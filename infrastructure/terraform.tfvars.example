@@ -1,0 +1,31 @@
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Project Configuration
+project_name = "claude-tms"
+environment  = "prod"
+
+# Database Configuration
+db_password = "your-secure-database-password-here"
+db_username = "tms_user"
+db_name     = "tms_db"
+
+# Application Configuration
+jwt_secret_key = "your-super-secret-jwt-key-minimum-32-characters-long"
+
+# Domain Configuration (optional)
+domain_name     = "yourdomain.com"
+certificate_arn = "arn:aws:acm:us-east-1:ACCOUNT-ID:certificate/CERTIFICATE-ID"
+
+# Infrastructure Sizing
+container_cpu    = 256
+container_memory = 512
+desired_count    = 1
+
+db_instance_class     = "db.t3.micro"
+db_allocated_storage  = 20
+
+# Network Configuration
+vpc_cidr               = "10.0.0.0/16"
+public_subnet_cidrs    = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs   = ["10.0.10.0/24", "10.0.20.0/24"]

@@ -1,0 +1,142 @@
+name: Deploy Claude TMS
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  PROJECT_NAME: claude-tms
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
+        terraform_wrapper: false
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Create Terraform variables file
+      run: |
+        cd infrastructure
+        cat > terraform.tfvars << EOF
+        aws_region = "${{ env.AWS_REGION }}"
+        project_name = "${{ env.PROJECT_NAME }}"
+        environment = "prod"
+        db_password = "${{ secrets.DB_PASSWORD }}"
+        jwt_secret_key = "${{ secrets.JWT_SECRET_KEY }}"
+        domain_name = "${{ secrets.DOMAIN_NAME }}"
+        certificate_arn = "${{ secrets.CERTIFICATE_ARN }}"
+        EOF
+
+    - name: Deploy Infrastructure
+      run: |
+        cd infrastructure
+        terraform init
+        terraform plan -out=tfplan
+        terraform apply tfplan
+
+    - name: Get Infrastructure Outputs
+      id: terraform-output
+      run: |
+        cd infrastructure
+        echo "ecr_repo=$(terraform output -raw ecr_backend_repository_url)" >> $GITHUB_OUTPUT
+        echo "ecs_cluster=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
+        echo "ecs_service=$(terraform output -raw ecs_service_name)" >> $GITHUB_OUTPUT
+        echo "s3_frontend_bucket=$(terraform output -raw s3_frontend_bucket)" >> $GITHUB_OUTPUT
+
+    - name: Build and Push Backend Image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: ${{ steps.terraform-output.outputs.ecr_repo }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REPOSITORY:$IMAGE_TAG ./backend/
+        docker push $ECR_REPOSITORY:$IMAGE_TAG
+        docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REPOSITORY:latest
+        docker push $ECR_REPOSITORY:latest
+
+    - name: Update ECS Service
+      run: |
+        aws ecs update-service \
+          --cluster ${{ steps.terraform-output.outputs.ecs_cluster }} \
+          --service ${{ steps.terraform-output.outputs.ecs_service }} \
+          --force-new-deployment
+
+    - name: Wait for ECS Service Stability
+      run: |
+        aws ecs wait services-stable \
+          --cluster ${{ steps.terraform-output.outputs.ecs_cluster }} \
+          --services ${{ steps.terraform-output.outputs.ecs_service }}
+
+    - name: Run Database Migrations
+      run: |
+        TASK_DEF_ARN=$(aws ecs describe-services \
+          --cluster ${{ steps.terraform-output.outputs.ecs_cluster }} \
+          --services ${{ steps.terraform-output.outputs.ecs_service }} \
+          --query 'services[0].taskDefinition' \
+          --output text)
+
+        SUBNETS=$(cd infrastructure && terraform output -raw private_subnet_ids | tr -d '[]" ' | tr ',' ' ')
+        SECURITY_GROUP=$(aws ec2 describe-security-groups \
+          --filters 'Name=group-name,Values=*ecs-tasks*' \
+          --query 'SecurityGroups[0].GroupId' \
+          --output text)
+
+        aws ecs run-task \
+          --cluster ${{ steps.terraform-output.outputs.ecs_cluster }} \
+          --task-definition $TASK_DEF_ARN \
+          --launch-type FARGATE \
+          --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SECURITY_GROUP]}" \
+          --overrides '{"containerOverrides":[{"name":"backend","command":["alembic","upgrade","head"]}]}'
+
+    - name: Build and Deploy Frontend
+      run: |
+        cd frontend
+        npm ci
+        npm run build
+        aws s3 sync ./out/ s3://${{ steps.terraform-output.outputs.s3_frontend_bucket }}/ --delete
+
+    - name: Invalidate CloudFront Cache
+      run: |
+        DISTRIBUTION_ID=$(aws cloudfront list-distributions \
+          --query "DistributionList.Items[?Comment=='${{ env.PROJECT_NAME }}-frontend-cdn'].Id" \
+          --output text)
+
+        if [ ! -z "$DISTRIBUTION_ID" ]; then
+          aws cloudfront create-invalidation \
+            --distribution-id $DISTRIBUTION_ID \
+            --paths "/*"
+        fi
+
+    - name: Deployment Summary
+      run: |
+        echo "🎉 Deployment completed successfully!"
+        cd infrastructure
+        echo "Frontend URL: https://$(terraform output -raw cloudfront_domain_name)"
+        echo "Backend API: https://$(terraform output -raw alb_hostname)"
