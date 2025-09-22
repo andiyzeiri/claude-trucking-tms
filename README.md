@@ -8,7 +8,7 @@ Deploy to production in 30 minutes:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/claude-trucking-tms.git
+git clone https://github.com/andiyzeiri/claude-trucking-tms.git
 cd claude-trucking-tms
 
 # 2. Configure environment
