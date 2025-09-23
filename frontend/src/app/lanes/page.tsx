@@ -2,16 +2,24 @@
 
 import React, { useState, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { DataTable, Column } from '@/components/ui/data-table'
 import { LaneModal, LaneData } from '@/components/lanes/lane-modal'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
-import { Plus, Route, MapPin, Building, Mail, Phone, Edit, Trash2 } from 'lucide-react'
+import { ExpandableLanesTable } from '@/components/lanes/expandable-lanes-table'
+import { Plus, Edit, Trash2 } from 'lucide-react'
+
+interface LaneGroup {
+  lane: string
+  pickup_location: string
+  delivery_location: string
+  brokers: LaneData[]
+  isExpanded: boolean
+}
 
 export default function LanesPage() {
-  // State for managing lanes
+  // State for managing lanes - restructured to have multiple brokers per route
   const [lanes, setLanes] = useState<LaneData[]>([
+    // Los Angeles to Phoenix
     {
       id: 1,
       pickup_location: "Los Angeles, CA",
@@ -23,6 +31,25 @@ export default function LanesPage() {
     },
     {
       id: 2,
+      pickup_location: "Los Angeles, CA",
+      delivery_location: "Phoenix, AZ",
+      broker: "Southwest Transport Co",
+      email: "ops@swtransport.com",
+      phone: "(555) 987-6543",
+      notes: "Premium service"
+    },
+    {
+      id: 3,
+      pickup_location: "Los Angeles, CA",
+      delivery_location: "Phoenix, AZ",
+      broker: "Desert Express Freight",
+      email: "loads@desertexpress.com",
+      phone: "(555) 456-7890",
+      notes: "Fast delivery"
+    },
+    // Dallas to Houston
+    {
+      id: 4,
       pickup_location: "Dallas, TX",
       delivery_location: "Houston, TX",
       broker: "Texas Freight Solutions",
@@ -31,7 +58,17 @@ export default function LanesPage() {
       notes: "High volume lane"
     },
     {
-      id: 3,
+      id: 5,
+      pickup_location: "Dallas, TX",
+      delivery_location: "Houston, TX",
+      broker: "Lone Star Logistics",
+      email: "dispatch@lonestarlog.com",
+      phone: "(555) 345-6789",
+      notes: "Energy sector specialist"
+    },
+    // Chicago to Detroit
+    {
+      id: 6,
       pickup_location: "Chicago, IL",
       delivery_location: "Detroit, MI",
       broker: "Midwest Transport Co",
@@ -40,25 +77,27 @@ export default function LanesPage() {
       notes: "Auto parts specialist"
     },
     {
-      id: 4,
+      id: 7,
+      pickup_location: "Chicago, IL",
+      delivery_location: "Detroit, MI",
+      broker: "Great Lakes Shipping",
+      email: "info@greatlakesship.com",
+      phone: "(555) 654-3210",
+      notes: "Manufacturing focus"
+    },
+    // Miami to Atlanta
+    {
+      id: 8,
       pickup_location: "Miami, FL",
       delivery_location: "Atlanta, GA",
       broker: "Southeast Shipping",
       email: "loads@southeastshipping.com",
       phone: "(555) 456-7890",
-      notes: ""
+      notes: "Perishable goods"
     },
+    // New York to Boston
     {
-      id: 5,
-      pickup_location: "Seattle, WA",
-      delivery_location: "Portland, OR",
-      broker: "Pacific Coast Freight",
-      email: "dispatch@pacificcoast.com",
-      phone: "(555) 567-8901",
-      notes: "Pacific Northwest specialist"
-    },
-    {
-      id: 6,
+      id: 9,
       pickup_location: "New York, NY",
       delivery_location: "Boston, MA",
       broker: "Northeast Logistics",
@@ -67,6 +106,12 @@ export default function LanesPage() {
       notes: "Express lanes"
     }
   ])
+
+  // Search state
+  const [searchTerm, setSearchTerm] = useState('')
+
+  // Expanded lanes state
+  const [expandedLanes, setExpandedLanes] = useState<Set<string>>(new Set())
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -80,6 +125,53 @@ export default function LanesPage() {
     y: number
     row: LaneData | null
   }>({ isVisible: false, x: 0, y: 0, row: null })
+
+  // Group lanes by pickup → delivery route
+  const laneGroups = useMemo(() => {
+    const groups: { [key: string]: LaneGroup } = {}
+
+    lanes
+      .filter(lane => {
+        if (!searchTerm) return true
+        const searchLower = searchTerm.toLowerCase()
+        return (
+          lane.pickup_location.toLowerCase().includes(searchLower) ||
+          lane.delivery_location.toLowerCase().includes(searchLower) ||
+          lane.broker.toLowerCase().includes(searchLower) ||
+          lane.email.toLowerCase().includes(searchLower) ||
+          lane.phone.toLowerCase().includes(searchLower) ||
+          (lane.notes && lane.notes.toLowerCase().includes(searchLower))
+        )
+      })
+      .forEach(lane => {
+        const routeKey = `${lane.pickup_location} → ${lane.delivery_location}`
+
+        if (!groups[routeKey]) {
+          groups[routeKey] = {
+            lane: routeKey,
+            pickup_location: lane.pickup_location,
+            delivery_location: lane.delivery_location,
+            brokers: [],
+            isExpanded: expandedLanes.has(routeKey)
+          }
+        }
+
+        groups[routeKey].brokers.push(lane)
+      })
+
+    return Object.values(groups).sort((a, b) => a.lane.localeCompare(b.lane))
+  }, [lanes, searchTerm, expandedLanes])
+
+  // Toggle lane expansion
+  const toggleLaneExpansion = (laneKey: string) => {
+    const newExpanded = new Set(expandedLanes)
+    if (newExpanded.has(laneKey)) {
+      newExpanded.delete(laneKey)
+    } else {
+      newExpanded.add(laneKey)
+    }
+    setExpandedLanes(newExpanded)
+  }
 
   // CRUD operations
   const handleCreateLane = () => {
@@ -95,7 +187,7 @@ export default function LanesPage() {
   }
 
   const handleDeleteLane = (laneId: number) => {
-    if (confirm('Are you sure you want to delete this lane?')) {
+    if (confirm('Are you sure you want to delete this broker from the lane?')) {
       setLanes(lanes.filter(lane => lane.id !== laneId))
     }
   }
@@ -113,12 +205,13 @@ export default function LanesPage() {
   }
 
   // Context menu handlers
-  const handleRowRightClick = (row: LaneData, event: React.MouseEvent) => {
+  const handleBrokerRightClick = (broker: LaneData, event: React.MouseEvent) => {
+    event.stopPropagation()
     setContextMenu({
       isVisible: true,
       x: event.clientX,
       y: event.clientY,
-      row
+      row: broker
     })
   }
 
@@ -140,114 +233,16 @@ export default function LanesPage() {
     closeContextMenu()
   }
 
-  // Calculate group totals for display in group headers
-  const calculateGroupTotals = (rows: LaneData[]) => {
-    return {
-      'pickup_location': (
-        <span className="text-sm font-medium text-gray-900">
-          {rows.length} lane{rows.length !== 1 ? 's' : ''}
-        </span>
-      )
-    }
-  }
-
-  // Calculate totals for the floating row
+  // Calculate totals
   const totals = useMemo(() => {
-    const totalLanes = lanes.length
-    const totalBrokers = new Set(lanes.map(lane => lane.broker)).size
+    const totalLanes = laneGroups.length
+    const totalBrokers = lanes.length
 
     return {
       totalLanes,
       totalBrokers
     }
-  }, [lanes])
-
-  const columns: Column<LaneData>[] = [
-    {
-      key: 'pickup_location',
-      label: 'Pickup Location',
-      width: '200px',
-      filterable: true,
-      groupable: true,
-      render: (value) => (
-        <div className="flex items-center">
-          <MapPin className="h-4 w-4 text-green-600 mr-2" />
-          <span className="font-medium text-gray-900">{value}</span>
-        </div>
-      )
-    },
-    {
-      key: 'delivery_location',
-      label: 'Delivery Location',
-      width: '200px',
-      filterable: true,
-      groupable: true,
-      render: (value) => (
-        <div className="flex items-center">
-          <MapPin className="h-4 w-4 text-red-600 mr-2" />
-          <span className="font-medium text-gray-900">{value}</span>
-        </div>
-      )
-    },
-    {
-      key: 'broker',
-      label: 'Broker',
-      width: '180px',
-      filterable: true,
-      groupable: true,
-      render: (value) => (
-        <div className="flex items-center">
-          <Building className="h-4 w-4 text-blue-600 mr-2" />
-          <span className="text-gray-900">{value}</span>
-        </div>
-      )
-    },
-    {
-      key: 'email',
-      label: 'Email',
-      width: '220px',
-      filterable: true,
-      render: (value) => (
-        <div className="flex items-center">
-          <Mail className="h-4 w-4 text-purple-600 mr-2" />
-          <a
-            href={`mailto:${value}`}
-            className="text-blue-600 hover:text-blue-800 hover:underline truncate"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {value}
-          </a>
-        </div>
-      )
-    },
-    {
-      key: 'phone',
-      label: 'Phone',
-      width: '150px',
-      filterable: true,
-      render: (value) => (
-        <div className="flex items-center">
-          <Phone className="h-4 w-4 text-orange-600 mr-2" />
-          <a
-            href={`tel:${value}`}
-            className="text-blue-600 hover:text-blue-800 hover:underline"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {value}
-          </a>
-        </div>
-      )
-    },
-    {
-      key: 'notes',
-      label: 'Notes',
-      width: '180px',
-      filterable: true,
-      render: (value) => (
-        <span className="text-gray-600 text-sm truncate">{value || '-'}</span>
-      )
-    }
-  ]
+  }, [laneGroups, lanes])
 
   return (
     <Layout>
@@ -263,11 +258,12 @@ export default function LanesPage() {
           </Button>
         </div>
 
-        <DataTable
-          data={lanes}
-          columns={columns}
-          onRowRightClick={handleRowRightClick}
-          calculateGroupTotals={calculateGroupTotals}
+        <ExpandableLanesTable
+          laneGroups={laneGroups}
+          onToggleLane={toggleLaneExpansion}
+          onBrokerRightClick={handleBrokerRightClick}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
         />
 
         <LaneModal
@@ -288,14 +284,14 @@ export default function LanesPage() {
             onClick={handleContextEdit}
             icon={<Edit className="h-4 w-4" />}
           >
-            Edit Lane
+            Edit Broker
           </ContextMenuItem>
           <ContextMenuItem
             onClick={handleContextDelete}
             icon={<Trash2 className="h-4 w-4" />}
             className="text-red-600 hover:bg-red-50"
           >
-            Delete Lane
+            Delete Broker
           </ContextMenuItem>
         </ContextMenu>
 
@@ -305,29 +301,17 @@ export default function LanesPage() {
             <table className="w-full table-auto">
               <tbody>
                 <tr className="bg-gray-50">
-                  {/* Pickup Location column - show total count */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '200px', minWidth: '200px' }}>
+                  {/* Route column - show total count */}
+                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '60%' }}>
                     <span className="font-medium text-gray-900">
-                      {totals.totalLanes} Lane{totals.totalLanes !== 1 ? 's' : ''}
+                      {totals.totalLanes} Route{totals.totalLanes !== 1 ? 's' : ''}
                     </span>
                   </td>
-                  {/* Delivery Location column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '200px', minWidth: '200px' }}>
-                  </td>
-                  {/* Broker column - show total brokers */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '180px', minWidth: '180px' }}>
+                  {/* Brokers column - show total brokers */}
+                  <td className="px-3 py-2 text-sm" style={{ width: '40%' }}>
                     <span className="font-medium text-blue-700">
-                      {totals.totalBrokers} Broker{totals.totalBrokers !== 1 ? 's' : ''}
+                      {totals.totalBrokers} Total Broker{totals.totalBrokers !== 1 ? 's' : ''}
                     </span>
-                  </td>
-                  {/* Email column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '220px', minWidth: '220px' }}>
-                  </td>
-                  {/* Phone column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '150px', minWidth: '150px' }}>
-                  </td>
-                  {/* Notes column - empty */}
-                  <td className="px-3 py-2 text-sm" style={{ width: '180px', minWidth: '180px' }}>
                   </td>
                 </tr>
               </tbody>
