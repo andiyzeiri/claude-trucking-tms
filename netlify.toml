@@ -1,0 +1,28 @@
+[build]
+  base = "frontend"
+  command = "npm run build-and-export"
+  publish = "frontend/out"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Redirect API calls to your AWS backend
+[[redirects]]
+  from = "/api/*"
+  to = "https://your-backend-api-url.com/api/:splat"
+  status = 200
+
+# Redirect all other requests to index.html for SPA routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[context.production]
+  command = "npm run build-and-export"
+
+[context.deploy-preview]
+  command = "npm run build-and-export"
+
+[context.branch-deploy]
+  command = "npm run build-and-export"

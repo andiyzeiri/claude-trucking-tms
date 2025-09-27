@@ -1,308 +1,285 @@
-# Claude TMS Production Deployment Guide
+# 🚀 ABSOLUTE TMS - Live Deployment Guide
 
-This guide will walk you through deploying the Claude TMS to production on AWS.
+This guide will get your TMS application live with:
+- **Frontend**: Netlify (free tier, easy deployment)
+- **Backend**: AWS ECS (scalable, production-ready)
+- **Database**: AWS RDS PostgreSQL (managed, secure)
 
-## Prerequisites
+## 🎯 Architecture Overview
 
-Before starting, ensure you have:
+```
+Frontend (Netlify) → API Gateway → Backend (AWS ECS) → Database (AWS RDS)
+```
 
-1. **AWS Account** with appropriate permissions
-2. **Domain name** (recommended)
-3. **Docker** installed locally
-4. **Terraform** installed locally
-5. **AWS CLI** configured with your credentials
+## ⚡ Quick Start (30 minutes)
 
-## Step 1: Configure AWS CLI
+### Phase 1: Deploy Database (5 minutes)
 
+1. **Set up AWS credentials**:
 ```bash
 aws configure
+# Enter your AWS Access Key ID, Secret Access Key, and region (us-east-1)
 ```
 
-Enter your:
-- AWS Access Key ID
-- AWS Secret Access Key
-- Default region (e.g., us-east-1)
-- Default output format (json)
-
-## Step 2: Set Up SSL Certificate (Optional but Recommended)
-
-If you have a domain, set up SSL certificate:
-
-```bash
-./scripts/setup-ssl.sh -d yourdomain.com -r us-east-1
-```
-
-This will:
-- Create Route 53 hosted zone (if needed)
-- Request SSL certificate from AWS Certificate Manager
-- Set up DNS validation records
-- Wait for certificate validation
-
-**Important**: Update your domain's nameservers if a new hosted zone was created.
-
-## Step 3: Configure Environment Variables
-
-Copy the example terraform variables file:
-
+2. **Deploy minimal infrastructure** (just RDS for now):
 ```bash
 cd infrastructure
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-Edit `terraform.tfvars` with your values:
-
+Edit `terraform.tfvars`:
 ```hcl
-# AWS Configuration
 aws_region = "us-east-1"
-
-# Project Configuration
-project_name = "claude-tms"
-environment  = "prod"
-
-# Database Configuration (REQUIRED)
-db_password = "your-secure-database-password-minimum-16-chars"
-db_username = "tms_user"
-db_name     = "tms_db"
-
-# Application Configuration (REQUIRED)
-jwt_secret_key = "your-super-secret-jwt-key-minimum-32-characters-long-and-random"
-
-# Domain Configuration (Optional)
-domain_name     = "yourdomain.com"
-certificate_arn = "arn:aws:acm:us-east-1:ACCOUNT:certificate/CERT-ID"
-
-# Infrastructure Sizing (Adjust as needed)
-container_cpu    = 256
-container_memory = 512
-desired_count    = 1
-
-db_instance_class     = "db.t3.micro"
-db_allocated_storage  = 20
+project_name = "absolute-tms"
+domain_name = "your-domain.com"  # Optional for now
+db_password = "YourSecurePassword123!"
+stripe_api_key = "sk_test_dummy"  # Use test key for now
+jwt_secret = "your-jwt-secret-32-chars-long"
 ```
 
-**Security Note**: Use strong, unique passwords and keys. Generate them with:
+3. **Deploy database infrastructure**:
 ```bash
-# Database password (16+ characters)
-openssl rand -base64 24
-
-# JWT secret key (32+ characters)
-openssl rand -base64 48
+terraform init
+terraform apply
 ```
 
-## Step 4: Deploy Infrastructure and Application
-
-### Option A: Full Automated Deployment
+4. **Set up database schema**:
 ```bash
-./deploy.sh all
+# Get database endpoint
+DB_ENDPOINT=$(terraform output -raw database_endpoint)
+
+# Run schema setup
+psql -h $DB_ENDPOINT -U postgres -d absolute_tms -f ../database/schema.sql
+psql -h $DB_ENDPOINT -U postgres -d absolute_tms -f ../database/seed_data.sql
 ```
 
-### Option B: Step-by-Step Deployment
+### Phase 2: Create FastAPI Backend (10 minutes)
 
-1. **Deploy Infrastructure Only**:
-   ```bash
-   ./deploy.sh infra
-   ```
-
-2. **Deploy Application Only** (after infrastructure is ready):
-   ```bash
-   ./deploy.sh app
-   ```
-
-### Option C: Manual Step-by-Step
-
-1. **Initialize and Deploy Infrastructure**:
-   ```bash
-   cd infrastructure
-   ~/bin/terraform init
-   ~/bin/terraform plan
-   ~/bin/terraform apply
-   ```
-
-2. **Build and Push Docker Image**:
-   ```bash
-   # Get ECR repository URL
-   ECR_REPO=$(cd infrastructure && ~/bin/terraform output -raw ecr_backend_repository_url)
-
-   # Login to ECR
-   aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REPO
-
-   # Build and push
-   docker build -f backend/Dockerfile.prod -t claude-tms-backend:latest ./backend/
-   docker tag claude-tms-backend:latest $ECR_REPO:latest
-   docker push $ECR_REPO:latest
-   ```
-
-3. **Update ECS Service**:
-   ```bash
-   ECS_CLUSTER=$(cd infrastructure && ~/bin/terraform output -raw ecs_cluster_name)
-   ECS_SERVICE=$(cd infrastructure && ~/bin/terraform output -raw ecs_service_name)
-
-   aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --force-new-deployment
-   ```
-
-4. **Run Database Migrations**:
-   ```bash
-   ./scripts/migrate-db.sh
-   ```
-
-5. **Deploy Frontend**:
-   ```bash
-   cd frontend
-   npm install
-   npm run build
-
-   S3_BUCKET=$(cd ../infrastructure && ~/bin/terraform output -raw s3_frontend_bucket)
-   aws s3 sync ./out/ s3://$S3_BUCKET/ --delete
-   ```
-
-## Step 5: Verify Deployment
-
-After deployment completes, check:
-
-1. **Backend API**: Visit your ALB hostname or `api.yourdomain.com`
-2. **Frontend**: Visit your CloudFront domain or `yourdomain.com`
-3. **API Documentation**: Visit `/docs` on your backend URL
-
-Get the URLs:
+1. **Create backend directory structure**:
 ```bash
-cd infrastructure
-echo "Frontend: https://$(~/bin/terraform output -raw cloudfront_domain_name)"
-echo "Backend: https://$(~/bin/terraform output -raw alb_hostname)"
+mkdir -p backend/app/api/v1/endpoints
+mkdir -p backend/app/core
+mkdir -p backend/app/models
+mkdir -p backend/app/schemas
 ```
 
-## Step 6: Post-Deployment Configuration
-
-### Create Initial Admin User
-
-Connect to your RDS instance and create an admin user:
-
-```sql
-INSERT INTO users (email, hashed_password, first_name, last_name, is_active, is_superuser, created_at)
-VALUES (
-  'admin@yourdomain.com',
-  '$2b$12$hashed_password_here',
-  'Admin',
-  'User',
-  true,
-  true,
-  NOW()
-);
-```
-
-Generate hashed password:
+2. **Create main FastAPI app** (`backend/app/main.py`):
 ```python
-from passlib.context import CryptContext
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-hashed = pwd_context.hash("your-admin-password")
-print(hashed)
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import os
+
+app = FastAPI(title="Absolute TMS API", version="1.0.0")
+
+# CORS middleware for Netlify frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://your-netlify-app.netlify.app", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "message": "Absolute TMS API is running"}
+
+@app.get("/api/v1/loads")
+async def get_loads():
+    # Mock data for now
+    return [
+        {
+            "id": 1,
+            "load_number": "TMS001",
+            "customer": "ACME Trucking",
+            "pickup": "Los Angeles, CA",
+            "delivery": "Phoenix, AZ",
+            "status": "in_transit"
+        }
+    ]
 ```
 
-### Set Up Monitoring (Recommended)
+3. **Create Dockerfile** (`backend/Dockerfile`):
+```dockerfile
+FROM python:3.11-slim
 
-1. **Enable CloudWatch Container Insights** (already configured)
-2. **Set up CloudWatch Alarms** for:
-   - ECS service health
-   - RDS CPU/connections
-   - ALB response times
-3. **Configure SNS notifications**
+WORKDIR /app
 
-### Set Up Backups
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-1. **RDS automated backups** (already enabled - 7 days retention)
-2. **Application data backup strategy**
-3. **S3 versioning** (already enabled)
+COPY app/ ./app/
 
-## Troubleshooting
+EXPOSE 8000
 
-### Common Issues
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
 
-1. **Certificate validation fails**:
-   - Check nameserver configuration
-   - Wait up to 30 minutes for DNS propagation
+4. **Create requirements.txt** (`backend/requirements.txt`):
+```
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.23
+alembic==1.12.1
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+boto3==1.34.0
+```
 
-2. **ECS tasks fail to start**:
-   - Check CloudWatch logs: `/ecs/claude-tms-backend`
-   - Verify environment variables
-   - Check security group rules
+### Phase 3: Deploy Backend to AWS ECS (10 minutes)
 
-3. **Database connection fails**:
-   - Verify RDS security group allows ECS access
-   - Check database endpoint in environment variables
-
-4. **Frontend not loading**:
-   - Check CloudFront distribution status
-   - Verify S3 bucket policy
-   - Check CloudFront invalidation
-
-### Useful Commands
-
+1. **Build and push Docker image**:
 ```bash
-# Check ECS service status
-aws ecs describe-services --cluster claude-tms --services claude-tms-backend
+# Get ECR repository URL
+ECR_URI=$(terraform output -raw ecr_backend_repository_url)
 
-# View ECS service logs
-aws logs describe-log-streams --log-group-name /ecs/claude-tms-backend
-aws logs get-log-events --log-group-name /ecs/claude-tms-backend --log-stream-name STREAM_NAME
+# Login to ECR
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_URI
 
-# Check RDS status
-aws rds describe-db-instances --db-instance-identifier claude-tms-db
-
-# Test database connectivity
-aws rds describe-db-instances --db-instance-identifier claude-tms-db --query 'DBInstances[0].Endpoint'
+# Build and push
+cd backend
+docker build -t absolute-tms-backend .
+docker tag absolute-tms-backend:latest $ECR_URI:latest
+docker push $ECR_URI:latest
 ```
 
-## Cost Optimization
+2. **Deploy ECS service**:
+```bash
+cd ../infrastructure
+terraform apply  # This will create the full infrastructure including ECS
+```
 
-### Development Environment
-For cost savings in dev/staging:
-- Use `db.t3.micro` (Free tier eligible)
-- Set `desired_count = 0` when not testing
-- Use smaller ECS task sizes
+3. **Get your API URL**:
+```bash
+echo "Your API URL: https://$(terraform output -raw load_balancer_dns)"
+```
 
-### Production Scaling
-As you scale:
-- Increase `desired_count` for high availability
-- Upgrade to larger RDS instance classes
-- Enable Multi-AZ for RDS
-- Use reserved instances for predictable workloads
+### Phase 4: Deploy Frontend to Netlify (5 minutes)
 
-## Security Best Practices
+1. **Update API configuration** in frontend:
+```bash
+cd ../frontend
+```
 
-✅ **Already Implemented**:
-- All traffic encrypted (HTTPS/TLS)
-- Database in private subnets
-- IAM roles with minimal permissions
-- S3 buckets with proper access controls
-- Security groups restricting access
+Create or update `.env.local`:
+```
+NEXT_PUBLIC_API_URL=https://your-alb-dns-name.us-east-1.elb.amazonaws.com
+```
 
-🔄 **Additional Recommendations**:
-- Enable AWS CloudTrail
-- Set up AWS Config rules
-- Use AWS Systems Manager for parameter storage
-- Implement network ACLs
-- Regular security audits
+2. **Build for production**:
+```bash
+npm install
+npm run build
+```
 
-## Maintenance
+3. **Deploy to Netlify**:
+   - Go to [netlify.com](https://netlify.com) and sign up
+   - Click "Add new site" → "Deploy manually"
+   - Drag and drop your `frontend/out` folder (after running `npm run build && npm run export`)
+   - Or connect your GitHub repo for automatic deployments
 
-### Regular Tasks
-- Monitor CloudWatch metrics
-- Review and rotate secrets quarterly
-- Update Docker images regularly
-- Monitor RDS performance insights
-- Review and clean up CloudWatch logs
+4. **Configure environment variables in Netlify**:
+   - Go to Site settings → Environment variables
+   - Add: `NEXT_PUBLIC_API_URL` = `https://your-alb-dns.us-east-1.elb.amazonaws.com`
 
-### Updates and Deployments
-- Use the automated deployment pipeline
-- Test changes in staging environment first
-- Monitor deployment health after updates
-- Keep Terraform state backed up
+## 📋 Production Checklist
 
-## Support
+### Security & Configuration
+- [ ] Update CORS origins in FastAPI to match your Netlify URL
+- [ ] Set up custom domain on Netlify
+- [ ] Configure SSL certificates
+- [ ] Update database password to something secure
+- [ ] Set up real Stripe API keys
+- [ ] Configure proper JWT secrets
 
-If you encounter issues:
-1. Check CloudWatch logs first
-2. Verify all environment variables
-3. Test connectivity between components
-4. Review AWS service quotas and limits
+### Monitoring & Maintenance
+- [ ] Set up CloudWatch alerts
+- [ ] Configure database backups
+- [ ] Set up error tracking (Sentry)
+- [ ] Monitor costs in AWS billing
 
-The deployment includes comprehensive logging and monitoring to help diagnose issues quickly.
+## 🔧 Environment-Specific Configs
+
+### Development
+```bash
+# Use local database
+DATABASE_URL=postgresql://postgres:password@localhost:5432/absolute_tms
+
+# Use local API
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+### Production
+```bash
+# Use AWS RDS
+DATABASE_URL=postgresql://postgres:password@your-rds-endpoint:5432/absolute_tms
+
+# Use AWS ALB
+NEXT_PUBLIC_API_URL=https://your-alb-dns.us-east-1.elb.amazonaws.com
+```
+
+## 🚨 Common Issues & Solutions
+
+### Backend Issues
+1. **ECS task keeps restarting**:
+   - Check CloudWatch logs: `aws logs get-log-events --log-group-name /ecs/absolute-tms`
+   - Verify environment variables in ECS task definition
+
+2. **Database connection fails**:
+   - Check security groups allow connection from ECS to RDS
+   - Verify database endpoint and credentials
+
+### Frontend Issues
+1. **CORS errors**:
+   - Update FastAPI CORS middleware with correct Netlify URL
+   - Redeploy backend after CORS changes
+
+2. **API calls fail**:
+   - Check `NEXT_PUBLIC_API_URL` environment variable
+   - Verify ALB health checks are passing
+
+### Deployment Issues
+1. **Terraform fails**:
+   - Check AWS credentials: `aws sts get-caller-identity`
+   - Verify you have necessary IAM permissions
+
+2. **Docker push fails**:
+   - Re-run ECR login command
+   - Check Docker daemon is running
+
+## 💰 Cost Optimization
+
+### AWS Costs (~$50-100/month)
+- Use `db.t3.micro` for development
+- Scale ECS tasks based on usage
+- Set up billing alerts
+
+### Free Tiers
+- Netlify: 100GB bandwidth/month (free)
+- AWS RDS: 750 hours/month (free tier first year)
+- AWS ECS: Pay only for what you use
+
+## 🔄 CI/CD Pipeline (Optional)
+
+Set up GitHub Actions for automatic deployments:
+
+1. **Frontend**: Auto-deploy to Netlify on push to `main`
+2. **Backend**: Auto-build and deploy to ECS on push to `main`
+3. **Database**: Run migrations automatically
+
+## 📞 Support & Next Steps
+
+After deployment:
+1. Test all functionality
+2. Set up monitoring and alerts
+3. Configure backup strategies
+4. Plan for scaling as you get customers
+5. Set up proper domain with SSL
+
+**Your app will be live at**:
+- Frontend: `https://your-app.netlify.app`
+- Backend API: `https://your-alb-dns.us-east-1.elb.amazonaws.com`
+
+Ready to launch your TMS SaaS! 🚛✨

@@ -1,14 +1,13 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import Layout from '@/components/layout/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { DataTable, Column } from '@/components/ui/data-table'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
-import { formatDate } from '@/lib/utils'
 import { DriverModal, DriverData } from '@/components/drivers/driver-modal'
-import { Plus, Users, Phone, Mail, Edit, Trash2, User } from 'lucide-react'
+import { Plus, Users, Phone, Mail, Edit, Trash2 } from 'lucide-react'
 
 export default function DriversPage() {
   // State for managing drivers
@@ -16,29 +15,66 @@ export default function DriversPage() {
       {
         id: 1,
         name: "John Smith",
-        license_number: "CDL123456",
+        date_hired: "2023-01-15",
+        terminated: false,
+        dob: "1985-03-20",
         phone: "(555) 123-4567",
         email: "john.smith@example.com",
-        status: "available",
-        created_at: "2024-01-01T00:00:00Z"
+        dl_number: "CDL123456",
+        dl_expiration: "2025-06-15",
+        file_status: "Complete",
+        medical_card: "2024-12-20",
+        mvr: "2024-10-15",
+        drug_test: "2024-09-30",
+        clearing_house: "Clear"
       },
       {
         id: 2,
         name: "Jane Doe",
-        license_number: "CDL654321",
+        date_hired: "2023-03-10",
+        terminated: false,
+        dob: "1990-07-14",
         phone: "(555) 987-6543",
         email: "jane.doe@example.com",
-        status: "on_trip",
-        created_at: "2024-01-02T00:00:00Z"
+        dl_number: "CDL654321",
+        dl_expiration: "2024-11-20",
+        file_status: "Incomplete",
+        medical_card: "2024-08-10",
+        mvr: "2024-11-01",
+        drug_test: "2024-08-25",
+        clearing_house: "Clear"
       },
       {
         id: 3,
         name: "Mike Johnson",
-        license_number: "CDL789012",
+        date_hired: "2022-11-05",
+        terminated: true,
+        dob: "1988-12-03",
         phone: "(555) 555-0123",
         email: "mike.johnson@example.com",
-        status: "available",
-        created_at: "2024-01-03T00:00:00Z"
+        dl_number: "CDL789012",
+        dl_expiration: "2025-04-10",
+        file_status: "Complete",
+        medical_card: "2024-06-15",
+        mvr: "2024-05-20",
+        drug_test: "2024-04-18",
+        clearing_house: "Violation"
+      },
+      {
+        id: 4,
+        name: "Sarah Davis",
+        date_hired: "2024-02-20",
+        terminated: false,
+        dob: "1992-09-25",
+        phone: "(555) 234-5678",
+        email: "sarah.davis@example.com",
+        dl_number: "CDL345678",
+        dl_expiration: "2026-01-30",
+        file_status: "Complete",
+        medical_card: "2025-03-15",
+        mvr: "2024-11-10",
+        drug_test: "2024-10-05",
+        clearing_house: "Clear"
       }
   ])
 
@@ -55,13 +91,6 @@ export default function DriversPage() {
     row: typeof drivers[0] | null
   }>({ isVisible: false, x: 0, y: 0, row: null })
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'available': return 'bg-green-100 text-green-800'
-      case 'on_trip': return 'bg-blue-100 text-blue-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
 
   // CRUD operations
   const handleCreateDriver = () => {
@@ -124,31 +153,6 @@ export default function DriversPage() {
     closeContextMenu()
   }
 
-  // Calculate group totals for display in group headers
-  const calculateGroupTotals = (rows: typeof drivers[0][]) => {
-    const totalDrivers = rows.length
-
-    return {
-      'name': (
-        <span className="text-sm font-medium text-gray-900">
-          {totalDrivers} driver{totalDrivers !== 1 ? 's' : ''}
-        </span>
-      )
-    }
-  }
-
-  // Calculate totals for the floating row
-  const totals = useMemo(() => {
-    const totalDrivers = drivers.length
-    const availableDrivers = drivers.filter(d => d.status === 'available').length
-    const onTripDrivers = drivers.filter(d => d.status === 'on_trip').length
-
-    return {
-      totalDrivers,
-      availableDrivers,
-      onTripDrivers
-    }
-  }, [drivers])
 
   const columns: Column<typeof drivers[0]>[] = [
     {
@@ -157,18 +161,39 @@ export default function DriversPage() {
       width: '150px',
       filterable: true,
       groupable: true,
-      render: (value) => (
-        <div className="flex items-center text-sm">
-          <User className="h-3 w-3 mr-1 text-gray-400" />
-          <span className="font-medium text-gray-900">{value}</span>
-        </div>
-      )
+      render: (value) => <span className="font-medium text-gray-900">{value}</span>
     },
     {
-      key: 'license_number',
-      label: 'License Number',
-      width: '140px',
-      filterable: true
+      key: 'date_hired',
+      label: 'Date Hired',
+      width: '120px',
+      render: (value, row) => {
+        const hiredDate = new Date(value).toLocaleDateString()
+        const isTerminated = row.terminated
+
+        return (
+          <span className={isTerminated ? 'text-red-600 font-medium' : 'text-gray-900'}>
+            {hiredDate}
+          </span>
+        )
+      }
+    },
+    {
+      key: 'dob',
+      label: 'DOB',
+      width: '120px',
+      render: (value) => new Date(value).toLocaleDateString()
+    },
+    {
+      key: 'age',
+      label: 'Age',
+      width: '60px',
+      render: (_, row) => {
+        const today = new Date()
+        const birthDate = new Date(row.dob)
+        const age = Math.floor((today.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+        return age.toString()
+      }
     },
     {
       key: 'phone',
@@ -193,28 +218,92 @@ export default function DriversPage() {
       )
     },
     {
-      key: 'status',
-      label: 'Status',
+      key: 'dl_number',
+      label: 'DL',
       width: '120px',
+      render: (value) => <span className="font-mono text-xs text-gray-700">{value}</span>
+    },
+    {
+      key: 'dl_expiration',
+      label: 'DL Expiration',
+      width: '120px',
+      render: (value) => {
+        const expirationDate = new Date(value)
+        const today = new Date()
+        const daysUntilExpiry = Math.ceil((expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+        const isExpiringSoon = daysUntilExpiry <= 60
+
+        return (
+          <span className={isExpiringSoon ? 'text-red-600 font-medium' : 'text-gray-900'}>
+            {expirationDate.toLocaleDateString()}
+          </span>
+        )
+      }
+    },
+    {
+      key: 'file_status',
+      label: 'File',
+      width: '100px',
       filterable: true,
       groupable: true,
       render: (value) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
-          {value.replace('_', ' ')}
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+          value === 'Complete' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+        }`}>
+          {value}
         </span>
       )
     },
     {
-      key: 'created_at',
-      label: 'Created',
+      key: 'medical_card',
+      label: 'Medical Card',
       width: '120px',
-      render: (value) => formatDate(value)
+      render: (value) => {
+        const medicalDate = new Date(value)
+        const today = new Date()
+        const daysUntilExpiry = Math.ceil((medicalDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+        const isExpiringSoon = daysUntilExpiry <= 30
+
+        return (
+          <span className={isExpiringSoon ? 'text-red-600 font-medium' : 'text-gray-900'}>
+            {medicalDate.toLocaleDateString()}
+          </span>
+        )
+      }
+    },
+    {
+      key: 'mvr',
+      label: 'MVR',
+      width: '120px',
+      render: (value) => new Date(value).toLocaleDateString()
+    },
+    {
+      key: 'drug_test',
+      label: 'Pre-employment Drug Test',
+      width: '180px',
+      render: (value) => new Date(value).toLocaleDateString()
+    },
+    {
+      key: 'clearing_house',
+      label: 'Clearing House',
+      width: '120px',
+      filterable: true,
+      groupable: true,
+      render: (value) => (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+          value === 'Clear' ? 'bg-green-100 text-green-800' :
+          value === 'Violation' ? 'bg-red-100 text-red-800' :
+          'bg-yellow-100 text-yellow-800'
+        }`}>
+          {value}
+        </span>
+      )
     }
   ]
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="page-drivers space-y-6">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center">
@@ -233,46 +322,7 @@ export default function DriversPage() {
           data={drivers}
           columns={columns}
           onRowRightClick={handleRowRightClick}
-          calculateGroupTotals={calculateGroupTotals}
         />
-
-        {/* Floating Totals Row - Aligned with table columns */}
-        <div className="sticky bottom-0 bg-white border-t-2 border-gray-300 shadow-lg mt-4">
-          <div style={{ minWidth: '1400px', width: '100%' }}>
-            <table className="w-full table-auto">
-              <tbody>
-                <tr className="bg-gray-50">
-                  {/* Name column - show total count */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '150px', minWidth: '150px' }}>
-                    <span className="font-medium text-gray-900">
-                      {totals.totalDrivers} Driver{totals.totalDrivers !== 1 ? 's' : ''}
-                    </span>
-                  </td>
-                  {/* License column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '140px', minWidth: '140px' }}>
-
-                  </td>
-                  {/* Phone column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '140px', minWidth: '140px' }}>
-
-                  </td>
-                  {/* Email column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '180px', minWidth: '180px' }}>
-
-                  </td>
-                  {/* Status column - show available count */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px', minWidth: '120px' }}>
-                    <span className="text-green-700">{totals.availableDrivers} Available</span>
-                  </td>
-                  {/* Created column - show on trip count */}
-                  <td className="px-3 py-2 text-sm" style={{ width: '120px', minWidth: '120px' }}>
-                    <span className="text-blue-700">{totals.onTripDrivers} On Trip</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
 
         <DriverModal
           isOpen={isModalOpen}

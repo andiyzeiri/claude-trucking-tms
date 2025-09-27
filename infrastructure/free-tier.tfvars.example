@@ -1,0 +1,13 @@
+# =================================================================================
+# ABSOLUTE TMS - Free Tier Terraform Variables
+# =================================================================================
+
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Database Configuration
+db_password = "YourSecurePassword123!"
+
+# EC2 Key Pair (create this in AWS Console first)
+# Go to EC2 → Key Pairs → Create Key Pair → Download .pem file
+key_pair_name = "your-key-pair-name"

@@ -9,6 +9,7 @@ from sqlalchemy import select
 from app.config import settings
 from app.database import get_db
 from app.models.user import User
+from .security_middleware import SecurityContext, DataFilter, create_security_context, create_data_filter
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
@@ -75,3 +76,17 @@ async def get_current_active_user(
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+
+async def get_security_context(
+    current_user: User = Depends(get_current_active_user)
+) -> SecurityContext:
+    """Get security context for the current user"""
+    return create_security_context(current_user)
+
+
+async def get_data_filter(
+    security_context: SecurityContext = Depends(get_security_context)
+) -> DataFilter:
+    """Get data filter for the current user's security context"""
+    return create_data_filter(security_context)

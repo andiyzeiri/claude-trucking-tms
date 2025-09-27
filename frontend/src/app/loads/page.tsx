@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { DataTable, Column } from '@/components/ui/data-table'
 import { LoadModal, LoadData } from '@/components/loads/load-modal'
+import { DocumentModal } from '@/components/loads/document-modal'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, Package, MapPin, DollarSign, FileText, CheckCircle, X, User, Edit, Trash2 } from 'lucide-react'
+import { Plus, Package, MapPin, DollarSign, FileText, CheckCircle, X, User, Edit, Trash2, Upload, FolderOpen } from 'lucide-react'
 
 export default function LoadsPage() {
   // State for managing loads
@@ -71,6 +72,30 @@ export default function LoadsPage() {
   const [editingLoad, setEditingLoad] = useState<LoadData | null>(null)
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create')
 
+  // Document management state
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false)
+  const [documentLoad, setDocumentLoad] = useState<LoadData | null>(null)
+  const [loadDocuments, setLoadDocuments] = useState<Record<number, {
+    ratecon: { id: string; name: string; size: number; type: string; url: string; uploadedAt: Date }[]
+    pod: { id: string; name: string; size: number; type: string; url: string; uploadedAt: Date }[]
+  }>>({
+    1: {
+      ratecon: [
+        { id: 'demo-1', name: 'Rate_Confirmation_TMS001.pdf', size: 245760, type: 'application/pdf', url: '#', uploadedAt: new Date('2024-01-15') }
+      ],
+      pod: []
+    },
+    2: {
+      ratecon: [
+        { id: 'demo-2', name: 'Rate_Confirmation_TMS002.pdf', size: 189440, type: 'application/pdf', url: '#', uploadedAt: new Date('2024-01-14') }
+      ],
+      pod: [
+        { id: 'demo-3', name: 'POD_TMS002.pdf', size: 345600, type: 'application/pdf', url: '#', uploadedAt: new Date('2024-01-15') }
+      ]
+    },
+    3: { ratecon: [], pod: [] }
+  })
+
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     isVisible: boolean
@@ -122,6 +147,37 @@ export default function LoadsPage() {
 
   const closeContextMenu = () => {
     setContextMenu({ isVisible: false, x: 0, y: 0, row: null })
+  }
+
+  // Document management handlers
+  const handleManageDocuments = (load: LoadData) => {
+    setDocumentLoad(load)
+    setIsDocumentModalOpen(true)
+    closeContextMenu()
+  }
+
+  const handleDocumentsChange = (loadId: number, documents: {
+    ratecon: { id: string; name: string; size: number; type: string; url: string; uploadedAt: Date }[]
+    pod: { id: string; name: string; size: number; type: string; url: string; uploadedAt: Date }[]
+  }) => {
+    setLoadDocuments(prev => ({
+      ...prev,
+      [loadId]: documents
+    }))
+
+    // Update the loads state to reflect document status
+    setLoads(prevLoads => prevLoads.map(load =>
+      load.id === loadId ? {
+        ...load,
+        ratecon: documents.ratecon.length > 0,
+        pod: documents.pod.length > 0
+      } : load
+    ))
+  }
+
+  const closeDocumentModal = () => {
+    setIsDocumentModalOpen(false)
+    setDocumentLoad(null)
   }
 
   // Calculate group totals for display in group headers
@@ -300,42 +356,72 @@ export default function LoadsPage() {
     {
       key: 'ratecon',
       label: 'Ratecon',
-      width: '110px',
-      render: (value) => (
-        <div className="flex items-center justify-center">
-          {value ? (
-            <div className="flex items-center text-green-600">
-              <FileText className="h-4 w-4 mr-1" />
-              <CheckCircle className="h-3 w-3" />
-            </div>
-          ) : (
-            <div className="flex items-center text-gray-400">
-              <FileText className="h-4 w-4 mr-1" />
-              <X className="h-3 w-3" />
-            </div>
-          )}
-        </div>
-      )
+      width: '120px',
+      render: (value, row) => {
+        const docCount = loadDocuments[row.id]?.ratecon.length || 0
+        return (
+          <div className="flex items-center justify-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 hover:bg-blue-50"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleManageDocuments(row)
+              }}
+            >
+              {docCount > 0 ? (
+                <div className="flex items-center text-green-600">
+                  <FileText className="h-4 w-4 mr-1" />
+                  <span className="text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                    {docCount}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center text-gray-400 hover:text-blue-600">
+                  <Upload className="h-4 w-4 mr-1" />
+                  <span className="text-xs">Add</span>
+                </div>
+              )}
+            </Button>
+          </div>
+        )
+      }
     },
     {
       key: 'pod',
       label: 'POD',
-      width: '100px',
-      render: (value) => (
-        <div className="flex items-center justify-center">
-          {value ? (
-            <div className="flex items-center text-green-600">
-              <FileText className="h-4 w-4 mr-1" />
-              <CheckCircle className="h-3 w-3" />
-            </div>
-          ) : (
-            <div className="flex items-center text-gray-400">
-              <FileText className="h-4 w-4 mr-1" />
-              <X className="h-3 w-3" />
-            </div>
-          )}
-        </div>
-      )
+      width: '120px',
+      render: (value, row) => {
+        const docCount = loadDocuments[row.id]?.pod.length || 0
+        return (
+          <div className="flex items-center justify-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 hover:bg-blue-50"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleManageDocuments(row)
+              }}
+            >
+              {docCount > 0 ? (
+                <div className="flex items-center text-green-600">
+                  <Package className="h-4 w-4 mr-1" />
+                  <span className="text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                    {docCount}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center text-gray-400 hover:text-blue-600">
+                  <Upload className="h-4 w-4 mr-1" />
+                  <span className="text-xs">Add</span>
+                </div>
+              )}
+            </Button>
+          </div>
+        )
+      }
     },
     {
       key: 'status',
@@ -354,7 +440,7 @@ export default function LoadsPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="page-loads space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Loads</h1>
@@ -381,6 +467,16 @@ export default function LoadsPage() {
           mode={modalMode}
         />
 
+        {documentLoad && (
+          <DocumentModal
+            isOpen={isDocumentModalOpen}
+            onClose={closeDocumentModal}
+            loadNumber={documentLoad.load_number}
+            documents={loadDocuments[documentLoad.id] || { ratecon: [], pod: [] }}
+            onDocumentsChange={(documents) => handleDocumentsChange(documentLoad.id!, documents)}
+          />
+        )}
+
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
@@ -392,6 +488,13 @@ export default function LoadsPage() {
             icon={<Edit className="h-4 w-4" />}
           >
             Edit Load
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={() => contextMenu.row && handleManageDocuments(contextMenu.row)}
+            icon={<FolderOpen className="h-4 w-4" />}
+            className="text-blue-600 hover:bg-blue-50"
+          >
+            Manage Documents
           </ContextMenuItem>
           <ContextMenuItem
             onClick={handleContextDelete}

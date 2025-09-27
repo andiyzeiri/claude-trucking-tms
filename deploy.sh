@@ -1,239 +1,154 @@
 #!/bin/bash
 
-# Claude TMS Deployment Script
-set -e
+# =================================================================================
+# ABSOLUTE TMS - Quick Deployment Script
+# =================================================================================
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+set -e  # Exit on any error
 
-# Configuration
-PROJECT_NAME="claude-tms"
-AWS_REGION="us-east-1"
-TERRAFORM_DIR="infrastructure"
+echo "🚀 Starting ABSOLUTE TMS Deployment..."
 
-echo -e "${GREEN}🚀 Starting Claude TMS Deployment${NC}"
+# Check if we're in the right directory
+if [ ! -f "package.json" ]; then
+    echo "❌ Error: Run this script from the project root directory"
+    exit 1
+fi
 
-# Function to check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
+# =================================================================================
+# Phase 1: Deploy Infrastructure
+# =================================================================================
 
-# Check prerequisites
-check_prerequisites() {
-    echo -e "${YELLOW}Checking prerequisites...${NC}"
+echo "📋 Phase 1: Deploying AWS Infrastructure..."
 
-    if ! command_exists terraform; then
-        echo -e "${RED}❌ Terraform not found. Please install Terraform first.${NC}"
-        exit 1
-    fi
+cd infrastructure
 
-    if ! command_exists docker; then
-        echo -e "${RED}❌ Docker not found. Please install Docker first.${NC}"
-        exit 1
-    fi
+# Check if terraform.tfvars exists
+if [ ! -f "terraform.tfvars" ]; then
+    echo "⚠️  Creating terraform.tfvars from example..."
+    cp terraform.tfvars.example terraform.tfvars
+    echo "✅ Please edit terraform.tfvars with your values, then run this script again"
+    exit 1
+fi
 
-    if ! aws sts get-caller-identity >/dev/null 2>&1; then
-        echo -e "${RED}❌ AWS CLI not configured. Please run 'aws configure' first.${NC}"
-        exit 1
-    fi
+# Initialize and deploy Terraform
+echo "🏗️  Initializing Terraform..."
+terraform init
 
-    echo -e "${GREEN}✅ Prerequisites checked${NC}"
-}
+echo "📊 Planning infrastructure..."
+terraform plan
 
-# Build and tag Docker images
-build_images() {
-    echo -e "${YELLOW}Building Docker images...${NC}"
-
-    # Backend image
-    echo "Building backend image..."
-    docker build -t ${PROJECT_NAME}-backend:latest ./backend/
-
-    echo -e "${GREEN}✅ Images built successfully${NC}"
-}
-
-# Deploy infrastructure
-deploy_infrastructure() {
-    echo -e "${YELLOW}Deploying infrastructure...${NC}"
-
-    cd ${TERRAFORM_DIR}
-
-    # Check if terraform.tfvars exists
-    if [ ! -f "terraform.tfvars" ]; then
-        echo -e "${RED}❌ terraform.tfvars not found. Please copy from terraform.tfvars.example and configure.${NC}"
-        exit 1
-    fi
-
-    # Initialize Terraform
-    echo "Initializing Terraform..."
-    ~/bin/terraform init
-
-    # Plan deployment
-    echo "Planning deployment..."
-    ~/bin/terraform plan -out=tfplan
-
-    # Apply deployment
-    echo "Applying deployment..."
-    ~/bin/terraform apply tfplan
+read -p "🤔 Deploy infrastructure? This will create AWS resources (~$50-100/month). (y/N): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "🚀 Deploying infrastructure..."
+    terraform apply -auto-approve
 
     # Get outputs
-    ECR_REPO=$(~/bin/terraform output -raw ecr_backend_repository_url)
-    ECS_CLUSTER=$(~/bin/terraform output -raw ecs_cluster_name)
-    ECS_SERVICE=$(~/bin/terraform output -raw ecs_service_name)
-    S3_FRONTEND_BUCKET=$(~/bin/terraform output -raw s3_frontend_bucket)
+    DB_ENDPOINT=$(terraform output -raw database_endpoint)
+    ECR_URI=$(terraform output -raw ecr_backend_repository_url)
+    ALB_DNS=$(terraform output -raw load_balancer_dns)
 
-    echo -e "${GREEN}✅ Infrastructure deployed${NC}"
+    echo "✅ Infrastructure deployed successfully!"
+    echo "📊 Database endpoint: $DB_ENDPOINT"
+    echo "🐳 ECR repository: $ECR_URI"
+    echo "🌐 Load balancer: $ALB_DNS"
+else
+    echo "❌ Deployment cancelled"
+    exit 1
+fi
 
-    cd ..
-}
+# =================================================================================
+# Phase 2: Set up Database
+# =================================================================================
 
-# Push images to ECR
-push_images() {
-    echo -e "${YELLOW}Pushing images to ECR...${NC}"
+echo "📋 Phase 2: Setting up database..."
 
-    # Get ECR login token
-    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}
+# Get database password from terraform.tfvars
+DB_PASSWORD=$(grep db_password terraform.tfvars | cut -d'"' -f2)
 
-    # Tag and push backend image
-    docker tag ${PROJECT_NAME}-backend:latest ${ECR_REPO}:latest
-    docker push ${ECR_REPO}:latest
+echo "🗄️  Setting up database schema..."
+PGPASSWORD="$DB_PASSWORD" psql -h "$DB_ENDPOINT" -U postgres -d absolute_tms -f ../database/schema.sql
 
-    echo -e "${GREEN}✅ Images pushed to ECR${NC}"
-}
+echo "📊 Loading sample data..."
+PGPASSWORD="$DB_PASSWORD" psql -h "$DB_ENDPOINT" -U postgres -d absolute_tms -f ../database/seed_data.sql
 
-# Update ECS service
-update_ecs_service() {
-    echo -e "${YELLOW}Updating ECS service...${NC}"
+echo "✅ Database setup complete!"
 
-    # Force new deployment
-    aws ecs update-service \
-        --cluster ${ECS_CLUSTER} \
-        --service ${ECS_SERVICE} \
-        --force-new-deployment \
-        --region ${AWS_REGION}
+# =================================================================================
+# Phase 3: Build and Deploy Backend
+# =================================================================================
 
-    # Wait for deployment to complete
-    echo "Waiting for service to stabilize..."
-    aws ecs wait services-stable \
-        --cluster ${ECS_CLUSTER} \
-        --services ${ECS_SERVICE} \
-        --region ${AWS_REGION}
+echo "📋 Phase 3: Building and deploying backend..."
 
-    echo -e "${GREEN}✅ ECS service updated${NC}"
-}
+cd ../backend
 
-# Run database migrations
-run_migrations() {
-    echo -e "${YELLOW}Running database migrations...${NC}"
+echo "🐳 Building Docker image..."
+docker build -t absolute-tms-backend .
 
-    # Get database connection info from Terraform outputs
-    cd ${TERRAFORM_DIR}
-    DB_ENDPOINT=$(~/bin/terraform output -raw database_endpoint)
-    cd ..
+echo "🔑 Logging into ECR..."
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$ECR_URI"
 
-    # Run migrations in ECS task
-    TASK_DEF_ARN=$(aws ecs describe-services \
-        --cluster ${ECS_CLUSTER} \
-        --services ${ECS_SERVICE} \
-        --query 'services[0].taskDefinition' \
-        --output text \
-        --region ${AWS_REGION})
+echo "🏷️  Tagging image..."
+docker tag absolute-tms-backend:latest "$ECR_URI:latest"
 
-    echo "Running migration task..."
-    aws ecs run-task \
-        --cluster ${ECS_CLUSTER} \
-        --task-definition ${TASK_DEF_ARN} \
-        --launch-type FARGATE \
-        --network-configuration "awsvpcConfiguration={subnets=[$(~/bin/terraform output -raw private_subnet_ids | tr -d '[]" ' | tr ',' ' ')],securityGroups=[$(aws ec2 describe-security-groups --filters 'Name=group-name,Values=*ecs-tasks*' --query 'SecurityGroups[0].GroupId' --output text --region ${AWS_REGION})]}" \
-        --overrides '{"containerOverrides":[{"name":"backend","command":["alembic","upgrade","head"]}]}' \
-        --region ${AWS_REGION}
+echo "📤 Pushing to ECR..."
+docker push "$ECR_URI:latest"
 
-    echo -e "${GREEN}✅ Database migrations completed${NC}"
-}
+echo "🔄 Updating ECS service..."
+aws ecs update-service --cluster absolute-tms-cluster --service absolute-tms-service --force-new-deployment
 
-# Deploy frontend
-deploy_frontend() {
-    echo -e "${YELLOW}Deploying frontend...${NC}"
+echo "✅ Backend deployed successfully!"
 
-    cd frontend
+# =================================================================================
+# Phase 4: Prepare Frontend for Netlify
+# =================================================================================
 
-    # Install dependencies and build
-    npm install
-    npm run build
+echo "📋 Phase 4: Preparing frontend for Netlify..."
 
-    # Upload to S3
-    aws s3 sync ./out/ s3://${S3_FRONTEND_BUCKET}/ --delete --region ${AWS_REGION}
+cd ../frontend
 
-    # Get CloudFront distribution ID
-    CLOUDFRONT_ID=$(aws cloudfront list-distributions \
-        --query "DistributionList.Items[?Comment=='${PROJECT_NAME}-frontend-cdn'].Id" \
-        --output text --region ${AWS_REGION})
+# Create production environment file
+echo "🔧 Creating production environment..."
+cat > .env.production << EOF
+NEXT_PUBLIC_API_URL=https://$ALB_DNS
+EOF
 
-    # Invalidate CloudFront cache
-    if [ ! -z "$CLOUDFRONT_ID" ]; then
-        echo "Invalidating CloudFront cache..."
-        aws cloudfront create-invalidation \
-            --distribution-id ${CLOUDFRONT_ID} \
-            --paths "/*" \
-            --region ${AWS_REGION}
-    fi
+# Build frontend
+echo "🏗️  Building frontend..."
+npm install
+npm run build
 
-    cd ..
-    echo -e "${GREEN}✅ Frontend deployed${NC}"
-}
+# Create deployment package
+echo "📦 Creating deployment package..."
+npm run export
 
-# Show deployment info
-show_deployment_info() {
-    echo -e "${GREEN}🎉 Deployment completed successfully!${NC}"
-    echo ""
-    echo "Deployment Information:"
-    echo "======================"
+echo "✅ Frontend built successfully!"
+echo "📁 Deploy the 'out' folder to Netlify"
 
-    cd ${TERRAFORM_DIR}
+# =================================================================================
+# Phase 5: Final Instructions
+# =================================================================================
 
-    echo "Frontend URL: https://$(~/bin/terraform output -raw cloudfront_domain_name)"
-    echo "Backend API: https://$(~/bin/terraform output -raw alb_hostname)"
-    echo "ECS Cluster: $(~/bin/terraform output -raw ecs_cluster_name)"
-    echo "RDS Endpoint: $(~/bin/terraform output -raw database_endpoint)"
-
-    cd ..
-}
-
-# Main deployment flow
-main() {
-    case "${1:-all}" in
-        "infra")
-            check_prerequisites
-            deploy_infrastructure
-            ;;
-        "app")
-            check_prerequisites
-            build_images
-            push_images
-            update_ecs_service
-            run_migrations
-            deploy_frontend
-            ;;
-        "all")
-            check_prerequisites
-            deploy_infrastructure
-            build_images
-            push_images
-            update_ecs_service
-            run_migrations
-            deploy_frontend
-            show_deployment_info
-            ;;
-        *)
-            echo "Usage: $0 [all|infra|app]"
-            echo "  all   - Deploy infrastructure and application (default)"
-            echo "  infra - Deploy only infrastructure"
-            echo "  app   - Deploy only application"
-            exit 1
-            ;;
-    esac
-}
-
-main "$@"
+echo ""
+echo "🎉 DEPLOYMENT COMPLETE!"
+echo ""
+echo "📋 Next Steps:"
+echo "1. 🌐 Deploy frontend to Netlify:"
+echo "   - Go to https://netlify.com"
+echo "   - Drag and drop the 'frontend/out' folder"
+echo "   - Set environment variable: NEXT_PUBLIC_API_URL=https://$ALB_DNS"
+echo ""
+echo "2. 🔗 Your API endpoints:"
+echo "   - Health Check: https://$ALB_DNS/health"
+echo "   - Loads API: https://$ALB_DNS/api/loads"
+echo "   - Drivers API: https://$ALB_DNS/api/drivers"
+echo ""
+echo "3. 📊 Monitor your deployment:"
+echo "   - AWS CloudWatch: Check ECS service logs"
+echo "   - AWS RDS: Monitor database performance"
+echo ""
+echo "4. 💰 Cost monitoring:"
+echo "   - Set up AWS billing alerts"
+echo "   - Monitor usage in AWS Console"
+echo ""
+echo "🚛 Your TMS is now live and ready for customers!"

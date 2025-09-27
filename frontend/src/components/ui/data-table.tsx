@@ -337,11 +337,14 @@ export function DataTable<T>({
                   <SelectContent>
                     {groupableColumns
                       .filter(column => !groupBy.includes(column.key))
-                      .map((column) => (
-                        <SelectItem key={String(column.key)} value={String(column.key)}>
-                          {column.label}
-                        </SelectItem>
-                      ))
+                      .map((column, index) => {
+                        const value = String(column.key) || `column-${index}`
+                        return (
+                          <SelectItem key={value} value={value}>
+                            {column.label}
+                          </SelectItem>
+                        )
+                      })
                     }
                   </SelectContent>
                 </Select>

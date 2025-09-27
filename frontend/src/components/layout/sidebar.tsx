@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/useAuth'
+import { ConditionalRender } from '@/components/auth/ProtectedRoute'
 import {
   Home,
   Package,
@@ -13,79 +15,94 @@ import {
   FileText,
   DollarSign,
   Settings,
-  LogOut
+  LogOut,
+  Calculator
 } from 'lucide-react'
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Loads', href: '/loads', icon: Package },
-  { name: 'Lanes', href: '/lanes', icon: Route },
-  { name: 'Trucks', href: '/trucks', icon: Truck },
-  { name: 'Drivers', href: '/drivers', icon: Users },
-  { name: 'Customers', href: '/customers', icon: Building2 },
-  { name: 'Invoices', href: '/invoices', icon: FileText },
-  { name: 'Reports', href: '/reports', icon: DollarSign },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Dashboard', href: '/dashboard', icon: Home, permissions: [] },
+  { name: 'Loads', href: '/loads', icon: Package, permissions: ['can_view_loads'] },
+  { name: 'Lanes', href: '/lanes', icon: Route, permissions: ['can_view_loads'] },
+  { name: 'Equipment', href: '/trucks', icon: Truck, permissions: ['can_view_trucks'] },
+  { name: 'Drivers', href: '/drivers', icon: Users, permissions: ['can_view_drivers'] },
+  { name: 'Customers', href: '/customers', icon: Building2, permissions: ['can_view_customers'] },
+  { name: 'Payroll', href: '/payroll', icon: Calculator, permissions: [] },
+  { name: 'Invoices', href: '/invoices', icon: FileText, permissions: ['can_view_invoices'] },
+  { name: 'Reports', href: '/reports', icon: DollarSign, permissions: ['can_view_reports'] },
+  { name: 'Settings', href: '/settings', icon: Settings, permissions: [] },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const { user, logout } = useAuth()
 
-  const handleLogout = () => {
-    // Simple logout for demo
-    window.location.href = '/login'
+  const handleLogout = async () => {
+    await logout()
+    window.location.href = '/auth/login'
   }
 
   return (
-    <div className="flex h-full w-60 flex-col bg-white border-r border-gray-200">
+    <div className="sidebar flex h-full w-60 flex-col bg-white border-r border-gray-200">
       {/* Logo/Brand */}
-      <div className="flex h-16 items-center justify-center border-b border-gray-200">
-        <div className="flex items-center space-x-2">
-          <Truck className="h-8 w-8 text-blue-600" />
-          <span className="text-xl font-semibold text-gray-900">TMS</span>
+      <div className="flex h-16 items-center justify-start px-4 border-b border-gray-200">
+        <div className="text-left">
+          <div className="text-xl font-semibold text-gray-900">ABSOLUTE</div>
+          <div className="text-xs text-gray-500">Transportation Management System</div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 space-y-0.5 px-3 py-4">
         {navigation.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href
 
           return (
-            <Link
+            <ConditionalRender
               key={item.name}
-              href={item.href}
-              className={cn(
-                'group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors',
-                isActive
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              )}
+              user={user}
+              permissions={item.permissions}
             >
-              <Icon className={cn(
-                'mr-3 h-5 w-5 flex-shrink-0',
-                isActive ? 'text-blue-600' : 'text-gray-400'
-              )} />
-              {item.name}
-            </Link>
+              <Link
+                href={item.href}
+                className={cn(
+                  'group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors nav-item',
+                  isActive
+                    ? 'active'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                )}
+              >
+                <Icon className={cn(
+                  'mr-3 h-5 w-5 flex-shrink-0',
+                  isActive ? 'text-current' : 'text-gray-400'
+                )} />
+                {item.name}
+              </Link>
+            </ConditionalRender>
           )
         })}
       </nav>
 
-      {/* Demo User & Logout */}
+      {/* User & Logout */}
       <div className="flex-shrink-0 border-t border-gray-200 p-4">
-        <div className="flex items-center space-x-3 mb-3">
-          <div className="flex-shrink-0">
-            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <span className="text-sm font-medium text-blue-600">DA</span>
+        {user && (
+          <div className="flex items-center space-x-3 mb-3">
+            <div className="flex-shrink-0">
+              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <span className="text-sm font-medium text-blue-600">
+                  {user.first_name?.[0] || ''}{user.last_name?.[0] || ''}
+                </span>
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900">
+                {user.first_name || ''} {user.last_name || ''}
+              </p>
+              <p className="text-xs text-gray-500">{user.email || ''}</p>
+              <p className="text-xs text-blue-600 capitalize">{user.role?.replace('_', ' ') || ''}</p>
             </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-gray-900">Demo Admin</p>
-            <p className="text-xs text-gray-500">demo@example.com</p>
-          </div>
-        </div>
+        )}
         <button
           onClick={handleLogout}
           className="flex w-full items-center px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-colors"

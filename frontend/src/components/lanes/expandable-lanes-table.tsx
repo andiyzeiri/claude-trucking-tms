@@ -112,8 +112,8 @@ export function ExpandableLanesTable({
   ]
 
   return (
-    <div className={cn("border border-gray-200 rounded-lg bg-white", className)} style={{ minWidth: '1400px', width: '100%' }}>
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
+    <div className={cn("bg-white rounded-lg shadow border", className)} style={{ minWidth: '1400px', width: '100%' }}>
+      <div className="p-4 border-b border-gray-200 bg-gray-50/50">
         <div className="flex items-center gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -121,7 +121,7 @@ export function ExpandableLanesTable({
               placeholder="Search lanes, brokers, emails..."
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 bg-white"
+              className="pl-10 bg-white border-gray-200"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -138,7 +138,7 @@ export function ExpandableLanesTable({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 last:border-r-0"
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-100 last:border-r-0"
                   style={{ width: column.width }}
                 >
                   <div className="flex items-center justify-between min-w-0">
@@ -179,7 +179,7 @@ export function ExpandableLanesTable({
                           ...prev,
                           [column.key]: e.target.value
                         }))}
-                        className="h-6 text-xs"
+                        className="h-6 text-xs border-gray-200"
                       />
                     </div>
                   )}
@@ -192,10 +192,10 @@ export function ExpandableLanesTable({
               <React.Fragment key={group.lane}>
                 {/* Lane Group Header Row */}
                 <tr
-                  className="group border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer bg-gray-100"
+                  className="group border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer bg-gray-50"
                   onClick={() => onToggleLane(group.lane)}
                 >
-                  <td className="px-3 py-3 text-sm border-r border-gray-100" style={{ width: '60%' }}>
+                  <td className="px-4 py-3 text-sm border-r border-gray-100" style={{ width: '60%' }}>
                     <div className="flex items-center">
                       <ChevronRight
                         className={`h-4 w-4 text-gray-500 transition-transform mr-3 ${
@@ -217,7 +217,7 @@ export function ExpandableLanesTable({
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-3 text-sm" style={{ width: '40%' }}>
+                  <td className="px-4 py-3 text-sm" style={{ width: '40%' }}>
                     <div className="flex items-center justify-between">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         {group.brokers.length} broker{group.brokers.length !== 1 ? 's' : ''}
@@ -233,10 +233,10 @@ export function ExpandableLanesTable({
                 {group.isExpanded && group.brokers.map((broker, brokerIndex) => (
                   <tr
                     key={`${group.lane}-${broker.id}`}
-                    className="group border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                    className="group border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
                     onContextMenu={(e) => onBrokerRightClick?.(broker, e)}
                   >
-                    <td className="px-3 py-2 text-sm border-r border-gray-100 pl-12" style={{ width: '60%' }}>
+                    <td className="px-4 py-3 text-sm border-r border-gray-100 pl-12" style={{ width: '60%' }}>
                       <div className="flex items-center space-x-3">
                         <div className="flex items-center space-x-2">
                           <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
@@ -249,7 +249,7 @@ export function ExpandableLanesTable({
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-sm" style={{ width: '40%' }}>
+                    <td className="px-4 py-3 text-sm" style={{ width: '40%' }}>
                       <div className="space-y-1">
                         <div className="flex items-center space-x-2">
                           <span className="text-xs text-gray-500">📧</span>

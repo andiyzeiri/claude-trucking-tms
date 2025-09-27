@@ -1,46 +1,76 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import Layout from '@/components/layout/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { DataTable, Column } from '@/components/ui/data-table'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
 import { TruckModal, TruckData } from '@/components/trucks/truck-modal'
-import { Plus, Truck, Wrench, CheckCircle, Edit, Trash2, User } from 'lucide-react'
+import { Plus, Truck, Edit, Trash2 } from 'lucide-react'
 
 export default function TrucksPage() {
-  // State for managing trucks
+  // State for managing equipment
   const [trucks, setTrucks] = useState([
     {
       id: 1,
+      type: "Tractor",
       unit_number: "T001",
+      year: 2022,
       make: "Freightliner",
       model: "Cascadia",
-      year: 2022,
-      status: "available",
-      mileage: 125000,
-      driver: "John Smith"
+      vin: "1FUJGLDR5NLSP1234",
+      miles: 125000,
+      value: 85000,
+      mpg: 7.2,
+      registration: "2025-06-15",
+      inspection: "2024-12-20",
+      service_history: "Last service: Oil change 11/15/24"
     },
     {
       id: 2,
+      type: "Tractor",
       unit_number: "T002",
+      year: 2021,
       make: "Peterbilt",
       model: "579",
-      year: 2021,
-      status: "in_use",
-      mileage: 158000,
-      driver: "Jane Doe"
+      vin: "1XP5DB9X1MD567890",
+      miles: 158000,
+      value: 78000,
+      mpg: 6.8,
+      registration: "2025-03-10",
+      inspection: "2024-11-05",
+      service_history: "Last service: PM Service 10/22/24"
     },
     {
       id: 3,
+      type: "Trailer",
+      unit_number: "TR001",
+      year: 2023,
+      make: "Great Dane",
+      model: "Everest",
+      vin: "1GRAA0621PF123456",
+      miles: 85000,
+      value: 45000,
+      mpg: 0,
+      registration: "2025-08-30",
+      inspection: "2024-10-15",
+      service_history: "Last service: Brake inspection 09/30/24"
+    },
+    {
+      id: 4,
+      type: "Tractor",
       unit_number: "T003",
+      year: 2020,
       make: "Kenworth",
       model: "T680",
-      year: 2023,
-      status: "maintenance",
-      mileage: 89000,
-      driver: null
+      vin: "1XKAD40X8LJ789123",
+      miles: 285000,
+      value: 65000,
+      mpg: 6.5,
+      registration: "2024-12-31",
+      inspection: "2024-09-12",
+      service_history: "Last service: Engine overhaul 08/15/24"
     },
   ])
 
@@ -57,23 +87,6 @@ export default function TrucksPage() {
     row: typeof trucks[0] | null
   }>({ isVisible: false, x: 0, y: 0, row: null })
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'available': return 'bg-green-100 text-green-800'
-      case 'in_use': return 'bg-blue-100 text-blue-800'
-      case 'maintenance': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'available': return CheckCircle
-      case 'in_use': return Truck
-      case 'maintenance': return Wrench
-      default: return Truck
-    }
-  }
 
   // CRUD operations
   const handleCreateTruck = () => {
@@ -136,68 +149,21 @@ export default function TrucksPage() {
     closeContextMenu()
   }
 
-  // Calculate group totals for display in group headers
-  const calculateGroupTotals = (rows: typeof trucks[0][]) => {
-    const totalTrucks = rows.length
-    const totalMileage = rows.reduce((sum, row) => sum + row.mileage, 0)
-    const averageMileage = totalTrucks > 0 ? totalMileage / totalTrucks : 0
-
-    return {
-      'unit_number': (
-        <span className="text-sm font-medium text-gray-900">
-          {totalTrucks} truck{totalTrucks !== 1 ? 's' : ''}
-        </span>
-      ),
-      'mileage': (
-        <span className="text-sm font-medium text-blue-700">
-          {totalMileage.toLocaleString()} mi total
-        </span>
-      ),
-      'year': (
-        <span className="text-sm font-medium text-purple-700">
-          Avg: {Math.round(averageMileage).toLocaleString()} mi
-        </span>
-      )
-    }
-  }
-
-  // Calculate totals for the floating row
-  const totals = useMemo(() => {
-    const totalTrucks = trucks.length
-    const totalMileage = trucks.reduce((sum, truck) => sum + truck.mileage, 0)
-    const averageMileage = totalTrucks > 0 ? totalMileage / totalTrucks : 0
-    const availableTrucks = trucks.filter(t => t.status === 'available').length
-
-    return {
-      totalTrucks,
-      totalMileage,
-      averageMileage,
-      availableTrucks
-    }
-  }, [trucks])
 
   const columns: Column<typeof trucks[0]>[] = [
     {
-      key: 'unit_number',
-      label: 'Unit #',
-      width: '120px',
+      key: 'type',
+      label: 'Type',
+      width: '100px',
+      filterable: true,
+      groupable: true,
       render: (value) => <span className="font-medium text-gray-900">{value}</span>
     },
     {
-      key: 'status',
-      label: 'Status',
-      width: '140px',
-      filterable: true,
-      groupable: true,
-      render: (value) => {
-        const StatusIcon = getStatusIcon(value)
-        return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
-            <StatusIcon className="h-3 w-3 mr-1" />
-            {value.replace('_', ' ')}
-          </span>
-        )
-      }
+      key: 'unit_number',
+      label: 'Unit Number',
+      width: '120px',
+      render: (value) => <span className="font-medium text-blue-600">{value}</span>
     },
     {
       key: 'year',
@@ -218,21 +184,59 @@ export default function TrucksPage() {
       filterable: true
     },
     {
-      key: 'mileage',
-      label: 'Mileage',
-      width: '120px',
-      render: (value) => `${value.toLocaleString()} mi`
+      key: 'vin',
+      label: 'VIN',
+      width: '180px',
+      render: (value) => <span className="text-xs font-mono text-gray-700">{value}</span>
     },
     {
-      key: 'driver',
-      label: 'Driver',
-      width: '140px',
-      filterable: true,
-      groupable: true,
+      key: 'miles',
+      label: 'Miles',
+      width: '100px',
+      render: (value) => `${value.toLocaleString()}`
+    },
+    {
+      key: 'value',
+      label: 'Value',
+      width: '100px',
+      render: (value) => `$${value.toLocaleString()}`
+    },
+    {
+      key: 'mpg',
+      label: 'MPG',
+      width: '80px',
+      render: (value) => value === 0 ? 'N/A' : value.toString()
+    },
+    {
+      key: 'registration',
+      label: 'Registration',
+      width: '120px',
+      render: (value) => new Date(value).toLocaleDateString()
+    },
+    {
+      key: 'inspection',
+      label: 'Inspection',
+      width: '120px',
+      render: (value) => {
+        const inspectionDate = new Date(value)
+        const today = new Date()
+        const daysUntilExpiry = Math.ceil((inspectionDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+        const isExpiringSoon = daysUntilExpiry <= 30
+
+        return (
+          <span className={isExpiringSoon ? 'text-red-600 font-medium' : 'text-gray-900'}>
+            {inspectionDate.toLocaleDateString()}
+          </span>
+        )
+      }
+    },
+    {
+      key: 'service_history',
+      label: 'Service History',
+      width: '200px',
       render: (value) => (
-        <div className="flex items-center text-sm">
-          <User className="h-3 w-3 mr-1 text-gray-400" />
-          {value || 'Unassigned'}
+        <div className="text-sm text-gray-600 truncate" title={value}>
+          {value}
         </div>
       )
     }
@@ -240,15 +244,15 @@ export default function TrucksPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="page-trucks space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Trucks</h1>
-            <p className="text-gray-600">Manage your fleet vehicles</p>
+            <h1 className="text-2xl font-semibold text-gray-900">Equipment</h1>
+            <p className="text-gray-600">Manage your fleet equipment and vehicles</p>
           </div>
           <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCreateTruck}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Truck
+            Add Equipment
           </Button>
         </div>
 
@@ -256,52 +260,8 @@ export default function TrucksPage() {
           data={trucks}
           columns={columns}
           onRowRightClick={handleRowRightClick}
-          calculateGroupTotals={calculateGroupTotals}
         />
 
-        {/* Floating Totals Row - Aligned with table columns */}
-        <div className="sticky bottom-0 bg-white border-t-2 border-gray-300 shadow-lg mt-4">
-          <div style={{ minWidth: '1400px', width: '100%' }}>
-            <table className="w-full table-auto">
-              <tbody>
-                <tr className="bg-gray-50">
-                  {/* Unit # column - show total count */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px', minWidth: '120px' }}>
-                    <span className="font-medium text-gray-900">
-                      {totals.totalTrucks} Truck{totals.totalTrucks !== 1 ? 's' : ''}
-                    </span>
-                  </td>
-                  {/* Status column - show available count */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '140px', minWidth: '140px' }}>
-                    <span className="font-medium text-green-700">
-                      {totals.availableTrucks} Available
-                    </span>
-                  </td>
-                  {/* Year column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '80px', minWidth: '80px' }}>
-
-                  </td>
-                  {/* Make column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px', minWidth: '120px' }}>
-
-                  </td>
-                  {/* Model column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px', minWidth: '120px' }}>
-
-                  </td>
-                  {/* Mileage column - show total mileage */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px', minWidth: '120px' }}>
-                    <span className="text-blue-700">{totals.totalMileage.toLocaleString()} mi</span>
-                  </td>
-                  {/* Driver column - show average mileage */}
-                  <td className="px-3 py-2 text-sm" style={{ width: '140px', minWidth: '140px' }}>
-                    <span className="text-purple-700">Avg: {Math.round(totals.averageMileage).toLocaleString()} mi</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
 
         <TruckModal
           isOpen={isModalOpen}

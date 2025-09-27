@@ -1,0 +1,195 @@
+/* Page-specific color themes - Very pale and subtle */
+
+/* Dashboard - Soft Blue */
+.page-dashboard {
+  --page-bg: #fafbff;
+  --page-accent: #f0f4ff;
+  --page-border: #e1e8ff;
+  --page-hover: #f5f8ff;
+  --page-text-accent: #4f46e5;
+  --page-text-muted: #6b7280;
+}
+
+/* Loads - Gentle Green */
+.page-loads {
+  --page-bg: #fafffe;
+  --page-accent: #f0fdf4;
+  --page-border: #dcfce7;
+  --page-hover: #f7fee7;
+  --page-text-accent: #16a34a;
+  --page-text-muted: #6b7280;
+}
+
+/* Lanes - Soft Orange */
+.page-lanes {
+  --page-bg: #fffcfa;
+  --page-accent: #fff7ed;
+  --page-border: #fed7aa;
+  --page-hover: #fef3c7;
+  --page-text-accent: #ea580c;
+  --page-text-muted: #6b7280;
+}
+
+/* Trucks - Light Purple */
+.page-trucks {
+  --page-bg: #fdfaff;
+  --page-accent: #faf5ff;
+  --page-border: #e9d5ff;
+  --page-hover: #f3e8ff;
+  --page-text-accent: #9333ea;
+  --page-text-muted: #6b7280;
+}
+
+/* Drivers - Soft Teal */
+.page-drivers {
+  --page-bg: #f9fffe;
+  --page-accent: #f0fdfa;
+  --page-border: #ccfbf1;
+  --page-hover: #e6fffa;
+  --page-text-accent: #0d9488;
+  --page-text-muted: #6b7280;
+}
+
+/* Customers - Light Rose */
+.page-customers {
+  --page-bg: #fffafc;
+  --page-accent: #fdf2f8;
+  --page-border: #fce7f3;
+  --page-hover: #fef7f0;
+  --page-text-accent: #e11d48;
+  --page-text-muted: #6b7280;
+}
+
+/* Payroll - Soft Yellow */
+.page-payroll {
+  --page-bg: #fefffe;
+  --page-accent: #fefce8;
+  --page-border: #fef3c7;
+  --page-hover: #fffbeb;
+  --page-text-accent: #ca8a04;
+  --page-text-muted: #6b7280;
+}
+
+/* Invoices - Light Indigo */
+.page-invoices {
+  --page-bg: #fafaff;
+  --page-accent: #f1f5f9;
+  --page-border: #e2e8f0;
+  --page-hover: #f8fafc;
+  --page-text-accent: #3730a3;
+  --page-text-muted: #6b7280;
+}
+
+/* Reports - Soft Emerald */
+.page-reports {
+  --page-bg: #fafffe;
+  --page-accent: #f0fdf9;
+  --page-border: #d1fae5;
+  --page-hover: #ecfdf5;
+  --page-text-accent: #059669;
+  --page-text-muted: #6b7280;
+}
+
+/* Settings - Light Gray */
+.page-settings {
+  --page-bg: #fafafa;
+  --page-accent: #f5f5f5;
+  --page-border: #e5e5e5;
+  --page-hover: #f9f9f9;
+  --page-text-accent: #525252;
+  --page-text-muted: #6b7280;
+}
+
+/* Auth - Soft Lavender */
+.page-auth {
+  --page-bg: #fefbff;
+  --page-accent: #faf5ff;
+  --page-border: #e9d5ff;
+  --page-hover: #f3e8ff;
+  --page-text-accent: #7c3aed;
+  --page-text-muted: #6b7280;
+}
+
+/* Apply theme colors to elements */
+[class*="page-"] {
+  background-color: var(--page-bg);
+  min-height: 100vh;
+}
+
+[class*="page-"] .page-card {
+  background-color: white;
+  border: 1px solid var(--page-border);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+}
+
+[class*="page-"] .page-card:hover {
+  background-color: var(--page-hover);
+}
+
+[class*="page-"] .page-accent {
+  background-color: var(--page-accent);
+  border-color: var(--page-border);
+}
+
+[class*="page-"] .page-text-accent {
+  color: var(--page-text-accent);
+}
+
+[class*="page-"] .page-border {
+  border-color: var(--page-border);
+}
+
+[class*="page-"] .page-bg-accent {
+  background-color: var(--page-accent);
+}
+
+[class*="page-"] .page-hover:hover {
+  background-color: var(--page-hover);
+}
+
+/* Button variants with page colors */
+[class*="page-"] .btn-page-primary {
+  background-color: var(--page-text-accent);
+  color: white;
+  border: 1px solid var(--page-text-accent);
+}
+
+[class*="page-"] .btn-page-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+[class*="page-"] .btn-page-secondary {
+  background-color: var(--page-accent);
+  color: var(--page-text-accent);
+  border: 1px solid var(--page-border);
+}
+
+[class*="page-"] .btn-page-secondary:hover {
+  background-color: var(--page-hover);
+}
+
+/* Status indicators with page theming */
+[class*="page-"] .status-success {
+  background-color: var(--page-accent);
+  color: var(--page-text-accent);
+  border: 1px solid var(--page-border);
+}
+
+/* Table headers with subtle page coloring */
+[class*="page-"] .table-header {
+  background-color: var(--page-accent);
+  border-bottom: 1px solid var(--page-border);
+}
+
+/* Navigation active state enhancement */
+.sidebar .nav-item.active {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: rgb(59, 130, 246);
+}
+
+/* Subtle gradients for headers */
+[class*="page-"] .page-header-gradient {
+  background: linear-gradient(135deg, var(--page-bg) 0%, var(--page-accent) 100%);
+  border-bottom: 1px solid var(--page-border);
+}

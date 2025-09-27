@@ -1,145 +1,214 @@
-# Claude TMS Infrastructure
+# ABSOLUTE TMS - AWS Infrastructure
 
-This directory contains Terraform configuration files for deploying the Claude TMS to AWS.
+Production-ready AWS infrastructure for a multi-tenant SaaS Transportation Management System.
 
-## Prerequisites
+## 🏗️ Infrastructure Components
 
-1. **AWS CLI** configured with appropriate credentials
-2. **Terraform** >= 1.0 installed
-3. **Domain name** (optional but recommended)
-4. **SSL Certificate** in AWS Certificate Manager
+This Terraform configuration deploys:
 
-## Quick Start
+- **VPC**: Multi-AZ virtual private cloud with public/private/database subnets
+- **RDS PostgreSQL**: Multi-AZ database with encryption and automated backups
+- **ECS Fargate**: Serverless container hosting for FastAPI backend
+- **Application Load Balancer**: SSL termination and health checks
+- **CloudFront**: Global CDN for frontend and API caching
+- **S3 Buckets**: Document storage and frontend static assets
+- **Secrets Manager**: Secure credential storage
+- **IAM Roles**: Least privilege access policies
+- **CloudWatch**: Logging and monitoring
 
-### 1. Configure Variables
+## 💰 Estimated Monthly Costs
+
+| Service | Configuration | Est. Monthly Cost |
+|---------|--------------|-------------------|
+| RDS PostgreSQL | db.t3.medium, Multi-AZ | ~$100 |
+| ECS Fargate | 2 tasks, 1 vCPU, 2GB RAM | ~$60 |
+| Application Load Balancer | Standard | ~$25 |
+| CloudFront | 1TB data transfer | ~$100 |
+| S3 Storage | 100GB + requests | ~$10 |
+| NAT Gateways | 2 AZs | ~$90 |
+| Other services | Secrets, CloudWatch, etc. | ~$15 |
+| **Total Estimated** | | **~$400/month** |
+
+*Costs will scale with usage. Consider using smaller instances for development.*
+
+## 🚀 Deployment Guide
+
+### Prerequisites
+
+1. **AWS CLI configured** with appropriate permissions
+2. **Terraform installed** (v1.0+)
+3. **Domain name** registered and managed in AWS Route 53
+4. **Stripe account** for subscription billing
+
+### Step 1: Configure Variables
 
 ```bash
+cd infrastructure
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-Edit `terraform.tfvars` with your specific values:
-- Set your domain name and certificate ARN
-- Generate secure passwords for database and JWT
-- Adjust resource sizes based on your needs
+Edit `terraform.tfvars` with your values:
+```hcl
+aws_region = "us-east-1"
+domain_name = "yourdomain.com"
+db_password = "super-secure-password"
+stripe_api_key = "sk_live_your_stripe_key"
+jwt_secret = "your-jwt-secret"
+```
 
-### 2. Initialize and Deploy
+### Step 2: Initialize Terraform
 
 ```bash
-# Initialize Terraform
 terraform init
+```
 
-# Review the deployment plan
+### Step 3: Plan Deployment
+
+```bash
 terraform plan
+```
 
-# Deploy infrastructure
+Review the plan carefully. This will create ~30 AWS resources.
+
+### Step 4: Deploy Infrastructure
+
+```bash
 terraform apply
 ```
 
-### 3. Post-Deployment Setup
+Type `yes` when prompted. Deployment takes ~15 minutes.
 
-After infrastructure is deployed, you'll need to:
+### Step 5: Configure DNS
 
-1. **Push Docker Images** to the created ECR repository
-2. **Run Database Migrations** on the RDS instance
-3. **Deploy Frontend** to the S3 bucket
-4. **Configure DNS** if using custom domain
+After deployment, you'll need to:
 
-## Architecture Overview
+1. **Point your domain to CloudFront**:
+   ```
+   yourdomain.com → [CloudFront Distribution Domain]
+   ```
 
-### Backend Services
-- **ECS Fargate** - Containerized FastAPI backend
-- **RDS PostgreSQL** - Database with PostGIS extension
-- **ElastiCache Redis** - Caching and session storage
-- **Application Load Balancer** - SSL termination and routing
+2. **Validate SSL certificate**:
+   - Check AWS Certificate Manager console
+   - Add required DNS records to validate domain ownership
 
-### Frontend Services
-- **S3 + CloudFront** - Static website hosting with CDN
-- **Route 53** - DNS management (if domain provided)
+## 📋 Post-Deployment Setup
 
-### Storage & Security
-- **S3** - Document storage (BOL/POD files)
-- **IAM** - Proper role-based access control
-- **Security Groups** - Network-level security
-
-## Environment Variables
-
-The following environment variables are automatically configured:
-
-### Backend
-- `DATABASE_URL` - PostgreSQL connection string
-- `REDIS_URL` - Redis connection string
-- `AWS_S3_BUCKET` - S3 bucket for document storage
-- `JWT_SECRET_KEY` - JWT signing key
-
-### Frontend
-- `NEXT_PUBLIC_API_URL` - Backend API endpoint
-
-## Costs
-
-Estimated monthly costs for minimal production setup:
-- RDS db.t3.micro: ~$15/month
-- ECS Fargate (1 task): ~$15/month
-- ElastiCache t3.micro: ~$15/month
-- ALB: ~$20/month
-- CloudFront: ~$1/month (low traffic)
-- S3: ~$5/month (moderate storage)
-
-**Total**: ~$70/month (excluding data transfer)
-
-## Scaling
-
-To scale the application:
-
-1. **Horizontal Scaling**: Increase `desired_count` in variables
-2. **Vertical Scaling**: Increase `container_cpu` and `container_memory`
-3. **Database Scaling**: Upgrade `db_instance_class`
-
-## Security
-
-- All traffic encrypted in transit (HTTPS/TLS)
-- Database in private subnets
-- S3 buckets with proper access controls
-- IAM roles with minimal required permissions
-
-## Monitoring
-
-- CloudWatch logs for all services
-- ECS Container Insights enabled
-- RDS Enhanced Monitoring available
-
-## Backup & Recovery
-
-- RDS automated backups (7-day retention)
-- S3 versioning enabled
-- Database encryption at rest
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Certificate ARN**: Make sure certificate is in the same region
-2. **Domain Setup**: Ensure Route 53 hosted zone exists
-3. **ECR Push**: Login to ECR before pushing images
-
-### Useful Commands
+### 1. Database Setup
 
 ```bash
-# Check infrastructure status
-terraform show
+# Get database endpoint from Terraform outputs
+terraform output database_endpoint
 
-# View outputs
-terraform output
-
-# Destroy infrastructure (careful!)
-terraform destroy
+# Connect and run schema
+psql -h [database-endpoint] -U postgres -d absolute_tms -f ../database/schema.sql
+psql -h [database-endpoint] -U postgres -d absolute_tms -f ../database/seed_data.sql
 ```
 
-## Next Steps
+### 2. Build and Deploy Backend
 
-After deploying infrastructure:
+```bash
+# Get ECR repository URL
+terraform output ecr_backend_repository_url
 
-1. Build and push Docker images to ECR
-2. Run database migrations
-3. Deploy frontend build to S3
-4. Set up CI/CD pipeline
-5. Configure monitoring and alerting
+# Build and push Docker image
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin [account].dkr.ecr.us-east-1.amazonaws.com
+
+docker build -t absolute-tms-backend ../backend
+docker tag absolute-tms-backend:latest [ecr-repo-url]:latest
+docker push [ecr-repo-url]:latest
+
+# Update ECS service to use new image
+aws ecs update-service --cluster absolute-tms-cluster --service absolute-tms-service --force-new-deployment
+```
+
+### 3. Deploy Frontend
+
+```bash
+# Build Next.js frontend
+cd ../frontend
+npm run build
+npm run export
+
+# Upload to S3
+aws s3 sync out/ s3://[frontend-bucket-name] --delete
+
+# Invalidate CloudFront cache
+aws cloudfront create-invalidation --distribution-id [distribution-id] --paths "/*"
+```
+
+## 🔒 Security Features
+
+- **Encryption**: All data encrypted at rest and in transit
+- **Network isolation**: Private subnets for backend services
+- **IAM roles**: Least privilege access principles
+- **Security groups**: Restrictive firewall rules
+- **Secrets management**: No hardcoded credentials
+- **SSL/TLS**: HTTPS everywhere with AWS Certificate Manager
+
+## 📊 Monitoring & Scaling
+
+### CloudWatch Dashboards
+- ECS service health and performance
+- RDS database metrics
+- Application Load Balancer metrics
+- S3 usage and costs
+
+### Auto Scaling
+The ECS service can be configured for auto-scaling:
+
+```hcl
+# Add to main.tf
+resource "aws_appautoscaling_target" "ecs_target" {
+  max_capacity       = 10
+  min_capacity       = 2
+  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.app.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+```
+
+## 🔧 Maintenance Tasks
+
+### Database Backups
+- Automated daily backups (7-day retention)
+- Manual snapshots before major changes
+- Point-in-time recovery available
+
+### Updates and Patches
+- RDS maintenance windows: Sundays 4-5 AM EST
+- ECS tasks automatically updated with new deployments
+- Security patches applied automatically
+
+### Cost Optimization
+- Monitor unused resources with AWS Cost Explorer
+- Consider Reserved Instances for RDS
+- Use S3 lifecycle policies for document storage
+
+## 🚨 Disaster Recovery
+
+### Backup Strategy
+- **RDS**: Automated backups + manual snapshots
+- **S3**: Cross-region replication for critical documents
+- **Application**: Container images stored in ECR
+
+### Recovery Procedures
+1. **Database**: Restore from automated backup or snapshot
+2. **Application**: Deploy from latest ECR image
+3. **Frontend**: Re-deploy from source code
+
+## 📞 Support
+
+For infrastructure issues:
+1. Check AWS CloudWatch logs
+2. Review Terraform state: `terraform show`
+3. AWS Support (if you have a support plan)
+
+## 🔄 Development Environment
+
+For a cheaper development environment:
+- Use `db.t3.micro` instead of `db.t3.medium`
+- Single AZ deployment (remove `multi_az = true`)
+- Smaller ECS task sizes
+- Skip CloudFront for development
+
+Estimated dev cost: ~$50/month
