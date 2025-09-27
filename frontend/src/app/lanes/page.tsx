@@ -200,7 +200,7 @@ export default function LanesPage() {
       }
       setLanes([...lanes, newLane])
     } else {
-      setLanes(lanes.map(lane => lane.id === editingLane?.id ? { ...laneData, id: editingLane.id } : lane))
+      setLanes(lanes.map(lane => lane.id === editingLane?.id ? { ...laneData, id: editingLane?.id || lane.id } : lane))
     }
   }
 

@@ -256,13 +256,34 @@ export default function PayrollPage() {
       render: (value) => formatCurrency(value)
     },
     {
-      key: 'deductions',
-      label: 'Total Deductions',
-      width: '130px',
-      render: (_, row) => {
-        const totalDeductions = row.dispatch_fee + row.insurance + row.fuel + row.parking + row.trailer + row.misc
-        return <span className="text-red-600">{formatCurrency(totalDeductions)}</span>
-      }
+      key: 'insurance',
+      label: 'Insurance',
+      width: '110px',
+      render: (value) => formatCurrency(value)
+    },
+    {
+      key: 'fuel',
+      label: 'Fuel',
+      width: '110px',
+      render: (value) => formatCurrency(value)
+    },
+    {
+      key: 'parking',
+      label: 'Parking',
+      width: '110px',
+      render: (value) => formatCurrency(value)
+    },
+    {
+      key: 'trailer',
+      label: 'Trailer',
+      width: '110px',
+      render: (value) => formatCurrency(value)
+    },
+    {
+      key: 'misc',
+      label: 'Misc',
+      width: '110px',
+      render: (value) => formatCurrency(value)
     }
   ]
 

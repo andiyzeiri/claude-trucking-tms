@@ -88,7 +88,11 @@ export default function InvoicesPage() {
   const closeContextMenu = () => setContextMenu({ isVisible: false, x: 0, y: 0, row: null })
   const handleContextEdit = () => {
     if (contextMenu.row) {
-      setEditingInvoice(contextMenu.row)
+      const invoiceData: InvoiceData = {
+        ...contextMenu.row,
+        status: contextMenu.row.status as 'paid' | 'pending' | 'overdue'
+      }
+      setEditingInvoice(invoiceData)
       setModalMode('edit')
       setIsModalOpen(true)
     }

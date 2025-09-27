@@ -131,7 +131,7 @@ export default function LoadsPage() {
       }
       setLoads([...loads, newLoad])
     } else {
-      setLoads(loads.map(load => load.id === editingLoad?.id ? { ...loadData, id: editingLoad.id } : load))
+      setLoads(loads.map(load => load.id === editingLoad?.id ? { ...loadData, id: editingLoad?.id || load.id } : load))
     }
   }
 
@@ -345,20 +345,14 @@ export default function LoadsPage() {
       key: 'miles',
       label: 'Miles',
       width: '100px',
-      render: (value) => `${value.toLocaleString()} mi`
-    },
-    {
-      key: 'rpm',
-      label: 'RPM',
-      width: '100px',
-      render: (value, row) => `$${calculateRPM(row.rate, row.miles)}`
+      render: (value, row) => `${value.toLocaleString()} mi ($${calculateRPM(row.rate, row.miles)}/mi)`
     },
     {
       key: 'ratecon',
       label: 'Ratecon',
       width: '120px',
       render: (value, row) => {
-        const docCount = loadDocuments[row.id]?.ratecon.length || 0
+        const docCount = row.id ? loadDocuments[row.id]?.ratecon.length || 0 : 0
         return (
           <div className="flex items-center justify-center">
             <Button
@@ -393,7 +387,7 @@ export default function LoadsPage() {
       label: 'POD',
       width: '120px',
       render: (value, row) => {
-        const docCount = loadDocuments[row.id]?.pod.length || 0
+        const docCount = row.id ? loadDocuments[row.id]?.pod.length || 0 : 0
         return (
           <div className="flex items-center justify-center">
             <Button
@@ -472,7 +466,7 @@ export default function LoadsPage() {
             isOpen={isDocumentModalOpen}
             onClose={closeDocumentModal}
             loadNumber={documentLoad.load_number}
-            documents={loadDocuments[documentLoad.id] || { ratecon: [], pod: [] }}
+            documents={documentLoad.id ? loadDocuments[documentLoad.id] || { ratecon: [], pod: [] } : { ratecon: [], pod: [] }}
             onDocumentsChange={(documents) => handleDocumentsChange(documentLoad.id!, documents)}
           />
         )}

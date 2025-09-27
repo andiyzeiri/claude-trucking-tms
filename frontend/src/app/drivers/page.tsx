@@ -209,17 +209,11 @@ export default function DriversPage() {
       key: 'dob',
       label: 'DOB',
       width: '120px',
-      render: (value) => new Date(value).toLocaleDateString()
-    },
-    {
-      key: 'age',
-      label: 'Age',
-      width: '60px',
-      render: (_, row) => {
+      render: (value) => {
         const today = new Date()
-        const birthDate = new Date(row.dob)
+        const birthDate = new Date(value)
         const age = Math.floor((today.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-        return age.toString()
+        return `${new Date(value).toLocaleDateString()} (${age})`
       }
     },
     {
