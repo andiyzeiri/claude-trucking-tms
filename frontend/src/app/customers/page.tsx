@@ -97,12 +97,17 @@ export default function CustomersPage() {
     if (modalMode === 'create') {
       const newCustomer = {
         ...customerData,
-        id: Math.max(...customers.map(c => c.id || 0)) + 1
+        id: Math.max(...customers.map(c => c.id || 0)) + 1,
+        created_at: customerData.created_at || new Date().toISOString()
       }
       setCustomers([...customers, newCustomer])
     } else {
       setCustomers(customers.map(customer =>
-        customer.id === editingCustomer?.id ? { ...customerData, id: editingCustomer.id } : customer
+        customer.id === editingCustomer?.id ? {
+          ...customerData,
+          id: editingCustomer.id,
+          created_at: customerData.created_at || customer.created_at
+        } : customer
       ))
     }
   }
