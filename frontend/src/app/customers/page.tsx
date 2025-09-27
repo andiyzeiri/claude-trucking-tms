@@ -81,7 +81,7 @@ export default function CustomersPage() {
   const closeContextMenu = () => setContextMenu({ isVisible: false, x: 0, y: 0, row: null })
   const handleContextEdit = () => {
     if (contextMenu.row) {
-      setEditingCustomer(contextMenu.row)
+      setEditingCustomer(contextMenu.row as CustomerData)
       setModalMode('edit')
       setIsModalOpen(true)
     }
