@@ -122,13 +122,32 @@ export default function DriversPage() {
   const handleSaveDriver = (driverData: DriverData) => {
     if (modalMode === 'create') {
       const newDriver = {
-        ...driverData,
-        id: Math.max(...drivers.map(d => d.id || 0)) + 1
+        id: Math.max(...drivers.map(d => d.id || 0)) + 1,
+        name: driverData.name,
+        date_hired: new Date().toISOString().split('T')[0],
+        terminated: driverData.status === 'on_trip',
+        dob: '1990-01-01',
+        phone: driverData.phone,
+        email: driverData.email,
+        dl_number: driverData.license_number,
+        dl_expiration: '2025-12-31',
+        file_status: 'Complete',
+        medical_card: '2025-12-31',
+        mvr: '2025-12-31',
+        drug_test: '2025-12-31',
+        clearing_house: 'Clear'
       }
       setDrivers([...drivers, newDriver])
     } else {
       setDrivers(drivers.map(driver =>
-        driver.id === editingDriver?.id ? { ...driverData, id: editingDriver.id } : driver
+        driver.id === editingDriver?.id ? {
+          ...driver,
+          name: driverData.name,
+          phone: driverData.phone,
+          email: driverData.email,
+          dl_number: driverData.license_number,
+          terminated: driverData.status === 'on_trip'
+        } : driver
       ))
     }
   }
