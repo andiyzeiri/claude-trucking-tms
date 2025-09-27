@@ -105,7 +105,7 @@ export default function CustomersPage() {
       setCustomers(customers.map(customer =>
         customer.id === editingCustomer?.id ? {
           ...customerData,
-          id: editingCustomer.id,
+          id: editingCustomer?.id || customer.id,
           created_at: customerData.created_at || customer.created_at
         } : customer
       ))
