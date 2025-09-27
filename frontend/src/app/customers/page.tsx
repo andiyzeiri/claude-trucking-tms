@@ -12,7 +12,7 @@ import { Plus, Building2, Phone, Mail, MapPin, Edit, Trash2, User } from 'lucide
 
 export default function CustomersPage() {
   // State for managing customers
-  const [customers, setCustomers] = useState([
+  const [customers, setCustomers] = useState<CustomerData[]>([
       {
         id: 1,
         name: "ABC Logistics",
@@ -21,7 +21,7 @@ export default function CustomersPage() {
         email: "alice@abclogistics.com",
         city: "Los Angeles",
         state: "CA",
-        status: "active",
+        status: "active" as const,
         created_at: "2024-01-01T00:00:00Z"
       },
       {
@@ -32,7 +32,7 @@ export default function CustomersPage() {
         email: "bob@xyzshipping.com",
         city: "Dallas",
         state: "TX",
-        status: "active",
+        status: "active" as const,
         created_at: "2024-01-02T00:00:00Z"
       },
       {
@@ -43,7 +43,7 @@ export default function CustomersPage() {
         email: "carol@globaltransport.com",
         city: "Chicago",
         state: "IL",
-        status: "inactive",
+        status: "inactive" as const,
         created_at: "2024-01-03T00:00:00Z"
       }
   ])
@@ -53,7 +53,7 @@ export default function CustomersPage() {
     isVisible: boolean
     x: number
     y: number
-    row: typeof customers[0] | null
+    row: CustomerData | null
   }>({ isVisible: false, x: 0, y: 0, row: null })
 
   const getStatusColor = (status: string) => {
@@ -75,13 +75,13 @@ export default function CustomersPage() {
     setModalMode('create')
     setIsModalOpen(true)
   }
-  const handleRowRightClick = (row: typeof customers[0], event: React.MouseEvent) => {
+  const handleRowRightClick = (row: CustomerData, event: React.MouseEvent) => {
     setContextMenu({ isVisible: true, x: event.clientX, y: event.clientY, row })
   }
   const closeContextMenu = () => setContextMenu({ isVisible: false, x: 0, y: 0, row: null })
   const handleContextEdit = () => {
     if (contextMenu.row) {
-      setEditingCustomer(contextMenu.row as CustomerData)
+      setEditingCustomer(contextMenu.row)
       setModalMode('edit')
       setIsModalOpen(true)
     }
@@ -111,7 +111,7 @@ export default function CustomersPage() {
       ))
     }
   }
-  const calculateGroupTotals = (rows: typeof customers[0][]) => ({
+  const calculateGroupTotals = (rows: CustomerData[]) => ({
     'name': <span className="text-sm font-medium text-gray-900">{rows.length} customer{rows.length !== 1 ? 's' : ''}</span>
   })
   const totals = useMemo(() => ({
