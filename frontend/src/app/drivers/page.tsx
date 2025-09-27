@@ -100,7 +100,15 @@ export default function DriversPage() {
   }
 
   const handleEditDriver = (driver: typeof drivers[0]) => {
-    setEditingDriver(driver)
+    const driverData: DriverData = {
+      id: driver.id,
+      name: driver.name,
+      license_number: driver.dl_number,
+      phone: driver.phone,
+      email: driver.email,
+      status: driver.terminated ? 'on_trip' : 'available'
+    }
+    setEditingDriver(driverData)
     setModalMode('edit')
     setIsModalOpen(true)
   }
