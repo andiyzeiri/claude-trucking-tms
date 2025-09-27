@@ -96,7 +96,17 @@ export default function TrucksPage() {
   }
 
   const handleEditTruck = (truck: typeof trucks[0]) => {
-    setEditingTruck(truck)
+    const truckData: TruckData = {
+      id: truck.id,
+      unit_number: truck.unit_number,
+      make: truck.make,
+      model: truck.model,
+      year: truck.year,
+      status: 'available',
+      mileage: truck.miles,
+      driver: null
+    }
+    setEditingTruck(truckData)
     setModalMode('edit')
     setIsModalOpen(true)
   }
@@ -110,13 +120,31 @@ export default function TrucksPage() {
   const handleSaveTruck = (truckData: TruckData) => {
     if (modalMode === 'create') {
       const newTruck = {
-        ...truckData,
-        id: Math.max(...trucks.map(t => t.id || 0)) + 1
+        id: Math.max(...trucks.map(t => t.id || 0)) + 1,
+        type: 'Semi-Truck',
+        unit_number: truckData.unit_number,
+        year: truckData.year,
+        make: truckData.make,
+        model: truckData.model,
+        vin: `VIN${Date.now()}`,
+        miles: truckData.mileage,
+        value: 50000,
+        mpg: 6.5,
+        registration: new Date().toISOString().split('T')[0],
+        inspection: new Date().toISOString().split('T')[0],
+        service_history: 'Up to date'
       }
       setTrucks([...trucks, newTruck])
     } else {
       setTrucks(trucks.map(truck =>
-        truck.id === editingTruck?.id ? { ...truckData, id: editingTruck.id } : truck
+        truck.id === editingTruck?.id ? {
+          ...truck,
+          unit_number: truckData.unit_number,
+          make: truckData.make,
+          model: truckData.model,
+          year: truckData.year,
+          miles: truckData.mileage
+        } : truck
       ))
     }
   }

@@ -126,8 +126,8 @@ export function DataTable<T>({
     if (searchTerm) {
       filtered = filtered.filter(row =>
         Object.values(row as any).some(value => {
-          if (typeof value === 'object' && value?.name) {
-            return value.name.toLowerCase().includes(searchTerm.toLowerCase())
+          if (typeof value === 'object' && value && 'name' in value) {
+            return String((value as any).name).toLowerCase().includes(searchTerm.toLowerCase())
           }
           return String(value).toLowerCase().includes(searchTerm.toLowerCase())
         })
