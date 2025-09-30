@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "export": "next export",
-    "build-and-export": "next build",
+    "build-and-export": "rm -rf .next && next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
