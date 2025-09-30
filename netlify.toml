@@ -6,7 +6,7 @@
 [build.environment]
   NODE_VERSION = "18"
   SECRETS_SCAN_ENABLED = "false"
-  NEXT_PUBLIC_API_URL = "http://18.212.79.137:8000/api"
+  NEXT_PUBLIC_API_URL = "/api"
 
 # Redirect API calls to your AWS backend
 [[redirects]]
