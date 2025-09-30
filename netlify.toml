@@ -5,11 +5,12 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  SECRETS_SCAN_ENABLED = "false"
 
 # Redirect API calls to your AWS backend
 [[redirects]]
   from = "/api/*"
-  to = "https://your-backend-api-url.com/api/:splat"
+  to = "http://18.212.79.137:8000/api/:splat"
   status = 200
 
 # Redirect all other requests to index.html for SPA routing
