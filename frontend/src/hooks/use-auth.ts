@@ -39,32 +39,13 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-      try {
-        const response = await api.post('/auth/login', credentials)
-        return response.data
-      } catch (error) {
-        // Fall back to demo auth
-        const formData = new FormData()
-        formData.append('username', credentials.email)
-        formData.append('password', credentials.password)
-
-        const response = await api.post('/demo/auth/login', formData, {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        })
-        return response.data
-      }
+      const response = await api.post('/auth/login', credentials)
+      return response.data
     },
     onSuccess: (data) => {
       Cookies.set('auth-token', data.access_token, { expires: 7 }) // 7 days
-      // Set demo user data
-      const demoUser = {
-        id: 1,
-        email: "admin@example.com",
-        name: "Demo Admin",
-        company_id: 1
-      }
-      queryClient.setQueryData(['user'], demoUser)
-      toast.success('Login successful! (Demo Mode)')
+      queryClient.setQueryData(['user'], data.user)
+      toast.success('Login successful!')
       router.push('/dashboard')
     },
     onError: (error: any) => {

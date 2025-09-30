@@ -21,17 +21,11 @@ export interface AuthState {
 
 export const auth = {
   async login(email: string, password: string): Promise<{ user: User; token: string }> {
-    // Use demo login endpoint for now
-    const formData = new FormData()
-    formData.append('username', email)
-    formData.append('password', password)
-
-    const response = await api.post('/demo/auth/login', formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
+    const response = await api.post('/auth/login', {
+      email,
+      password
     })
-    const { access_token } = response.data
+    const { access_token, user: userData } = response.data
 
     // Create demo user based on email for role-based testing
     let role = 'viewer'
@@ -84,14 +78,7 @@ export const auth = {
     }
 
     const user: User = {
-      id: 1,
-      email: email,
-      first_name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1),
-      last_name: 'User',
-      role: role,
-      company_id: 1,
-      is_active: true,
-      is_superuser: email.includes('super'),
+      ...userData,
       permissions: permissions
     }
 
@@ -115,8 +102,8 @@ export const auth = {
       const token = this.getToken()
       if (!token) return null
 
-      // Try to get from demo endpoint first
-      const response = await api.get('/demo/auth/me')
+      // Get current user from API
+      const response = await api.get('/auth/me')
       const userData = response.data
 
       // Enhance with permissions based on email pattern
