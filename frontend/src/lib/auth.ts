@@ -4,13 +4,13 @@ import { api } from './api'
 export interface User {
   id: number
   email: string
-  first_name: string
-  last_name: string
+  first_name?: string
+  last_name?: string
   role: string
-  company_id: number
-  is_active: boolean
-  is_superuser: boolean
-  permissions: Record<string, boolean>
+  company_id?: number
+  is_active?: boolean
+  is_superuser?: boolean
+  permissions?: Record<string, boolean>
 }
 
 export interface AuthState {
@@ -156,7 +156,13 @@ export const auth = {
 export const hasPermission = (user: User | null, permission: string): boolean => {
   if (!user) return false
   if (user.is_superuser) return true
-  return user.permissions[permission] || false
+
+  // Admin users have all permissions
+  if (user.role === 'admin' || user.role === 'company_admin' || user.role === 'super_admin') {
+    return true
+  }
+
+  return user.permissions?.[permission] || false
 }
 
 export const canViewLoads = (user: User | null): boolean =>
