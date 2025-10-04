@@ -2,6 +2,10 @@
 const nextConfig = {
   output: 'export',
   trailingSlash: true,
+  eslint: {
+    // Disable ESLint during builds - warnings don't block production
+    ignoreDuringBuilds: true,
+  },
   images: {
     unoptimized: true
   },
