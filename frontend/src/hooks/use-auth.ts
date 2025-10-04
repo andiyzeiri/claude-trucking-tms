@@ -18,7 +18,7 @@ export function useAuth() {
       if (!token) return null
 
       try {
-        const response = await api.get('/auth/me')
+        const response = await api.get('/v1/users/me')
         return response.data
       } catch (error) {
         // Fall back to demo user if token exists

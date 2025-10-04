@@ -1,7 +1,8 @@
-from sqlalchemy import Column, String, Boolean, ForeignKey, Integer, Enum
+from sqlalchemy import Column, String, Boolean, ForeignKey, Integer, Enum, DateTime, JSON
 from sqlalchemy.orm import relationship
 from .base import Base
 import enum
+from datetime import datetime
 
 
 class UserRole(enum.Enum):
@@ -11,20 +12,27 @@ class UserRole(enum.Enum):
     DRIVER = "driver"  # Can only view assigned loads
     CUSTOMER = "customer"  # Can only view their own loads
     VIEWER = "viewer"  # Read-only access
+    CUSTOM = "custom"  # Custom permissions
 
 
 class User(Base):
     __tablename__ = "users"
 
+    username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
+    email_verified = Column(Boolean, default=False)
+    email_verified_at = Column(DateTime, nullable=True)
 
     # Role-based access control
     role = Column(Enum(UserRole), default=UserRole.VIEWER, nullable=False)
+
+    # Custom page permissions (for CUSTOM role)
+    page_permissions = Column(JSON, nullable=True)
 
     # Multi-tenant support
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
@@ -33,6 +41,47 @@ class User(Base):
     @property
     def full_name(self) -> str:
         return f"{self.first_name} {self.last_name}"
+
+    @property
+    def allowed_pages(self) -> list[str]:
+        """Return list of pages user can access"""
+        # If custom role, use custom permissions
+        if self.role == UserRole.CUSTOM and self.page_permissions:
+            return self.page_permissions.get("pages", [])
+
+        # Default pages based on role
+        all_pages = [
+            "dashboard",
+            "loads",
+            "drivers",
+            "trucks",
+            "customers",
+            "invoices",
+            "reports",
+            "payroll",
+            "lanes",
+            "settings"
+        ]
+
+        if self.is_superuser or self.role == UserRole.SUPER_ADMIN:
+            return all_pages
+
+        if self.role == UserRole.COMPANY_ADMIN:
+            return all_pages
+
+        if self.role == UserRole.DISPATCHER:
+            return ["dashboard", "loads", "drivers", "trucks", "customers", "invoices", "reports"]
+
+        if self.role == UserRole.DRIVER:
+            return ["dashboard", "loads"]
+
+        if self.role == UserRole.CUSTOMER:
+            return ["dashboard", "loads", "invoices"]
+
+        if self.role == UserRole.VIEWER:
+            return ["dashboard", "loads", "drivers", "trucks", "customers", "invoices", "reports"]
+
+        return ["dashboard"]
 
     @property
     def permissions(self) -> dict:

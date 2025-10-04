@@ -7,6 +7,7 @@ from .driver import Driver
 from .load import Load
 from .stop import Stop
 from .invoice import Invoice
+from .email_verification import EmailVerificationToken
 
 __all__ = [
     "Base",
@@ -17,5 +18,6 @@ __all__ = [
     "Driver",
     "Load",
     "Stop",
-    "Invoice"
+    "Invoice",
+    "EmailVerificationToken"
 ]

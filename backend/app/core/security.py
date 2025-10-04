@@ -34,13 +34,19 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 
-async def authenticate_user(db: AsyncSession, email: str, password: str) -> Union[User, bool]:
-    query = select(User).where(User.email == email)
+async def authenticate_user(db: AsyncSession, username_or_email: str, password: str) -> Union[User, bool]:
+    """Authenticate user by username or email"""
+    # Try to find user by username or email
+    query = select(User).where(
+        (User.username == username_or_email) | (User.email == username_or_email)
+    )
     result = await db.execute(query)
     user = result.scalar_one_or_none()
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
+        return False
+    if not user.is_active:
         return False
     return user
 

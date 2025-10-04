@@ -1,9 +1,18 @@
 export interface User {
   id: number
+  username: string
   email: string
-  name: string
-  role?: string
-  company_id?: number
+  first_name: string
+  last_name: string
+  full_name: string
+  name?: string // For backward compatibility
+  is_active: boolean
+  email_verified: boolean
+  email_verified_at?: string
+  role: string
+  company_id: number
+  page_permissions?: { pages: string[] }
+  allowed_pages?: string[]
   created_at?: string
   updated_at?: string
 }
