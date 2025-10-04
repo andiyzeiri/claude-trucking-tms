@@ -25,9 +25,17 @@ export function useAuth() {
         if (token === 'demo_token_123') {
           return {
             id: 1,
+            username: "demoadmin",
             email: "admin@example.com",
+            first_name: "Demo",
+            last_name: "Admin",
+            full_name: "Demo Admin",
             name: "Demo Admin",
-            company_id: 1
+            is_active: true,
+            email_verified: true,
+            role: "company_admin",
+            company_id: 1,
+            allowed_pages: ["dashboard", "loads", "drivers", "trucks", "customers", "invoices", "reports", "payroll", "lanes", "settings"]
           }
         }
         Cookies.remove('auth-token')
