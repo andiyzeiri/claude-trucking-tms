@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Truck, ArrowLeft, Shield, CheckCircle } from 'lucide-react'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
+import { useRouter } from 'next/navigation'
+import api from '@/lib/api'
 
 const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -35,6 +37,7 @@ type RegisterFormData = z.infer<typeof registerSchema>
 export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [step, setStep] = useState(1)
+  const router = useRouter()
 
   const {
     register,
@@ -52,15 +55,30 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterFormData) => {
     setIsSubmitting(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Generate username from email (before @ symbol)
+      const username = data.email.split('@')[0]
+
+      // Call real backend API
+      await api.post('/v1/auth/register', {
+        company_name: data.companyName,
+        company_phone: data.phoneNumber,
+        company_size: data.companySize,
+        username: username,
+        email: data.email,
+        password: data.password,
+        first_name: data.firstName,
+        last_name: data.lastName,
+      })
 
       toast.success('Account created successfully! Please check your email to verify your account.')
 
-      // In a real app, you'd redirect to verification page or dashboard
-      console.log('Registration data:', data)
-    } catch (error) {
-      toast.error('Registration failed. Please try again.')
+      // Redirect to login page after successful registration
+      setTimeout(() => {
+        router.push('/login')
+      }, 2000)
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Registration failed. Please try again.'
+      toast.error(typeof errorMessage === 'string' ? errorMessage : 'Registration failed. Please try again.')
     } finally {
       setIsSubmitting(false)
     }

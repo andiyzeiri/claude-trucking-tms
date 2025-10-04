@@ -21,65 +21,22 @@ export interface AuthState {
 
 export const auth = {
   async login(email: string, password: string): Promise<{ user: User; token: string }> {
-    const response = await api.post('/auth/login', {
-      email,
+    const response = await api.post('/v1/auth/login-json', {
+      username_or_email: email,
       password
     })
     const { access_token, user: userData } = response.data
 
-    // Create demo user based on email for role-based testing
-    let role = 'viewer'
-    let permissions = {}
-
-    if (email.includes('admin')) {
-      role = 'company_admin'
-      permissions = {
-        can_view_loads: true,
-        can_create_loads: true,
-        can_edit_loads: true,
-        can_delete_loads: true,
-        can_view_drivers: true,
-        can_manage_drivers: true,
-        can_view_trucks: true,
-        can_manage_trucks: true,
-        can_view_customers: true,
-        can_manage_customers: true,
-        can_view_invoices: true,
-        can_manage_invoices: true,
-        can_view_reports: true,
-        can_manage_users: true,
-        can_manage_company: true
-      }
-    } else if (email.includes('dispatcher')) {
-      role = 'dispatcher'
-      permissions = {
-        can_view_loads: true,
-        can_create_loads: true,
-        can_edit_loads: true,
-        can_view_drivers: true,
-        can_manage_drivers: true,
-        can_view_trucks: true,
-        can_manage_trucks: true,
-        can_view_customers: true,
-        can_view_invoices: true,
-        can_view_reports: true
-      }
-    } else if (email.includes('driver')) {
-      role = 'driver'
-      permissions = {
-        can_view_loads: true
-      }
-    } else if (email.includes('customer')) {
-      role = 'customer'
-      permissions = {
-        can_view_loads: true,
-        can_view_invoices: true
-      }
-    }
-
     const user: User = {
-      ...userData,
-      permissions: permissions
+      id: userData.id,
+      email: userData.email,
+      first_name: userData.first_name,
+      last_name: userData.last_name,
+      role: userData.role,
+      company_id: userData.company_id,
+      is_active: userData.is_active,
+      is_superuser: userData.role === 'super_admin',
+      permissions: userData.permissions || {}
     }
 
     // Store token in cookie
@@ -98,44 +55,23 @@ export const auth = {
 
   async getCurrentUser(): Promise<User | null> {
     try {
-      // For demo purposes, return user based on stored token
       const token = this.getToken()
       if (!token) return null
 
       // Get current user from API
-      const response = await api.get('/auth/me')
+      const response = await api.get('/v1/users/me')
       const userData = response.data
 
-      // Enhance with permissions based on email pattern
-      let permissions = {}
-      if (userData.email?.includes('admin')) {
-        permissions = {
-          can_view_loads: true, can_create_loads: true, can_edit_loads: true, can_delete_loads: true,
-          can_view_drivers: true, can_manage_drivers: true, can_view_trucks: true, can_manage_trucks: true,
-          can_view_customers: true, can_manage_customers: true, can_view_invoices: true, can_manage_invoices: true,
-          can_view_reports: true, can_manage_users: true, can_manage_company: true
-        }
-      } else if (userData.email?.includes('dispatcher')) {
-        permissions = {
-          can_view_loads: true, can_create_loads: true, can_edit_loads: true,
-          can_view_drivers: true, can_manage_drivers: true, can_view_trucks: true, can_manage_trucks: true,
-          can_view_customers: true, can_view_invoices: true, can_view_reports: true
-        }
-      } else if (userData.email?.includes('driver')) {
-        permissions = { can_view_loads: true }
-      } else if (userData.email?.includes('customer')) {
-        permissions = { can_view_loads: true, can_view_invoices: true }
-      }
-
       return {
-        ...userData,
-        role: userData.email?.includes('admin') ? 'company_admin' :
-              userData.email?.includes('dispatcher') ? 'dispatcher' :
-              userData.email?.includes('driver') ? 'driver' :
-              userData.email?.includes('customer') ? 'customer' : 'viewer',
-        permissions,
-        is_superuser: userData.email?.includes('super') || false,
-        is_active: true
+        id: userData.id,
+        email: userData.email,
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        role: userData.role,
+        company_id: userData.company_id,
+        is_active: userData.is_active,
+        is_superuser: userData.role === 'super_admin',
+        permissions: userData.permissions || {}
       }
     } catch (error) {
       console.warn('Failed to get current user:', error)
