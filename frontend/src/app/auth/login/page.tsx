@@ -95,18 +95,6 @@ export default function LoginPage() {
                 {isLoading ? 'Signing in...' : 'Sign in'}
               </Button>
             </form>
-
-            <div className="mt-6 text-center">
-              <div className="text-sm text-gray-600">
-                Demo Accounts:
-              </div>
-              <div className="mt-2 text-xs text-gray-500 space-y-1">
-                <div><strong>Admin:</strong> admin@company.com / admin123</div>
-                <div><strong>Dispatcher:</strong> dispatcher@company.com / dispatch123</div>
-                <div><strong>Driver:</strong> driver@company.com / driver123</div>
-                <div><strong>Customer:</strong> customer@company.com / customer123</div>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>

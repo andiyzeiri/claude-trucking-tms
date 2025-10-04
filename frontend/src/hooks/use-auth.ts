@@ -21,23 +21,7 @@ export function useAuth() {
         const response = await api.get('/v1/users/me')
         return response.data
       } catch (error) {
-        // Fall back to demo user if token exists
-        if (token === 'demo_token_123') {
-          return {
-            id: 1,
-            username: "demoadmin",
-            email: "admin@example.com",
-            first_name: "Demo",
-            last_name: "Admin",
-            full_name: "Demo Admin",
-            name: "Demo Admin",
-            is_active: true,
-            email_verified: true,
-            role: "company_admin",
-            company_id: 1,
-            allowed_pages: ["dashboard", "loads", "drivers", "trucks", "customers", "invoices", "reports", "payroll", "lanes", "settings"]
-          }
-        }
+        // Invalid token, remove it
         Cookies.remove('auth-token')
         return null
       }
