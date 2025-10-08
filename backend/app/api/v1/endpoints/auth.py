@@ -91,10 +91,10 @@ async def register_company(
         hashed_password=get_password_hash(registration.password),
         first_name=registration.first_name,
         last_name=registration.last_name,
-        role=UserRole.COMPANY_ADMIN,
+        role=UserRole.COMPANY_ADMIN.value,
         company_id=company.id,
         is_active=True,
-        email_verified=False
+        email_verified=not settings.REQUIRE_EMAIL_VERIFICATION  # Auto-verify if not required
     )
     db.add(user)
     await db.flush()  # Flush to get user ID
@@ -198,7 +198,7 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if not user.email_verified:
+    if settings.REQUIRE_EMAIL_VERIFICATION and not user.email_verified:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Please verify your email before logging in"
@@ -224,7 +224,7 @@ async def login_json(
             detail="Incorrect username or password"
         )
 
-    if not user.email_verified:
+    if settings.REQUIRE_EMAIL_VERIFICATION and not user.email_verified:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Please verify your email before logging in"
@@ -246,10 +246,10 @@ async def login_json(
         is_active=user.is_active,
         email_verified=user.email_verified,
         email_verified_at=user.email_verified_at,
-        role=user.role.value,
+        role=user.role if isinstance(user.role, str) else user.role.value,
         company_id=user.company_id,
         page_permissions=user.page_permissions,
-        allowed_pages=user.allowed_pages
+        allowed_pages=user.allowed_pages if hasattr(user, 'allowed_pages') else []
     )
 
     return LoginResponse(
