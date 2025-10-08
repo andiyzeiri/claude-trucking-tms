@@ -10,9 +10,6 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "http://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com/api/:splat"
+  to = "https://d353mi06zxxkvl.cloudfront.net/api/:splat"
   status = 200
   force = true
-
-[redirects.conditions]
-  # Only proxy API requests, not redirects
