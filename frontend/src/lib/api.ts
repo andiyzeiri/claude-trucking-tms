@@ -23,8 +23,16 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`
     config.headers['X-Auth-Token'] = token
   }
+
+  // Add trailing slash if not present (FastAPI requires it)
+  if (config.url && !config.url.endsWith('/') && !config.url.includes('?')) {
+    config.url += '/'
+  } else if (config.url && config.url.includes('?') && !config.url.match(/\/\?/)) {
+    config.url = config.url.replace('?', '/?')
+  }
+
   if (typeof window !== 'undefined') {
-    console.log('[API Request]', config.method?.toUpperCase(), config.url, 'baseURL:', config.baseURL, 'token:', token ? 'present' : 'MISSING', 'Authorization header:', config.headers.Authorization ? 'SET' : 'NOT SET', 'X-Auth-Token:', config.headers['X-Auth-Token'] ? 'SET' : 'NOT SET')
+    console.log('[API Request]', config.method?.toUpperCase(), config.url, 'baseURL:', config.baseURL, 'token:', token ? 'present' : 'MISSING')
   }
   return config
 })
