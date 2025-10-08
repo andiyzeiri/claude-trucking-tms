@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // output: 'export', // Disabled for local development - enable only for static export
+  output: 'export', // Static export for Netlify
   trailingSlash: true,
   typescript: {
     // !! WARN !!
