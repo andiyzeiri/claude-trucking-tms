@@ -10,11 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 export interface CustomerData {
   id?: number
   name: string
-  contact_name: string
-  phone: string
-  email: string
-  city: string
-  state: string
+  contact_name?: string
+  phone?: string
+  email?: string
+  address?: string
+  city?: string
+  state?: string
+  zip_code?: string
   status: 'active' | 'inactive'
   created_at?: string
 }

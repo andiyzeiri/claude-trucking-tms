@@ -9,44 +9,15 @@ import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
 import { formatDate } from '@/lib/utils'
 import { CustomerModal, CustomerData } from '@/components/customers/customer-modal'
 import { Plus, Building2, Phone, Mail, MapPin, Edit, Trash2, User } from 'lucide-react'
+import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer } from '@/hooks/use-customers'
 
 export default function CustomersPage() {
-  // State for managing customers
-  const [customers, setCustomers] = useState<CustomerData[]>([
-      {
-        id: 1,
-        name: "ABC Logistics",
-        contact_name: "Alice Johnson",
-        phone: "(555) 123-0001",
-        email: "alice@abclogistics.com",
-        city: "Los Angeles",
-        state: "CA",
-        status: "active" as const,
-        created_at: "2024-01-01T00:00:00Z"
-      },
-      {
-        id: 2,
-        name: "XYZ Shipping",
-        contact_name: "Bob Martinez",
-        phone: "(555) 123-0002",
-        email: "bob@xyzshipping.com",
-        city: "Dallas",
-        state: "TX",
-        status: "active" as const,
-        created_at: "2024-01-02T00:00:00Z"
-      },
-      {
-        id: 3,
-        name: "Global Transport",
-        contact_name: "Carol Davis",
-        phone: "(555) 123-0003",
-        email: "carol@globaltransport.com",
-        city: "Chicago",
-        state: "IL",
-        status: "inactive" as const,
-        created_at: "2024-01-03T00:00:00Z"
-      }
-  ])
+  // Fetch customers from API
+  const { data: customersData, isLoading } = useCustomers()
+  const customers = customersData?.items || []
+  const createCustomer = useCreateCustomer()
+  const updateCustomer = useUpdateCustomer()
+  const deleteCustomer = useDeleteCustomer()
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -89,27 +60,29 @@ export default function CustomersPage() {
   }
   const handleContextDelete = () => {
     if (contextMenu.row && confirm('Delete customer?')) {
-      setCustomers(customers.filter(c => c.id !== contextMenu.row!.id))
+      deleteCustomer.mutate(contextMenu.row.id!)
     }
     closeContextMenu()
   }
   const handleSaveCustomer = (customerData: CustomerData) => {
-    if (modalMode === 'create') {
-      const newCustomer = {
-        ...customerData,
-        id: Math.max(...customers.map(c => c.id || 0)) + 1,
-        created_at: customerData.created_at || new Date().toISOString()
-      }
-      setCustomers([...customers, newCustomer])
-    } else {
-      setCustomers(customers.map(customer =>
-        customer.id === editingCustomer?.id ? {
-          ...customerData,
-          id: editingCustomer?.id || customer.id,
-          created_at: customerData.created_at || customer.created_at
-        } : customer
-      ))
+    const backendData = {
+      name: customerData.name,
+      contact_name: customerData.contact_name,
+      email: customerData.email,
+      phone: customerData.phone,
+      address: customerData.address,
+      city: customerData.city,
+      state: customerData.state,
+      zip_code: customerData.zip_code,
+      status: customerData.status
     }
+
+    if (modalMode === 'create') {
+      createCustomer.mutate(backendData as any)
+    } else if (editingCustomer?.id) {
+      updateCustomer.mutate({ id: editingCustomer.id, data: backendData as any })
+    }
+    setIsModalOpen(false)
   }
   const calculateGroupTotals = (rows: CustomerData[]) => ({
     'name': <span className="text-sm font-medium text-gray-900">{rows.length} customer{rows.length !== 1 ? 's' : ''}</span>

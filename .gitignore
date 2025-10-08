@@ -67,3 +67,5 @@ venv/
 *.pem
 *.key
 config.json
+# Local Netlify folder
+.netlify

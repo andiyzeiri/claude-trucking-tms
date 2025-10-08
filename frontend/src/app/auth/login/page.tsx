@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,12 +23,11 @@ export default function LoginPage() {
     setError('')
 
     try {
-      await login(email, password)
-      router.push('/dashboard')
+      login({ email, password })
+      // Navigation is handled in the mutation's onSuccess callback
     } catch (error: any) {
       const errorMessage = error?.response?.data?.detail || error?.message || 'Login failed'
       setError(typeof errorMessage === 'string' ? errorMessage : 'Login failed')
-    } finally {
       setIsLoading(false)
     }
   }

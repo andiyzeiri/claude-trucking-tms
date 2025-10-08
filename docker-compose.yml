@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: andi-tms-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: anditms
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d anditms"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - andi-tms-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: andi-tms-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - andi-tms-network
+    command: redis-server --appendonly yes
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: andi-tms-api
+    environment:
+      # Database configuration
+      DATABASE_URL: postgresql+asyncpg://postgres:dev@db:5432/anditms
+
+      # Redis configuration
+      REDIS_URL: redis://redis:6379/0
+
+      # Application settings
+      ENV: development
+      PORT: 8000
+      DEBUG: "true"
+
+      # JWT & Security
+      JWT_SECRET_KEY: dev-secret-key-change-in-production
+      JWT_ALGORITHM: HS256
+
+      # AWS (for local dev, use localstack or mock)
+      AWS_REGION: us-east-1
+      S3_BUCKET: andi-tms-dev-documents
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+
+      # CORS
+      CORS_ORIGINS: http://localhost:3000,http://web:3000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - andi-tms-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: andi-tms-web
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/next.config.mjs:/app/next.config.mjs
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - api
+    networks:
+      - andi-tms-network
+    command: npm run dev
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  andi-tms-network:
+    driver: bridge

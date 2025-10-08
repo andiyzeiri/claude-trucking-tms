@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from pydantic import BaseModel
+from typing import Optional
 from app.database import get_db
 from app.core.security import get_current_active_user, get_password_hash
 from app.models.user import User, UserRole
@@ -24,7 +26,7 @@ def build_user_response(user: User) -> UserResponse:
         is_active=user.is_active,
         email_verified=user.email_verified,
         email_verified_at=user.email_verified_at,
-        role=user.role.value,
+        role=user.role if isinstance(user.role, str) else user.role.value,
         company_id=user.company_id,
         page_permissions=user.page_permissions,
         allowed_pages=user.allowed_pages

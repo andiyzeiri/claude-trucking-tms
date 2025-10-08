@@ -8,6 +8,9 @@ from .load import Load
 from .stop import Stop
 from .invoice import Invoice
 from .email_verification import EmailVerificationToken
+from .payroll import Payroll
+from .lane import Lane
+from .expense import Expense
 
 __all__ = [
     "Base",
@@ -19,5 +22,8 @@ __all__ = [
     "Load",
     "Stop",
     "Invoice",
-    "EmailVerificationToken"
+    "EmailVerificationToken",
+    "Payroll",
+    "Lane",
+    "Expense"
 ]

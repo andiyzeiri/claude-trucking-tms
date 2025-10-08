@@ -9,41 +9,15 @@ import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
 import { formatCurrency } from '@/lib/utils'
 import { InvoiceModal, InvoiceData } from '@/components/invoices/invoice-modal'
 import { Plus, FileText, DollarSign, Clock, CheckCircle, Edit, Trash2, User } from 'lucide-react'
+import { useInvoices, useDeleteInvoice, useCreateInvoice, useUpdateInvoice } from '@/hooks/use-invoices'
 
 export default function InvoicesPage() {
-  // State for managing invoices
-  const [invoices, setInvoices] = useState([
-    {
-      id: 1,
-      invoice_number: "INV-001",
-      customer: "ABC Logistics",
-      amount: 2500.00,
-      status: "paid",
-      issue_date: "2024-01-15",
-      due_date: "2024-02-15",
-      loads: ["TMS001"]
-    },
-    {
-      id: 2,
-      invoice_number: "INV-002",
-      customer: "XYZ Shipping",
-      amount: 1200.00,
-      status: "pending",
-      issue_date: "2024-01-16",
-      due_date: "2024-02-16",
-      loads: ["TMS002"]
-    },
-    {
-      id: 3,
-      invoice_number: "INV-003",
-      customer: "Global Transport",
-      amount: 800.00,
-      status: "overdue",
-      issue_date: "2024-01-10",
-      due_date: "2024-02-10",
-      loads: ["TMS003"]
-    },
-  ])
+  // Fetch real invoice data from API
+  const { data, isLoading, error } = useInvoices(1, 100)
+  const invoices = data?.items || []
+  const deleteInvoice = useDeleteInvoice()
+  const createInvoice = useCreateInvoice()
+  const updateInvoice = useUpdateInvoice()
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -100,22 +74,17 @@ export default function InvoicesPage() {
   }
   const handleContextDelete = () => {
     if (contextMenu.row && confirm('Delete invoice?')) {
-      setInvoices(invoices.filter(i => i.id !== contextMenu.row!.id))
+      deleteInvoice.mutate(contextMenu.row.id)
     }
     closeContextMenu()
   }
   const handleSaveInvoice = (invoiceData: InvoiceData) => {
     if (modalMode === 'create') {
-      const newInvoice = {
-        ...invoiceData,
-        id: Math.max(...invoices.map(i => i.id || 0)) + 1
-      }
-      setInvoices([...invoices, newInvoice])
-    } else {
-      setInvoices(invoices.map(invoice =>
-        invoice.id === editingInvoice?.id ? { ...invoiceData, id: editingInvoice.id } : invoice
-      ))
+      createInvoice.mutate(invoiceData)
+    } else if (editingInvoice?.id) {
+      updateInvoice.mutate({ id: editingInvoice.id, data: invoiceData })
     }
+    setIsModalOpen(false)
   }
   const calculateGroupTotals = (rows: typeof invoices[0][]) => {
     const totalAmount = rows.reduce((sum, row) => sum + row.amount, 0)
@@ -155,11 +124,16 @@ export default function InvoicesPage() {
       }
     },
     {
-      key: 'customer',
-      label: 'Customer',
-      width: '150px',
+      key: 'customer_id',
+      label: 'Customer ID',
+      width: '120px',
       filterable: true,
       groupable: true
+    },
+    {
+      key: 'load_id',
+      label: 'Load ID',
+      width: '120px'
     },
     {
       key: 'amount',
@@ -172,20 +146,16 @@ export default function InvoicesPage() {
       )
     },
     {
-      key: 'issue_date',
-      label: 'Issue Date',
-      width: '120px'
-    },
-    {
       key: 'due_date',
       label: 'Due Date',
-      width: '120px'
+      width: '120px',
+      render: (value) => value ? new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'
     },
     {
-      key: 'loads',
-      label: 'Loads',
+      key: 'created_at',
+      label: 'Created',
       width: '120px',
-      render: (value) => value.join(', ')
+      render: (value) => value ? new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'
     }
   ]
 
@@ -258,11 +228,11 @@ export default function InvoicesPage() {
                   <span className="font-medium text-gray-900">{totals.total} Invoice{totals.total !== 1 ? 's' : ''}</span>
                 </td>
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px' }}></td>
-                <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '150px' }}></td>
+                <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px' }}></td>
+                <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px' }}></td>
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px' }}>
                   <span className="text-green-700">${totals.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </td>
-                <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px' }}></td>
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px' }}></td>
                 <td className="px-3 py-2 text-sm" style={{ width: '120px' }}></td>
               </tr></tbody>

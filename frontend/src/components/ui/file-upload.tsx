@@ -46,11 +46,18 @@ export function FileUpload({
     setIsUploading(true)
 
     const newFiles: UploadedFile[] = []
+    let filesProcessed = 0
 
     Array.from(selectedFiles).forEach((file, index) => {
       // Validate file type
       if (accept && !file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
         alert(`File ${file.name} is not a PDF file`)
+        filesProcessed++
+        if (filesProcessed === selectedFiles.length && newFiles.length > 0) {
+          const updatedFiles = multiple ? [...files, ...newFiles] : newFiles
+          onFilesChange(updatedFiles)
+          setIsUploading(false)
+        }
         return
       }
 
@@ -58,30 +65,48 @@ export function FileUpload({
       const fileSizeMB = file.size / (1024 * 1024)
       if (fileSizeMB > maxSize) {
         alert(`File ${file.name} is too large. Maximum size is ${maxSize}MB`)
+        filesProcessed++
+        if (filesProcessed === selectedFiles.length && newFiles.length > 0) {
+          const updatedFiles = multiple ? [...files, ...newFiles] : newFiles
+          onFilesChange(updatedFiles)
+          setIsUploading(false)
+        }
         return
       }
 
-      // Create file URL for preview (in production, this would be uploaded to S3)
-      const fileUrl = URL.createObjectURL(file)
+      // Convert file to data URL so it persists in localStorage
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const uploadedFile: UploadedFile = {
+          id: `${Date.now()}-${index}`,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: reader.result as string, // Data URL persists across sessions
+          uploadedAt: new Date()
+        }
 
-      const uploadedFile: UploadedFile = {
-        id: `${Date.now()}-${index}`,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: fileUrl,
-        uploadedAt: new Date()
+        newFiles.push(uploadedFile)
+        filesProcessed++
+
+        // When all files are processed, update the state
+        if (filesProcessed === selectedFiles.length) {
+          const updatedFiles = multiple ? [...files, ...newFiles] : newFiles
+          onFilesChange(updatedFiles)
+          setIsUploading(false)
+        }
       }
-
-      newFiles.push(uploadedFile)
+      reader.onerror = () => {
+        alert(`Failed to read file ${file.name}`)
+        filesProcessed++
+        if (filesProcessed === selectedFiles.length && newFiles.length > 0) {
+          const updatedFiles = multiple ? [...files, ...newFiles] : newFiles
+          onFilesChange(updatedFiles)
+          setIsUploading(false)
+        }
+      }
+      reader.readAsDataURL(file)
     })
-
-    // Simulate upload delay
-    setTimeout(() => {
-      const updatedFiles = multiple ? [...files, ...newFiles] : newFiles
-      onFilesChange(updatedFiles)
-      setIsUploading(false)
-    }, 1000)
   }
 
   const handleDrop = (e: React.DragEvent) => {
@@ -116,8 +141,10 @@ export function FileUpload({
   const removeFile = (fileId: string) => {
     const updatedFiles = files.filter(file => {
       if (file.id === fileId) {
-        // Revoke object URL to prevent memory leaks
-        URL.revokeObjectURL(file.url)
+        // Only revoke if it's a blob URL (starts with 'blob:')
+        if (file.url.startsWith('blob:')) {
+          URL.revokeObjectURL(file.url)
+        }
         return false
       }
       return true

@@ -1,0 +1,43 @@
+# Andi's Trucking TMS - Terraform Variables Example
+# Copy this file to terraform.tfvars and update with your values
+
+# AWS Configuration
+aws_region = "us-east-1"
+project    = "andi-tms"
+env        = "prod"
+owner      = "andi"
+
+# VPC Configuration
+vpc_cidr           = "10.0.0.0/16"
+availability_zones = ["us-east-1a", "us-east-1b"]
+
+# ECS Configuration
+ecs_task_cpu       = 256  # 0.25 vCPU
+ecs_task_memory    = 512  # 512 MB
+ecs_desired_count  = 1    # Number of tasks to run
+
+# RDS Configuration
+rds_instance_class      = "db.t4g.micro"
+rds_allocated_storage   = 20  # GB
+rds_engine_version      = "15.4"
+rds_database_name       = "anditms"
+rds_username            = "anditms_admin"
+
+# Redis Configuration
+redis_node_type = "cache.t4g.micro"
+
+# API Configuration
+api_container_port     = 8000
+api_health_check_path  = "/health"
+
+# CloudWatch Configuration
+cloudwatch_log_retention_days = 14
+
+# HTTPS Configuration (Optional)
+# Set enable_https to true and provide ACM certificate ARN to enable HTTPS
+enable_https        = false
+acm_certificate_arn = ""  # e.g., "arn:aws:acm:us-east-1:123456789012:certificate/xxxxx"
+
+# Example with HTTPS enabled:
+# enable_https        = true
+# acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"

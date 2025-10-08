@@ -2,236 +2,263 @@
 
 import React, { useState, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { DataTable, Column } from '@/components/ui/data-table'
-import { LoadModal, LoadData } from '@/components/loads/load-modal'
-import { DocumentModal } from '@/components/loads/document-modal'
-import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, Package, MapPin, DollarSign, FileText, CheckCircle, X, User, Edit, Trash2, Upload, FolderOpen } from 'lucide-react'
+import { Plus, ChevronRight, ChevronDown } from 'lucide-react'
+import { useLoads, useCreateLoad, useUpdateLoad, useDeleteLoad } from '@/hooks/use-loads'
+import { useCustomers } from '@/hooks/use-customers'
+import { useDrivers } from '@/hooks/use-drivers'
+import { useTrucks } from '@/hooks/use-trucks'
+import { Load } from '@/types'
 
-export default function LoadsPage() {
-  // State for managing loads
-  const [loads, setLoads] = useState<LoadData[]>([
-    {
-      id: 1,
-      load_number: "TMS001",
-      pickup_location: "Los Angeles, CA",
-      delivery_location: "Phoenix, AZ",
-      customer: { name: "ABC Logistics", mc: "MC-123456" },
-      driver: "John Smith",
-      status: "in_transit",
-      rate: 2500.00,
-      miles: 385,
-      pickup_date: "2024-01-15",
-      pickup_time: "08:00",
-      delivery_date: "2024-01-17",
-      delivery_time: "14:00",
-      ratecon: true,
-      pod: false
-    },
-    {
-      id: 2,
-      load_number: "TMS002",
-      pickup_location: "Dallas, TX",
-      delivery_location: "Houston, TX",
-      customer: { name: "XYZ Shipping", mc: "MC-789012" },
-      driver: "Jane Doe",
-      status: "delivered",
-      rate: 1200.00,
-      miles: 240,
-      pickup_date: "2024-01-14",
-      pickup_time: "09:30",
-      delivery_date: "2024-01-15",
-      delivery_time: "16:30",
-      ratecon: true,
-      pod: true
-    },
-    {
-      id: 3,
-      load_number: "TMS003",
-      pickup_location: "Chicago, IL",
-      delivery_location: "Milwaukee, WI",
-      customer: { name: "Global Transport", mc: "MC-345678" },
-      driver: "Mike Johnson",
-      status: "assigned",
-      rate: 800.00,
-      miles: 92,
-      pickup_date: "2024-01-16",
-      pickup_time: "07:00",
-      delivery_date: "2024-01-17",
-      delivery_time: "11:00",
-      ratecon: true,
-      pod: false
-    },
-  ])
+interface EditableLoad extends Load {
+  isNew?: boolean
+  weekNumber?: number
+  weekLabel?: string
+  weekDateRange?: string
+}
 
-  // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingLoad, setEditingLoad] = useState<LoadData | null>(null)
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create')
+type EditingCell = {
+  loadId: number | 'new'
+  field: string
+} | null
 
-  // Document management state
-  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false)
-  const [documentLoad, setDocumentLoad] = useState<LoadData | null>(null)
-  const [loadDocuments, setLoadDocuments] = useState<Record<number, {
-    ratecon: { id: string; name: string; size: number; type: string; url: string; uploadedAt: Date }[]
-    pod: { id: string; name: string; size: number; type: string; url: string; uploadedAt: Date }[]
-  }>>({
-    1: {
-      ratecon: [
-        { id: 'demo-1', name: 'Rate_Confirmation_TMS001.pdf', size: 245760, type: 'application/pdf', url: '#', uploadedAt: new Date('2024-01-15') }
-      ],
-      pod: []
-    },
-    2: {
-      ratecon: [
-        { id: 'demo-2', name: 'Rate_Confirmation_TMS002.pdf', size: 189440, type: 'application/pdf', url: '#', uploadedAt: new Date('2024-01-14') }
-      ],
-      pod: [
-        { id: 'demo-3', name: 'POD_TMS002.pdf', size: 345600, type: 'application/pdf', url: '#', uploadedAt: new Date('2024-01-15') }
-      ]
-    },
-    3: { ratecon: [], pod: [] }
-  })
+// Helper to get week number from date
+function getWeekNumber(date: Date): number {
+  const startOfYear = new Date(date.getFullYear(), 0, 1)
+  const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000))
+  return Math.ceil((days + startOfYear.getDay() + 1) / 7)
+}
 
-  // Context menu state
-  const [contextMenu, setContextMenu] = useState<{
-    isVisible: boolean
-    x: number
-    y: number
-    row: LoadData | null
-  }>({ isVisible: false, x: 0, y: 0, row: null })
+// Helper to get week label with date range
+function getWeekLabel(date: Date): string {
+  const weekNum = getWeekNumber(date)
+  return `Week ${weekNum}`
+}
 
-  // CRUD operations
-  const handleCreateLoad = () => {
-    setEditingLoad(null)
-    setModalMode('create')
-    setIsModalOpen(true)
-  }
+// Helper to get week date range
+function getWeekDateRange(date: Date): string {
+  const dayOfWeek = date.getDay()
+  const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek
+  const monday = new Date(date)
+  monday.setDate(date.getDate() + diffToMonday)
 
-  const handleEditLoad = (load: LoadData) => {
-    setEditingLoad(load)
-    setModalMode('edit')
-    setIsModalOpen(true)
-  }
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
 
-  const handleDeleteLoad = (loadId: number) => {
-    if (confirm('Are you sure you want to delete this load?')) {
-      setLoads(loads.filter(load => load.id !== loadId))
+  const startMonth = monday.getMonth() + 1
+  const startDay = monday.getDate()
+  const endMonth = sunday.getMonth() + 1
+  const endDay = sunday.getDate()
+
+  return `(${startMonth}/${startDay}-${endMonth}/${endDay})`
+}
+
+export default function LoadsPageInline() {
+  const { data: loadsData, isLoading } = useLoads(1, 1000)
+  const loads = loadsData?.items || []
+  const createLoad = useCreateLoad()
+  const updateLoad = useUpdateLoad()
+  const deleteLoad = useDeleteLoad()
+
+  const { data: customersData } = useCustomers()
+  const customers = customersData?.items || []
+
+  const { data: driversData } = useDrivers()
+  const drivers = driversData?.items || []
+
+  const { data: trucksData } = useTrucks()
+  const trucks = trucksData?.items || []
+
+  const [editableLoads, setEditableLoads] = useState<EditableLoad[]>([])
+  const [editingCell, setEditingCell] = useState<EditingCell>(null)
+  const [groupBy, setGroupBy] = useState<'none' | 'week' | 'driver' | 'customer'>('none')
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+
+  // Sync loads with editable state and add week info
+  React.useEffect(() => {
+    if (loads.length > 0 && editableLoads.length === 0) {
+      const loadsWithWeeks = loads.map(load => {
+        const pickupDate = new Date(load.pickup_date)
+        return {
+          ...load,
+          weekNumber: getWeekNumber(pickupDate),
+          weekLabel: getWeekLabel(pickupDate),
+          weekDateRange: getWeekDateRange(pickupDate)
+        }
+      })
+      setEditableLoads(loadsWithWeeks)
     }
-  }
+  }, [loads, editableLoads.length])
 
-  const handleSaveLoad = (loadData: LoadData) => {
-    if (modalMode === 'create') {
-      const newLoad = {
-        ...loadData,
-        id: Math.max(...loads.map(l => l.id || 0)) + 1
+  // Group loads
+  const groupedLoads = useMemo(() => {
+    if (groupBy === 'none') return null
+
+    const groups: Record<string, EditableLoad[]> = {}
+    editableLoads.forEach(load => {
+      let groupKey = ''
+      if (groupBy === 'week') {
+        groupKey = `Week ${load.weekNumber}`
+      } else if (groupBy === 'driver') {
+        groupKey = load.driver ? `${load.driver.first_name} ${load.driver.last_name}` : 'Unassigned'
+      } else if (groupBy === 'customer') {
+        groupKey = customers.find(c => c.id === load.customer_id)?.name || 'N/A'
       }
-      setLoads([...loads, newLoad])
-    } else {
-      setLoads(loads.map(load => load.id === editingLoad?.id ? { ...loadData, id: editingLoad?.id || load.id } : load))
-    }
-  }
 
-  // Context menu handlers
-  const handleRowRightClick = (row: LoadData, event: React.MouseEvent) => {
-    setContextMenu({
-      isVisible: true,
-      x: event.clientX,
-      y: event.clientY,
-      row
+      if (!groups[groupKey]) {
+        groups[groupKey] = []
+      }
+      groups[groupKey].push(load)
     })
+
+    return groups
+  }, [editableLoads, groupBy, customers])
+
+  const toggleGroup = (groupKey: string) => {
+    const newCollapsed = new Set(collapsedGroups)
+    if (newCollapsed.has(groupKey)) {
+      newCollapsed.delete(groupKey)
+    } else {
+      newCollapsed.add(groupKey)
+    }
+    setCollapsedGroups(newCollapsed)
   }
 
-  const closeContextMenu = () => {
-    setContextMenu({ isVisible: false, x: 0, y: 0, row: null })
+  const handleAddNew = async () => {
+    // Create a new load immediately in the backend
+    const backendData: any = {
+      load_number: `TMS${Date.now()}`,
+      customer_id: customers[0]?.id || 0,
+      driver_id: null,
+      truck_id: null,
+      pickup_location: '',
+      delivery_location: '',
+      pickup_date: new Date().toISOString(),
+      delivery_date: new Date().toISOString(),
+      miles: 0,
+      rate: 0,
+      status: 'pending'
+    }
+    await createLoad.mutateAsync(backendData)
   }
 
-  // Document management handlers
-  const handleManageDocuments = (load: LoadData) => {
-    setDocumentLoad(load)
-    setIsDocumentModalOpen(true)
-    closeContextMenu()
+  const handleDelete = async (id: number) => {
+    if (confirm('Are you sure you want to delete this load?')) {
+      await deleteLoad.mutateAsync(id)
+      setEditableLoads(editableLoads.filter(load => load.id !== id))
+    }
   }
 
-  const handleDocumentsChange = (loadId: number, documents: {
-    ratecon: { id: string; name: string; size: number; type: string; url: string; uploadedAt: Date }[]
-    pod: { id: string; name: string; size: number; type: string; url: string; uploadedAt: Date }[]
-  }) => {
-    setLoadDocuments(prev => ({
-      ...prev,
-      [loadId]: documents
-    }))
+  const handleFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    loadKey: number | 'new',
+    field: 'pod_url' | 'ratecon_url'
+  ) => {
+    const file = e.target.files?.[0]
+    if (!file) return
 
-    // Update the loads state to reflect document status
-    setLoads(prevLoads => prevLoads.map(load =>
-      load.id === loadId ? {
-        ...load,
-        ratecon: documents.ratecon.length > 0,
-        pod: documents.pod.length > 0
-      } : load
-    ))
+    // Validate file type
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      alert('Only PDF files are allowed')
+      return
+    }
+
+    // Create form data
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      // Get token from cookie
+      const getCookie = (name: string) => {
+        const value = `; ${document.cookie}`
+        const parts = value.split(`; ${name}=`)
+        if (parts.length === 2) return parts.pop()?.split(';').shift()
+      }
+      const token = getCookie('auth-token')
+
+      // Upload file
+      const response = await fetch('http://localhost:8000/api/v1/uploads/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error('Upload failed')
+      }
+
+      const data = await response.json()
+
+      // Update the field with the returned URL
+      await updateField(loadKey, field, data.url)
+    } catch (error) {
+      console.error('File upload error:', error)
+      alert('Failed to upload file')
+    }
+
+    // Reset the input
+    e.target.value = ''
   }
 
-  const closeDocumentModal = () => {
-    setIsDocumentModalOpen(false)
-    setDocumentLoad(null)
+  const updateField = async (id: number | 'new', field: keyof EditableLoad, value: any) => {
+    const updatedLoads = editableLoads.map(load => {
+      if ((id === 'new' && load.isNew) || load.id === id) {
+        const updated = { ...load, [field]: value }
+
+        // Update nested objects when IDs change
+        if (field === 'driver_id') {
+          updated.driver = value ? drivers.find(d => d.id === value) : undefined
+        } else if (field === 'truck_id') {
+          updated.truck = value ? trucks.find(t => t.id === value) : undefined
+        }
+
+        return updated
+      }
+      return load
+    })
+    setEditableLoads(updatedLoads)
+
+    // Auto-save to backend if not a new load
+    const load = updatedLoads.find(l => (id === 'new' && l.isNew) || l.id === id)
+    if (load && !load.isNew) {
+      const backendData: any = {
+        load_number: load.load_number,
+        customer_id: load.customer_id,
+        driver_id: load.driver_id || null,
+        truck_id: load.truck_id || null,
+        pickup_location: load.pickup_location,
+        delivery_location: load.delivery_location,
+        pickup_date: load.pickup_date,
+        delivery_date: load.delivery_date,
+        miles: load.miles || 0,
+        rate: load.rate || 0,
+        status: load.status
+      }
+      await updateLoad.mutateAsync({ id: load.id, data: backendData })
+    }
   }
 
-  // Calculate group totals for display in group headers
-  const calculateGroupTotals = (rows: LoadData[]) => {
-    const totalRate = rows.reduce((sum, row) => sum + row.rate, 0)
-    const totalMiles = rows.reduce((sum, row) => sum + row.miles, 0)
-    const averageRPM = totalMiles > 0 ? totalRate / totalMiles : 0
 
+  const formatDateForInput = (dateString: string) => {
+    if (!dateString) return ''
+    return dateString.split('T')[0]
+  }
+
+  const totals = useMemo(() => {
+    const totalRate = editableLoads.reduce((sum, load) => sum + (Number(load.rate) || 0), 0)
+    const totalMiles = editableLoads.reduce((sum, load) => sum + (Number(load.miles) || 0), 0)
     return {
-      'load_number': (
-        <span className="text-sm font-medium text-gray-900">
-          {rows.length} load{rows.length !== 1 ? 's' : ''}
-        </span>
-      ),
-      'rate': (
-        <div className="text-sm font-medium text-green-700">
-          ${totalRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </div>
-      ),
-      'miles': (
-        <span className="text-sm font-medium text-blue-700">
-          {totalMiles.toLocaleString()} mi
-        </span>
-      ),
-      'rpm': (
-        <span className="text-sm font-medium text-purple-700">
-          ${averageRPM.toFixed(2)}
-        </span>
-      )
+      count: editableLoads.filter(l => !l.isNew).length,
+      rate: totalRate,
+      miles: totalMiles,
+      rpm: totalMiles > 0 ? totalRate / totalMiles : 0
     }
-  }
-
-  const handleContextEdit = () => {
-    if (contextMenu.row) {
-      handleEditLoad(contextMenu.row)
-    }
-    closeContextMenu()
-  }
-
-  const handleContextDelete = () => {
-    if (contextMenu.row) {
-      handleDeleteLoad(contextMenu.row.id!)
-    }
-    closeContextMenu()
-  }
-
-
-  const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(':')
-    const hour = parseInt(hours)
-    const ampm = hour >= 12 ? 'PM' : 'AM'
-    const displayHour = hour % 12 || 12
-    return `${displayHour}:${minutes} ${ampm}`
-  }
+  }, [editableLoads])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -242,195 +269,369 @@ export default function LoadsPage() {
     }
   }
 
-  const calculateRPM = (rate: number, miles: number) => {
-    return miles > 0 ? (rate / miles).toFixed(2) : '0.00'
+  const isEditing = (loadId: number | 'new', field: string) => {
+    return editingCell?.loadId === loadId && editingCell?.field === field
   }
 
-  // Calculate totals for the floating row
-  const totals = useMemo(() => {
-    const totalLoads = loads.length
-    const totalRate = loads.reduce((sum, load) => sum + load.rate, 0)
-    const totalMiles = loads.reduce((sum, load) => sum + load.miles, 0)
-    const averageRPM = totalMiles > 0 ? totalRate / totalMiles : 0
+  const startEdit = (loadId: number | 'new', field: string) => {
+    setEditingCell({ loadId, field })
+  }
 
-    return {
-      totalLoads,
-      totalRate,
-      totalMiles,
-      averageRPM
-    }
-  }, [loads])
+  const stopEdit = () => {
+    setEditingCell(null)
+  }
 
-  const columns: Column<LoadData>[] = [
-    {
-      key: 'pickup_date',
-      label: 'Date',
-      width: '120px',
-      render: (value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    },
-    {
-      key: 'load_number',
-      label: 'Load #',
-      width: '120px',
-      render: (value) => <span className="font-medium text-gray-900">{value}</span>
-    },
-    {
-      key: 'driver',
-      label: 'Driver',
-      width: '150px',
-      filterable: true,
-      groupable: true,
-      render: (value) => (
-        <div className="flex items-center text-sm">
-          <User className="h-3 w-3 mr-1 text-gray-400" />
-          {value}
-        </div>
-      )
-    },
-    {
-      key: 'customer',
-      label: 'Customer',
-      width: '160px',
-      filterable: true,
-      groupable: true,
-      getGroupValue: (row) => row.customer.name,
-      render: (value) => (
-        <div className="space-y-0.5">
-          <div className="font-medium text-gray-900">{value.name}</div>
-          <div className="text-xs text-gray-500">{value.mc}</div>
-        </div>
-      )
-    },
-    {
-      key: 'pickup_location',
-      label: 'Pickup',
-      width: '160px',
-      filterable: true,
-      groupable: true,
-      render: (value, row) => (
-        <div className="space-y-0.5">
-          <div className="text-gray-900">{value}</div>
-          <div className="text-xs text-gray-500">
-            {new Date(row.pickup_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {formatTime(row.pickup_time)}
+  const renderLoadRow = (load: EditableLoad, paddingLeft = 0) => {
+    const loadKey = load.isNew ? 'new' : load.id
+    const rpm = load.miles && load.miles > 0 ? (load.rate || 0) / load.miles : 0
+
+    return (
+      <tr
+        key={loadKey}
+        className="hover:bg-gray-50"
+        onContextMenu={(e) => {
+          e.preventDefault()
+          if (!load.isNew) {
+            handleDelete(load.id)
+          }
+        }}
+      >
+        {/* Week */}
+        <td className="px-2 py-2" style={{ paddingLeft: `${paddingLeft + 8}px` }}>
+          <div>
+            <div className="text-sm text-gray-900">{load.weekLabel}</div>
+            <div className="text-xs text-gray-500">{load.weekDateRange}</div>
           </div>
-        </div>
-      )
-    },
-    {
-      key: 'delivery_location',
-      label: 'Delivery',
-      width: '160px',
-      filterable: true,
-      groupable: true,
-      render: (value, row) => (
-        <div className="space-y-0.5">
-          <div className="text-gray-900">{value}</div>
-          <div className="text-xs text-gray-500">
-            {new Date(row.delivery_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {formatTime(row.delivery_time)}
-          </div>
-        </div>
-      )
-    },
-    {
-      key: 'rate',
-      label: 'Rate',
-      width: '120px',
-      render: (value) => (
-        <div className="font-medium text-gray-900">
-          ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </div>
-      )
-    },
-    {
-      key: 'miles',
-      label: 'Miles',
-      width: '100px',
-      render: (value, row) => `${value.toLocaleString()} mi ($${calculateRPM(row.rate, row.miles)}/mi)`
-    },
-    {
-      key: 'ratecon',
-      label: 'Ratecon',
-      width: '120px',
-      render: (value, row) => {
-        const docCount = row.id ? loadDocuments[row.id]?.ratecon.length || 0 : 0
-        return (
-          <div className="flex items-center justify-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 hover:bg-blue-50"
-              onClick={(e) => {
-                e.stopPropagation()
-                handleManageDocuments(row)
+        </td>
+
+        {/* Date */}
+        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'pickup_date')}>
+          {isEditing(loadKey, 'pickup_date') ? (
+            <Input
+              type="date"
+              value={formatDateForInput(load.pickup_date)}
+              onChange={(e) => updateField(loadKey, 'pickup_date', `${e.target.value}T00:00:00`)}
+              onBlur={stopEdit}
+              autoFocus
+              className="h-8 text-sm"
+            />
+          ) : (
+            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+              {new Date(load.pickup_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
+            </div>
+          )}
+        </td>
+
+        {/* Load # */}
+        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'load_number')}>
+          {isEditing(loadKey, 'load_number') ? (
+            <Input
+              value={load.load_number}
+              onChange={(e) => updateField(loadKey, 'load_number', e.target.value)}
+              onBlur={stopEdit}
+              autoFocus
+              className="h-8 text-sm"
+            />
+          ) : (
+            <div className="text-sm font-medium cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+              {load.load_number}
+            </div>
+          )}
+        </td>
+
+        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'customer_id')}>
+          {isEditing(loadKey, 'customer_id') ? (
+            <Select
+              value={String(load.customer_id)}
+              onValueChange={(value) => {
+                updateField(loadKey, 'customer_id', Number(value))
+                stopEdit()
               }}
+              open={true}
+              onOpenChange={(open) => !open && stopEdit()}
             >
-              {docCount > 0 ? (
-                <div className="flex items-center text-green-600">
-                  <FileText className="h-4 w-4 mr-1" />
-                  <span className="text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-                    {docCount}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center text-gray-400 hover:text-blue-600">
-                  <Upload className="h-4 w-4 mr-1" />
-                  <span className="text-xs">Add</span>
-                </div>
-              )}
-            </Button>
-          </div>
-        )
-      }
-    },
-    {
-      key: 'pod',
-      label: 'POD',
-      width: '120px',
-      render: (value, row) => {
-        const docCount = row.id ? loadDocuments[row.id]?.pod.length || 0 : 0
-        return (
-          <div className="flex items-center justify-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 hover:bg-blue-50"
-              onClick={(e) => {
-                e.stopPropagation()
-                handleManageDocuments(row)
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {customers.map(customer => (
+                  <SelectItem key={customer.id} value={String(customer.id)}>
+                    {customer.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+              {customers.find(c => c.id === load.customer_id)?.name || 'N/A'}
+            </div>
+          )}
+        </td>
+
+        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'driver_id')}>
+          {isEditing(loadKey, 'driver_id') ? (
+            <Select
+              value={load.driver_id ? String(load.driver_id) : 'unassigned'}
+              onValueChange={(value) => {
+                updateField(loadKey, 'driver_id', value === 'unassigned' ? null : Number(value))
+                stopEdit()
               }}
+              open={true}
+              onOpenChange={(open) => !open && stopEdit()}
             >
-              {docCount > 0 ? (
-                <div className="flex items-center text-green-600">
-                  <Package className="h-4 w-4 mr-1" />
-                  <span className="text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-                    {docCount}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center text-gray-400 hover:text-blue-600">
-                  <Upload className="h-4 w-4 mr-1" />
-                  <span className="text-xs">Add</span>
-                </div>
-              )}
-            </Button>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {drivers.map(driver => (
+                  <SelectItem key={driver.id} value={String(driver.id)}>
+                    {driver.first_name} {driver.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+              {load.driver ? `${load.driver.first_name} ${load.driver.last_name}` : 'Unassigned'}
+            </div>
+          )}
+        </td>
+
+        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'truck_id')}>
+          {isEditing(loadKey, 'truck_id') ? (
+            <Select
+              value={load.truck_id ? String(load.truck_id) : 'unassigned'}
+              onValueChange={(value) => {
+                updateField(loadKey, 'truck_id', value === 'unassigned' ? null : Number(value))
+                stopEdit()
+              }}
+              open={true}
+              onOpenChange={(open) => !open && stopEdit()}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {trucks.map(truck => (
+                  <SelectItem key={truck.id} value={String(truck.id)}>
+                    {truck.truck_number}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+              {load.truck ? load.truck.truck_number : 'Unassigned'}
+            </div>
+          )}
+        </td>
+
+        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'pickup_location')}>
+          {isEditing(loadKey, 'pickup_location') ? (
+            <Input
+              value={load.pickup_location}
+              onChange={(e) => updateField(loadKey, 'pickup_location', e.target.value)}
+              onBlur={stopEdit}
+              autoFocus
+              placeholder="City, ST"
+              className="h-8 text-sm"
+            />
+          ) : (
+            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+              {load.pickup_location || 'N/A'}
+            </div>
+          )}
+        </td>
+
+        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'delivery_location')}>
+          {isEditing(loadKey, 'delivery_location') ? (
+            <Input
+              value={load.delivery_location}
+              onChange={(e) => updateField(loadKey, 'delivery_location', e.target.value)}
+              onBlur={stopEdit}
+              autoFocus
+              placeholder="City, ST"
+              className="h-8 text-sm"
+            />
+          ) : (
+            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+              {load.delivery_location || 'N/A'}
+            </div>
+          )}
+        </td>
+
+        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'rate')}>
+          {isEditing(loadKey, 'rate') ? (
+            <Input
+              type="number"
+              value={load.rate}
+              onChange={(e) => updateField(loadKey, 'rate', Number(e.target.value))}
+              onBlur={stopEdit}
+              autoFocus
+              className="h-8 text-sm text-right"
+            />
+          ) : (
+            <div className="text-sm font-medium cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+              {formatCurrency(load.rate)}
+            </div>
+          )}
+        </td>
+
+        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'miles')}>
+          {isEditing(loadKey, 'miles') ? (
+            <Input
+              type="number"
+              value={load.miles}
+              onChange={(e) => updateField(loadKey, 'miles', Number(e.target.value))}
+              onBlur={stopEdit}
+              autoFocus
+              className="h-8 text-sm text-right"
+            />
+          ) : (
+            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+              {load.miles?.toLocaleString() || 0}
+            </div>
+          )}
+        </td>
+
+        <td className="px-2 py-2">
+          <div className="text-sm text-gray-600">
+            ${rpm.toFixed(2)}
           </div>
-        )
-      }
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      width: '130px',
-      filterable: true,
-      groupable: true,
-      getGroupValue: (row) => row.status.replace('_', ' '),
-      render: (value) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
-          {value.replace('_', ' ')}
-        </span>
-      )
-    },
-  ]
+        </td>
+
+        {/* POD */}
+        <td className="px-2 py-2">
+          <div className="flex items-center gap-2">
+            {load.pod_url ? (
+              <>
+                <a
+                  href={`http://localhost:8000${load.pod_url}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline text-sm"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  View
+                </a>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => handleFileUpload(e, loadKey, 'pod_url')}
+                  className="hidden"
+                  id={`pod-upload-${loadKey}`}
+                />
+                <label
+                  htmlFor={`pod-upload-${loadKey}`}
+                  className="text-xs text-gray-500 hover:text-gray-700 cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Replace
+                </label>
+              </>
+            ) : (
+              <>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => handleFileUpload(e, loadKey, 'pod_url')}
+                  className="hidden"
+                  id={`pod-upload-${loadKey}`}
+                />
+                <label
+                  htmlFor={`pod-upload-${loadKey}`}
+                  className="text-sm text-blue-600 hover:underline cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Upload
+                </label>
+              </>
+            )}
+          </div>
+        </td>
+
+        {/* Ratecon */}
+        <td className="px-2 py-2">
+          <div className="flex items-center gap-2">
+            {load.ratecon_url ? (
+              <>
+                <a
+                  href={`http://localhost:8000${load.ratecon_url}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline text-sm"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  View
+                </a>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => handleFileUpload(e, loadKey, 'ratecon_url')}
+                  className="hidden"
+                  id={`ratecon-upload-${loadKey}`}
+                />
+                <label
+                  htmlFor={`ratecon-upload-${loadKey}`}
+                  className="text-xs text-gray-500 hover:text-gray-700 cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Replace
+                </label>
+              </>
+            ) : (
+              <>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => handleFileUpload(e, loadKey, 'ratecon_url')}
+                  className="hidden"
+                  id={`ratecon-upload-${loadKey}`}
+                />
+                <label
+                  htmlFor={`ratecon-upload-${loadKey}`}
+                  className="text-sm text-blue-600 hover:underline cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Upload
+                </label>
+              </>
+            )}
+          </div>
+        </td>
+
+        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'status')}>
+          {isEditing(loadKey, 'status') ? (
+            <Select
+              value={load.status}
+              onValueChange={(value) => {
+                updateField(loadKey, 'status', value)
+                stopEdit()
+              }}
+              open={true}
+              onOpenChange={(open) => !open && stopEdit()}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="assigned">Assigned</SelectItem>
+                <SelectItem value="in_transit">In Transit</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer ${getStatusColor(load.status)}`}>
+              {load.status.replace('_', ' ')}
+            </span>
+          )}
+        </td>
+      </tr>
+    )
+  }
 
   return (
     <Layout>
@@ -440,125 +641,117 @@ export default function LoadsPage() {
             <h1 className="text-2xl font-semibold text-gray-900">Loads</h1>
             <p className="text-gray-600">Manage your shipments and deliveries</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCreateLoad}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Load
-          </Button>
+          <div className="flex gap-2">
+            <Select value={groupBy} onValueChange={(value: any) => setGroupBy(value)}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Group by..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No grouping</SelectItem>
+                <SelectItem value="week">Week</SelectItem>
+                <SelectItem value="driver">Driver</SelectItem>
+                <SelectItem value="customer">Customer</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handleAddNew}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              New Load
+            </Button>
+          </div>
         </div>
 
-        <DataTable
-          data={loads}
-          columns={columns}
-          onRowRightClick={handleRowRightClick}
-          calculateGroupTotals={calculateGroupTotals}
-        />
-
-        <LoadModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSave={handleSaveLoad}
-          load={editingLoad}
-          mode={modalMode}
-        />
-
-        {documentLoad && (
-          <DocumentModal
-            isOpen={isDocumentModalOpen}
-            onClose={closeDocumentModal}
-            loadNumber={documentLoad.load_number}
-            documents={documentLoad.id ? loadDocuments[documentLoad.id] || { ratecon: [], pod: [] } : { ratecon: [], pod: [] }}
-            onDocumentsChange={(documents) => handleDocumentsChange(documentLoad.id!, documents)}
-          />
-        )}
-
-        <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          isVisible={contextMenu.isVisible}
-          onClose={closeContextMenu}
-        >
-          <ContextMenuItem
-            onClick={handleContextEdit}
-            icon={<Edit className="h-4 w-4" />}
-          >
-            Edit Load
-          </ContextMenuItem>
-          <ContextMenuItem
-            onClick={() => contextMenu.row && handleManageDocuments(contextMenu.row)}
-            icon={<FolderOpen className="h-4 w-4" />}
-            className="text-blue-600 hover:bg-blue-50"
-          >
-            Manage Documents
-          </ContextMenuItem>
-          <ContextMenuItem
-            onClick={handleContextDelete}
-            icon={<Trash2 className="h-4 w-4" />}
-            className="text-red-600 hover:bg-red-50"
-          >
-            Delete Load
-          </ContextMenuItem>
-        </ContextMenu>
-
-        {/* Floating Totals Row - Aligned with table columns */}
-        <div className="sticky bottom-0 bg-white border-t-2 border-gray-300 shadow-lg mt-4">
-          <div style={{ minWidth: '1400px', width: '100%' }}>
+        <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+          <div className="overflow-x-auto">
             <table className="w-full table-auto">
-              <tbody>
-                <tr className="bg-gray-50">
-                  {/* Date column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px', minWidth: '120px' }}>
-
-                  </td>
-                  {/* Load # column - show total count */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px', minWidth: '120px' }}>
-                    <span className="font-medium text-gray-900">
-                      {totals.totalLoads} Load{totals.totalLoads !== 1 ? 's' : ''}
-                    </span>
-                  </td>
-                  {/* Driver column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '150px', minWidth: '150px' }}>
-
-                  </td>
-                  {/* Customer column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '160px', minWidth: '160px' }}>
-
-                  </td>
-                  {/* Pickup column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '160px', minWidth: '160px' }}>
-
-                  </td>
-                  {/* Delivery column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '160px', minWidth: '160px' }}>
-
-                  </td>
-                  {/* Rate column - show total rate */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px', minWidth: '120px' }}>
-                    <div className="font-medium text-green-700">
-                      ${totals.totalRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                  </td>
-                  {/* Miles column - show total miles */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '100px', minWidth: '100px' }}>
-                    <span className="text-blue-700">{totals.totalMiles.toLocaleString()} mi</span>
-                  </td>
-                  {/* RPM column - show average RPM */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '100px', minWidth: '100px' }}>
-                    <span className="text-purple-700">${totals.averageRPM.toFixed(2)}</span>
-                  </td>
-                  {/* Ratecon column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '110px', minWidth: '110px' }}>
-
-                  </td>
-                  {/* POD column - empty */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '100px', minWidth: '100px' }}>
-
-                  </td>
-                  {/* Status column - empty */}
-                  <td className="px-3 py-2 text-sm" style={{ width: '130px', minWidth: '130px' }}>
-
-                  </td>
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Week</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Load #</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Driver</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Truck</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pickup</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Delivery</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rate</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Miles</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">RPM</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">POD</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ratecon</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {groupBy === 'none' ? (
+                  editableLoads.map((load) => renderLoadRow(load))
+                ) : (
+                  groupedLoads && Object.entries(groupedLoads).map(([groupKey, groupLoads]) => {
+                    const isCollapsed = collapsedGroups.has(groupKey)
+                    const groupTotalRate = groupLoads.reduce((sum, l) => sum + (Number(l.rate) || 0), 0)
+                    const groupTotalMiles = groupLoads.reduce((sum, l) => sum + (Number(l.miles) || 0), 0)
+                    const groupRPM = groupTotalMiles > 0 ? groupTotalRate / groupTotalMiles : 0
+
+                    return (
+                      <React.Fragment key={groupKey}>
+                        {/* Group Header Row */}
+                        <tr className="bg-gray-100 border-b border-gray-200 cursor-pointer" onClick={() => toggleGroup(groupKey)}>
+                          <td colSpan={2} className="px-2 py-2 text-sm font-medium text-gray-700">
+                            <div className="flex items-center gap-2">
+                              {isCollapsed ? (
+                                <ChevronRight className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                              <span>{groupKey}</span>
+                              <span className="text-gray-500">({groupLoads.length} loads)</span>
+                            </div>
+                          </td>
+                          <td className="px-2 py-2 text-sm" colSpan={7}></td>
+                          <td className="px-2 py-2 text-sm font-medium text-green-700">
+                            {formatCurrency(groupTotalRate)}
+                          </td>
+                          <td className="px-2 py-2 text-sm font-medium text-blue-700">
+                            {groupTotalMiles.toLocaleString()} mi
+                          </td>
+                          <td className="px-2 py-2 text-sm font-medium text-purple-700">
+                            ${groupRPM.toFixed(2)}
+                          </td>
+                          <td className="px-2 py-2 text-sm" colSpan={3}></td>
+                        </tr>
+                        {/* Group Loads */}
+                        {!isCollapsed && groupLoads.map((load) => renderLoadRow(load, 20))}
+                      </React.Fragment>
+                    )
+                  })
+                )}
               </tbody>
+              <tfoot className="sticky bottom-0 bg-white border-t-2 border-gray-300 shadow-lg">
+                <tr className="bg-gray-50">
+                  <td className="px-2 py-2 text-sm"></td>
+                  <td className="px-2 py-2 text-sm"></td>
+                  <td className="px-2 py-2 text-sm font-medium">{totals.count} Loads</td>
+                  <td className="px-2 py-2 text-sm"></td>
+                  <td className="px-2 py-2 text-sm"></td>
+                  <td className="px-2 py-2 text-sm"></td>
+                  <td className="px-2 py-2 text-sm"></td>
+                  <td className="px-2 py-2 text-sm"></td>
+                  <td className="px-2 py-2 text-sm font-medium text-green-700">
+                    {formatCurrency(totals.rate)}
+                  </td>
+                  <td className="px-2 py-2 text-sm font-medium text-blue-700">
+                    {totals.miles.toLocaleString()} mi
+                  </td>
+                  <td className="px-2 py-2 text-sm font-medium text-purple-700">
+                    ${totals.rpm.toFixed(2)}
+                  </td>
+                  <td className="px-2 py-2 text-sm"></td>
+                  <td className="px-2 py-2 text-sm"></td>
+                  <td className="px-2 py-2 text-sm"></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>

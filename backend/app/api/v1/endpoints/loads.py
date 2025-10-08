@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.models.load import Load
 from app.schemas.load import LoadCreate, LoadUpdate, LoadResponse
@@ -18,7 +19,13 @@ async def get_loads(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    query = select(Load).where(Load.company_id == current_user.company_id).offset(skip).limit(limit)
+    query = (
+        select(Load)
+        .options(selectinload(Load.driver), selectinload(Load.truck))
+        .where(Load.company_id == current_user.company_id)
+        .offset(skip)
+        .limit(limit)
+    )
     result = await db.execute(query)
     loads = result.scalars().all()
     return loads
@@ -43,9 +50,13 @@ async def get_load(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    query = select(Load).where(
-        Load.id == load_id,
-        Load.company_id == current_user.company_id
+    query = (
+        select(Load)
+        .options(selectinload(Load.driver), selectinload(Load.truck))
+        .where(
+            Load.id == load_id,
+            Load.company_id == current_user.company_id
+        )
     )
     result = await db.execute(query)
     load = result.scalar_one_or_none()
@@ -61,16 +72,21 @@ async def update_load(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    query = select(Load).where(
-        Load.id == load_id,
-        Load.company_id == current_user.company_id
+    query = (
+        select(Load)
+        .options(selectinload(Load.driver), selectinload(Load.truck))
+        .where(
+            Load.id == load_id,
+            Load.company_id == current_user.company_id
+        )
     )
     result = await db.execute(query)
     load = result.scalar_one_or_none()
     if not load:
         raise HTTPException(status_code=404, detail="Load not found")
 
-    for field, value in load_update.dict(exclude_unset=True).items():
+    update_data = load_update.dict(exclude_unset=True)
+    for field, value in update_data.items():
         setattr(load, field, value)
 
     await db.commit()

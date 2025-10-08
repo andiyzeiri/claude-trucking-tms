@@ -1,430 +1,262 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React from 'react'
+import { useQuery } from '@tanstack/react-query'
 import Layout from '@/components/layout/layout'
+import { useAuth } from '@/hooks/use-auth'
+import api from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Package, Users, Truck, Building2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { DataTable, Column } from '@/components/ui/data-table'
-import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
-import { formatCurrency } from '@/lib/utils'
-import { DollarSign, TrendingUp, Plus, User, Edit, Trash2, Phone, Mail, FileText, CheckCircle, X, Package, Users, Truck, Building2 } from 'lucide-react'
-import StatisticsCards from '@/components/dashboard/StatisticsCards'
-
-interface DriverData {
-  id?: number
-  name: string
-  phone: string
-  email: string
-  license_number: string
-  license_expiry: string
-  status: 'active' | 'inactive' | 'on_leave'
-  truck_assigned?: string
-  hire_date: string
-  type: 'company' | 'owner_operator'
-  revenue: number
-  profit: number
-}
+import { useRouter } from 'next/navigation'
 
 export default function DashboardPage() {
-  // Static demo data
-  const loads = {
-    total: 5,
-    items: [
-      { id: 1, load_number: "TMS001", pickup_location: "Los Angeles, CA", status: "in_transit", rate: 2500.00 },
-      { id: 2, load_number: "TMS002", pickup_location: "Dallas, TX", status: "delivered", rate: 1200.00 },
-      { id: 3, load_number: "TMS003", pickup_location: "Chicago, IL", status: "assigned", rate: 800.00 }
-    ]
-  }
+  const { user } = useAuth()
+  const router = useRouter()
 
-  // Company Drivers Data
-  const [companyDrivers, setCompanyDrivers] = useState<DriverData[]>([
-    {
-      id: 1,
-      name: "John Smith",
-      phone: "(555) 123-4567",
-      email: "john.smith@company.com",
-      license_number: "DL12345678",
-      license_expiry: "2025-06-15",
-      status: "active",
-      truck_assigned: "Truck #101",
-      hire_date: "2023-01-15",
-      type: "company",
-      revenue: 25000.75,
-      profit: 5000.25
-    },
-    {
-      id: 2,
-      name: "Jane Doe",
-      phone: "(555) 234-5678",
-      email: "jane.doe@company.com",
-      license_number: "DL87654321",
-      license_expiry: "2024-12-20",
-      status: "active",
-      truck_assigned: "Truck #102",
-      hire_date: "2023-03-10",
-      type: "company",
-      revenue: 32000.50,
-      profit: 7200.80
-    },
-    {
-      id: 3,
-      name: "Mike Johnson",
-      phone: "(555) 345-6789",
-      email: "mike.johnson@company.com",
-      license_number: "DL11223344",
-      license_expiry: "2025-08-30",
-      status: "on_leave",
-      truck_assigned: "",
-      hire_date: "2022-11-05",
-      type: "company",
-      revenue: 18000.25,
-      profit: 2800.60
+  // Fetch real data from API
+  const { data: loads, isLoading: loadsLoading } = useQuery({
+    queryKey: ['loads'],
+    queryFn: async () => {
+      const response = await api.get('/v1/loads?limit=10000')
+      return response.data
     }
-  ])
+  })
 
-  // Owner Operators Data
-  const [ownerOperators, setOwnerOperators] = useState<DriverData[]>([
-    {
-      id: 4,
-      name: "Robert Wilson",
-      phone: "(555) 456-7890",
-      email: "robert.wilson@gmail.com",
-      license_number: "DL55667788",
-      license_expiry: "2025-04-10",
-      status: "active",
-      truck_assigned: "Own Truck - Peterbilt 579",
-      hire_date: "2023-02-20",
-      type: "owner_operator",
-      revenue: 45000.90,
-      profit: 15000.45
-    },
-    {
-      id: 5,
-      name: "Sarah Davis",
-      phone: "(555) 567-8901",
-      email: "sarah.davis@outlook.com",
-      license_number: "DL99887766",
-      license_expiry: "2024-11-15",
-      status: "active",
-      truck_assigned: "Own Truck - Freightliner Cascadia",
-      hire_date: "2023-05-12",
-      type: "owner_operator",
-      revenue: 38000.35,
-      profit: 12000.70
+  const { data: drivers, isLoading: driversLoading } = useQuery({
+    queryKey: ['drivers'],
+    queryFn: async () => {
+      const response = await api.get('/v1/drivers?limit=10000')
+      return response.data
     }
-  ])
+  })
 
-  // Context menu state for drivers
-  const [driverContextMenu, setDriverContextMenu] = useState<{
-    isVisible: boolean
-    x: number
-    y: number
-    row: DriverData | null
-    type: 'company' | 'owner_operator' | null
-  }>({ isVisible: false, x: 0, y: 0, row: null, type: null })
+  const { data: trucks, isLoading: trucksLoading } = useQuery({
+    queryKey: ['trucks'],
+    queryFn: async () => {
+      const response = await api.get('/v1/trucks?limit=10000')
+      return response.data
+    }
+  })
 
-  // Enhanced statistics data
-  const totalRevenue = loads.items.reduce((sum, load) => sum + load.rate, 0)
-  const weeklyRevenue = totalRevenue * 0.25 // Simulated weekly portion
-  const monthlyRevenue = totalRevenue * 1.2 // Simulated monthly
-  const yearlyRevenue = totalRevenue * 15 // Simulated yearly
+  const { data: customers, isLoading: customersLoading } = useQuery({
+    queryKey: ['customers'],
+    queryFn: async () => {
+      const response = await api.get('/v1/customers?limit=10000')
+      return response.data
+    }
+  })
 
-  const statisticsData = {
-    loads: loads.total,
-    drivers: companyDrivers.length + ownerOperators.length,
-    trucks: 3,
-    customers: 2,
-    weeklyRevenue,
-    monthlyRevenue,
-    yearlyRevenue
-  }
+  const isLoading = loadsLoading || driversLoading || trucksLoading || customersLoading
 
-  // Driver CRUD operations
-  const handleCreateCompanyDriver = () => {
-    // TODO: Implement modal for creating company driver
-    console.log('Create company driver')
-  }
+  // Calculate financial summaries
+  const financialSummary = React.useMemo(() => {
+    if (!loads) return { today: 0, month: 0, year: 0, todayLoads: 0, monthLoads: 0, yearLoads: 0 }
 
-  const handleCreateOwnerOperator = () => {
-    // TODO: Implement modal for creating owner operator
-    console.log('Create owner operator')
-  }
+    const now = new Date()
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const todayEnd = new Date(todayStart)
+    todayEnd.setDate(todayEnd.getDate() + 1)
 
-  const handleEditDriver = (driver: DriverData) => {
-    // TODO: Implement modal for editing driver
-    console.log('Edit driver:', driver)
-  }
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const yearStart = new Date(now.getFullYear(), 0, 1)
 
-  const handleDeleteDriver = (driverId: number, type: 'company' | 'owner_operator') => {
-    if (confirm('Are you sure you want to delete this driver?')) {
-      if (type === 'company') {
-        setCompanyDrivers(companyDrivers.filter(driver => driver.id !== driverId))
-      } else {
-        setOwnerOperators(ownerOperators.filter(driver => driver.id !== driverId))
+    let todayRevenue = 0
+    let monthRevenue = 0
+    let yearRevenue = 0
+    let todayLoads = 0
+    let monthLoads = 0
+    let yearLoads = 0
+
+    loads.forEach((load: any) => {
+      const rate = Number(load.rate) || 0
+      // Use pickup_date or created_at as the date for revenue calculation
+      const loadDate = load.pickup_date ? new Date(load.pickup_date) : (load.created_at ? new Date(load.created_at) : null)
+
+      if (loadDate) {
+        // Today: loads picked up today
+        if (loadDate >= todayStart && loadDate < todayEnd) {
+          todayRevenue += rate
+          todayLoads++
+        }
+        // This month: loads picked up this month
+        if (loadDate >= monthStart) {
+          monthRevenue += rate
+          monthLoads++
+        }
+        // This year: loads picked up this year
+        if (loadDate >= yearStart) {
+          yearRevenue += rate
+          yearLoads++
+        }
       }
-    }
-  }
-
-  // Context menu handlers
-  const handleDriverRightClick = (row: DriverData, event: React.MouseEvent, type: 'company' | 'owner_operator') => {
-    setDriverContextMenu({
-      isVisible: true,
-      x: event.clientX,
-      y: event.clientY,
-      row,
-      type
     })
-  }
 
-  const closeDriverContextMenu = () => {
-    setDriverContextMenu({ isVisible: false, x: 0, y: 0, row: null, type: null })
-  }
-
-  const handleDriverContextEdit = () => {
-    if (driverContextMenu.row) {
-      handleEditDriver(driverContextMenu.row)
+    return {
+      today: todayRevenue,
+      month: monthRevenue,
+      year: yearRevenue,
+      todayLoads,
+      monthLoads,
+      yearLoads
     }
-    closeDriverContextMenu()
-  }
-
-  const handleDriverContextDelete = () => {
-    if (driverContextMenu.row && driverContextMenu.type) {
-      handleDeleteDriver(driverContextMenu.row.id!, driverContextMenu.type)
-    }
-    closeDriverContextMenu()
-  }
-
-  // Helper functions
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'inactive': return 'bg-red-100 text-red-800'
-      case 'on_leave': return 'bg-yellow-100 text-yellow-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const isLicenseExpiringSoon = (expiryDate: string) => {
-    const expiry = new Date(expiryDate)
-    const today = new Date()
-    const thirtyDaysFromNow = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000))
-    return expiry <= thirtyDaysFromNow
-  }
+  }, [loads])
 
   return (
     <Layout>
-      <div className="page-dashboard space-y-6 p-6">
-        {/* Header Section */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Welcome back, {user?.first_name ? user.first_name.charAt(0).toUpperCase() + user.first_name.slice(1).toLowerCase() : ''}!
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Here's what's happening with your company today
+          </p>
         </div>
 
-        {/* Statistics Display */}
-        <div className="bg-white rounded-lg shadow border p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{statisticsData.loads}</div>
-              <div className="text-sm text-gray-600">Total Loads</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{statisticsData.drivers}</div>
-              <div className="text-sm text-gray-600">Active Drivers</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{statisticsData.trucks}</div>
-              <div className="text-sm text-gray-600">Available Trucks</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{statisticsData.customers}</div>
-              <div className="text-sm text-gray-600">Active Customers</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{formatCurrency(statisticsData.weeklyRevenue)}</div>
-              <div className="text-sm text-gray-600">Weekly Revenue</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{formatCurrency(statisticsData.monthlyRevenue)}</div>
-              <div className="text-sm text-gray-600">Monthly Revenue</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{formatCurrency(statisticsData.yearlyRevenue)}</div>
-              <div className="text-sm text-gray-600">Yearly Revenue</div>
-            </div>
-          </div>
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Loads</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {isLoading ? '...' : loads?.length || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Active shipments
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Drivers</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {isLoading ? '...' : drivers?.length || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Company & owner operators
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Available Trucks</CardTitle>
+              <Truck className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {isLoading ? '...' : trucks?.length || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Fleet vehicles
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {isLoading ? '...' : customers?.length || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Business partners
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Side by Side Simple Tables */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Company Drivers Table */}
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Company Drivers</h2>
-              <p className="text-gray-600">Performance overview</p>
+        {/* Financial Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Revenue Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">Today</p>
+                <p className="text-3xl font-bold text-green-600">
+                  ${financialSummary.today.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-gray-500">{financialSummary.todayLoads} loads</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">This Month</p>
+                <p className="text-3xl font-bold text-blue-600">
+                  ${financialSummary.month.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-gray-500">{financialSummary.monthLoads} loads</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">This Year</p>
+                <p className="text-3xl font-bold text-purple-600">
+                  ${financialSummary.year.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-gray-500">{financialSummary.yearLoads} loads</p>
+              </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="bg-white rounded-lg border shadow">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Driver
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Revenue
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Profit
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {companyDrivers.map((driver) => (
-                    <tr key={driver.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {driver.name}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2
-                        }).format(driver.revenue)}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-green-600">
-                        {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2
-                        }).format(driver.profit)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-gray-100 border-t-2 border-gray-300">
-                  <tr>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-900">
-                      Total ({companyDrivers.length} drivers)
-                    </td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-900">
-                      {new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: 'USD',
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                      }).format(companyDrivers.reduce((sum, driver) => sum + driver.revenue, 0))}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-bold text-green-700">
-                      {new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: 'USD',
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                      }).format(companyDrivers.reduce((sum, driver) => sum + driver.profit, 0))}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-
-          {/* Owner Operators Table */}
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Owner Operators</h2>
-              <p className="text-gray-600">Performance overview</p>
-            </div>
-
-            <div className="bg-white rounded-lg border shadow">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Driver
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Revenue
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Profit
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {ownerOperators.map((driver) => (
-                    <tr key={driver.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {driver.name}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2
-                        }).format(driver.revenue)}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-green-600">
-                        {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2
-                        }).format(driver.profit)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-gray-100 border-t-2 border-gray-300">
-                  <tr>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-900">
-                      Total ({ownerOperators.length} operators)
-                    </td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-900">
-                      {new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: 'USD',
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                      }).format(ownerOperators.reduce((sum, driver) => sum + driver.revenue, 0))}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-bold text-green-700">
-                      {new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: 'USD',
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                      }).format(ownerOperators.reduce((sum, driver) => sum + driver.profit, 0))}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* Context Menu for Drivers */}
-        <ContextMenu
-          x={driverContextMenu.x}
-          y={driverContextMenu.y}
-          isVisible={driverContextMenu.isVisible}
-          onClose={closeDriverContextMenu}
-        >
-          <ContextMenuItem
-            onClick={handleDriverContextEdit}
-            icon={<Edit className="h-4 w-4" />}
-          >
-            Edit Driver
-          </ContextMenuItem>
-          <ContextMenuItem
-            onClick={handleDriverContextDelete}
-            icon={<Trash2 className="h-4 w-4" />}
-            className="text-red-600 hover:bg-red-50"
-          >
-            Delete Driver
-          </ContextMenuItem>
-        </ContextMenu>
+        {/* Getting Started Section */}
+        {!isLoading && loads?.length === 0 && drivers?.length === 0 && (
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader>
+              <CardTitle>🚀 Getting Started</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-gray-700">
+                Welcome to your TMS! Get started by adding your first data:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button
+                  onClick={() => router.push('/loads')}
+                  variant="outline"
+                  className="justify-start"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Load
+                </Button>
+                <Button
+                  onClick={() => router.push('/drivers')}
+                  variant="outline"
+                  className="justify-start"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Driver
+                </Button>
+                <Button
+                  onClick={() => router.push('/trucks')}
+                  variant="outline"
+                  className="justify-start"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Truck
+                </Button>
+                <Button
+                  onClick={() => router.push('/customers')}
+                  variant="outline"
+                  className="justify-start"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Customer
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       </div>
     </Layout>

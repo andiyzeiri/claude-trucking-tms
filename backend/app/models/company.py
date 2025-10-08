@@ -22,3 +22,4 @@ class Company(Base):
     drivers = relationship("Driver", back_populates="company")
     customers = relationship("Customer", back_populates="company")
     loads = relationship("Load", back_populates="company")
+    expenses = relationship("Expense", back_populates="company")

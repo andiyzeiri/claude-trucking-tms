@@ -34,7 +34,8 @@ export interface Customer {
 
 export interface Driver {
   id: number
-  name: string
+  first_name: string
+  last_name: string
   license_number: string
   phone?: string
   email?: string
@@ -45,6 +46,7 @@ export interface Driver {
 
 export interface Truck {
   id: number
+  type: 'truck' | 'trailer'
   truck_number: string
   make?: string
   model?: string
@@ -70,9 +72,31 @@ export interface Load {
   delivery_location: string
   delivery_date: string
   weight?: number
+  miles?: number
   rate: number
   status: 'pending' | 'assigned' | 'in_transit' | 'delivered' | 'cancelled'
   notes?: string
+  pod_url?: string
+  ratecon_url?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Expense {
+  id: number
+  date: string
+  category: string
+  description?: string
+  amount: number
+  vendor?: string
+  payment_method?: string
+  receipt_number?: string
+  driver_id?: number
+  driver?: Driver
+  truck_id?: number
+  truck?: Truck
+  load_id?: number
+  company_id: number
   created_at: string
   updated_at: string
 }

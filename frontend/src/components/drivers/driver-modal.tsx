@@ -9,11 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export interface DriverData {
   id?: number
-  name: string
+  first_name: string
+  last_name: string
   license_number: string
   phone: string
   email: string
-  status: 'available' | 'on_trip'
+  status: 'available' | 'on_trip' | 'off_duty'
   created_at?: string
 }
 
@@ -27,7 +28,8 @@ interface DriverModalProps {
 
 export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverModalProps) {
   const [formData, setFormData] = useState<DriverData>({
-    name: '',
+    first_name: '',
+    last_name: '',
     license_number: '',
     phone: '',
     email: '',
@@ -41,7 +43,8 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
       setFormData(driver)
     } else if (mode === 'create') {
       setFormData({
-        name: '',
+        first_name: '',
+        last_name: '',
         license_number: `CDL${String(Date.now()).slice(-6)}`,
         phone: '',
         email: '',
@@ -55,7 +58,8 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name.trim()) newErrors.name = 'Name is required'
+    if (!formData.first_name.trim()) newErrors.first_name = 'First name is required'
+    if (!formData.last_name.trim()) newErrors.last_name = 'Last name is required'
     if (!formData.license_number.trim()) newErrors.license_number = 'License number is required'
     if (!formData.phone.trim()) newErrors.phone = 'Phone number is required'
     if (!formData.email.trim()) newErrors.email = 'Email is required'
@@ -83,15 +87,35 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
 
         <div className="grid grid-cols-2 gap-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
+            <Label htmlFor="first_name">First Name</Label>
             <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className={errors.name ? 'border-red-500' : ''}
-              placeholder="John Smith"
+              id="first_name"
+              value={formData.first_name}
+              onChange={(e) => {
+                const value = e.target.value
+                const capitalized = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+                setFormData({ ...formData, first_name: capitalized })
+              }}
+              className={errors.first_name ? 'border-red-500' : ''}
+              placeholder="John"
             />
-            {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+            {errors.first_name && <p className="text-sm text-red-500">{errors.first_name}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="last_name">Last Name</Label>
+            <Input
+              id="last_name"
+              value={formData.last_name}
+              onChange={(e) => {
+                const value = e.target.value
+                const capitalized = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+                setFormData({ ...formData, last_name: capitalized })
+              }}
+              className={errors.last_name ? 'border-red-500' : ''}
+              placeholder="Smith"
+            />
+            {errors.last_name && <p className="text-sm text-red-500">{errors.last_name}</p>}
           </div>
 
           <div className="space-y-2">
@@ -111,9 +135,23 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
             <Input
               id="phone"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '') // Remove non-digits
+                let formatted = value
+                if (value.length >= 1) {
+                  formatted = `(${value.slice(0, 3)}`
+                }
+                if (value.length >= 4) {
+                  formatted = `(${value.slice(0, 3)}) ${value.slice(3, 6)}`
+                }
+                if (value.length >= 7) {
+                  formatted = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6, 10)}`
+                }
+                setFormData({ ...formData, phone: formatted })
+              }}
               className={errors.phone ? 'border-red-500' : ''}
-              placeholder="(555) 123-4567"
+              placeholder="(847) 436-1677"
+              maxLength={14}
             />
             {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
           </div>
@@ -131,9 +169,9 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
             {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
           </div>
 
-          <div className="space-y-2 col-span-2">
+          <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
-            <Select value={formData.status} onValueChange={(value: 'available' | 'on_trip') =>
+            <Select value={formData.status} onValueChange={(value: 'available' | 'on_trip' | 'off_duty') =>
               setFormData({ ...formData, status: value })}>
               <SelectTrigger>
                 <SelectValue />
@@ -141,6 +179,7 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
               <SelectContent>
                 <SelectItem value="available">Available</SelectItem>
                 <SelectItem value="on_trip">On Trip</SelectItem>
+                <SelectItem value="off_duty">Off Duty</SelectItem>
               </SelectContent>
             </Select>
           </div>

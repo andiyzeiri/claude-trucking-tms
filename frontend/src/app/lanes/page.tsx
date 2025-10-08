@@ -3,209 +3,160 @@
 import React, { useState, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
-import { LaneModal, LaneData } from '@/components/lanes/lane-modal'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
-import { ExpandableLanesTable } from '@/components/lanes/expandable-lanes-table'
-import { Plus, Edit, Trash2 } from 'lucide-react'
+import { Plus, Edit, Trash2, MapPin, ChevronDown, ChevronRight } from 'lucide-react'
+import { useLanes, useDeleteLane } from '@/hooks/use-lanes'
+import { useLoads } from '@/hooks/use-loads'
+import { useCustomers } from '@/hooks/use-customers'
 
 interface LaneGroup {
-  lane: string
+  route: string
   pickup_location: string
   delivery_location: string
-  brokers: LaneData[]
+  brokers: any[]
+  loads: any[]
+  customers: Set<string>
   isExpanded: boolean
 }
 
 export default function LanesPage() {
-  // State for managing lanes - restructured to have multiple brokers per route
-  const [lanes, setLanes] = useState<LaneData[]>([
-    // Los Angeles to Phoenix
-    {
-      id: 1,
-      pickup_location: "Los Angeles, CA",
-      delivery_location: "Phoenix, AZ",
-      broker: "Western Logistics LLC",
-      email: "dispatch@westernlogistics.com",
-      phone: "(555) 123-4567",
-      notes: "Regular weekly runs"
-    },
-    {
-      id: 2,
-      pickup_location: "Los Angeles, CA",
-      delivery_location: "Phoenix, AZ",
-      broker: "Southwest Transport Co",
-      email: "ops@swtransport.com",
-      phone: "(555) 987-6543",
-      notes: "Premium service"
-    },
-    {
-      id: 3,
-      pickup_location: "Los Angeles, CA",
-      delivery_location: "Phoenix, AZ",
-      broker: "Desert Express Freight",
-      email: "loads@desertexpress.com",
-      phone: "(555) 456-7890",
-      notes: "Fast delivery"
-    },
-    // Dallas to Houston
-    {
-      id: 4,
-      pickup_location: "Dallas, TX",
-      delivery_location: "Houston, TX",
-      broker: "Texas Freight Solutions",
-      email: "ops@texasfreight.com",
-      phone: "(555) 234-5678",
-      notes: "High volume lane"
-    },
-    {
-      id: 5,
-      pickup_location: "Dallas, TX",
-      delivery_location: "Houston, TX",
-      broker: "Lone Star Logistics",
-      email: "dispatch@lonestarlog.com",
-      phone: "(555) 345-6789",
-      notes: "Energy sector specialist"
-    },
-    // Chicago to Detroit
-    {
-      id: 6,
-      pickup_location: "Chicago, IL",
-      delivery_location: "Detroit, MI",
-      broker: "Midwest Transport Co",
-      email: "bookings@midwesttransport.com",
-      phone: "(555) 345-6789",
-      notes: "Auto parts specialist"
-    },
-    {
-      id: 7,
-      pickup_location: "Chicago, IL",
-      delivery_location: "Detroit, MI",
-      broker: "Great Lakes Shipping",
-      email: "info@greatlakesship.com",
-      phone: "(555) 654-3210",
-      notes: "Manufacturing focus"
-    },
-    // Miami to Atlanta
-    {
-      id: 8,
-      pickup_location: "Miami, FL",
-      delivery_location: "Atlanta, GA",
-      broker: "Southeast Shipping",
-      email: "loads@southeastshipping.com",
-      phone: "(555) 456-7890",
-      notes: "Perishable goods"
-    },
-    // New York to Boston
-    {
-      id: 9,
-      pickup_location: "New York, NY",
-      delivery_location: "Boston, MA",
-      broker: "Northeast Logistics",
-      email: "operations@northeastlog.com",
-      phone: "(555) 678-9012",
-      notes: "Express lanes"
-    }
-  ])
+  // Fetch real lanes data from API
+  const { data, isLoading, error } = useLanes(1, 100)
+  const lanes = data?.items || []
+  const deleteLane = useDeleteLane()
 
-  // Search state
-  const [searchTerm, setSearchTerm] = useState('')
+  // Fetch loads to show matching trips
+  const { data: loadsData } = useLoads(1, 100)
+  const loads = loadsData?.items || []
+
+  // Fetch customers to display names instead of IDs
+  const { data: customersData } = useCustomers()
+  const customers = customersData?.items || []
+  const customerMap = useMemo(() => {
+    const map: Record<number, string> = {}
+    customers.forEach(c => {
+      map[c.id] = c.name
+    })
+    return map
+  }, [customers])
 
   // Expanded lanes state
   const [expandedLanes, setExpandedLanes] = useState<Set<string>>(new Set())
-
-  // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingLane, setEditingLane] = useState<LaneData | null>(null)
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create')
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     isVisible: boolean
     x: number
     y: number
-    row: LaneData | null
+    row: typeof lanes[0] | null
   }>({ isVisible: false, x: 0, y: 0, row: null })
 
   // Group lanes by pickup → delivery route
   const laneGroups = useMemo(() => {
     const groups: { [key: string]: LaneGroup } = {}
 
-    lanes
-      .filter(lane => {
-        if (!searchTerm) return true
-        const searchLower = searchTerm.toLowerCase()
-        return (
-          lane.pickup_location.toLowerCase().includes(searchLower) ||
-          lane.delivery_location.toLowerCase().includes(searchLower) ||
-          lane.broker.toLowerCase().includes(searchLower) ||
-          lane.email.toLowerCase().includes(searchLower) ||
-          lane.phone.toLowerCase().includes(searchLower) ||
-          (lane.notes && lane.notes.toLowerCase().includes(searchLower))
-        )
-      })
-      .forEach(lane => {
-        const routeKey = `${lane.pickup_location} → ${lane.delivery_location}`
+    console.log('Lanes data:', lanes)
+    console.log('Loads data:', loads)
 
-        if (!groups[routeKey]) {
-          groups[routeKey] = {
-            lane: routeKey,
-            pickup_location: lane.pickup_location,
-            delivery_location: lane.delivery_location,
-            brokers: [],
-            isExpanded: expandedLanes.has(routeKey)
-          }
+    // First, create groups from defined lanes
+    lanes.forEach(lane => {
+      const routeKey = `${lane.pickup_location} → ${lane.delivery_location}`
+
+      if (!groups[routeKey]) {
+        groups[routeKey] = {
+          route: routeKey,
+          pickup_location: lane.pickup_location,
+          delivery_location: lane.delivery_location,
+          brokers: [],
+          loads: [],
+          customers: new Set<string>(),
+          isExpanded: expandedLanes.has(routeKey)
         }
+      }
 
-        groups[routeKey].brokers.push(lane)
-      })
+      groups[routeKey].brokers.push(lane)
+    })
 
-    return Object.values(groups).sort((a, b) => a.lane.localeCompare(b.lane))
-  }, [lanes, searchTerm, expandedLanes])
+    // Function to format location: Capitalize city, uppercase state
+    const formatLocation = (loc: string) => {
+      if (!loc) return loc
+      const parts = loc.split(',').map(p => p.trim())
+      if (parts.length === 2) {
+        const city = parts[0].split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+        const state = parts[1].toUpperCase()
+        return `${city}, ${state}`
+      }
+      return loc
+    }
+
+    // Then, add loads and create groups for routes that don't have lanes yet
+    loads.forEach(load => {
+      console.log('Processing load:', load.id, 'pickup:', load.pickup_location, 'delivery:', load.delivery_location, 'description:', load.description)
+
+      let loadPickup = load.pickup_location
+      let loadDelivery = load.delivery_location
+
+      // Fallback: parse from description if pickup/delivery not set
+      if ((!loadPickup || !loadDelivery) && load.description) {
+        const parts = load.description.split(' to ')
+        if (parts.length === 2) {
+          loadPickup = loadPickup || parts[0].trim()
+          loadDelivery = loadDelivery || parts[1].trim()
+          console.log('Parsed from description - pickup:', loadPickup, 'delivery:', loadDelivery)
+        }
+      }
+
+      if (!loadPickup || !loadDelivery) {
+        console.log('Skipping load', load.id, '- missing pickup or delivery location')
+        return
+      }
+
+      // Format locations with proper capitalization
+      loadPickup = formatLocation(loadPickup.trim())
+      loadDelivery = formatLocation(loadDelivery.trim())
+      const routeKey = `${loadPickup} → ${loadDelivery}`
+
+      console.log('Creating/updating route:', routeKey)
+
+      // Create group if it doesn't exist
+      if (!groups[routeKey]) {
+        groups[routeKey] = {
+          route: routeKey,
+          pickup_location: loadPickup,
+          delivery_location: loadDelivery,
+          brokers: [],
+          loads: [],
+          customers: new Set<string>(),
+          isExpanded: expandedLanes.has(routeKey)
+        }
+      }
+
+      // Add load to the group
+      groups[routeKey].loads.push(load)
+
+      // Add customer to the set
+      if (load.customer_id && customerMap[load.customer_id]) {
+        groups[routeKey].customers.add(customerMap[load.customer_id])
+      }
+    })
+
+    console.log('Final lane groups:', groups)
+    return Object.values(groups).sort((a, b) => a.route.localeCompare(b.route))
+  }, [lanes, loads, expandedLanes])
 
   // Toggle lane expansion
-  const toggleLaneExpansion = (laneKey: string) => {
+  const toggleLaneExpansion = (routeKey: string) => {
     const newExpanded = new Set(expandedLanes)
-    if (newExpanded.has(laneKey)) {
-      newExpanded.delete(laneKey)
+    if (newExpanded.has(routeKey)) {
+      newExpanded.delete(routeKey)
     } else {
-      newExpanded.add(laneKey)
+      newExpanded.add(routeKey)
     }
     setExpandedLanes(newExpanded)
   }
 
-  // CRUD operations
-  const handleCreateLane = () => {
-    setEditingLane(null)
-    setModalMode('create')
-    setIsModalOpen(true)
-  }
-
-  const handleEditLane = (lane: LaneData) => {
-    setEditingLane(lane)
-    setModalMode('edit')
-    setIsModalOpen(true)
-  }
-
-  const handleDeleteLane = (laneId: number) => {
-    if (confirm('Are you sure you want to delete this broker from the lane?')) {
-      setLanes(lanes.filter(lane => lane.id !== laneId))
-    }
-  }
-
-  const handleSaveLane = (laneData: LaneData) => {
-    if (modalMode === 'create') {
-      const newLane = {
-        ...laneData,
-        id: Math.max(...lanes.map(l => l.id || 0)) + 1
-      }
-      setLanes([...lanes, newLane])
-    } else {
-      setLanes(lanes.map(lane => lane.id === editingLane?.id ? { ...laneData, id: editingLane?.id || lane.id } : lane))
-    }
-  }
-
   // Context menu handlers
-  const handleBrokerRightClick = (broker: LaneData, event: React.MouseEvent) => {
+  const handleBrokerRightClick = (broker: typeof lanes[0], event: React.MouseEvent) => {
     event.stopPropagation()
     setContextMenu({
       isVisible: true,
@@ -219,16 +170,9 @@ export default function LanesPage() {
     setContextMenu({ isVisible: false, x: 0, y: 0, row: null })
   }
 
-  const handleContextEdit = () => {
-    if (contextMenu.row) {
-      handleEditLane(contextMenu.row)
-    }
-    closeContextMenu()
-  }
-
   const handleContextDelete = () => {
-    if (contextMenu.row) {
-      handleDeleteLane(contextMenu.row.id!)
+    if (contextMenu.row && confirm('Delete lane broker?')) {
+      deleteLane.mutate(contextMenu.row.id)
     }
     closeContextMenu()
   }
@@ -236,13 +180,40 @@ export default function LanesPage() {
   // Calculate totals
   const totals = useMemo(() => {
     const totalLanes = laneGroups.length
-    const totalBrokers = lanes.length
+    const allCustomers = new Set<string>()
+    laneGroups.forEach(group => {
+      group.customers.forEach(customer => allCustomers.add(customer))
+    })
+    const totalCustomers = allCustomers.size
+    const totalLoads = laneGroups.reduce((sum, group) => sum + group.loads.length, 0)
 
     return {
       totalLanes,
-      totalBrokers
+      totalCustomers,
+      totalLoads
     }
-  }, [laneGroups, lanes])
+  }, [laneGroups])
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="page-lanes space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Lanes</h1>
+              <p className="text-gray-600">Manage your freight lanes and broker relationships</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <MapPin className="h-16 w-16 text-gray-400 mx-auto mb-4 animate-pulse" />
+              <p className="text-gray-600">Loading lanes data...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>
@@ -252,27 +223,170 @@ export default function LanesPage() {
             <h1 className="text-2xl font-semibold text-gray-900">Lanes</h1>
             <p className="text-gray-600">Manage your freight lanes and broker relationships</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCreateLane}>
+          <Button className="bg-blue-600 hover:bg-blue-700 opacity-50 cursor-not-allowed" disabled>
             <Plus className="mr-2 h-4 w-4" />
             New Lane
           </Button>
         </div>
 
-        <ExpandableLanesTable
-          laneGroups={laneGroups}
-          onToggleLane={toggleLaneExpansion}
-          onBrokerRightClick={handleBrokerRightClick}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-        />
+        {laneGroups.length === 0 ? (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <MapPin className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">No Lanes</h2>
+              <p className="text-gray-600">No lane data available yet.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg border">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '40%' }}>
+                    Route
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '60%' }}>
+                    Customers & Loads
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {laneGroups.map((group) => (
+                  <React.Fragment key={group.route}>
+                    <tr
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => toggleLaneExpansion(group.route)}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center">
+                          {group.isExpanded ? (
+                            <ChevronDown className="h-4 w-4 mr-2 text-gray-500" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 mr-2 text-gray-500" />
+                          )}
+                          <span className="font-medium text-gray-900">{group.route}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-4">
+                          {group.customers.size > 0 ? (
+                            <span className="text-sm text-blue-600 font-medium">
+                              {group.customers.size} customer{group.customers.size !== 1 ? 's' : ''}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-400 italic">
+                              No customers
+                            </span>
+                          )}
+                          {group.loads.length > 0 && (
+                            <span className="text-sm text-green-600 font-medium">
+                              {group.loads.length} load{group.loads.length !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {group.isExpanded && (
+                      <>
+                        {/* Customers section */}
+                        {group.customers.size > 0 && (
+                          <>
+                            <tr className="bg-blue-50">
+                              <td colSpan={2} className="px-4 py-2 pl-8">
+                                <div className="text-xs font-semibold text-blue-700 uppercase">Customers</div>
+                              </td>
+                            </tr>
+                            {Array.from(group.customers).map((customerName, index) => (
+                              <tr
+                                key={index}
+                                className="bg-gray-50 hover:bg-gray-100"
+                              >
+                                <td className="px-4 py-2 pl-12">
+                                  <div className="text-sm">
+                                    <div className="font-medium text-gray-900">{customerName}</div>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-2"></td>
+                              </tr>
+                            ))}
+                          </>
+                        )}
 
-        <LaneModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSave={handleSaveLane}
-          lane={editingLane}
-          mode={modalMode}
-        />
+                        {/* Loads section */}
+                        {group.loads.length > 0 && (
+                          <>
+                            <tr className="bg-green-50">
+                              <td colSpan={2} className="px-4 py-2 pl-8">
+                                <div className="text-xs font-semibold text-green-700 uppercase">Recent Loads</div>
+                              </td>
+                            </tr>
+                            {group.loads.slice(0, 5).map((load) => (
+                              <tr key={load.id} className="bg-gray-50 hover:bg-gray-100" style={{ fontSize: '9px' }}>
+                                <td className="px-2 py-1 pl-12">
+                                  <div>
+                                    <div className="font-medium text-gray-900">
+                                      {load.load_number}
+                                    </div>
+                                    <div className="text-gray-500" style={{ fontSize: '8px' }}>
+                                      {new Date(load.pickup_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-2 py-1">
+                                  <div className="text-gray-600">
+                                    ${load.rate.toLocaleString()} • {load.miles} mi
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                            {group.loads.length > 5 && (
+                              <tr className="bg-gray-50">
+                                <td colSpan={2} className="px-4 py-2 pl-12">
+                                  <div className="text-xs text-gray-500">
+                                    + {group.loads.length - 5} more load{group.loads.length - 5 !== 1 ? 's' : ''}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Floating Totals Row */}
+        {laneGroups.length > 0 && (
+          <div className="sticky bottom-0 bg-white border-t-2 border-gray-300 shadow-lg mt-4">
+            <div style={{ minWidth: '1400px', width: '100%' }}>
+              <table className="w-full table-auto">
+                <tbody>
+                  <tr className="bg-gray-50">
+                    <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '40%' }}>
+                      <span className="font-medium text-gray-900">
+                        {totals.totalLanes} Route{totals.totalLanes !== 1 ? 's' : ''}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-sm" style={{ width: '60%' }}>
+                      <div className="flex items-center gap-4">
+                        <span className="font-medium text-blue-700">
+                          {totals.totalCustomers} Customer{totals.totalCustomers !== 1 ? 's' : ''}
+                        </span>
+                        <span className="font-medium text-green-700">
+                          {totals.totalLoads} Load{totals.totalLoads !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         <ContextMenu
           x={contextMenu.x}
@@ -281,12 +395,6 @@ export default function LanesPage() {
           onClose={closeContextMenu}
         >
           <ContextMenuItem
-            onClick={handleContextEdit}
-            icon={<Edit className="h-4 w-4" />}
-          >
-            Edit Broker
-          </ContextMenuItem>
-          <ContextMenuItem
             onClick={handleContextDelete}
             icon={<Trash2 className="h-4 w-4" />}
             className="text-red-600 hover:bg-red-50"
@@ -294,30 +402,6 @@ export default function LanesPage() {
             Delete Broker
           </ContextMenuItem>
         </ContextMenu>
-
-        {/* Floating Totals Row - Aligned with table columns */}
-        <div className="sticky bottom-0 bg-white border-t-2 border-gray-300 shadow-lg mt-4">
-          <div style={{ minWidth: '1400px', width: '100%' }}>
-            <table className="w-full table-auto">
-              <tbody>
-                <tr className="bg-gray-50">
-                  {/* Route column - show total count */}
-                  <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '60%' }}>
-                    <span className="font-medium text-gray-900">
-                      {totals.totalLanes} Route{totals.totalLanes !== 1 ? 's' : ''}
-                    </span>
-                  </td>
-                  {/* Brokers column - show total brokers */}
-                  <td className="px-3 py-2 text-sm" style={{ width: '40%' }}>
-                    <span className="font-medium text-blue-700">
-                      {totals.totalBrokers} Total Broker{totals.totalBrokers !== 1 ? 's' : ''}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
       </div>
     </Layout>
   )

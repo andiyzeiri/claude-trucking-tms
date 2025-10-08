@@ -9,12 +9,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export interface TruckData {
   id?: number
+  type: 'truck' | 'trailer'
   unit_number: string
+  year: number
   make: string
   model: string
-  year: number
+  vin: string
+  value: number
+  miles: number
+  mpg: number
+  registration: string
+  inspection: string
   status: 'available' | 'in_use' | 'maintenance'
-  mileage: number
   driver: string | null
 }
 
@@ -31,12 +37,18 @@ const drivers = ['John Smith', 'Jane Doe', 'Mike Johnson', 'Sarah Wilson', 'Davi
 
 export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalProps) {
   const [formData, setFormData] = useState<TruckData>({
+    type: 'truck',
     unit_number: '',
+    year: new Date().getFullYear(),
     make: '',
     model: '',
-    year: new Date().getFullYear(),
+    vin: '',
+    value: 0,
+    miles: 0,
+    mpg: 0,
+    registration: '',
+    inspection: '',
     status: 'available',
-    mileage: 0,
     driver: null
   })
 
@@ -47,12 +59,18 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalP
       setFormData(truck)
     } else if (mode === 'create') {
       setFormData({
+        type: 'truck',
         unit_number: `T${String(Date.now()).slice(-3)}`,
+        year: new Date().getFullYear(),
         make: '',
         model: '',
-        year: new Date().getFullYear(),
+        vin: '',
+        value: 0,
+        miles: 0,
+        mpg: 0,
+        registration: '',
+        inspection: '',
         status: 'available',
-        mileage: 0,
         driver: null
       })
     }
@@ -92,7 +110,21 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalP
 
         <div className="grid grid-cols-2 gap-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="unit_number">Unit Number</Label>
+            <Label htmlFor="type">Type</Label>
+            <Select value={formData.type} onValueChange={(value: 'truck' | 'trailer') =>
+              setFormData({ ...formData, type: value })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="truck">Truck</SelectItem>
+                <SelectItem value="trailer">Trailer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="unit_number">Unit #</Label>
             <Input
               id="unit_number"
               value={formData.unit_number}
@@ -103,18 +135,17 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalP
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select value={formData.status} onValueChange={(value: 'available' | 'in_use' | 'maintenance') =>
-              setFormData({ ...formData, status: value })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="available">Available</SelectItem>
-                <SelectItem value="in_use">In Use</SelectItem>
-                <SelectItem value="maintenance">Maintenance</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="year">Year</Label>
+            <Input
+              id="year"
+              type="number"
+              value={formData.year}
+              onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) || new Date().getFullYear() })}
+              className={errors.year ? 'border-red-500' : ''}
+              min="1990"
+              max={new Date().getFullYear() + 1}
+            />
+            {errors.year && <p className="text-sm text-red-500">{errors.year}</p>}
           </div>
 
           <div className="space-y-2">
@@ -147,43 +178,96 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalP
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="year">Year</Label>
+            <Label htmlFor="vin">VIN</Label>
             <Input
-              id="year"
-              type="number"
-              value={formData.year}
-              onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) || new Date().getFullYear() })}
-              className={errors.year ? 'border-red-500' : ''}
-              min="1990"
-              max={new Date().getFullYear() + 1}
+              id="vin"
+              value={formData.vin}
+              onChange={(e) => setFormData({ ...formData, vin: e.target.value })}
+              placeholder="17-character VIN"
+              maxLength={17}
             />
-            {errors.year && <p className="text-sm text-red-500">{errors.year}</p>}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="mileage">Mileage</Label>
+            <Label htmlFor="value">Value ($)</Label>
             <Input
-              id="mileage"
+              id="value"
               type="number"
-              value={formData.mileage}
-              onChange={(e) => setFormData({ ...formData, mileage: parseInt(e.target.value) || 0 })}
-              className={errors.mileage ? 'border-red-500' : ''}
+              value={formData.value || ''}
+              onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
+              placeholder="0.00"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="miles">Miles</Label>
+            <Input
+              id="miles"
+              type="number"
+              value={formData.miles || ''}
+              onChange={(e) => setFormData({ ...formData, miles: parseInt(e.target.value) || 0 })}
               placeholder="0"
             />
-            {errors.mileage && <p className="text-sm text-red-500">{errors.mileage}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="mpg">MPG</Label>
+            <Input
+              id="mpg"
+              type="number"
+              step="0.1"
+              value={formData.mpg || ''}
+              onChange={(e) => setFormData({ ...formData, mpg: parseFloat(e.target.value) || 0 })}
+              placeholder="0.0"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="registration">Registration Expiration</Label>
+            <Input
+              id="registration"
+              type="date"
+              value={formData.registration}
+              onChange={(e) => setFormData({ ...formData, registration: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="inspection">Inspection Expiration</Label>
+            <Input
+              id="inspection"
+              type="date"
+              value={formData.inspection}
+              onChange={(e) => setFormData({ ...formData, inspection: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select value={formData.status} onValueChange={(value: 'available' | 'in_use' | 'maintenance') =>
+              setFormData({ ...formData, status: value })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="in_use">In Use</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2 col-span-2">
             <Label htmlFor="driver">Assigned Driver</Label>
             <Select
-              value={formData.driver || ''}
-              onValueChange={(value) => setFormData({ ...formData, driver: value || null })}
+              value={formData.driver || undefined}
+              onValueChange={(value) => setFormData({ ...formData, driver: value === 'unassigned' ? null : value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select driver (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Unassigned</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
                 {drivers.map((driver) => (
                   <SelectItem key={driver} value={driver}>
                     {driver}

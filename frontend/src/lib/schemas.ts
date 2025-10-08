@@ -48,6 +48,8 @@ export const loadSchema = z.object({
   rate: z.number().positive('Rate must be positive'),
   status: z.enum(['pending', 'assigned', 'in_transit', 'delivered', 'cancelled']).default('pending'),
   notes: z.string().optional(),
+  pod_url: z.string().optional(),
+  ratecon_url: z.string().optional(),
 })
 
 export type LoginFormData = z.infer<typeof loginSchema>

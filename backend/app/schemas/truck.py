@@ -1,10 +1,11 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
-from app.models.truck import TruckStatus
+from app.models.truck import TruckStatus, TruckType
 
 
 class TruckBase(BaseModel):
+    type: TruckType = TruckType.TRUCK
     truck_number: str
     vin: Optional[str] = None
     make: Optional[str] = None
@@ -20,6 +21,7 @@ class TruckCreate(TruckBase):
 
 
 class TruckUpdate(BaseModel):
+    type: Optional[TruckType] = None
     truck_number: Optional[str] = None
     vin: Optional[str] = None
     make: Optional[str] = None

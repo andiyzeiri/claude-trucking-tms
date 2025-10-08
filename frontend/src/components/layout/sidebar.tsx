@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuth } from '@/hooks/use-auth'
 import { ConditionalRender } from '@/components/auth/ProtectedRoute'
 import {
   Home,
@@ -16,7 +16,8 @@ import {
   DollarSign,
   Settings,
   LogOut,
-  Calculator
+  Calculator,
+  Receipt
 } from 'lucide-react'
 
 const navigation = [
@@ -26,6 +27,7 @@ const navigation = [
   { name: 'Equipment', href: '/trucks', icon: Truck, permissions: ['can_view_trucks'] },
   { name: 'Drivers', href: '/drivers', icon: Users, permissions: ['can_view_drivers'] },
   { name: 'Customers', href: '/customers', icon: Building2, permissions: ['can_view_customers'] },
+  { name: 'Expenses', href: '/expenses', icon: Receipt, permissions: [] },
   { name: 'Payroll', href: '/payroll', icon: Calculator, permissions: [] },
   { name: 'Invoices', href: '/invoices', icon: FileText, permissions: ['can_view_invoices'] },
   { name: 'Reports', href: '/reports', icon: DollarSign, permissions: ['can_view_reports'] },
@@ -90,13 +92,13 @@ export default function Sidebar() {
             <div className="flex-shrink-0">
               <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
                 <span className="text-sm font-medium text-blue-600">
-                  {user.first_name?.[0] || ''}{user.last_name?.[0] || ''}
+                  {user.first_name?.[0]?.toUpperCase() || ''}{user.last_name?.[0]?.toUpperCase() || ''}
                 </span>
               </div>
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-gray-900">
-                {user.first_name || ''} {user.last_name || ''}
+                {user.first_name ? user.first_name.charAt(0).toUpperCase() + user.first_name.slice(1).toLowerCase() : ''} {user.last_name ? user.last_name.charAt(0).toUpperCase() + user.last_name.slice(1).toLowerCase() : ''}
               </p>
               <p className="text-xs text-gray-500">{user.email || ''}</p>
               <p className="text-xs text-blue-600 capitalize">{user.role?.replace('_', ' ') || ''}</p>

@@ -3,40 +3,47 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 from app.config import settings
 from app.api.v1.api import api_router
+from app.health import router as health_router
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.DEBUG if settings.DEBUG else logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Claude TMS API",
-    version="1.0.0",
-    description="Multi-tenant Transportation Management System API"
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    description="Multi-tenant Transportation Management System API",
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
 )
 
-# CORS middleware
+# CORS middleware - use configured origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://*.netlify.app",
-    ],
+    allow_origins=settings.backend_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include health check router (no prefix, at root level)
+app.include_router(health_router)
 
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():
-    return {"message": "Claude TMS API is running"}
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "message": "Claude TMS API is running"}
+    """Root endpoint."""
+    return {
+        "message": f"{settings.PROJECT_NAME} API is running",
+        "version": settings.VERSION,
+        "environment": settings.ENV,
+        "docs_url": "/docs" if settings.DEBUG else None
+    }
 
 if __name__ == "__main__":
     import uvicorn

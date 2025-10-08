@@ -8,75 +8,14 @@ import { DataTable, Column } from '@/components/ui/data-table'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
 import { DriverModal, DriverData } from '@/components/drivers/driver-modal'
 import { Plus, Users, Phone, Mail, Edit, Trash2 } from 'lucide-react'
+import { useDrivers, useCreateDriver, useUpdateDriver } from '@/hooks/use-drivers'
 
 export default function DriversPage() {
-  // State for managing drivers
-  const [drivers, setDrivers] = useState([
-      {
-        id: 1,
-        name: "John Smith",
-        date_hired: "2023-01-15",
-        terminated: false,
-        dob: "1985-03-20",
-        phone: "(555) 123-4567",
-        email: "john.smith@example.com",
-        dl_number: "CDL123456",
-        dl_expiration: "2025-06-15",
-        file_status: "Complete",
-        medical_card: "2024-12-20",
-        mvr: "2024-10-15",
-        drug_test: "2024-09-30",
-        clearing_house: "Clear"
-      },
-      {
-        id: 2,
-        name: "Jane Doe",
-        date_hired: "2023-03-10",
-        terminated: false,
-        dob: "1990-07-14",
-        phone: "(555) 987-6543",
-        email: "jane.doe@example.com",
-        dl_number: "CDL654321",
-        dl_expiration: "2024-11-20",
-        file_status: "Incomplete",
-        medical_card: "2024-08-10",
-        mvr: "2024-11-01",
-        drug_test: "2024-08-25",
-        clearing_house: "Clear"
-      },
-      {
-        id: 3,
-        name: "Mike Johnson",
-        date_hired: "2022-11-05",
-        terminated: true,
-        dob: "1988-12-03",
-        phone: "(555) 555-0123",
-        email: "mike.johnson@example.com",
-        dl_number: "CDL789012",
-        dl_expiration: "2025-04-10",
-        file_status: "Complete",
-        medical_card: "2024-06-15",
-        mvr: "2024-05-20",
-        drug_test: "2024-04-18",
-        clearing_house: "Violation"
-      },
-      {
-        id: 4,
-        name: "Sarah Davis",
-        date_hired: "2024-02-20",
-        terminated: false,
-        dob: "1992-09-25",
-        phone: "(555) 234-5678",
-        email: "sarah.davis@example.com",
-        dl_number: "CDL345678",
-        dl_expiration: "2026-01-30",
-        file_status: "Complete",
-        medical_card: "2025-03-15",
-        mvr: "2024-11-10",
-        drug_test: "2024-10-05",
-        clearing_house: "Clear"
-      }
-  ])
+  // Fetch drivers from API
+  const { data: driversData, isLoading } = useDrivers()
+  const drivers = driversData?.items || []
+  const createDriver = useCreateDriver()
+  const updateDriver = useUpdateDriver()
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -102,11 +41,12 @@ export default function DriversPage() {
   const handleEditDriver = (driver: typeof drivers[0]) => {
     const driverData: DriverData = {
       id: driver.id,
-      name: driver.name,
-      license_number: driver.dl_number,
-      phone: driver.phone,
-      email: driver.email,
-      status: driver.terminated ? 'on_trip' : 'available'
+      first_name: driver.first_name || '',
+      last_name: driver.last_name || '',
+      license_number: driver.license_number,
+      phone: driver.phone || '',
+      email: driver.email || '',
+      status: driver.status
     }
     setEditingDriver(driverData)
     setModalMode('edit')
@@ -115,41 +55,27 @@ export default function DriversPage() {
 
   const handleDeleteDriver = (driverId: number) => {
     if (confirm('Are you sure you want to delete this driver?')) {
-      setDrivers(drivers.filter(driver => driver.id !== driverId))
+      // TODO: Implement delete driver API call
+      console.log('Delete driver:', driverId)
     }
   }
 
   const handleSaveDriver = (driverData: DriverData) => {
-    if (modalMode === 'create') {
-      const newDriver = {
-        id: Math.max(...drivers.map(d => d.id || 0)) + 1,
-        name: driverData.name,
-        date_hired: new Date().toISOString().split('T')[0],
-        terminated: driverData.status === 'on_trip',
-        dob: '1990-01-01',
-        phone: driverData.phone,
-        email: driverData.email,
-        dl_number: driverData.license_number,
-        dl_expiration: '2025-12-31',
-        file_status: 'Complete',
-        medical_card: '2025-12-31',
-        mvr: '2025-12-31',
-        drug_test: '2025-12-31',
-        clearing_house: 'Clear'
-      }
-      setDrivers([...drivers, newDriver])
-    } else {
-      setDrivers(drivers.map(driver =>
-        driver.id === editingDriver?.id ? {
-          ...driver,
-          name: driverData.name,
-          phone: driverData.phone,
-          email: driverData.email,
-          dl_number: driverData.license_number,
-          terminated: driverData.status === 'on_trip'
-        } : driver
-      ))
+    const backendData = {
+      first_name: driverData.first_name,
+      last_name: driverData.last_name,
+      license_number: driverData.license_number,
+      phone: driverData.phone,
+      email: driverData.email,
+      status: driverData.status
     }
+
+    if (modalMode === 'create') {
+      createDriver.mutate(backendData as any)
+    } else if (editingDriver?.id) {
+      updateDriver.mutate({ id: editingDriver.id, data: backendData as any })
+    }
+    setIsModalOpen(false)
   }
 
   // Context menu handlers
@@ -183,142 +109,66 @@ export default function DriversPage() {
 
   const columns: Column<typeof drivers[0]>[] = [
     {
-      key: 'name',
+      key: 'first_name',
       label: 'Name',
-      width: '150px',
+      width: '200px',
       filterable: true,
       groupable: true,
-      render: (value) => <span className="font-medium text-gray-900">{value}</span>
-    },
-    {
-      key: 'date_hired',
-      label: 'Date Hired',
-      width: '120px',
       render: (value, row) => {
-        const hiredDate = new Date(value).toLocaleDateString()
-        const isTerminated = row.terminated
-
-        return (
-          <span className={isTerminated ? 'text-red-600 font-medium' : 'text-gray-900'}>
-            {hiredDate}
-          </span>
-        )
+        const firstName = row.first_name.charAt(0).toUpperCase() + row.first_name.slice(1).toLowerCase()
+        const lastName = row.last_name.charAt(0).toUpperCase() + row.last_name.slice(1).toLowerCase()
+        return <span className="font-medium text-gray-900">{firstName} {lastName}</span>
       }
     },
     {
-      key: 'dob',
-      label: 'DOB',
-      width: '120px',
-      render: (value) => {
-        const today = new Date()
-        const birthDate = new Date(value)
-        const age = Math.floor((today.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-        return `${new Date(value).toLocaleDateString()} (${age})`
-      }
+      key: 'license_number',
+      label: 'License Number',
+      width: '150px',
+      render: (value) => <span className="font-mono text-xs text-gray-700">{value || 'N/A'}</span>
     },
     {
       key: 'phone',
       label: 'Phone',
-      width: '140px',
+      width: '150px',
       render: (value) => (
         <div className="flex items-center text-sm text-gray-600">
           <Phone className="mr-1 h-3 w-3" />
-          {value}
+          {value || 'N/A'}
         </div>
       )
     },
     {
       key: 'email',
       label: 'Email',
-      width: '180px',
+      width: '200px',
       render: (value) => (
         <div className="flex items-center text-sm text-gray-600">
           <Mail className="mr-1 h-3 w-3" />
-          {value}
+          {value || 'N/A'}
         </div>
       )
     },
     {
-      key: 'dl_number',
-      label: 'DL',
+      key: 'status',
+      label: 'Status',
       width: '120px',
-      render: (value) => <span className="font-mono text-xs text-gray-700">{value}</span>
-    },
-    {
-      key: 'dl_expiration',
-      label: 'DL Expiration',
-      width: '120px',
-      render: (value) => {
-        const expirationDate = new Date(value)
-        const today = new Date()
-        const daysUntilExpiry = Math.ceil((expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-        const isExpiringSoon = daysUntilExpiry <= 60
-
-        return (
-          <span className={isExpiringSoon ? 'text-red-600 font-medium' : 'text-gray-900'}>
-            {expirationDate.toLocaleDateString()}
-          </span>
-        )
-      }
-    },
-    {
-      key: 'file_status',
-      label: 'File',
-      width: '100px',
       filterable: true,
       groupable: true,
       render: (value) => (
         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-          value === 'Complete' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+          value === 'available' ? 'bg-green-100 text-green-800' :
+          value === 'on_trip' ? 'bg-blue-100 text-blue-800' :
+          'bg-gray-100 text-gray-800'
         }`}>
           {value}
         </span>
       )
     },
     {
-      key: 'medical_card',
-      label: 'Medical Card',
-      width: '120px',
-      render: (value) => {
-        const medicalDate = new Date(value)
-        const today = new Date()
-        const daysUntilExpiry = Math.ceil((medicalDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-        const isExpiringSoon = daysUntilExpiry <= 30
-
-        return (
-          <span className={isExpiringSoon ? 'text-red-600 font-medium' : 'text-gray-900'}>
-            {medicalDate.toLocaleDateString()}
-          </span>
-        )
-      }
-    },
-    {
-      key: 'mvr',
-      label: 'MVR',
-      width: '120px',
-      render: (value) => new Date(value).toLocaleDateString()
-    },
-    {
-      key: 'drug_test',
-      label: 'Pre-employment Drug Test',
-      width: '180px',
-      render: (value) => new Date(value).toLocaleDateString()
-    },
-    {
-      key: 'clearing_house',
-      label: 'Clearing House',
-      width: '120px',
-      filterable: true,
-      groupable: true,
-      render: (value) => (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-          value === 'Clear' ? 'bg-green-100 text-green-800' :
-          value === 'Violation' ? 'bg-red-100 text-red-800' :
-          'bg-yellow-100 text-yellow-800'
-        }`}>
-          {value}
-        </span>
-      )
+      key: 'created_at',
+      label: 'Created',
+      width: '150px',
+      render: (value) => value ? new Date(value).toLocaleDateString() : 'N/A'
     }
   ]
 

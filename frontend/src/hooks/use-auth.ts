@@ -31,7 +31,10 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-      const response = await api.post('/auth/login', credentials)
+      const response = await api.post('/v1/auth/login-json', {
+        username_or_email: credentials.email,
+        password: credentials.password
+      })
       return response.data
     },
     onSuccess: (data) => {

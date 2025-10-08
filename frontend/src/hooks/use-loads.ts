@@ -10,13 +10,15 @@ export function useLoads(page = 1, limit = 10) {
   return useQuery({
     queryKey: ['loads', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Load>> => {
-      try {
-        const response = await api.get(`/loads?page=${page}&limit=${limit}`)
-        return response.data
-      } catch (error: any) {
-        // Always fall back to demo data on any error
-        const response = await api.get(`/demo/loads`)
-        return response.data
+      const response = await api.get(`/v1/loads?skip=${(page - 1) * limit}&limit=${limit}`)
+      // Backend returns array, convert to paginated format
+      const loads = Array.isArray(response.data) ? response.data : []
+      return {
+        items: loads,
+        total: loads.length,
+        page,
+        per_page: limit,
+        pages: 1
       }
     },
     retry: false,
@@ -27,7 +29,7 @@ export function useLoad(id: number) {
   return useQuery({
     queryKey: ['load', id],
     queryFn: async (): Promise<Load> => {
-      const response = await api.get(`/loads/${id}`)
+      const response = await api.get(`/v1/loads/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -39,7 +41,7 @@ export function useCreateLoad() {
 
   return useMutation({
     mutationFn: async (data: LoadFormData): Promise<Load> => {
-      const response = await api.post('/loads', data)
+      const response = await api.post('/v1/loads', data)
       return response.data
     },
     onSuccess: () => {
@@ -47,8 +49,11 @@ export function useCreateLoad() {
       toast.success('Load created successfully')
     },
     onError: (error: any) => {
-      const message = typeof error.response?.data?.detail === 'string'
-        ? error.response.data.detail
+      const detail = error.response?.data?.detail
+      const message = typeof detail === 'string'
+        ? detail
+        : Array.isArray(detail)
+        ? detail.map((e: any) => `${e.loc.join('.')}: ${e.msg}`).join(', ')
         : 'Failed to create load'
       toast.error(message)
     },
@@ -60,18 +65,40 @@ export function useUpdateLoad() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<LoadFormData> }): Promise<Load> => {
-      const response = await api.put(`/loads/${id}`, data)
+      const response = await api.put(`/v1/loads/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['loads'] })
       queryClient.invalidateQueries({ queryKey: ['load', id] })
-      toast.success('Load updated successfully')
+    },
+    onError: (error: any) => {
+      const detail = error.response?.data?.detail
+      const message = typeof detail === 'string'
+        ? detail
+        : Array.isArray(detail)
+        ? detail.map((e: any) => `${e.loc.join('.')}: ${e.msg}`).join(', ')
+        : 'Failed to update load'
+      toast.error(message)
+    },
+  })
+}
+
+export function useDeleteLoad() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: number): Promise<void> => {
+      await api.delete(`/v1/loads/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loads'] })
+      toast.success('Load deleted successfully')
     },
     onError: (error: any) => {
       const message = typeof error.response?.data?.detail === 'string'
         ? error.response.data.detail
-        : 'Failed to update load'
+        : 'Failed to delete load'
       toast.error(message)
     },
   })

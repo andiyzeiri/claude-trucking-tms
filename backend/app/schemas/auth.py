@@ -102,13 +102,6 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class LoginResponse(BaseModel):
-    """Response after successful login"""
-    access_token: str
-    token_type: str
-    user: UserResponse
-
-
 class UserResponse(BaseModel):
     """User response schema"""
     id: int
@@ -127,3 +120,10 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class LoginResponse(BaseModel):
+    """Response after successful login"""
+    access_token: str
+    token_type: str
+    user: UserResponse

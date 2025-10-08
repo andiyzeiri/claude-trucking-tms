@@ -6,17 +6,17 @@ import api from '@/lib/api'
 import { Customer, PaginatedResponse } from '@/types'
 import { CustomerFormData } from '@/lib/schemas'
 
-export function useCustomers(page = 1, limit = 10) {
+export function useCustomers(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['customers', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Customer>> => {
-      try {
-        const response = await api.get(`/customers?page=${page}&limit=${limit}`)
-        return response.data
-      } catch (error: any) {
-        // Always fall back to demo data on any error
-        const response = await api.get(`/demo/customers`)
-        return response.data
+      const response = await api.get(`/v1/customers?skip=${(page - 1) * limit}&limit=${limit}`)
+      const customers = Array.isArray(response.data) ? response.data : []
+      return {
+        items: customers,
+        total: customers.length,
+        page,
+        limit
       }
     },
     retry: false,
@@ -27,7 +27,7 @@ export function useCustomer(id: number) {
   return useQuery({
     queryKey: ['customer', id],
     queryFn: async (): Promise<Customer> => {
-      const response = await api.get(`/customers/${id}`)
+      const response = await api.get(`/v1/customers/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -39,7 +39,7 @@ export function useCreateCustomer() {
 
   return useMutation({
     mutationFn: async (data: CustomerFormData): Promise<Customer> => {
-      const response = await api.post('/customers', data)
+      const response = await api.post('/v1/customers', data)
       return response.data
     },
     onSuccess: () => {
@@ -57,7 +57,7 @@ export function useUpdateCustomer() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: CustomerFormData }): Promise<Customer> => {
-      const response = await api.put(`/customers/${id}`, data)
+      const response = await api.put(`/v1/customers/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -76,7 +76,7 @@ export function useDeleteCustomer() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/customers/${id}`)
+      await api.delete(`/v1/customers/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] })

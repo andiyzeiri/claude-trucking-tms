@@ -6,17 +6,19 @@ import api from '@/lib/api'
 import { Driver, PaginatedResponse } from '@/types'
 import { DriverFormData } from '@/lib/schemas'
 
-export function useDrivers(page = 1, limit = 10) {
+export function useDrivers(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['drivers', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Driver>> => {
-      try {
-        const response = await api.get(`/drivers?page=${page}&limit=${limit}`)
-        return response.data
-      } catch (error: any) {
-        // Always fall back to demo data on any error
-        const response = await api.get(`/demo/drivers`)
-        return response.data
+      const response = await api.get(`/v1/drivers?skip=${(page - 1) * limit}&limit=${limit}`)
+      console.log('useDrivers - fetched drivers:', JSON.stringify(response.data, null, 2))
+      // Backend returns array, convert to paginated format
+      const drivers = Array.isArray(response.data) ? response.data : []
+      return {
+        items: drivers,
+        total: drivers.length,
+        page,
+        limit
       }
     },
     retry: false,
@@ -27,7 +29,7 @@ export function useDriver(id: number) {
   return useQuery({
     queryKey: ['driver', id],
     queryFn: async (): Promise<Driver> => {
-      const response = await api.get(`/drivers/${id}`)
+      const response = await api.get(`/v1/drivers/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -39,7 +41,7 @@ export function useCreateDriver() {
 
   return useMutation({
     mutationFn: async (data: DriverFormData): Promise<Driver> => {
-      const response = await api.post('/drivers', data)
+      const response = await api.post('/v1/drivers', data)
       return response.data
     },
     onSuccess: () => {
@@ -47,7 +49,14 @@ export function useCreateDriver() {
       toast.success('Driver created successfully')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Failed to create driver')
+      console.error('useCreateDriver error:', error.response?.data)
+      const detail = error.response?.data?.detail
+      const message = typeof detail === 'string'
+        ? detail
+        : Array.isArray(detail)
+        ? detail.map((e: any) => `${e.loc.join('.')}: ${e.msg}`).join(', ')
+        : 'Failed to create driver'
+      toast.error(message)
     },
   })
 }
@@ -57,7 +66,7 @@ export function useUpdateDriver() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: DriverFormData }): Promise<Driver> => {
-      const response = await api.put(`/drivers/${id}`, data)
+      const response = await api.put(`/v1/drivers/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -66,7 +75,14 @@ export function useUpdateDriver() {
       toast.success('Driver updated successfully')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Failed to update driver')
+      console.error('useUpdateDriver error:', error.response?.data)
+      const detail = error.response?.data?.detail
+      const message = typeof detail === 'string'
+        ? detail
+        : Array.isArray(detail)
+        ? detail.map((e: any) => `${e.loc.join('.')}: ${e.msg}`).join(', ')
+        : 'Failed to update driver'
+      toast.error(message)
     },
   })
 }

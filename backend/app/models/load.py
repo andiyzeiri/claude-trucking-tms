@@ -18,6 +18,9 @@ class Load(Base):
     load_number = Column(String, unique=True, nullable=False, index=True)
     reference_number = Column(String)
     description = Column(Text)
+    pickup_location = Column(String)
+    delivery_location = Column(String)
+    miles = Column(Integer)
 
     # Financial
     rate = Column(Numeric(10, 2))
@@ -33,6 +36,10 @@ class Load(Base):
 
     # Status
     status = Column(Enum(LoadStatus), default=LoadStatus.PENDING)
+
+    # Documents
+    pod_url = Column(String)
+    ratecon_url = Column(String)
 
     # Multi-tenant
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
@@ -50,3 +57,4 @@ class Load(Base):
 
     stops = relationship("Stop", back_populates="load", cascade="all, delete-orphan")
     invoices = relationship("Invoice", back_populates="load")
+    expenses = relationship("Expense", back_populates="load")

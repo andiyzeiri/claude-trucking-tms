@@ -29,7 +29,7 @@ class User(Base):
     email_verified_at = Column(DateTime, nullable=True)
 
     # Role-based access control
-    role = Column(Enum(UserRole), default=UserRole.VIEWER, nullable=False)
+    role = Column(String, default="viewer", nullable=False)
 
     # Custom page permissions (for CUSTOM role)
     page_permissions = Column(JSON, nullable=True)

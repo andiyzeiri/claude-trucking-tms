@@ -1,0 +1,56 @@
+{
+  "family": "trucking-tms-backend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::337756366856:role/trucking-tms-task-execution-role",
+  "taskRoleArn": "arn:aws:iam::337756366856:role/trucking-tms-task-execution-role",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "337756366856.dkr.ecr.us-east-1.amazonaws.com/trucking-tms-backend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "DATABASE_URL",
+          "value": "postgresql+asyncpg://tmsadmin:VNDNzVg4uQwrsV4XenuYbQG+OlHh5waSoDUzxd85HuM=@trucking-tms-db.csla6kaago6t.us-east-1.rds.amazonaws.com:5432/trucking_tms"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "S3_BUCKET",
+          "value": "trucking-tms-uploads-1759878269"
+        },
+        {
+          "name": "USE_S3",
+          "value": "true"
+        },
+        {
+          "name": "SECRET_KEY",
+          "value": "8bc0e7dd5c22420472d2f12a4cb890c9117ca97fc6eedc0645c1821f0eb29be6"
+        },
+        {
+          "name": "ENV",
+          "value": "production"
+        },
+        {
+          "name": "CORS_ORIGINS",
+          "value": "http://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com,https://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com,http://localhost:3000"
+        },
+        {
+          "name": "REDIS_URL",
+          "value": "redis://localhost:6379/0"
+        }
+      ]
+    }
+  ]
+}

@@ -258,12 +258,14 @@ export function DataTable<T>({
                         <td
                           key={String(column.key)}
                           className={cn(
-                            "px-3 py-2 text-sm border-r border-gray-100 last:border-r-0",
+                            "px-3 text-sm border-r border-gray-100 last:border-r-0",
                             column.className
                           )}
                           style={{
                             width: column.width,
                             minWidth: column.width,
+                            paddingTop: '6px',
+                            paddingBottom: '6px',
                             paddingLeft: String(column.key) === String(columns[0].key) ? `${paddingLeft + 32}px` : undefined
                           }}
                         >
@@ -330,24 +332,26 @@ export function DataTable<T>({
                     Clear all
                   </button>
                 )}
-                <Select value="" onValueChange={(value) => addGroupLevel(value as keyof T)}>
-                  <SelectTrigger className="w-40 bg-white">
-                    <SelectValue placeholder={groupBy.length === 0 ? "Group by..." : "Add group..."} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groupableColumns
-                      .filter(column => !groupBy.includes(column.key))
-                      .map((column, index) => {
-                        const value = String(column.key) || `column-${index}`
-                        return (
-                          <SelectItem key={value} value={value}>
-                            {column.label}
-                          </SelectItem>
-                        )
-                      })
-                    }
-                  </SelectContent>
-                </Select>
+                {groupableColumns.filter(column => !groupBy.includes(column.key)).length > 0 && (
+                  <Select value={undefined} onValueChange={(value) => addGroupLevel(value as keyof T)}>
+                    <SelectTrigger className="w-40 bg-white">
+                      <SelectValue placeholder={groupBy.length === 0 ? "Group by..." : "Add group..."} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {groupableColumns
+                        .filter(column => !groupBy.includes(column.key))
+                        .map((column, index) => {
+                          const value = column.key ? String(column.key) : `column-${index}`
+                          return (
+                            <SelectItem key={value} value={value}>
+                              {column.label}
+                            </SelectItem>
+                          )
+                        })
+                      }
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
           )}
@@ -436,10 +440,15 @@ export function DataTable<T>({
                     <td
                       key={String(column.key)}
                       className={cn(
-                        "px-3 py-2 text-sm border-r border-gray-100 last:border-r-0",
+                        "px-3 text-sm border-r border-gray-100 last:border-r-0",
                         column.className
                       )}
-                      style={{ width: column.width, minWidth: column.width }}
+                      style={{
+                        width: column.width,
+                        minWidth: column.width,
+                        paddingTop: '6px',
+                        paddingBottom: '6px'
+                      }}
                     >
                       {column.render ? (
                         column.render((row as any)[column.key], row)
