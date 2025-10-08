@@ -11,7 +11,7 @@ from app.database import get_db
 from app.models.user import User
 from .security_middleware import SecurityContext, DataFilter, create_security_context, create_data_filter
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
 
