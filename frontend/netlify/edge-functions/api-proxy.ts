@@ -5,8 +5,16 @@ export default async (request: Request) => {
   const backendUrl = url.pathname.replace('/api', 'https://d353mi06zxxkvl.cloudfront.net/api')
   const backendUrlWithQuery = backendUrl + url.search
 
-  // Clone headers and ensure Authorization is included
-  const headers = new Headers(request.headers)
+  // Create new headers object and copy all headers
+  const headers = new Headers()
+
+  // Explicitly copy important headers
+  for (const [key, value] of request.headers.entries()) {
+    headers.set(key, value)
+  }
+
+  // Log Authorization header for debugging
+  console.log('[Edge Function] Request to:', backendUrlWithQuery, 'Auth header:', headers.get('authorization') || headers.get('Authorization') || 'MISSING')
 
   // Forward the request to CloudFront
   const response = await fetch(backendUrlWithQuery, {
