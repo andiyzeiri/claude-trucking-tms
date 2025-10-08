@@ -18,12 +18,11 @@ export const api = axios.create({
 // Add auth token to requests
 api.interceptors.request.use((config) => {
   const token = Cookies.get('auth-token')
+  if (typeof window !== 'undefined') {
+    console.log('[API Request]', config.method?.toUpperCase(), config.url, 'baseURL:', config.baseURL, 'token:', token ? 'present' : 'MISSING')
+  }
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
-  }
-  // Debug: Log the actual URL being requested
-  if (typeof window !== 'undefined') {
-    console.log('[API Request]', config.method?.toUpperCase(), config.url, 'baseURL:', config.baseURL)
   }
   return config
 })
