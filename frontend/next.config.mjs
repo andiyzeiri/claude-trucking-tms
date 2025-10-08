@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export', // Static export for Netlify
+  // output: 'export', // Disabled - need SSR for Edge Functions
   trailingSlash: true,
   typescript: {
     // !! WARN !!
