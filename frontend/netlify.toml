@@ -4,9 +4,3 @@
 
 [build.environment]
   NEXT_PUBLIC_API_URL = "/api"
-
-[[redirects]]
-  from = "/api/*"
-  to = "https://d353mi06zxxkvl.cloudfront.net/api/:splat"
-  status = 200
-  force = true
