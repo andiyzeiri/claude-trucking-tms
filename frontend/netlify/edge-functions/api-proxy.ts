@@ -13,8 +13,16 @@ export default async (request: Request) => {
     headers.set(key, value)
   }
 
+  // If X-Auth-Token is present but Authorization is not, convert it
+  const xAuthToken = headers.get('x-auth-token')
+  const authHeader = headers.get('authorization') || headers.get('Authorization')
+
+  if (xAuthToken && !authHeader) {
+    headers.set('Authorization', `Bearer ${xAuthToken}`)
+  }
+
   // Log Authorization header for debugging
-  console.log('[Edge Function] Request to:', backendUrlWithQuery, 'Auth header:', headers.get('authorization') || headers.get('Authorization') || 'MISSING')
+  console.log('[Edge Function] Request to:', backendUrlWithQuery, 'Auth header:', headers.get('authorization') || headers.get('Authorization') || 'MISSING', 'X-Auth-Token:', xAuthToken || 'MISSING')
 
   // Forward the request to CloudFront
   const response = await fetch(backendUrlWithQuery, {

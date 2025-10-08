@@ -19,10 +19,12 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = Cookies.get('auth-token')
   if (token) {
+    // Use both standard and custom header as workaround for browser restrictions
     config.headers.Authorization = `Bearer ${token}`
+    config.headers['X-Auth-Token'] = token
   }
   if (typeof window !== 'undefined') {
-    console.log('[API Request]', config.method?.toUpperCase(), config.url, 'baseURL:', config.baseURL, 'token:', token ? 'present' : 'MISSING', 'Authorization header:', config.headers.Authorization ? 'SET' : 'NOT SET')
+    console.log('[API Request]', config.method?.toUpperCase(), config.url, 'baseURL:', config.baseURL, 'token:', token ? 'present' : 'MISSING', 'Authorization header:', config.headers.Authorization ? 'SET' : 'NOT SET', 'X-Auth-Token:', config.headers['X-Auth-Token'] ? 'SET' : 'NOT SET')
   }
   return config
 })
