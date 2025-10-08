@@ -13,4 +13,6 @@
   to = "http://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com/api/:splat"
   status = 200
   force = true
-  headers = {X-From = "Netlify"}
+
+[redirects.conditions]
+  # Only proxy API requests, not redirects
