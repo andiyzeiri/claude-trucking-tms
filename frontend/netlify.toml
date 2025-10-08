@@ -13,3 +13,6 @@
   to = "https://d353mi06zxxkvl.cloudfront.net/api/:splat"
   status = 200
   force = true
+
+  [redirects.headers]
+    X-From = "Netlify"

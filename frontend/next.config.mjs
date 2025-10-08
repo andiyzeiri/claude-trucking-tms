@@ -20,14 +20,6 @@ const nextConfig = {
   },
   basePath: process.env.NODE_ENV === 'production' ? '' : '',
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'https://d353mi06zxxkvl.cloudfront.net/api/:path*',
-      },
-    ];
-  },
 };
 
 export default nextConfig;
