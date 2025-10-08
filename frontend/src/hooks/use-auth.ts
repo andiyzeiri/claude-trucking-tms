@@ -31,13 +31,21 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginCredentials): Promise<AuthResponse> => {
+      console.log('[Auth] Login attempt for:', credentials.email)
       const response = await api.post('/v1/auth/login-json', {
         username_or_email: credentials.email,
         password: credentials.password
       })
+      console.log('[Auth] Login response:', response.data)
+      // Set cookie immediately after successful response
+      if (response.data.access_token) {
+        console.log('[Auth] Setting auth-token cookie')
+        Cookies.set('auth-token', response.data.access_token, { expires: 7 })
+      }
       return response.data
     },
     onSuccess: (data) => {
+      console.log('[Auth] onSuccess callback triggered')
       Cookies.set('auth-token', data.access_token, { expires: 7 }) // 7 days
       queryClient.setQueryData(['user'], data.user)
       toast.success('Login successful!')
