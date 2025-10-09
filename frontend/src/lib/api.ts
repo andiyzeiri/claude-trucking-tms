@@ -19,16 +19,7 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = Cookies.get('auth-token')
   if (token) {
-    // Use both standard and custom header as workaround for browser restrictions
     config.headers.Authorization = `Bearer ${token}`
-    config.headers['X-Auth-Token'] = token
-  }
-
-  // Add trailing slash if not present (FastAPI requires it)
-  if (config.url && !config.url.endsWith('/') && !config.url.includes('?')) {
-    config.url += '/'
-  } else if (config.url && config.url.includes('?') && !config.url.match(/\/\?/)) {
-    config.url = config.url.replace('?', '/?')
   }
 
   if (typeof window !== 'undefined') {
@@ -42,9 +33,13 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Remove invalid token
-      Cookies.remove('auth-token')
-      // Don't redirect automatically - let components handle it
+      // Only remove token if it's explicitly an auth error (not network issues)
+      if (error.config && !error.config._retry) {
+        console.log('[API] 401 Unauthorized - keeping token for now')
+        // Mark this request as retried to avoid infinite loops
+        error.config._retry = true
+      }
+      // Let components handle redirecting to login if needed
     }
     return Promise.reject(error)
   }

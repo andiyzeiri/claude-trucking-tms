@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from datetime import datetime
+from pydantic import BaseModel, field_validator
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 from app.models.load import LoadStatus
@@ -31,7 +31,13 @@ class LoadBase(BaseModel):
 
 
 class LoadCreate(LoadBase):
-    pass
+    @field_validator('pickup_date', 'delivery_date', 'pickup_deadline', 'delivery_deadline', mode='after')
+    @classmethod
+    def ensure_naive_datetime(cls, v):
+        # Strip timezone from any datetime to match database TIMESTAMP WITHOUT TIME ZONE
+        if v is not None and isinstance(v, datetime) and v.tzinfo is not None:
+            return v.replace(tzinfo=None)
+        return v
 
 
 class LoadUpdate(BaseModel):

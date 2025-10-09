@@ -37,6 +37,13 @@ async def create_load(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    # Validate customer_id
+    if load.customer_id <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="customer_id must be a valid positive integer"
+        )
+
     db_load = Load(**load.dict(), company_id=current_user.company_id)
     db.add(db_load)
     await db.commit()
