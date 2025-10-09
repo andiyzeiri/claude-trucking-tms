@@ -3,7 +3,13 @@
   publish = ".next"
 
 [build.environment]
-  NEXT_PUBLIC_API_URL = "http://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com/api"
+  NEXT_PUBLIC_API_URL = "/api"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[[redirects]]
+  from = "/api/*"
+  to = "http://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com/api/:splat"
+  status = 200
+  force = true
