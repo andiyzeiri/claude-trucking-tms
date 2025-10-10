@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // output: 'export', // Disabled - need SSR for Edge Functions
-  trailingSlash: true,
+  trailingSlash: false,
   typescript: {
     // !! WARN !!
     // Temporarily ignore TypeScript build errors to test runtime fixes
