@@ -57,7 +57,7 @@ function getWeekDateRange(date: Date): string {
 }
 
 export default function LoadsPageInline() {
-  const { data: loadsData, isLoading } = useLoads(1, 1000)
+  const { data: loadsData, isLoading, refetch } = useLoads(1, 1000)
   const loads = loadsData?.items || []
   const createLoad = useCreateLoad()
   const updateLoad = useUpdateLoad()
@@ -79,19 +79,17 @@ export default function LoadsPageInline() {
 
   // Sync loads with editable state and add week info
   React.useEffect(() => {
-    if (loads.length > 0 && editableLoads.length === 0) {
-      const loadsWithWeeks = loads.map(load => {
-        const pickupDate = new Date(load.pickup_date)
-        return {
-          ...load,
-          weekNumber: getWeekNumber(pickupDate),
-          weekLabel: getWeekLabel(pickupDate),
-          weekDateRange: getWeekDateRange(pickupDate)
-        }
-      })
-      setEditableLoads(loadsWithWeeks)
-    }
-  }, [loads, editableLoads.length])
+    const loadsWithWeeks = loads.map(load => {
+      const pickupDate = new Date(load.pickup_date)
+      return {
+        ...load,
+        weekNumber: getWeekNumber(pickupDate),
+        weekLabel: getWeekLabel(pickupDate),
+        weekDateRange: getWeekDateRange(pickupDate)
+      }
+    })
+    setEditableLoads(loadsWithWeeks)
+  }, [loads, loads.length])
 
   // Group loads
   const groupedLoads = useMemo(() => {
@@ -150,7 +148,21 @@ export default function LoadsPageInline() {
     }
 
     try {
-      await createLoad.mutateAsync(backendData)
+      const result = await createLoad.mutateAsync(backendData)
+
+      // Immediately add the new load to the local state
+      const pickupDate = new Date(result.pickup_date)
+      const newLoadWithWeek = {
+        ...result,
+        weekNumber: getWeekNumber(pickupDate),
+        weekLabel: getWeekLabel(pickupDate),
+        weekDateRange: getWeekDateRange(pickupDate)
+      }
+
+      setEditableLoads([...editableLoads, newLoadWithWeek])
+
+      // Also refetch to sync with backend
+      refetch()
     } catch (error: any) {
       console.error('Failed to create load:', error)
       alert(`Failed to create load: ${error.response?.data?.detail || error.message}`)
