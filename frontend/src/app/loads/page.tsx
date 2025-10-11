@@ -79,17 +79,23 @@ export default function LoadsPageInline() {
 
   // Sync loads with editable state and add week info
   React.useEffect(() => {
-    const loadsWithWeeks = loads.map(load => {
-      const pickupDate = new Date(load.pickup_date)
-      return {
-        ...load,
-        weekNumber: getWeekNumber(pickupDate),
-        weekLabel: getWeekLabel(pickupDate),
-        weekDateRange: getWeekDateRange(pickupDate)
-      }
-    })
-    setEditableLoads(loadsWithWeeks)
-  }, [loads, loads.length])
+    // Only update if the loads have actually changed
+    const loadIds = loads.map(l => l.id).sort().join(',')
+    const editableIds = editableLoads.map(l => l.id).sort().join(',')
+
+    if (loadIds !== editableIds) {
+      const loadsWithWeeks = loads.map(load => {
+        const pickupDate = new Date(load.pickup_date)
+        return {
+          ...load,
+          weekNumber: getWeekNumber(pickupDate),
+          weekLabel: getWeekLabel(pickupDate),
+          weekDateRange: getWeekDateRange(pickupDate)
+        }
+      })
+      setEditableLoads(loadsWithWeeks)
+    }
+  }, [loads, loads.length, editableLoads])
 
   // Group loads
   const groupedLoads = useMemo(() => {
