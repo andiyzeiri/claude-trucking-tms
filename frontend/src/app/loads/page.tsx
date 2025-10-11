@@ -131,6 +131,25 @@ export default function LoadsPageInline() {
     setCollapsedGroups(newCollapsed)
   }
 
+  // Calculate today's load statistics
+  const todayStats = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const todayLoads = editableLoads.filter(load => {
+      const pickupDate = new Date(load.pickup_date)
+      pickupDate.setHours(0, 0, 0, 0)
+      return pickupDate.getTime() === today.getTime()
+    })
+
+    return {
+      total: todayLoads.length,
+      available: todayLoads.filter(l => l.status === 'available').length,
+      dispatched: todayLoads.filter(l => l.status === 'dispatched').length,
+      invoiced: todayLoads.filter(l => l.status === 'invoiced').length
+    }
+  }, [editableLoads])
+
   const handleAddNew = async () => {
     // Validate we have customers
     if (customers.length === 0 || !customers[0]?.id) {
@@ -150,7 +169,7 @@ export default function LoadsPageInline() {
       delivery_date: new Date().toISOString(),
       miles: 0,
       rate: 0,
-      status: 'pending'
+      status: 'available'
     }
 
     try {
@@ -297,9 +316,9 @@ export default function LoadsPageInline() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'delivered': return 'bg-green-100 text-green-800'
-      case 'in_transit': return 'bg-blue-100 text-blue-800'
-      case 'assigned': return 'bg-yellow-100 text-yellow-800'
+      case 'available': return 'bg-green-100 text-green-800'
+      case 'dispatched': return 'bg-orange-100 text-orange-800'
+      case 'invoiced': return 'bg-purple-100 text-purple-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
@@ -652,10 +671,9 @@ export default function LoadsPageInline() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="assigned">Assigned</SelectItem>
-                <SelectItem value="in_transit">In Transit</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="dispatched">Dispatched</SelectItem>
+                <SelectItem value="invoiced">Invoiced</SelectItem>
               </SelectContent>
             </Select>
           ) : (
@@ -695,6 +713,65 @@ export default function LoadsPageInline() {
               <Plus className="mr-2 h-4 w-4" />
               New Load
             </Button>
+          </div>
+        </div>
+
+        {/* Today's Load Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Today</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{todayStats.total}</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Available</p>
+                <p className="text-2xl font-bold text-green-600 mt-1">{todayStats.available}</p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Dispatched</p>
+                <p className="text-2xl font-bold text-orange-600 mt-1">{todayStats.dispatched}</p>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Invoiced</p>
+                <p className="text-2xl font-bold text-purple-600 mt-1">{todayStats.invoiced}</p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
 
