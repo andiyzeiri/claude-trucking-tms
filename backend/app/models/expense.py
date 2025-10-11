@@ -26,4 +26,4 @@ class Expense(Base):
     truck = relationship("Truck", back_populates="expenses")
 
     load_id = Column(Integer, ForeignKey("loads.id"))
-    load = relationship("Load", back_populates="expenses")
+    # load = relationship("Load", back_populates="expenses")

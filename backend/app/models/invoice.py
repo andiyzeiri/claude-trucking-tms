@@ -37,7 +37,7 @@ class Invoice(Base):
 
     # Relationships
     load_id = Column(Integer, ForeignKey("loads.id"), nullable=False)
-    load = relationship("Load", back_populates="invoices")
+    # load = relationship("Load", back_populates="invoices")
 
     @property
     def amount_due(self) -> float:

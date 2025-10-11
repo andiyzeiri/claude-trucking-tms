@@ -56,5 +56,5 @@ class Load(Base):
     driver = relationship("Driver", back_populates="loads")
 
     stops = relationship("Stop", back_populates="load", cascade="all, delete-orphan")
-    invoices = relationship("Invoice", back_populates="load")
-    expenses = relationship("Expense", back_populates="load")
+    # invoices = relationship("Invoice", back_populates="load")
+    # expenses = relationship("Expense", back_populates="load")

@@ -136,7 +136,7 @@ export default function LoadsPageInline() {
 
     // Create a new load immediately in the backend
     const backendData: any = {
-      load_number: `TMS${Date.now()}`,
+      load_number: '',
       customer_id: customers[0].id,
       driver_id: null,
       truck_id: null,
