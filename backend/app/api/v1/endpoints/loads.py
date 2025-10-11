@@ -13,6 +13,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[LoadResponse])
+@router.get("", response_model=List[LoadResponse])
 async def get_loads(
     skip: int = 0,
     limit: int = 100,
@@ -32,6 +33,7 @@ async def get_loads(
 
 
 @router.post("/", response_model=LoadResponse)
+@router.post("", response_model=LoadResponse)
 async def create_load(
     load: LoadCreate,
     db: AsyncSession = Depends(get_db),

@@ -12,6 +12,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[TruckResponse])
+@router.get("", response_model=List[TruckResponse])
 async def get_trucks(
     skip: int = 0,
     limit: int = 100,
@@ -25,6 +26,7 @@ async def get_trucks(
 
 
 @router.post("/", response_model=TruckResponse)
+@router.post("", response_model=TruckResponse)
 async def create_truck(
     truck: TruckCreate,
     db: AsyncSession = Depends(get_db),

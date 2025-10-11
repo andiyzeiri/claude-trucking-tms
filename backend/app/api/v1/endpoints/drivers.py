@@ -12,6 +12,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[DriverResponse])
+@router.get("", response_model=List[DriverResponse])
 async def get_drivers(
     skip: int = 0,
     limit: int = 100,
@@ -25,6 +26,7 @@ async def get_drivers(
 
 
 @router.post("/", response_model=DriverResponse)
+@router.post("", response_model=DriverResponse)
 async def create_driver(
     driver: DriverCreate,
     db: AsyncSession = Depends(get_db),

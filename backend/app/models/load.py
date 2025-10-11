@@ -37,9 +37,9 @@ class Load(Base):
     # Status
     status = Column(Enum(LoadStatus), default=LoadStatus.PENDING)
 
-    # Documents (commented out until migration is run)
-    # pod_url = Column(String)
-    # ratecon_url = Column(String)
+    # Documents
+    pod_url = Column(String)
+    ratecon_url = Column(String)
 
     # Multi-tenant
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)

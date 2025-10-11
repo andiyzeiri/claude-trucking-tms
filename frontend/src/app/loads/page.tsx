@@ -128,10 +128,16 @@ export default function LoadsPageInline() {
   }
 
   const handleAddNew = async () => {
+    // Validate we have customers
+    if (customers.length === 0 || !customers[0]?.id) {
+      alert('Please add a customer first before creating loads')
+      return
+    }
+
     // Create a new load immediately in the backend
     const backendData: any = {
       load_number: `TMS${Date.now()}`,
-      customer_id: customers[0]?.id || 0,
+      customer_id: customers[0].id,
       driver_id: null,
       truck_id: null,
       pickup_location: '',
@@ -142,13 +148,24 @@ export default function LoadsPageInline() {
       rate: 0,
       status: 'pending'
     }
-    await createLoad.mutateAsync(backendData)
+
+    try {
+      await createLoad.mutateAsync(backendData)
+    } catch (error: any) {
+      console.error('Failed to create load:', error)
+      alert(`Failed to create load: ${error.response?.data?.detail || error.message}`)
+    }
   }
 
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this load?')) {
-      await deleteLoad.mutateAsync(id)
-      setEditableLoads(editableLoads.filter(load => load.id !== id))
+      try {
+        await deleteLoad.mutateAsync(id)
+        setEditableLoads(editableLoads.filter(load => load.id !== id))
+      } catch (error: any) {
+        console.error('Failed to delete load:', error)
+        alert(`Failed to delete load: ${error.response?.data?.detail || error.message}`)
+      }
     }
   }
 
