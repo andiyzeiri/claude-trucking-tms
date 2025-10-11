@@ -15,7 +15,7 @@ class LoadStatus(str, enum.Enum):
 class Load(Base):
     __tablename__ = "loads"
 
-    load_number = Column(String, unique=True, nullable=False, index=True)
+    load_number = Column(String, nullable=True, index=True)
     reference_number = Column(String)
     description = Column(Text)
     pickup_location = Column(String)
