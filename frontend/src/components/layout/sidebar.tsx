@@ -17,7 +17,8 @@ import {
   Settings,
   LogOut,
   Calculator,
-  Receipt
+  Receipt,
+  Warehouse
 } from 'lucide-react'
 
 const navigation = [
@@ -27,9 +28,12 @@ const navigation = [
   { name: 'Equipment', href: '/trucks', icon: Truck, permissions: ['can_view_trucks'] },
   { name: 'Drivers', href: '/drivers', icon: Users, permissions: ['can_view_drivers'] },
   { name: 'Customers', href: '/customers', icon: Building2, permissions: ['can_view_customers'] },
+  { name: 'Shippers', href: '/shippers', icon: Warehouse, permissions: [] },
+  { name: 'Receivers', href: '/receivers', icon: Warehouse, permissions: [] },
   { name: 'Expenses', href: '/expenses', icon: Receipt, permissions: [] },
   { name: 'Payroll', href: '/payroll', icon: Calculator, permissions: [] },
   { name: 'Invoices', href: '/invoices', icon: FileText, permissions: ['can_view_invoices'] },
+  { name: 'Ratecons', href: '/ratecons', icon: Receipt, permissions: [] },
   { name: 'Reports', href: '/reports', icon: DollarSign, permissions: ['can_view_reports'] },
   { name: 'Settings', href: '/settings', icon: Settings, permissions: [] },
 ]

@@ -503,6 +503,60 @@ export default function LoadsPageInline() {
     }
   }
 
+  const handleAddToGroup = async (groupKey: string) => {
+    // Determine the customer_id or driver_id based on the grouping
+    let customer_id = customers.length > 0 ? customers[0].id : null
+    let driver_id = null
+
+    if (groupBy === 'customer') {
+      // Find the customer by name
+      const customer = customers.find(c => c.name === groupKey)
+      if (customer) {
+        customer_id = customer.id
+      }
+    } else if (groupBy === 'driver') {
+      // Find the driver by name
+      if (groupKey !== 'Unassigned') {
+        const [firstName, lastName] = groupKey.split(' ')
+        const driver = drivers.find(d => d.first_name === firstName && d.last_name === lastName)
+        if (driver) {
+          driver_id = driver.id
+        }
+      }
+    }
+
+    // Create a new load with the determined customer/driver
+    const backendData: any = {
+      load_number: '',
+      customer_id: customer_id,
+      driver_id: driver_id,
+      truck_id: null,
+      pickup_location: '',
+      delivery_location: '',
+      pickup_date: new Date().toISOString(),
+      delivery_date: new Date().toISOString(),
+      miles: 0,
+      rate: 0,
+      status: 'available'
+    }
+
+    try {
+      const result = await createLoad.mutateAsync(backendData)
+      const pickupDate = new Date(result.pickup_date)
+      const newLoadWithWeek = {
+        ...result,
+        weekNumber: getWeekNumber(pickupDate),
+        weekLabel: getWeekLabel(pickupDate),
+        weekDateRange: getWeekDateRange(pickupDate)
+      }
+      setEditableLoads([...editableLoads, newLoadWithWeek])
+      refetch()
+    } catch (error: any) {
+      console.error('Failed to create load:', error)
+      alert(`Failed to create load: ${error.response?.data?.detail || error.message}`)
+    }
+  }
+
   const renderLoadRow = (load: EditableLoad, paddingLeft = 0, rowIndex = 0) => {
     const loadKey = load.isNew ? 'new' : load.id
     const rpm = load.miles && load.miles > 0 ? (load.rate || 0) / load.miles : 0
@@ -1038,6 +1092,23 @@ export default function LoadsPageInline() {
                         </tr>
                         {/* Group Loads */}
                         {!isCollapsed && groupLoads.map((load, index) => renderLoadRow(load, 20, index))}
+                        {/* Add Load Button Row */}
+                        {!isCollapsed && (
+                          <tr className="border-b hover:bg-gray-50 transition-colors" style={{borderColor: 'var(--cell-borderColor)'}}>
+                            <td colSpan={14} className="px-2 py-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleAddToGroup(groupKey)
+                                }}
+                                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium ml-5"
+                              >
+                                <Plus className="h-4 w-4" />
+                                <span>Add load to {groupKey}</span>
+                              </button>
+                            </td>
+                          </tr>
+                        )}
                       </React.Fragment>
                     )
                   })

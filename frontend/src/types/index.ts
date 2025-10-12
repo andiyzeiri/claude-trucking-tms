@@ -102,6 +102,76 @@ export interface Expense {
   updated_at: string
 }
 
+export interface Shipper {
+  id: number
+  name: string
+  address?: string
+  city?: string
+  state?: string
+  zip_code?: string
+  phone?: string
+  contact_person?: string
+  email?: string
+  product_type?: string
+  average_wait_time?: string
+  appointment_type?: string
+  notes?: string
+  company_id: number
+  created_at: string
+  updated_at?: string
+}
+
+export interface Receiver {
+  id: number
+  name: string
+  address?: string
+  city?: string
+  state?: string
+  zip_code?: string
+  phone?: string
+  contact_person?: string
+  email?: string
+  product_type?: string
+  average_wait_time?: string
+  appointment_type?: string
+  notes?: string
+  company_id: number
+  created_at: string
+  updated_at?: string
+}
+
+export interface Ratecon {
+  id: number
+  ratecon_number: string
+  load_number?: string
+  broker_name: string
+  carrier_name?: string
+  date_issued?: string
+  pickup_date?: string
+  delivery_date?: string
+  pickup_location?: string
+  delivery_location?: string
+  total_rate?: number
+  fuel_surcharge?: number
+  detention_rate?: number
+  layover_rate?: number
+  commodity?: string
+  weight?: number
+  pieces?: number
+  equipment_type?: string
+  broker_contact?: string
+  broker_phone?: string
+  broker_email?: string
+  payment_terms?: string
+  special_instructions?: string
+  notes?: string
+  status?: string
+  document_url?: string
+  company_id: number
+  created_at: string
+  updated_at?: string
+}
+
 export interface LoginCredentials {
   email: string
   password: string
