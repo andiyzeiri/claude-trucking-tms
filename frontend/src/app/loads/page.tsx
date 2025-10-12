@@ -234,6 +234,9 @@ export default function LoadsPageInline() {
     // Immediately remove from UI
     setEditableLoads(editableLoads.filter(load => load.id !== id))
 
+    // Track if undo was clicked
+    let undoClicked = false
+
     // Show toast with undo option
     const toastId = toast.custom(
       (t) => (
@@ -257,8 +260,9 @@ export default function LoadsPageInline() {
           <div className="flex border-l border-gray-200">
             <button
               onClick={() => {
-                // Restore the load
-                setEditableLoads([...editableLoads, deletedLoad])
+                undoClicked = true
+                // Restore the load using functional update to avoid stale closure
+                setEditableLoads(prev => [...prev, deletedLoad])
                 toast.dismiss(toastId)
                 toast.success('Load restored')
               }}
@@ -278,16 +282,14 @@ export default function LoadsPageInline() {
 
     // Wait for toast to expire, then actually delete from backend
     setTimeout(async () => {
+      if (undoClicked) return // Don't delete if undo was clicked
+
       try {
-        // Check if load is still deleted (user didn't undo)
-        const stillDeleted = !editableLoads.find(l => l.id === id)
-        if (stillDeleted) {
-          await deleteLoad.mutateAsync(id)
-        }
+        await deleteLoad.mutateAsync(id)
       } catch (error: any) {
         console.error('Failed to delete load from backend:', error)
-        // If backend deletion fails, restore the load
-        setEditableLoads([...editableLoads, deletedLoad])
+        // If backend deletion fails, restore the load using functional update
+        setEditableLoads(prev => [...prev, deletedLoad])
         toast.error(`Failed to delete load: ${error.response?.data?.detail || error.message}`)
       }
     }, 5000)
