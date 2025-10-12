@@ -38,6 +38,8 @@ COPY run-migration-sql.py ./
 COPY migration.sql ./
 COPY migrate.py ./
 COPY remove_unique_constraint.py ./
+COPY update_status_enum.py ./
+COPY cleanup_old_statuses.py ./
 COPY entrypoint.sh ./
 
 # Copy application code

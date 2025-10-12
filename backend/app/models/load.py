@@ -5,9 +5,9 @@ from .base import Base
 
 
 class LoadStatus(str, enum.Enum):
-    AVAILABLE = "available"
-    DISPATCHED = "dispatched"
-    INVOICED = "invoiced"
+    available = "available"
+    dispatched = "dispatched"
+    invoiced = "invoiced"
 
 
 class Load(Base):
@@ -33,7 +33,7 @@ class Load(Base):
     delivery_deadline = Column(DateTime)
 
     # Status
-    status = Column(Enum(LoadStatus), default=LoadStatus.AVAILABLE)
+    status = Column(Enum(LoadStatus), default=LoadStatus.available)
 
     # Documents
     pod_url = Column(String)

@@ -548,7 +548,7 @@ export default function LoadsPageInline() {
           )}
         </td>
 
-        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'customer_id')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'customer_id')}>
           {isEditing(loadKey, 'customer_id') ? (
             <Select
               value={String(load.customer_id)}
@@ -577,7 +577,7 @@ export default function LoadsPageInline() {
           )}
         </td>
 
-        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'driver_id')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'driver_id')}>
           {isEditing(loadKey, 'driver_id') ? (
             <Select
               value={load.driver_id ? String(load.driver_id) : 'unassigned'}
@@ -607,7 +607,7 @@ export default function LoadsPageInline() {
           )}
         </td>
 
-        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'truck_id')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'truck_id')}>
           {isEditing(loadKey, 'truck_id') ? (
             <Select
               value={load.truck_id ? String(load.truck_id) : 'unassigned'}
@@ -637,7 +637,7 @@ export default function LoadsPageInline() {
           )}
         </td>
 
-        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'pickup_location')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'pickup_location')}>
           {isEditing(loadKey, 'pickup_location') ? (
             <Input
               value={load.pickup_location}
@@ -654,7 +654,7 @@ export default function LoadsPageInline() {
           )}
         </td>
 
-        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'delivery_location')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'delivery_location')}>
           {isEditing(loadKey, 'delivery_location') ? (
             <Input
               value={load.delivery_location}
@@ -671,7 +671,7 @@ export default function LoadsPageInline() {
           )}
         </td>
 
-        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'rate')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'rate')}>
           {isEditing(loadKey, 'rate') ? (
             <Input
               type="number"
@@ -688,7 +688,7 @@ export default function LoadsPageInline() {
           )}
         </td>
 
-        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'miles')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'miles')}>
           {isEditing(loadKey, 'miles') ? (
             <Input
               type="number"
@@ -705,14 +705,14 @@ export default function LoadsPageInline() {
           )}
         </td>
 
-        <td className="px-2 py-2">
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}}>
           <div className="text-sm text-gray-600">
             ${rpm.toFixed(2)}
           </div>
         </td>
 
         {/* POD */}
-        <td className="px-2 py-2">
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}}>
           <div className="flex items-center gap-2">
             {load.pod_url ? (
               <>
@@ -762,7 +762,7 @@ export default function LoadsPageInline() {
         </td>
 
         {/* Ratecon */}
-        <td className="px-2 py-2">
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}}>
           <div className="flex items-center gap-2">
             {load.ratecon_url ? (
               <>
@@ -811,7 +811,7 @@ export default function LoadsPageInline() {
           </div>
         </td>
 
-        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'status')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'status')}>
           {isEditing(loadKey, 'status') ? (
             <Select
               value={load.status}

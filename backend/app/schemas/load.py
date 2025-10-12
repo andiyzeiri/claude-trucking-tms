@@ -22,7 +22,7 @@ class LoadBase(BaseModel):
     delivery_date: Optional[datetime] = None
     pickup_deadline: Optional[datetime] = None
     delivery_deadline: Optional[datetime] = None
-    status: LoadStatus = LoadStatus.PENDING
+    status: LoadStatus = LoadStatus.available
     customer_id: int
     truck_id: Optional[int] = None
     driver_id: Optional[int] = None
@@ -79,7 +79,7 @@ class LoadResponse(BaseModel):
     delivery_date: Optional[datetime] = None
     pickup_deadline: Optional[datetime] = None
     delivery_deadline: Optional[datetime] = None
-    status: LoadStatus = LoadStatus.PENDING
+    status: LoadStatus = LoadStatus.available
     customer_id: int
     truck_id: Optional[int] = None
     driver_id: Optional[int] = None
