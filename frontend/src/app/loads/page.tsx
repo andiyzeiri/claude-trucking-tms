@@ -234,65 +234,86 @@ export default function LoadsPageInline() {
     // Immediately remove from UI
     setEditableLoads(editableLoads.filter(load => load.id !== id))
 
-    // Track if undo was clicked
-    let undoClicked = false
+    // Delete from backend immediately
+    try {
+      await deleteLoad.mutateAsync(id)
 
-    // Show toast with undo option
-    const toastId = toast.custom(
-      (t) => (
-        <div
-          className={`${
-            t.visible ? 'animate-enter' : 'animate-leave'
-          } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
-        >
-          <div className="flex-1 w-0 p-4">
-            <div className="flex items-start">
-              <div className="ml-3 flex-1">
-                <p className="text-sm font-medium text-gray-900">
-                  Load deleted
-                </p>
-                <p className="mt-1 text-sm text-gray-500">
-                  {deletedLoad.load_number || 'Untitled load'} has been removed
-                </p>
+      // Show success toast with undo option
+      const toastId = toast.custom(
+        (t) => (
+          <div
+            className={`${
+              t.visible ? 'animate-enter' : 'animate-leave'
+            } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
+          >
+            <div className="flex-1 w-0 p-4">
+              <div className="flex items-start">
+                <div className="ml-3 flex-1">
+                  <p className="text-sm font-medium text-gray-900">
+                    Load deleted
+                  </p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {deletedLoad.load_number || 'Untitled load'} has been removed
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex border-l border-gray-200">
-            <button
-              onClick={() => {
-                undoClicked = true
-                // Restore the load using functional update to avoid stale closure
-                setEditableLoads(prev => [...prev, deletedLoad])
-                toast.dismiss(toastId)
-                toast.success('Load restored')
-              }}
-              className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-500 focus:outline-none"
-            >
-              <Undo2 className="h-5 w-5 mr-2" />
-              Undo
-            </button>
-          </div>
-        </div>
-      ),
-      {
-        duration: 5000,
-        position: 'bottom-right',
-      }
-    )
+            <div className="flex border-l border-gray-200">
+              <button
+                onClick={async () => {
+                  // Recreate the load in backend
+                  try {
+                    const backendData: any = {
+                      load_number: deletedLoad.load_number,
+                      customer_id: deletedLoad.customer_id,
+                      driver_id: deletedLoad.driver_id || null,
+                      truck_id: deletedLoad.truck_id || null,
+                      pickup_location: deletedLoad.pickup_location,
+                      delivery_location: deletedLoad.delivery_location,
+                      pickup_date: deletedLoad.pickup_date,
+                      delivery_date: deletedLoad.delivery_date,
+                      miles: deletedLoad.miles || 0,
+                      rate: deletedLoad.rate || 0,
+                      status: deletedLoad.status
+                    }
+                    const result = await createLoad.mutateAsync(backendData)
 
-    // Wait for toast to expire, then actually delete from backend
-    setTimeout(async () => {
-      if (undoClicked) return // Don't delete if undo was clicked
-
-      try {
-        await deleteLoad.mutateAsync(id)
-      } catch (error: any) {
-        console.error('Failed to delete load from backend:', error)
-        // If backend deletion fails, restore the load using functional update
-        setEditableLoads(prev => [...prev, deletedLoad])
-        toast.error(`Failed to delete load: ${error.response?.data?.detail || error.message}`)
-      }
-    }, 5000)
+                    // Add back to UI with new ID
+                    const pickupDate = new Date(result.pickup_date)
+                    const restoredLoad = {
+                      ...result,
+                      weekNumber: getWeekNumber(pickupDate),
+                      weekLabel: getWeekLabel(pickupDate),
+                      weekDateRange: getWeekDateRange(pickupDate)
+                    }
+                    setEditableLoads(prev => [...prev, restoredLoad])
+                    toast.dismiss(toastId)
+                    toast.success('Load restored')
+                    refetch()
+                  } catch (error: any) {
+                    console.error('Failed to restore load:', error)
+                    toast.error(`Failed to restore load: ${error.response?.data?.detail || error.message}`)
+                  }
+                }}
+                className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-500 focus:outline-none"
+              >
+                <Undo2 className="h-5 w-5 mr-2" />
+                Undo
+              </button>
+            </div>
+          </div>
+        ),
+        {
+          duration: 5000,
+          position: 'bottom-right',
+        }
+      )
+    } catch (error: any) {
+      console.error('Failed to delete load from backend:', error)
+      // If backend deletion fails, restore the load using functional update
+      setEditableLoads(prev => [...prev, deletedLoad])
+      toast.error(`Failed to delete load: ${error.response?.data?.detail || error.message}`)
+    }
   }
 
   const handleFileUpload = async (
