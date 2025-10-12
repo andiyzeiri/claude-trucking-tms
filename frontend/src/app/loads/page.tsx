@@ -503,22 +503,27 @@ export default function LoadsPageInline() {
     }
   }
 
-  const renderLoadRow = (load: EditableLoad, paddingLeft = 0) => {
+  const renderLoadRow = (load: EditableLoad, paddingLeft = 0, rowIndex = 0) => {
     const loadKey = load.isNew ? 'new' : load.id
     const rpm = load.miles && load.miles > 0 ? (load.rate || 0) / load.miles : 0
+    const isEvenRow = rowIndex % 2 === 0
+    const defaultBgColor = isEvenRow ? 'var(--cell-background-base)' : 'rgba(0, 0, 0, 0.02)'
 
     return (
       <tr
         key={loadKey}
         className="border-b transition-colors"
-        style={{borderColor: 'var(--cell-borderColor)'}}
+        style={{
+          borderColor: 'var(--cell-borderColor)',
+          backgroundColor: defaultBgColor
+        }}
         onMouseEnter={(e) => {
           const target = e.currentTarget
           target.style.backgroundColor = 'var(--row-background-cursor)'
         }}
         onMouseLeave={(e) => {
           const target = e.currentTarget
-          target.style.backgroundColor = 'var(--cell-background-base)'
+          target.style.backgroundColor = defaultBgColor
         }}
         onContextMenu={(e) => {
           if (!load.isNew) {
@@ -996,7 +1001,7 @@ export default function LoadsPageInline() {
               </thead>
               <tbody className="bg-white" style={{backgroundColor: 'var(--cell-background-base)'}}>
                 {groupBy === 'none' ? (
-                  filteredLoads.map((load) => renderLoadRow(load))
+                  filteredLoads.map((load, index) => renderLoadRow(load, 0, index))
                 ) : (
                   groupedLoads && Object.entries(groupedLoads).map(([groupKey, groupLoads]) => {
                     const isCollapsed = collapsedGroups.has(groupKey)
@@ -1032,7 +1037,7 @@ export default function LoadsPageInline() {
                           <td className="px-2 py-2 text-sm" colSpan={3}></td>
                         </tr>
                         {/* Group Loads */}
-                        {!isCollapsed && groupLoads.map((load) => renderLoadRow(load, 20))}
+                        {!isCollapsed && groupLoads.map((load, index) => renderLoadRow(load, 20, index))}
                       </React.Fragment>
                     )
                   })
