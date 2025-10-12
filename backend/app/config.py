@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     PORT: int = 8000
 
     # CORS - allow frontend origins
-    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,https://absolutetms.netlify.app,https://absolutetms.com"
 
     # Email Configuration
     SMTP_HOST: str = "smtp.gmail.com"
