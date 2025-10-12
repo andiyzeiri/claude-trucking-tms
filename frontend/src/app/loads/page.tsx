@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy } from 'lucide-react'
+import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2 } from 'lucide-react'
 import { useLoads, useCreateLoad, useUpdateLoad, useDeleteLoad } from '@/hooks/use-loads'
 import { useCustomers } from '@/hooks/use-customers'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
 import { Load } from '@/types'
+import toast from 'react-hot-toast'
 
 interface EditableLoad extends Load {
   isNew?: boolean
@@ -226,15 +227,70 @@ export default function LoadsPageInline() {
   }
 
   const handleDelete = async (id: number) => {
-    if (confirm('Are you sure you want to delete this load?')) {
-      try {
-        await deleteLoad.mutateAsync(id)
-        setEditableLoads(editableLoads.filter(load => load.id !== id))
-      } catch (error: any) {
-        console.error('Failed to delete load:', error)
-        alert(`Failed to delete load: ${error.response?.data?.detail || error.message}`)
+    // Store the deleted load for undo
+    const deletedLoad = editableLoads.find(load => load.id === id)
+    if (!deletedLoad) return
+
+    // Immediately remove from UI
+    setEditableLoads(editableLoads.filter(load => load.id !== id))
+
+    // Show toast with undo option
+    const toastId = toast.custom(
+      (t) => (
+        <div
+          className={`${
+            t.visible ? 'animate-enter' : 'animate-leave'
+          } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
+        >
+          <div className="flex-1 w-0 p-4">
+            <div className="flex items-start">
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  Load deleted
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  {deletedLoad.load_number || 'Untitled load'} has been removed
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex border-l border-gray-200">
+            <button
+              onClick={() => {
+                // Restore the load
+                setEditableLoads([...editableLoads, deletedLoad])
+                toast.dismiss(toastId)
+                toast.success('Load restored')
+              }}
+              className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-500 focus:outline-none"
+            >
+              <Undo2 className="h-5 w-5 mr-2" />
+              Undo
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        duration: 5000,
+        position: 'bottom-right',
       }
-    }
+    )
+
+    // Wait for toast to expire, then actually delete from backend
+    setTimeout(async () => {
+      try {
+        // Check if load is still deleted (user didn't undo)
+        const stillDeleted = !editableLoads.find(l => l.id === id)
+        if (stillDeleted) {
+          await deleteLoad.mutateAsync(id)
+        }
+      } catch (error: any) {
+        console.error('Failed to delete load from backend:', error)
+        // If backend deletion fails, restore the load
+        setEditableLoads([...editableLoads, deletedLoad])
+        toast.error(`Failed to delete load: ${error.response?.data?.detail || error.message}`)
+      }
+    }, 5000)
   }
 
   const handleFileUpload = async (
