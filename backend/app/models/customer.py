@@ -7,6 +7,7 @@ class Customer(Base):
     __tablename__ = "customers"
 
     name = Column(String, nullable=False)
+    mc = Column(String)  # Motor Carrier number
     contact_person = Column(String)
     email = Column(String)
     phone = Column(String)

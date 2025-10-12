@@ -592,8 +592,15 @@ export default function LoadsPageInline() {
               </SelectContent>
             </Select>
           ) : (
-            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
-              {customers.find(c => c.id === load.customer_id)?.name || 'N/A'}
+            <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+              <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+                {customers.find(c => c.id === load.customer_id)?.name || 'N/A'}
+              </div>
+              {customers.find(c => c.id === load.customer_id)?.mc && (
+                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)'}}>
+                  MC: {customers.find(c => c.id === load.customer_id)?.mc}
+                </div>
+              )}
             </div>
           )}
         </td>

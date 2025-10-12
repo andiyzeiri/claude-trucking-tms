@@ -20,6 +20,7 @@ export interface User {
 export interface Customer {
   id: number
   name: string
+  mc?: string
   contact_name?: string
   email?: string
   phone?: string
