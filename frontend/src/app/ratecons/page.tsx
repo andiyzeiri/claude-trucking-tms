@@ -128,9 +128,16 @@ export default function RateconsPage() {
   const { data: loadsData, isLoading } = useLoads(1, 1000)
   const loads = loadsData?.items || []
 
-  // Filter loads for Absolute Trucking customer
+  // Debug: Log all customer names
+  React.useEffect(() => {
+    if (loads.length > 0) {
+      console.log('All customer names:', loads.map(l => l.customer?.name).filter(Boolean))
+    }
+  }, [loads])
+
+  // Filter loads for Absolute Trucking customer (case-insensitive, partial match)
   const absoluteTruckingLoads = loads.filter(
-    load => load.customer?.name === 'Absolute Trucking'
+    load => load.customer?.name?.toLowerCase().includes('absolute')
   )
 
   const printRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
