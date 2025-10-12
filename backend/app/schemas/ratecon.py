@@ -8,9 +8,9 @@ from datetime import date, datetime
 
 class RateconBase(BaseModel):
     """Base Ratecon schema with common fields"""
-    ratecon_number: str = Field(..., description="Unique rate confirmation number")
+    ratecon_number: str = Field("", description="Unique rate confirmation number")
     load_number: Optional[str] = Field(None, description="Associated load number")
-    broker_name: str = Field(..., description="Broker company name")
+    broker_name: str = Field("", description="Broker company name")
     carrier_name: Optional[str] = Field(None, description="Carrier company name")
 
     date_issued: Optional[date] = Field(None, description="Date ratecon was issued")
