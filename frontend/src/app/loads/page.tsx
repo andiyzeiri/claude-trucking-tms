@@ -76,6 +76,8 @@ export default function LoadsPageInline() {
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
   const [groupBy, setGroupBy] = useState<'none' | 'week' | 'driver' | 'customer'>('none')
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
+  const [upcomingFilter, setUpcomingFilter] = useState<boolean>(false)
 
   // Sync loads with editable state and add week info
   React.useEffect(() => {
@@ -121,6 +123,32 @@ export default function LoadsPageInline() {
     return groups
   }, [editableLoads, groupBy, customers])
 
+  // Filter loads based on upcoming and status filters
+  const filteredLoads = useMemo(() => {
+    let filtered = editableLoads
+
+    // Apply upcoming filter (today and tomorrow)
+    if (upcomingFilter) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+
+      filtered = filtered.filter(load => {
+        const pickupDate = new Date(load.pickup_date)
+        pickupDate.setHours(0, 0, 0, 0)
+        return pickupDate.getTime() === today.getTime() || pickupDate.getTime() === tomorrow.getTime()
+      })
+    }
+
+    // Apply status filter
+    if (statusFilter) {
+      filtered = filtered.filter(load => load.status === statusFilter)
+    }
+
+    return filtered
+  }, [editableLoads, upcomingFilter, statusFilter])
+
   const toggleGroup = (groupKey: string) => {
     const newCollapsed = new Set(collapsedGroups)
     if (newCollapsed.has(groupKey)) {
@@ -131,22 +159,24 @@ export default function LoadsPageInline() {
     setCollapsedGroups(newCollapsed)
   }
 
-  // Calculate today's load statistics
-  const todayStats = useMemo(() => {
+  // Calculate upcoming loads statistics (today and tomorrow)
+  const upcomingStats = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const todayLoads = editableLoads.filter(load => {
+    const upcomingLoads = editableLoads.filter(load => {
       const pickupDate = new Date(load.pickup_date)
       pickupDate.setHours(0, 0, 0, 0)
-      return pickupDate.getTime() === today.getTime()
+      return pickupDate.getTime() === today.getTime() || pickupDate.getTime() === tomorrow.getTime()
     })
 
     return {
-      total: todayLoads.length,
-      available: todayLoads.filter(l => l.status === 'available').length,
-      dispatched: todayLoads.filter(l => l.status === 'dispatched').length,
-      invoiced: todayLoads.filter(l => l.status === 'invoiced').length
+      total: upcomingLoads.length,
+      available: upcomingLoads.filter(l => l.status === 'available').length,
+      dispatched: upcomingLoads.filter(l => l.status === 'dispatched').length,
+      invoiced: upcomingLoads.filter(l => l.status === 'invoiced').length
     }
   }, [editableLoads])
 
@@ -234,7 +264,11 @@ export default function LoadsPageInline() {
       const token = getCookie('auth-token')
 
       // Upload file
-      const response = await fetch('http://localhost:8000/api/v1/uploads/', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      if (!apiUrl) {
+        throw new Error('API URL not configured')
+      }
+      const response = await fetch(`${apiUrl}/v1/uploads/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -562,7 +596,7 @@ export default function LoadsPageInline() {
             {load.pod_url ? (
               <>
                 <a
-                  href={`http://localhost:8000${load.pod_url}`}
+                  href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${load.pod_url}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline text-sm"
@@ -612,7 +646,7 @@ export default function LoadsPageInline() {
             {load.ratecon_url ? (
               <>
                 <a
-                  href={`http://localhost:8000${load.ratecon_url}`}
+                  href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${load.ratecon_url}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline text-sm"
@@ -716,13 +750,19 @@ export default function LoadsPageInline() {
           </div>
         </div>
 
-        {/* Today's Load Statistics */}
+        {/* Upcoming Load Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div
+            className={`cursor-pointer transition-all ${upcomingFilter ? 'bg-blue-50 border-blue-500 border-2' : 'bg-white border border-gray-200'} rounded-lg p-4 hover:shadow-md`}
+            onClick={() => {
+              setUpcomingFilter(!upcomingFilter)
+              if (!upcomingFilter) setStatusFilter(null)
+            }}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Today</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{todayStats.total}</p>
+                <p className="text-sm font-medium text-gray-600">Upcoming Loads</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{upcomingStats.total}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -732,11 +772,14 @@ export default function LoadsPageInline() {
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div
+            className={`cursor-pointer transition-all ${statusFilter === 'available' ? 'bg-green-50 border-green-500 border-2' : 'bg-white border border-gray-200'} rounded-lg p-4 hover:shadow-md`}
+            onClick={() => setStatusFilter(statusFilter === 'available' ? null : 'available')}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Available</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">{todayStats.available}</p>
+                <p className="text-2xl font-bold text-green-600 mt-1">{upcomingStats.available}</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -746,11 +789,14 @@ export default function LoadsPageInline() {
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div
+            className={`cursor-pointer transition-all ${statusFilter === 'dispatched' ? 'bg-orange-50 border-orange-500 border-2' : 'bg-white border border-gray-200'} rounded-lg p-4 hover:shadow-md`}
+            onClick={() => setStatusFilter(statusFilter === 'dispatched' ? null : 'dispatched')}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Dispatched</p>
-                <p className="text-2xl font-bold text-orange-600 mt-1">{todayStats.dispatched}</p>
+                <p className="text-2xl font-bold text-orange-600 mt-1">{upcomingStats.dispatched}</p>
               </div>
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -760,11 +806,14 @@ export default function LoadsPageInline() {
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div
+            className={`cursor-pointer transition-all ${statusFilter === 'invoiced' ? 'bg-purple-50 border-purple-500 border-2' : 'bg-white border border-gray-200'} rounded-lg p-4 hover:shadow-md`}
+            onClick={() => setStatusFilter(statusFilter === 'invoiced' ? null : 'invoiced')}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Invoiced</p>
-                <p className="text-2xl font-bold text-purple-600 mt-1">{todayStats.invoiced}</p>
+                <p className="text-2xl font-bold text-purple-600 mt-1">{upcomingStats.invoiced}</p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -798,7 +847,7 @@ export default function LoadsPageInline() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {groupBy === 'none' ? (
-                  editableLoads.map((load) => renderLoadRow(load))
+                  filteredLoads.map((load) => renderLoadRow(load))
                 ) : (
                   groupedLoads && Object.entries(groupedLoads).map(([groupKey, groupLoads]) => {
                     const isCollapsed = collapsedGroups.has(groupKey)
