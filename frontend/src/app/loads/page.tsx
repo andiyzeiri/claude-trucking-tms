@@ -489,7 +489,16 @@ export default function LoadsPageInline() {
     return (
       <tr
         key={loadKey}
-        className="hover:bg-gray-50"
+        className="border-b transition-colors"
+        style={{borderColor: 'var(--cell-borderColor)'}}
+        onMouseEnter={(e) => {
+          const target = e.currentTarget
+          target.style.backgroundColor = 'var(--row-background-cursor)'
+        }}
+        onMouseLeave={(e) => {
+          const target = e.currentTarget
+          target.style.backgroundColor = 'var(--cell-background-base)'
+        }}
         onContextMenu={(e) => {
           if (!load.isNew) {
             handleContextMenu(e, load.id)
@@ -497,15 +506,15 @@ export default function LoadsPageInline() {
         }}
       >
         {/* Week */}
-        <td className="px-2 py-2" style={{ paddingLeft: `${paddingLeft + 8}px` }}>
+        <td className="px-3 py-2.5 border-r" style={{ paddingLeft: `${paddingLeft + 12}px`, borderColor: 'var(--cell-borderColor)' }}>
           <div>
-            <div className="text-sm text-gray-900">{load.weekLabel}</div>
-            <div className="text-xs text-gray-500">{load.weekDateRange}</div>
+            <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>{load.weekLabel}</div>
+            <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)'}}>{load.weekDateRange}</div>
           </div>
         </td>
 
         {/* Date */}
-        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'pickup_date')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'pickup_date')}>
           {isEditing(loadKey, 'pickup_date') ? (
             <Input
               type="date"
@@ -516,14 +525,14 @@ export default function LoadsPageInline() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
               {new Date(load.pickup_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
             </div>
           )}
         </td>
 
         {/* Load # */}
-        <td className="px-2 py-2" onClick={() => startEdit(loadKey, 'load_number')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'load_number')}>
           {isEditing(loadKey, 'load_number') ? (
             <Input
               value={load.load_number}
@@ -533,7 +542,7 @@ export default function LoadsPageInline() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="text-sm font-medium cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+            <div className="font-medium cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
               {load.load_number}
             </div>
           )}
@@ -936,28 +945,28 @@ export default function LoadsPageInline() {
           </div>
         </div>
 
-        <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+        <div className="border rounded-lg bg-white overflow-hidden shadow-sm" style={{borderColor: 'var(--cell-borderColor)'}}>
           <div className="overflow-x-auto">
-            <table className="w-full table-auto">
-              <thead className="bg-gray-50 border-b border-gray-200">
+            <table className="w-full table-auto" style={{borderCollapse: 'separate', borderSpacing: 0}}>
+              <thead style={{backgroundColor: 'var(--cell-background-header)'}}>
                 <tr>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Week</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Load #</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Driver</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Truck</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pickup</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Delivery</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rate</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Miles</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">RPM</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">POD</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ratecon</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Week</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Date</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Load #</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Customer</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Driver</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Truck</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Pickup</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Delivery</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Rate</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Miles</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>RPM</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>POD</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Ratecon</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Status</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
+              <tbody className="bg-white" style={{backgroundColor: 'var(--cell-background-base)'}}>
                 {groupBy === 'none' ? (
                   filteredLoads.map((load) => renderLoadRow(load))
                 ) : (
