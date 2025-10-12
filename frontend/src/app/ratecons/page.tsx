@@ -7,7 +7,6 @@ import { formatCurrency } from '@/lib/utils'
 import { FileDown } from 'lucide-react'
 import { useLoads } from '@/hooks/use-loads'
 import { Load } from '@/types'
-import { useReactToPrint } from 'react-to-print'
 
 // Printable Ratecon Component
 const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ load }, ref) => {
@@ -144,15 +143,35 @@ export default function RateconsPage() {
 
   const printRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
 
-  const handlePrint = useReactToPrint({
-    content: () => null, // Will be set dynamically
-    documentTitle: 'Rate Confirmation',
-  })
-
   const generatePDF = (load: Load) => {
     const printableComponent = printRefs.current[load.id]
     if (printableComponent) {
-      handlePrint({ content: () => printableComponent })
+      // Create a temporary iframe for printing
+      const printWindow = window.open('', '', 'width=800,height=600')
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Rate Confirmation - ${load.load_number}</title>
+              <style>
+                body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+                @media print {
+                  body { margin: 0; padding: 0; }
+                }
+              </style>
+            </head>
+            <body>
+              ${printableComponent.innerHTML}
+            </body>
+          </html>
+        `)
+        printWindow.document.close()
+        printWindow.focus()
+        setTimeout(() => {
+          printWindow.print()
+          printWindow.close()
+        }, 250)
+      }
     }
   }
 
