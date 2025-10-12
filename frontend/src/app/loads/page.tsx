@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, ChevronRight, ChevronDown } from 'lucide-react'
+import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy } from 'lucide-react'
 import { useLoads, useCreateLoad, useUpdateLoad, useDeleteLoad } from '@/hooks/use-loads'
 import { useCustomers } from '@/hooks/use-customers'
 import { useDrivers } from '@/hooks/use-drivers'
@@ -78,6 +78,7 @@ export default function LoadsPageInline() {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [upcomingFilter, setUpcomingFilter] = useState<boolean>(false)
+  const [contextMenu, setContextMenu] = useState<{x: number, y: number, loadId: number} | null>(null)
 
   // Sync loads with editable state and add week info
   React.useEffect(() => {
@@ -369,6 +370,60 @@ export default function LoadsPageInline() {
     setEditingCell(null)
   }
 
+  // Close context menu when clicking outside
+  React.useEffect(() => {
+    const handleClick = () => setContextMenu(null)
+    if (contextMenu) {
+      document.addEventListener('click', handleClick)
+      return () => document.removeEventListener('click', handleClick)
+    }
+  }, [contextMenu])
+
+  const handleContextMenu = (e: React.MouseEvent, loadId: number) => {
+    e.preventDefault()
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      loadId
+    })
+  }
+
+  const handleDuplicate = async (id: number) => {
+    const loadToDuplicate = editableLoads.find(l => l.id === id)
+    if (!loadToDuplicate) return
+
+    const backendData: any = {
+      load_number: '',
+      customer_id: loadToDuplicate.customer_id,
+      driver_id: loadToDuplicate.driver_id || null,
+      truck_id: loadToDuplicate.truck_id || null,
+      pickup_location: loadToDuplicate.pickup_location,
+      delivery_location: loadToDuplicate.delivery_location,
+      pickup_date: loadToDuplicate.pickup_date,
+      delivery_date: loadToDuplicate.delivery_date,
+      miles: loadToDuplicate.miles || 0,
+      rate: loadToDuplicate.rate || 0,
+      status: 'available'
+    }
+
+    try {
+      const result = await createLoad.mutateAsync(backendData)
+      const pickupDate = new Date(result.pickup_date)
+      const newLoadWithWeek = {
+        ...result,
+        weekNumber: getWeekNumber(pickupDate),
+        weekLabel: getWeekLabel(pickupDate),
+        weekDateRange: getWeekDateRange(pickupDate)
+      }
+      setEditableLoads([...editableLoads, newLoadWithWeek])
+      refetch()
+      setContextMenu(null)
+    } catch (error: any) {
+      console.error('Failed to duplicate load:', error)
+      alert(`Failed to duplicate load: ${error.response?.data?.detail || error.message}`)
+    }
+  }
+
   const renderLoadRow = (load: EditableLoad, paddingLeft = 0) => {
     const loadKey = load.isNew ? 'new' : load.id
     const rpm = load.miles && load.miles > 0 ? (load.rate || 0) / load.miles : 0
@@ -378,9 +433,8 @@ export default function LoadsPageInline() {
         key={loadKey}
         className="hover:bg-gray-50"
         onContextMenu={(e) => {
-          e.preventDefault()
           if (!load.isNew) {
-            handleDelete(load.id)
+            handleContextMenu(e, load.id)
           }
         }}
       >
@@ -916,6 +970,50 @@ export default function LoadsPageInline() {
             </table>
           </div>
         </div>
+
+        {/* Context Menu */}
+        {contextMenu && (
+          <div
+            className="fixed bg-white shadow-lg rounded-lg border border-gray-200 py-1 z-50"
+            style={{
+              left: `${contextMenu.x}px`,
+              top: `${contextMenu.y}px`,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+              onClick={() => {
+                // Start editing the first editable field (load_number)
+                startEdit(contextMenu.loadId, 'load_number')
+                setContextMenu(null)
+              }}
+            >
+              <Edit2 className="h-4 w-4 text-blue-600" />
+              <span>Edit Load</span>
+            </button>
+            <button
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+              onClick={() => {
+                handleDuplicate(contextMenu.loadId)
+              }}
+            >
+              <Copy className="h-4 w-4 text-green-600" />
+              <span>Duplicate Load</span>
+            </button>
+            <div className="border-t border-gray-200 my-1"></div>
+            <button
+              className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 flex items-center gap-2 text-red-600"
+              onClick={() => {
+                handleDelete(contextMenu.loadId)
+                setContextMenu(null)
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Delete Load</span>
+            </button>
+          </div>
+        )}
       </div>
     </Layout>
   )
