@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2 } from 'lucide-react'
+import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X } from 'lucide-react'
 import { useLoads, useCreateLoad, useUpdateLoad, useDeleteLoad } from '@/hooks/use-loads'
 import { useCustomers } from '@/hooks/use-customers'
 import { useDrivers } from '@/hooks/use-drivers'
@@ -80,6 +80,7 @@ export default function LoadsPageInline() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [upcomingFilter, setUpcomingFilter] = useState<boolean>(false)
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, loadId: number} | null>(null)
+  const [pdfModal, setPdfModal] = useState<{url: string, loadId: number, type: 'pod' | 'ratecon'} | null>(null)
 
   // Sync loads with editable state and add week info
   React.useEffect(() => {
@@ -313,6 +314,18 @@ export default function LoadsPageInline() {
       // If backend deletion fails, restore the load using functional update
       setEditableLoads(prev => [...prev, deletedLoad])
       toast.error(`Failed to delete load: ${error.response?.data?.detail || error.message}`)
+    }
+  }
+
+  const handleDeletePdf = async (loadId: number, field: 'pod_url' | 'ratecon_url') => {
+    try {
+      // Update the field to null
+      await updateField(loadId, field, null)
+      setPdfModal(null)
+      toast.success(`${field === 'pod_url' ? 'POD' : 'Ratecon'} deleted successfully`)
+    } catch (error) {
+      console.error('Error deleting PDF:', error)
+      toast.error('Failed to delete PDF')
     }
   }
 
@@ -803,15 +816,19 @@ export default function LoadsPageInline() {
           <div className="flex items-center gap-2">
             {load.pod_url ? (
               <>
-                <a
-                  href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${load.pod_url}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setPdfModal({
+                      url: `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${load.pod_url}`,
+                      loadId: load.id,
+                      type: 'pod'
+                    })
+                  }}
                   className="text-blue-600 hover:underline text-sm"
-                  onClick={(e) => e.stopPropagation()}
                 >
                   View
-                </a>
+                </button>
                 <input
                   type="file"
                   accept=".pdf"
@@ -853,15 +870,19 @@ export default function LoadsPageInline() {
           <div className="flex items-center gap-2">
             {load.ratecon_url ? (
               <>
-                <a
-                  href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${load.ratecon_url}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setPdfModal({
+                      url: `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${load.ratecon_url}`,
+                      loadId: load.id,
+                      type: 'ratecon'
+                    })
+                  }}
                   className="text-blue-600 hover:underline text-sm"
-                  onClick={(e) => e.stopPropagation()}
                 >
                   View
-                </a>
+                </button>
                 <input
                   type="file"
                   accept=".pdf"
@@ -1183,6 +1204,55 @@ export default function LoadsPageInline() {
               <Trash2 className="h-4 w-4" />
               <span>Delete Load</span>
             </button>
+          </div>
+        )}
+
+        {/* PDF Viewer Modal */}
+        {pdfModal && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            onClick={() => setPdfModal(null)}
+          >
+            <div
+              className="bg-white rounded-lg shadow-xl w-11/12 h-5/6 flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b">
+                <h2 className="text-lg font-semibold">
+                  {pdfModal.type === 'pod' ? 'Proof of Delivery' : 'Rate Confirmation'}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to delete this ${pdfModal.type === 'pod' ? 'POD' : 'Ratecon'}?`)) {
+                        handleDeletePdf(pdfModal.loadId, pdfModal.type === 'pod' ? 'pod_url' : 'ratecon_url')
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                  <button
+                    onClick={() => setPdfModal(null)}
+                    className="p-2 hover:bg-gray-100 rounded-full"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* PDF Viewer */}
+              <div className="flex-1 p-4 overflow-hidden">
+                <iframe
+                  src={pdfModal.url}
+                  className="w-full h-full border-0"
+                  title={pdfModal.type === 'pod' ? 'POD Viewer' : 'Ratecon Viewer'}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
