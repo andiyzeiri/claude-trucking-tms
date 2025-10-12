@@ -144,7 +144,11 @@ export default function RateconsPage() {
   const printRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
 
   const generatePDF = (load: Load) => {
+    console.log('Generating PDF for load:', load.id)
+    console.log('Available refs:', Object.keys(printRefs.current))
     const printableComponent = printRefs.current[load.id]
+    console.log('Found component:', !!printableComponent)
+
     if (printableComponent) {
       // Create a temporary iframe for printing
       const printWindow = window.open('', '', 'width=800,height=600')
@@ -172,6 +176,8 @@ export default function RateconsPage() {
           printWindow.close()
         }, 250)
       }
+    } else {
+      console.error('Could not find printable component for load:', load.id)
     }
   }
 
