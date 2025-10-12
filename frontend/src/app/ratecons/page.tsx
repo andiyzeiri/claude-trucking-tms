@@ -324,8 +324,8 @@ export default function RateconsPage() {
               </div>
             </div>
 
-            {/* Hidden printable components */}
-            <div style={{ display: 'none' }}>
+            {/* Off-screen printable components (must be visible for html2canvas) */}
+            <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
               {absoluteTruckingLoads.map(load => (
                 <PrintableRatecon
                   key={load.id}
