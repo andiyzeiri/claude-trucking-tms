@@ -7,6 +7,8 @@ import { formatCurrency } from '@/lib/utils'
 import { FileDown } from 'lucide-react'
 import { useLoads } from '@/hooks/use-loads'
 import { Load } from '@/types'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 
 // Printable Ratecon Component
 const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ load }, ref) => {
@@ -143,38 +145,35 @@ export default function RateconsPage() {
 
   const printRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
 
-  const generatePDF = (load: Load) => {
+  const generatePDF = async (load: Load) => {
     console.log('Generating PDF for load:', load.id)
-    console.log('Available refs:', Object.keys(printRefs.current))
     const printableComponent = printRefs.current[load.id]
     console.log('Found component:', !!printableComponent)
 
     if (printableComponent) {
-      // Create a temporary iframe for printing
-      const printWindow = window.open('', '', 'width=800,height=600')
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Rate Confirmation - ${load.load_number}</title>
-              <style>
-                body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
-                @media print {
-                  body { margin: 0; padding: 0; }
-                }
-              </style>
-            </head>
-            <body>
-              ${printableComponent.innerHTML}
-            </body>
-          </html>
-        `)
-        printWindow.document.close()
-        printWindow.focus()
-        setTimeout(() => {
-          printWindow.print()
-          printWindow.close()
-        }, 250)
+      try {
+        // Convert HTML to canvas
+        const canvas = await html2canvas(printableComponent, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+        })
+
+        // Calculate PDF dimensions
+        const imgWidth = 210 // A4 width in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width
+
+        // Create PDF
+        const pdf = new jsPDF('p', 'mm', 'a4')
+        const imgData = canvas.toDataURL('image/png')
+
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
+
+        // Download the PDF
+        pdf.save(`rate-confirmation-${load.load_number}.pdf`)
+      } catch (error) {
+        console.error('Error generating PDF:', error)
+        alert('Failed to generate PDF. Please try again.')
       }
     } else {
       console.error('Could not find printable component for load:', load.id)
