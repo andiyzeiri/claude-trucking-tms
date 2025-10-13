@@ -34,7 +34,7 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#000', margin: 0 }}>RATE CONFIRMATION</h1>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#000', margin: 0 }}>RATE CONFIRMATION</h1>
           <div style={{ fontSize: '13px', color: '#4b5563', marginTop: '8px' }}>
             <div><strong>Load #:</strong> {load.load_number}</div>
             <div><strong>Date:</strong> {new Date().toLocaleDateString()}</div>
@@ -44,7 +44,7 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
 
       {/* Carrier Information Section */}
       <div style={{ marginBottom: '16px', padding: '12px', border: '1px solid #d1d5db' }}>
-        <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
+        <h2 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
           CARRIER INFORMATION
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -61,7 +61,7 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
 
       {/* Pickup Section */}
       <div style={{ marginBottom: '16px', padding: '12px', border: '1px solid #d1d5db' }}>
-        <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
+        <h2 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
           PICKUP INFORMATION
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
@@ -84,7 +84,7 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
 
       {/* Delivery Section */}
       <div style={{ marginBottom: '16px', padding: '12px', border: '1px solid #d1d5db' }}>
-        <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
+        <h2 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
           DELIVERY INFORMATION
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
@@ -107,7 +107,7 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
 
       {/* Rate & Equipment Section */}
       <div style={{ marginBottom: '16px', padding: '12px', border: '1px solid #d1d5db' }}>
-        <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
+        <h2 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
           RATE & EQUIPMENT
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
