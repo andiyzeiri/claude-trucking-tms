@@ -75,6 +75,9 @@ export interface Load {
   weight?: number
   miles?: number
   rate: number
+  carrier_rate?: number
+  pickup_notes?: string
+  delivery_notes?: string
   status: 'pending' | 'assigned' | 'in_transit' | 'delivered' | 'cancelled'
   notes?: string
   pod_url?: string
