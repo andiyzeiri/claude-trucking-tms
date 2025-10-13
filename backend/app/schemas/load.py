@@ -15,6 +15,7 @@ class LoadBase(BaseModel):
     delivery_location: Optional[str] = None
     miles: Optional[int] = None
     rate: Optional[Decimal] = None
+    carrier_rate: Optional[Decimal] = None
     fuel_surcharge: Optional[Decimal] = None
     accessorial_charges: Optional[Decimal] = None
     total_amount: Optional[Decimal] = None
@@ -28,6 +29,8 @@ class LoadBase(BaseModel):
     driver_id: Optional[int] = None
     pod_url: Optional[str] = None
     ratecon_url: Optional[str] = None
+    pickup_notes: Optional[str] = None
+    delivery_notes: Optional[str] = None
 
 
 class LoadCreate(LoadBase):
@@ -48,6 +51,7 @@ class LoadUpdate(BaseModel):
     delivery_location: Optional[str] = None
     miles: Optional[int] = None
     rate: Optional[Decimal] = None
+    carrier_rate: Optional[Decimal] = None
     fuel_surcharge: Optional[Decimal] = None
     accessorial_charges: Optional[Decimal] = None
     total_amount: Optional[Decimal] = None
@@ -61,6 +65,8 @@ class LoadUpdate(BaseModel):
     driver_id: Optional[int] = None
     pod_url: Optional[str] = None
     ratecon_url: Optional[str] = None
+    pickup_notes: Optional[str] = None
+    delivery_notes: Optional[str] = None
 
 
 class LoadResponse(BaseModel):
@@ -72,6 +78,7 @@ class LoadResponse(BaseModel):
     delivery_location: Optional[str] = None
     miles: Optional[int] = None
     rate: Optional[Decimal] = None
+    carrier_rate: Optional[Decimal] = None
     fuel_surcharge: Optional[Decimal] = None
     accessorial_charges: Optional[Decimal] = None
     total_amount: Optional[Decimal] = None
@@ -85,6 +92,8 @@ class LoadResponse(BaseModel):
     driver_id: Optional[int] = None
     pod_url: Optional[str] = None
     ratecon_url: Optional[str] = None
+    pickup_notes: Optional[str] = None
+    delivery_notes: Optional[str] = None
     driver: Optional[DriverResponse] = None
     truck: Optional[TruckResponse] = None
     created_at: datetime

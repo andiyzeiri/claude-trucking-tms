@@ -22,6 +22,7 @@ class Load(Base):
 
     # Financial
     rate = Column(Numeric(10, 2))
+    carrier_rate = Column(Numeric(10, 2))
     fuel_surcharge = Column(Numeric(10, 2), default=0)
     accessorial_charges = Column(Numeric(10, 2), default=0)
     total_amount = Column(Numeric(10, 2))
@@ -38,6 +39,10 @@ class Load(Base):
     # Documents
     pod_url = Column(String)
     ratecon_url = Column(String)
+
+    # Notes
+    pickup_notes = Column(Text)
+    delivery_notes = Column(Text)
 
     # Multi-tenant
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)

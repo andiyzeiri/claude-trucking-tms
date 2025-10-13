@@ -22,7 +22,11 @@ async def get_loads(
 ):
     query = (
         select(Load)
-        .options(selectinload(Load.driver), selectinload(Load.truck))
+        .options(
+            selectinload(Load.driver),
+            selectinload(Load.truck),
+            selectinload(Load.customer)
+        )
         .where(Load.company_id == current_user.company_id)
         .offset(skip)
         .limit(limit)
@@ -61,7 +65,11 @@ async def get_load(
 ):
     query = (
         select(Load)
-        .options(selectinload(Load.driver), selectinload(Load.truck))
+        .options(
+            selectinload(Load.driver),
+            selectinload(Load.truck),
+            selectinload(Load.customer)
+        )
         .where(
             Load.id == load_id,
             Load.company_id == current_user.company_id
@@ -83,7 +91,11 @@ async def update_load(
 ):
     query = (
         select(Load)
-        .options(selectinload(Load.driver), selectinload(Load.truck))
+        .options(
+            selectinload(Load.driver),
+            selectinload(Load.truck),
+            selectinload(Load.customer)
+        )
         .where(
             Load.id == load_id,
             Load.company_id == current_user.company_id

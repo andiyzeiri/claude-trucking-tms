@@ -1,35 +1,29 @@
 import asyncio
 import asyncpg
-import os
 
 async def run_migration():
-    # Get database URL from environment
-    db_url = os.environ.get('DATABASE_URL', '')
-    
-    if not db_url:
-        print("DATABASE_URL not set")
-        return
-    
-    # Parse connection string
-    # Format: postgresql+asyncpg://user:pass@host:port/dbname
-    db_url = db_url.replace('postgresql+asyncpg://', 'postgresql://')
-    
-    print(f"Connecting to database...")
-    
-    conn = await asyncpg.connect(db_url)
-    
+    conn = await asyncpg.connect(
+        host='trucking-tms-db.csla6kaago6t.us-east-1.rds.amazonaws.com',
+        port=5432,
+        user='tmsadmin',
+        password='VNDNzVg4uQwrsV4XenuYbQG+OlHh5waSoDUzxd85HuM=',
+        database='trucking_tms'
+    )
+
     try:
-        # Add the missing columns
-        print("Adding pod_url column...")
-        await conn.execute("ALTER TABLE loads ADD COLUMN IF NOT EXISTS pod_url VARCHAR")
-        
-        print("Adding ratecon_url column...")
-        await conn.execute("ALTER TABLE loads ADD COLUMN IF NOT EXISTS ratecon_url VARCHAR")
-        
-        print("Migration completed successfully!")
-        
+        # Read migration SQL
+        with open('add_carrier_rate_and_notes.sql', 'r') as f:
+            sql = f.read()
+
+        # Execute migration
+        await conn.execute(sql)
+        print("✅ Migration completed successfully!")
+        print("Added columns: carrier_rate, pickup_notes, delivery_notes")
+
+    except Exception as e:
+        print(f"❌ Migration failed: {e}")
     finally:
         await conn.close()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.run(run_migration())
