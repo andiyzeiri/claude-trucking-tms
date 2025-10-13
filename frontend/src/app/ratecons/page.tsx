@@ -42,14 +42,14 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
         </div>
       </div>
 
-      {/* Customer Information Section */}
+      {/* Carrier Information Section */}
       <div style={{ marginBottom: '16px', padding: '12px', border: '1px solid #d1d5db' }}>
         <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
-          CUSTOMER INFORMATION
+          CARRIER INFORMATION
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           <div>
-            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '2px' }}>Customer Name:</div>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '2px' }}>Carrier Name:</div>
             <div style={{ fontSize: '13px', color: '#1f2937' }}>{load.customer?.name || 'N/A'}</div>
           </div>
           <div>
@@ -106,7 +106,7 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
       </div>
 
       {/* Rate & Equipment Section */}
-      <div style={{ marginBottom: '16px', padding: '12px', border: '2px solid #000' }}>
+      <div style={{ marginBottom: '16px', padding: '12px', border: '1px solid #d1d5db' }}>
         <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
           RATE & EQUIPMENT
         </h2>
