@@ -32,10 +32,10 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
           />
           <div style={{ marginTop: '12px', fontSize: '12px', color: '#4b5563', lineHeight: '1.6' }}>
             <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#1f2937', marginBottom: '4px' }}>ABSOLUTE TRUCKING INC</div>
-            <div>MC #: [MC NUMBER]</div>
-            <div>DOT #: [DOT NUMBER]</div>
-            <div>Phone: [PHONE NUMBER]</div>
-            <div>Email: [EMAIL]</div>
+            <div>MC #: 1116953</div>
+            <div>DOT #: 3439947</div>
+            <div>Phone: (708) 845-6619</div>
+            <div>Email: redi@absolutetrucking.net</div>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
