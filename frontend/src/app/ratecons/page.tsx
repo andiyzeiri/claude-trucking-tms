@@ -13,89 +13,148 @@ import html2canvas from 'html2canvas'
 // Printable Ratecon Component
 const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ load }, ref) => {
   return (
-    <div ref={ref} className="p-8 bg-white" style={{ width: '8.5in', minHeight: '11in' }}>
-      {/* Header */}
-      <div className="text-center mb-8 border-b-2 border-gray-800 pb-4">
-        <h1 className="text-3xl font-bold text-gray-900">RATE CONFIRMATION</h1>
-        <p className="text-sm text-gray-600 mt-2">Absolute Trucking</p>
-      </div>
-
-      {/* Load Information */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">Load Information</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm font-semibold text-gray-600">Load Number:</p>
-            <p className="text-base text-gray-900">{load.load_number}</p>
+    <div ref={ref} className="p-8 bg-white" style={{ width: '8.5in', minHeight: '11in', fontFamily: 'Arial, sans-serif' }}>
+      {/* Header with Logo */}
+      <div className="mb-6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #1e40af', paddingBottom: '16px' }}>
+        <div style={{ flex: 1 }}>
+          {/* Logo placeholder - replace with actual logo */}
+          <div style={{
+            width: '200px',
+            height: '80px',
+            backgroundColor: '#1e40af',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontWeight: 'bold',
+            fontSize: '20px',
+            borderRadius: '4px'
+          }}>
+            ABSOLUTE TRUCKING INC
           </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-600">Status:</p>
-            <p className="text-base text-gray-900 capitalize">{load.status}</p>
+          <div style={{ marginTop: '8px', fontSize: '12px', color: '#4b5563' }}>
+            <div>MC #: [MC NUMBER]</div>
+            <div>DOT #: [DOT NUMBER]</div>
+            <div>Phone: [PHONE NUMBER]</div>
+            <div>Email: [EMAIL]</div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-600">Equipment Type:</p>
-            <p className="text-base text-gray-900">{load.equipment_type || 'N/A'}</p>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-600">Rate:</p>
-            <p className="text-base font-bold text-gray-900">{formatCurrency(load.rate)}</p>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1e40af', margin: 0 }}>RATE CONFIRMATION</h1>
+          <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>
+            <div><strong>Load #:</strong> {load.load_number}</div>
+            <div><strong>Date:</strong> {new Date().toLocaleDateString()}</div>
           </div>
         </div>
       </div>
 
-      {/* Pickup Information */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">Pickup Details</h2>
-        <div className="grid grid-cols-2 gap-4">
+      {/* Customer Information Section */}
+      <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f3f4f6', borderRadius: '4px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '12px', textTransform: 'uppercase' }}>
+          CUSTOMER INFORMATION
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           <div>
-            <p className="text-sm font-semibold text-gray-600">Location:</p>
-            <p className="text-base text-gray-900">{load.pickup_location}</p>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Customer Name:</div>
+            <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.customer?.name || 'N/A'}</div>
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-600">Date:</p>
-            <p className="text-base text-gray-900">
-              {load.pickup_date ? new Date(load.pickup_date).toLocaleDateString() : 'N/A'}
-            </p>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>MC Number:</div>
+            <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.customer?.mc || 'N/A'}</div>
           </div>
         </div>
       </div>
 
-      {/* Delivery Information */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">Delivery Details</h2>
-        <div className="grid grid-cols-2 gap-4">
+      {/* Rate & Equipment Section */}
+      <div style={{ marginBottom: '24px', padding: '16px', border: '2px solid #1e40af', borderRadius: '4px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '12px', textTransform: 'uppercase' }}>
+          RATE & EQUIPMENT
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
           <div>
-            <p className="text-sm font-semibold text-gray-600">Location:</p>
-            <p className="text-base text-gray-900">{load.delivery_location}</p>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Total Rate:</div>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1e40af' }}>{formatCurrency(load.rate)}</div>
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-600">Date:</p>
-            <p className="text-base text-gray-900">
-              {load.delivery_date ? new Date(load.delivery_date).toLocaleDateString() : 'N/A'}
-            </p>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Equipment Type:</div>
+            <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.equipment_type || 'Dry Van'}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Miles:</div>
+            <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.miles || 'N/A'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Pickup Section */}
+      <div style={{ marginBottom: '16px', padding: '16px', backgroundColor: '#f9fafb', borderLeft: '4px solid #10b981', borderRadius: '4px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '12px', textTransform: 'uppercase' }}>
+          📍 PICKUP INFORMATION
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Location:</div>
+            <div style={{ fontSize: '14px', color: '#1f2937', fontWeight: '600' }}>{load.pickup_location}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Date & Time:</div>
+            <div style={{ fontSize: '14px', color: '#1f2937' }}>
+              {load.pickup_date ? new Date(load.pickup_date).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              }) : 'N/A'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Delivery Section */}
+      <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9fafb', borderLeft: '4px solid #ef4444', borderRadius: '4px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '12px', textTransform: 'uppercase' }}>
+          📍 DELIVERY INFORMATION
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Location:</div>
+            <div style={{ fontSize: '14px', color: '#1f2937', fontWeight: '600' }}>{load.delivery_location}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Date & Time:</div>
+            <div style={{ fontSize: '14px', color: '#1f2937' }}>
+              {load.delivery_date ? new Date(load.delivery_date).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              }) : 'N/A'}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Commodity Information */}
-      {load.commodity && (
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">Commodity Details</h2>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-sm font-semibold text-gray-600">Type:</p>
-              <p className="text-base text-gray-900">{load.commodity}</p>
-            </div>
+      {(load.commodity || load.weight || load.pieces) && (
+        <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#fef3c7', borderRadius: '4px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '12px', textTransform: 'uppercase' }}>
+            COMMODITY DETAILS
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+            {load.commodity && (
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: '600', color: '#92400e', marginBottom: '4px' }}>Type:</div>
+                <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.commodity}</div>
+              </div>
+            )}
             {load.weight && (
               <div>
-                <p className="text-sm font-semibold text-gray-600">Weight:</p>
-                <p className="text-base text-gray-900">{load.weight} lbs</p>
+                <div style={{ fontSize: '12px', fontWeight: '600', color: '#92400e', marginBottom: '4px' }}>Weight:</div>
+                <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.weight} lbs</div>
               </div>
             )}
             {load.pieces && (
               <div>
-                <p className="text-sm font-semibold text-gray-600">Pieces:</p>
-                <p className="text-base text-gray-900">{load.pieces}</p>
+                <div style={{ fontSize: '12px', fontWeight: '600', color: '#92400e', marginBottom: '4px' }}>Pieces:</div>
+                <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.pieces}</div>
               </div>
             )}
           </div>
@@ -104,20 +163,59 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
 
       {/* Special Instructions */}
       {load.special_instructions && (
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">Special Instructions</h2>
-          <p className="text-base text-gray-900">{load.special_instructions}</p>
+        <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#991b1b', marginBottom: '8px', textTransform: 'uppercase' }}>
+            ⚠️ SPECIAL INSTRUCTIONS
+          </h2>
+          <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.special_instructions}</div>
         </div>
       )}
 
+      {/* Terms and Conditions */}
+      <div style={{ marginTop: '32px', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '4px', border: '1px solid #e5e7eb' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px' }}>TERMS AND CONDITIONS</h3>
+        <ul style={{ fontSize: '11px', color: '#4b5563', lineHeight: '1.6', paddingLeft: '20px', margin: 0 }}>
+          <li>Payment terms: Net 30 days from delivery date</li>
+          <li>Carrier agrees to maintain required insurance coverage</li>
+          <li>All claims must be filed within 9 months of delivery date</li>
+          <li>This rate confirmation is subject to the terms in the carrier agreement</li>
+          <li>Carrier is responsible for securing the load properly and for all cargo loss or damage</li>
+        </ul>
+      </div>
+
+      {/* Signature Section */}
+      <div style={{ marginTop: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+        <div>
+          <div style={{ borderBottom: '2px solid #000', paddingBottom: '2px', marginBottom: '8px', minHeight: '40px' }}></div>
+          <div style={{ fontSize: '12px', color: '#4b5563' }}>
+            <div style={{ fontWeight: 'bold' }}>Carrier Signature</div>
+            <div>Date: _________________</div>
+          </div>
+        </div>
+        <div>
+          <div style={{ borderBottom: '2px solid #000', paddingBottom: '2px', marginBottom: '8px', minHeight: '40px' }}></div>
+          <div style={{ fontSize: '12px', color: '#4b5563' }}>
+            <div style={{ fontWeight: 'bold' }}>Broker Signature</div>
+            <div>Date: _________________</div>
+          </div>
+        </div>
+      </div>
+
       {/* Footer */}
-      <div className="mt-12 pt-6 border-t border-gray-300">
-        <p className="text-xs text-gray-600 text-center">
-          This rate confirmation is subject to the terms and conditions agreed upon by both parties.
-        </p>
-        <p className="text-xs text-gray-600 text-center mt-2">
-          Generated on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}
-        </p>
+      <div style={{ marginTop: '32px', paddingTop: '16px', borderTop: '2px solid #1e40af', textAlign: 'center' }}>
+        <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px' }}>
+          Document generated on {new Date().toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+          })} at {new Date().toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+        </div>
+        <div style={{ fontSize: '10px', color: '#9ca3af', fontStyle: 'italic' }}>
+          This is a legally binding document. Please retain for your records.
+        </div>
       </div>
     </div>
   )
