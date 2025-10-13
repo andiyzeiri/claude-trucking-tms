@@ -17,22 +17,21 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
       {/* Header with Logo */}
       <div className="mb-6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #1e40af', paddingBottom: '16px' }}>
         <div style={{ flex: 1 }}>
-          {/* Logo placeholder - replace with actual logo */}
-          <div style={{
-            width: '200px',
-            height: '80px',
-            backgroundColor: '#1e40af',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontWeight: 'bold',
-            fontSize: '20px',
-            borderRadius: '4px'
-          }}>
-            ABSOLUTE TRUCKING INC
-          </div>
-          <div style={{ marginTop: '8px', fontSize: '12px', color: '#4b5563' }}>
+          {/* Company Logo */}
+          <img
+            src="https://lh3.googleusercontent.com/a/ACg8ocJL_tzu1xh8R0X1-vch91cbmpCbv2CcroaHCqNKTC4Fiiu0bIed=s317-c-no"
+            alt="Absolute Trucking Inc Logo"
+            style={{
+              width: '120px',
+              height: '120px',
+              objectFit: 'contain',
+              borderRadius: '50%',
+              border: '3px solid #1e40af',
+              backgroundColor: 'white'
+            }}
+          />
+          <div style={{ marginTop: '12px', fontSize: '12px', color: '#4b5563', lineHeight: '1.6' }}>
+            <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#1f2937', marginBottom: '4px' }}>ABSOLUTE TRUCKING INC</div>
             <div>MC #: [MC NUMBER]</div>
             <div>DOT #: [DOT NUMBER]</div>
             <div>Phone: [PHONE NUMBER]</div>
