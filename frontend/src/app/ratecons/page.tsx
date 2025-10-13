@@ -15,32 +15,27 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
   return (
     <div ref={ref} className="p-8 bg-white" style={{ width: '8.5in', minHeight: '11in', fontFamily: 'Arial, sans-serif' }}>
       {/* Header with Logo */}
-      <div className="mb-6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #1e40af', paddingBottom: '16px' }}>
+      <div className="mb-6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #000', paddingBottom: '16px' }}>
         <div style={{ flex: 1 }}>
           {/* Company Logo */}
           <img
             src="https://lh3.googleusercontent.com/a/ACg8ocJL_tzu1xh8R0X1-vch91cbmpCbv2CcroaHCqNKTC4Fiiu0bIed=s317-c-no"
             alt="Absolute Trucking Inc Logo"
             style={{
-              width: '120px',
-              height: '120px',
-              objectFit: 'contain',
-              borderRadius: '50%',
-              border: '3px solid #1e40af',
-              backgroundColor: 'white'
+              width: '140px',
+              height: '140px',
+              objectFit: 'contain'
             }}
           />
-          <div style={{ marginTop: '12px', fontSize: '12px', color: '#4b5563', lineHeight: '1.6' }}>
-            <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#1f2937', marginBottom: '4px' }}>ABSOLUTE TRUCKING INC</div>
-            <div>MC #: 1116953</div>
-            <div>DOT #: 3439947</div>
-            <div>Phone: (708) 845-6619</div>
-            <div>Email: redi@absolutetrucking.net</div>
+          <div style={{ marginTop: '8px', fontSize: '11px', color: '#1f2937', lineHeight: '1.5' }}>
+            <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>ABSOLUTE TRUCKING INC</div>
+            <div>MC: 1116953 | DOT: 3439947</div>
+            <div>Phone: (708) 845-6619 | Email: redi@absolutetrucking.net</div>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1e40af', margin: 0 }}>RATE CONFIRMATION</h1>
-          <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#000', margin: 0 }}>RATE CONFIRMATION</h1>
+          <div style={{ fontSize: '13px', color: '#4b5563', marginTop: '8px' }}>
             <div><strong>Load #:</strong> {load.load_number}</div>
             <div><strong>Date:</strong> {new Date().toLocaleDateString()}</div>
           </div>
@@ -48,56 +43,35 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
       </div>
 
       {/* Customer Information Section */}
-      <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f3f4f6', borderRadius: '4px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '12px', textTransform: 'uppercase' }}>
+      <div style={{ marginBottom: '16px', padding: '12px', border: '1px solid #d1d5db' }}>
+        <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
           CUSTOMER INFORMATION
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Customer Name:</div>
-            <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.customer?.name || 'N/A'}</div>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '2px' }}>Customer Name:</div>
+            <div style={{ fontSize: '13px', color: '#1f2937' }}>{load.customer?.name || 'N/A'}</div>
           </div>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>MC Number:</div>
-            <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.customer?.mc || 'N/A'}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Rate & Equipment Section */}
-      <div style={{ marginBottom: '24px', padding: '16px', border: '2px solid #1e40af', borderRadius: '4px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '12px', textTransform: 'uppercase' }}>
-          RATE & EQUIPMENT
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-          <div>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Total Rate:</div>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1e40af' }}>{formatCurrency(load.rate)}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Equipment Type:</div>
-            <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.equipment_type || 'Dry Van'}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Miles:</div>
-            <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.miles || 'N/A'}</div>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '2px' }}>MC Number:</div>
+            <div style={{ fontSize: '13px', color: '#1f2937' }}>{load.customer?.mc || 'N/A'}</div>
           </div>
         </div>
       </div>
 
       {/* Pickup Section */}
-      <div style={{ marginBottom: '16px', padding: '16px', backgroundColor: '#f9fafb', borderLeft: '4px solid #10b981', borderRadius: '4px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '12px', textTransform: 'uppercase' }}>
-          📍 PICKUP INFORMATION
+      <div style={{ marginBottom: '16px', padding: '12px', border: '1px solid #d1d5db' }}>
+        <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
+          PICKUP INFORMATION
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Location:</div>
-            <div style={{ fontSize: '14px', color: '#1f2937', fontWeight: '600' }}>{load.pickup_location}</div>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '2px' }}>Location:</div>
+            <div style={{ fontSize: '13px', color: '#1f2937', fontWeight: '600' }}>{load.pickup_location}</div>
           </div>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Date & Time:</div>
-            <div style={{ fontSize: '14px', color: '#1f2937' }}>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '2px' }}>Date:</div>
+            <div style={{ fontSize: '13px', color: '#1f2937' }}>
               {load.pickup_date ? new Date(load.pickup_date).toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
@@ -109,18 +83,18 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
       </div>
 
       {/* Delivery Section */}
-      <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9fafb', borderLeft: '4px solid #ef4444', borderRadius: '4px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '12px', textTransform: 'uppercase' }}>
-          📍 DELIVERY INFORMATION
+      <div style={{ marginBottom: '16px', padding: '12px', border: '1px solid #d1d5db' }}>
+        <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
+          DELIVERY INFORMATION
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Location:</div>
-            <div style={{ fontSize: '14px', color: '#1f2937', fontWeight: '600' }}>{load.delivery_location}</div>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '2px' }}>Location:</div>
+            <div style={{ fontSize: '13px', color: '#1f2937', fontWeight: '600' }}>{load.delivery_location}</div>
           </div>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Date & Time:</div>
-            <div style={{ fontSize: '14px', color: '#1f2937' }}>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '2px' }}>Date:</div>
+            <div style={{ fontSize: '13px', color: '#1f2937' }}>
               {load.delivery_date ? new Date(load.delivery_date).toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
@@ -131,29 +105,50 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
         </div>
       </div>
 
+      {/* Rate & Equipment Section */}
+      <div style={{ marginBottom: '16px', padding: '12px', border: '2px solid #000' }}>
+        <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
+          RATE & EQUIPMENT
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '2px' }}>Total Rate:</div>
+            <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1f2937' }}>{formatCurrency(load.rate)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '2px' }}>Equipment Type:</div>
+            <div style={{ fontSize: '13px', color: '#1f2937' }}>{load.equipment_type || 'Dry Van'}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '2px' }}>Miles:</div>
+            <div style={{ fontSize: '13px', color: '#1f2937' }}>{load.miles || 'N/A'}</div>
+          </div>
+        </div>
+      </div>
+
       {/* Commodity Information */}
       {(load.commodity || load.weight || load.pieces) && (
-        <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#fef3c7', borderRadius: '4px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', marginBottom: '12px', textTransform: 'uppercase' }}>
+        <div style={{ marginBottom: '16px', padding: '12px', border: '1px solid #d1d5db' }}>
+          <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
             COMMODITY DETAILS
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
             {load.commodity && (
               <div>
-                <div style={{ fontSize: '12px', fontWeight: '600', color: '#92400e', marginBottom: '4px' }}>Type:</div>
-                <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.commodity}</div>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '2px' }}>Type:</div>
+                <div style={{ fontSize: '13px', color: '#1f2937' }}>{load.commodity}</div>
               </div>
             )}
             {load.weight && (
               <div>
-                <div style={{ fontSize: '12px', fontWeight: '600', color: '#92400e', marginBottom: '4px' }}>Weight:</div>
-                <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.weight} lbs</div>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '2px' }}>Weight:</div>
+                <div style={{ fontSize: '13px', color: '#1f2937' }}>{load.weight} lbs</div>
               </div>
             )}
             {load.pieces && (
               <div>
-                <div style={{ fontSize: '12px', fontWeight: '600', color: '#92400e', marginBottom: '4px' }}>Pieces:</div>
-                <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.pieces}</div>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '2px' }}>Pieces:</div>
+                <div style={{ fontSize: '13px', color: '#1f2937' }}>{load.pieces}</div>
               </div>
             )}
           </div>
@@ -162,18 +157,18 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
 
       {/* Special Instructions */}
       {load.special_instructions && (
-        <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#991b1b', marginBottom: '8px', textTransform: 'uppercase' }}>
-            ⚠️ SPECIAL INSTRUCTIONS
+        <div style={{ marginBottom: '16px', padding: '12px', border: '1px solid #d1d5db' }}>
+          <h2 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px', textTransform: 'uppercase' }}>
+            SPECIAL INSTRUCTIONS
           </h2>
-          <div style={{ fontSize: '14px', color: '#1f2937' }}>{load.special_instructions}</div>
+          <div style={{ fontSize: '13px', color: '#1f2937' }}>{load.special_instructions}</div>
         </div>
       )}
 
       {/* Terms and Conditions */}
-      <div style={{ marginTop: '32px', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '4px', border: '1px solid #e5e7eb' }}>
+      <div style={{ marginTop: '24px', padding: '12px', border: '1px solid #d1d5db' }}>
         <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px' }}>TERMS AND CONDITIONS</h3>
-        <ul style={{ fontSize: '11px', color: '#4b5563', lineHeight: '1.6', paddingLeft: '20px', margin: 0 }}>
+        <ul style={{ fontSize: '10px', color: '#4b5563', lineHeight: '1.5', paddingLeft: '18px', margin: 0 }}>
           <li>Payment terms: Net 30 days from delivery date</li>
           <li>Carrier agrees to maintain required insurance coverage</li>
           <li>All claims must be filed within 9 months of delivery date</li>
@@ -183,17 +178,17 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
       </div>
 
       {/* Signature Section */}
-      <div style={{ marginTop: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+      <div style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
         <div>
-          <div style={{ borderBottom: '2px solid #000', paddingBottom: '2px', marginBottom: '8px', minHeight: '40px' }}></div>
-          <div style={{ fontSize: '12px', color: '#4b5563' }}>
+          <div style={{ borderBottom: '1px solid #000', paddingBottom: '2px', marginBottom: '8px', minHeight: '40px' }}></div>
+          <div style={{ fontSize: '11px', color: '#1f2937' }}>
             <div style={{ fontWeight: 'bold' }}>Carrier Signature</div>
             <div>Date: _________________</div>
           </div>
         </div>
         <div>
-          <div style={{ borderBottom: '2px solid #000', paddingBottom: '2px', marginBottom: '8px', minHeight: '40px' }}></div>
-          <div style={{ fontSize: '12px', color: '#4b5563' }}>
+          <div style={{ borderBottom: '1px solid #000', paddingBottom: '2px', marginBottom: '8px', minHeight: '40px' }}></div>
+          <div style={{ fontSize: '11px', color: '#1f2937' }}>
             <div style={{ fontWeight: 'bold' }}>Broker Signature</div>
             <div>Date: _________________</div>
           </div>
@@ -201,8 +196,8 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
       </div>
 
       {/* Footer */}
-      <div style={{ marginTop: '32px', paddingTop: '16px', borderTop: '2px solid #1e40af', textAlign: 'center' }}>
-        <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px' }}>
+      <div style={{ marginTop: '24px', paddingTop: '12px', borderTop: '1px solid #000', textAlign: 'center' }}>
+        <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '2px' }}>
           Document generated on {new Date().toLocaleDateString('en-US', {
             month: 'long',
             day: 'numeric',
@@ -212,7 +207,7 @@ const PrintableRatecon = React.forwardRef<HTMLDivElement, { load: Load }>(({ loa
             minute: '2-digit'
           })}
         </div>
-        <div style={{ fontSize: '10px', color: '#9ca3af', fontStyle: 'italic' }}>
+        <div style={{ fontSize: '9px', color: '#9ca3af', fontStyle: 'italic' }}>
           This is a legally binding document. Please retain for your records.
         </div>
       </div>
