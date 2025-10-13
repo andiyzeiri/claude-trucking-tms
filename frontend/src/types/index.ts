@@ -105,6 +105,25 @@ export interface Expense {
   updated_at: string
 }
 
+export interface Fuel {
+  id: number
+  date: string
+  location?: string
+  gallons: number
+  price_per_gallon?: number
+  total_amount: number
+  odometer?: number
+  notes?: string
+  driver_id?: number
+  driver?: Driver
+  truck_id?: number
+  truck?: Truck
+  load_id?: number
+  company_id: number
+  created_at: string
+  updated_at?: string
+}
+
 export interface Shipper {
   id: number
   name: string

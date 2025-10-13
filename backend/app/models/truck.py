@@ -43,3 +43,4 @@ class Truck(Base):
     # Relationships
     loads = relationship("Load", back_populates="truck")
     expenses = relationship("Expense", back_populates="truck")
+    fuel_entries = relationship("Fuel", back_populates="truck")

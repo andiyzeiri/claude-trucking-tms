@@ -11,6 +11,7 @@ from .email_verification import EmailVerificationToken
 from .payroll import Payroll
 from .lane import Lane
 from .expense import Expense
+from .fuel import Fuel
 
 __all__ = [
     "Base",
@@ -25,5 +26,6 @@ __all__ = [
     "EmailVerificationToken",
     "Payroll",
     "Lane",
-    "Expense"
+    "Expense",
+    "Fuel"
 ]

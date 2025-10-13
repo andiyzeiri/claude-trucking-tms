@@ -31,6 +31,7 @@ class Driver(Base):
     current_truck = relationship("Truck", back_populates="current_driver", uselist=False)
     loads = relationship("Load", back_populates="driver")
     expenses = relationship("Expense", back_populates="driver")
+    fuel_entries = relationship("Fuel", back_populates="driver")
 
     @property
     def full_name(self) -> str:

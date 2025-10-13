@@ -18,7 +18,8 @@ import {
   LogOut,
   Calculator,
   Receipt,
-  Warehouse
+  Warehouse,
+  Fuel as FuelIcon
 } from 'lucide-react'
 
 const navigation = [
@@ -31,6 +32,7 @@ const navigation = [
   { name: 'Shippers', href: '/shippers', icon: Warehouse, permissions: [] },
   { name: 'Receivers', href: '/receivers', icon: Warehouse, permissions: [] },
   { name: 'Expenses', href: '/expenses', icon: Receipt, permissions: [] },
+  { name: 'Fuel', href: '/fuel', icon: FuelIcon, permissions: [] },
   { name: 'Payroll', href: '/payroll', icon: Calculator, permissions: [] },
   { name: 'Invoices', href: '/invoices', icon: FileText, permissions: ['can_view_invoices'] },
   { name: 'Ratecons', href: '/ratecons', icon: Receipt, permissions: [] },
