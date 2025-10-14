@@ -4,6 +4,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
 import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X, Check, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
@@ -69,6 +70,19 @@ function getDayLabel(date: Date): string {
   const dayNum = date.getDate()
 
   return `${dayName}, ${monthName} ${dayNum}`
+}
+
+// Helper to format date and time for display
+function formatDateTime(dateString: string): string {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleString('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 export default function LoadsPageInline() {
@@ -194,9 +208,6 @@ export default function LoadsPageInline() {
       } else if (sortField === 'driver_id') {
         aValue = a.driver ? `${a.driver.first_name} ${a.driver.last_name}` : ''
         bValue = b.driver ? `${b.driver.first_name} ${b.driver.last_name}` : ''
-      } else if (sortField === 'truck_id') {
-        aValue = a.truck?.truck_number || ''
-        bValue = b.truck?.truck_number || ''
       }
 
       // Handle dates
@@ -390,7 +401,7 @@ export default function LoadsPageInline() {
                       load_number: deletedLoad.load_number,
                       customer_id: deletedLoad.customer_id,
                       driver_id: deletedLoad.driver_id || null,
-                      truck_id: deletedLoad.truck_id || null,
+                      truck_id: null,
                       pickup_location: deletedLoad.pickup_location,
                       delivery_location: deletedLoad.delivery_location,
                       pickup_date: deletedLoad.pickup_date,
@@ -518,8 +529,6 @@ export default function LoadsPageInline() {
         // Update nested objects when IDs change
         if (field === 'driver_id') {
           updated.driver = value ? drivers.find(d => d.id === value) : undefined
-        } else if (field === 'truck_id') {
-          updated.truck = value ? trucks.find(t => t.id === value) : undefined
         }
 
         return updated
@@ -535,7 +544,7 @@ export default function LoadsPageInline() {
         load_number: load.load_number,
         customer_id: load.customer_id,
         driver_id: load.driver_id || null,
-        truck_id: load.truck_id || null,
+        truck_id: null,
         pickup_location: load.pickup_location,
         delivery_location: load.delivery_location,
         pickup_date: load.pickup_date,
@@ -612,7 +621,7 @@ export default function LoadsPageInline() {
       load_number: '',
       customer_id: loadToDuplicate.customer_id,
       driver_id: loadToDuplicate.driver_id || null,
-      truck_id: loadToDuplicate.truck_id || null,
+      truck_id: null,
       pickup_location: loadToDuplicate.pickup_location,
       delivery_location: loadToDuplicate.delivery_location,
       pickup_date: loadToDuplicate.pickup_date,
@@ -768,7 +777,7 @@ export default function LoadsPageInline() {
               <span className="text-gray-500">({groupLoads.length} loads)</span>
             </div>
           </td>
-          <td className="px-2 py-2 text-sm" colSpan={7}></td>
+          <td className="px-2 py-2 text-sm" colSpan={6}></td>
           <td className="px-2 py-2 text-sm font-medium text-green-700">
             {formatCurrency(groupTotalRate)}
           </td>
@@ -792,7 +801,7 @@ export default function LoadsPageInline() {
         if (Array.isArray(groupData)) {
           elements.push(
             <tr key={`add-${groupKey}`} className="border-b hover:bg-gray-50 transition-colors" style={{borderColor: 'var(--cell-borderColor)'}}>
-              <td colSpan={14} className="px-2 py-2">
+              <td colSpan={13} className="px-2 py-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -968,44 +977,14 @@ export default function LoadsPageInline() {
           )}
         </td>
 
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'truck_id')}>
-          {isEditing(loadKey, 'truck_id') ? (
-            <Select
-              value={load.truck_id ? String(load.truck_id) : 'unassigned'}
-              onValueChange={(value) => {
-                updateField(loadKey, 'truck_id', value === 'unassigned' ? null : Number(value))
-                stopEdit()
-              }}
-              open={true}
-              onOpenChange={(open) => !open && stopEdit()}
-            >
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                {trucks.map(truck => (
-                  <SelectItem key={truck.id} value={String(truck.id)}>
-                    {truck.truck_number}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
-              {load.truck ? load.truck.truck_number : 'Unassigned'}
-            </div>
-          )}
-        </td>
-
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'pickup_location')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)', minWidth: '200px'}} onClick={() => startEdit(loadKey, 'pickup_location')}>
           {isEditing(loadKey, 'pickup_location') ? (
-            <Input
+            <Textarea
               value={load.pickup_location}
               onChange={(e) => updateField(loadKey, 'pickup_location', e.target.value)}
               onBlur={stopEdit}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
                   stopEdit()
                 } else if (e.key === 'Tab' && !e.shiftKey) {
@@ -1015,24 +994,32 @@ export default function LoadsPageInline() {
                 }
               }}
               autoFocus
-              placeholder="City, ST"
-              className="h-8 text-sm"
+              placeholder="Street, City, ST Zip"
+              className="text-sm resize-none"
+              rows={3}
             />
           ) : (
-            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
-              {load.pickup_location || 'N/A'}
+            <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+              <div className="text-sm whitespace-pre-wrap" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+                {load.pickup_location || 'N/A'}
+              </div>
+              {load.pickup_date && (
+                <div className="text-xs text-gray-500 mt-1">
+                  {formatDateTime(load.pickup_date)}
+                </div>
+              )}
             </div>
           )}
         </td>
 
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'delivery_location')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)', minWidth: '200px'}} onClick={() => startEdit(loadKey, 'delivery_location')}>
           {isEditing(loadKey, 'delivery_location') ? (
-            <Input
+            <Textarea
               value={load.delivery_location}
               onChange={(e) => updateField(loadKey, 'delivery_location', e.target.value)}
               onBlur={stopEdit}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
                   stopEdit()
                 } else if (e.key === 'Tab' && !e.shiftKey) {
@@ -1042,12 +1029,20 @@ export default function LoadsPageInline() {
                 }
               }}
               autoFocus
-              placeholder="City, ST"
-              className="h-8 text-sm"
+              placeholder="Street, City, ST Zip"
+              className="text-sm resize-none"
+              rows={3}
             />
           ) : (
-            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
-              {load.delivery_location || 'N/A'}
+            <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+              <div className="text-sm whitespace-pre-wrap" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+                {load.delivery_location || 'N/A'}
+              </div>
+              {load.delivery_date && (
+                <div className="text-xs text-gray-500 mt-1">
+                  {formatDateTime(load.delivery_date)}
+                </div>
+              )}
             </div>
           )}
         </td>
@@ -1457,15 +1452,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('truck_id')}>
-                    <div className="flex items-center gap-1">
-                      Truck
-                      {sortField === 'truck_id' ? (
-                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                      ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
-                    </div>
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('pickup_location')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '200px'}} onClick={() => handleSort('pickup_location')}>
                     <div className="flex items-center gap-1">
                       Pickup
                       {sortField === 'pickup_location' ? (
@@ -1473,7 +1460,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('delivery_location')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '200px'}} onClick={() => handleSort('delivery_location')}>
                     <div className="flex items-center gap-1">
                       Delivery
                       {sortField === 'delivery_location' ? (
@@ -1522,7 +1509,6 @@ export default function LoadsPageInline() {
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm font-medium">{totals.count} Loads</td>
-                  <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
