@@ -8,7 +8,7 @@ import { DataTable, Column } from '@/components/ui/data-table'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
 import { DriverModal, DriverData } from '@/components/drivers/driver-modal'
 import { Plus, Users, Phone, Mail, Edit, Trash2 } from 'lucide-react'
-import { useDrivers, useCreateDriver, useUpdateDriver } from '@/hooks/use-drivers'
+import { useDrivers, useCreateDriver, useUpdateDriver, useDeleteDriver } from '@/hooks/use-drivers'
 
 export default function DriversPage() {
   // Fetch drivers from API
@@ -16,6 +16,7 @@ export default function DriversPage() {
   const drivers = driversData?.items || []
   const createDriver = useCreateDriver()
   const updateDriver = useUpdateDriver()
+  const deleteDriver = useDeleteDriver()
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -55,8 +56,7 @@ export default function DriversPage() {
 
   const handleDeleteDriver = (driverId: number) => {
     if (confirm('Are you sure you want to delete this driver?')) {
-      // TODO: Implement delete driver API call
-      console.log('Delete driver:', driverId)
+      deleteDriver.mutate(driverId)
     }
   }
 

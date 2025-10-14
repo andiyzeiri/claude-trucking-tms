@@ -86,3 +86,25 @@ export function useUpdateDriver() {
     },
   })
 }
+
+export function useDeleteDriver() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: number): Promise<void> => {
+      await api.delete(`/v1/drivers/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drivers'] })
+      toast.success('Driver deleted successfully')
+    },
+    onError: (error: any) => {
+      console.error('useDeleteDriver error:', error.response?.data)
+      const detail = error.response?.data?.detail
+      const message = typeof detail === 'string'
+        ? detail
+        : 'Failed to delete driver'
+      toast.error(message)
+    },
+  })
+}
