@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X, Check } from 'lucide-react'
+import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X, Check, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { useLoads, useCreateLoad, useUpdateLoad, useDeleteLoad } from '@/hooks/use-loads'
 import { useCustomers } from '@/hooks/use-customers'
 import { useDrivers } from '@/hooks/use-drivers'
@@ -96,6 +96,8 @@ export default function LoadsPageInline() {
   const [upcomingFilter, setUpcomingFilter] = useState<boolean>(false)
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, loadId: number} | null>(null)
   const [pdfModal, setPdfModal] = useState<{url: string, loadId: number, type: 'pod' | 'ratecon'} | null>(null)
+  const [sortField, setSortField] = useState<keyof EditableLoad>('pickup_date')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const groupMenuRef = useRef<HTMLDivElement>(null)
 
   // Sync loads with editable state and add week info
@@ -145,6 +147,18 @@ export default function LoadsPageInline() {
     setActiveGroupings(newGroupings)
   }
 
+  // Handle sort
+  const handleSort = (field: keyof EditableLoad) => {
+    if (sortField === field) {
+      // Toggle direction if clicking the same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      // Set new field and default to descending
+      setSortField(field)
+      setSortDirection('desc')
+    }
+  }
+
   // Filter loads based on upcoming and status filters (MOVED BEFORE groupedLoads)
   const filteredLoads = useMemo(() => {
     let filtered = editableLoads
@@ -168,8 +182,47 @@ export default function LoadsPageInline() {
       filtered = filtered.filter(load => load.status === statusFilter)
     }
 
+    // Apply sorting
+    filtered = [...filtered].sort((a, b) => {
+      let aValue: any = a[sortField]
+      let bValue: any = b[sortField]
+
+      // Handle nested objects
+      if (sortField === 'customer_id') {
+        aValue = customers.find(c => c.id === a.customer_id)?.name || ''
+        bValue = customers.find(c => c.id === b.customer_id)?.name || ''
+      } else if (sortField === 'driver_id') {
+        aValue = a.driver ? `${a.driver.first_name} ${a.driver.last_name}` : ''
+        bValue = b.driver ? `${b.driver.first_name} ${b.driver.last_name}` : ''
+      } else if (sortField === 'truck_id') {
+        aValue = a.truck?.truck_number || ''
+        bValue = b.truck?.truck_number || ''
+      }
+
+      // Handle dates
+      if (sortField === 'pickup_date' || sortField === 'delivery_date') {
+        aValue = new Date(aValue).getTime()
+        bValue = new Date(bValue).getTime()
+      }
+
+      // Handle numbers
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
+      }
+
+      // Handle strings
+      const aStr = String(aValue || '').toLowerCase()
+      const bStr = String(bValue || '').toLowerCase()
+
+      if (sortDirection === 'asc') {
+        return aStr.localeCompare(bStr)
+      } else {
+        return bStr.localeCompare(aStr)
+      }
+    })
+
     return filtered
-  }, [editableLoads, upcomingFilter, statusFilter])
+  }, [editableLoads, upcomingFilter, statusFilter, sortField, sortDirection, customers])
 
   // Group loads - now supports multiple groupings
   const groupedLoads = useMemo(() => {
@@ -1330,20 +1383,97 @@ export default function LoadsPageInline() {
             <table className="w-full table-auto" style={{borderCollapse: 'separate', borderSpacing: 0}}>
               <thead style={{backgroundColor: 'var(--cell-background-header)'}}>
                 <tr>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Week</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Date</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Load #</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Customer</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Driver</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Truck</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Pickup</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Delivery</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Rate</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Miles</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('weekNumber')}>
+                    <div className="flex items-center gap-1">
+                      Week
+                      {sortField === 'weekNumber' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                    </div>
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('pickup_date')}>
+                    <div className="flex items-center gap-1">
+                      Date
+                      {sortField === 'pickup_date' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                    </div>
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('load_number')}>
+                    <div className="flex items-center gap-1">
+                      Load #
+                      {sortField === 'load_number' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                    </div>
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('customer_id')}>
+                    <div className="flex items-center gap-1">
+                      Customer
+                      {sortField === 'customer_id' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                    </div>
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('driver_id')}>
+                    <div className="flex items-center gap-1">
+                      Driver
+                      {sortField === 'driver_id' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                    </div>
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('truck_id')}>
+                    <div className="flex items-center gap-1">
+                      Truck
+                      {sortField === 'truck_id' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                    </div>
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('pickup_location')}>
+                    <div className="flex items-center gap-1">
+                      Pickup
+                      {sortField === 'pickup_location' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                    </div>
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('delivery_location')}>
+                    <div className="flex items-center gap-1">
+                      Delivery
+                      {sortField === 'delivery_location' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                    </div>
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('rate')}>
+                    <div className="flex items-center gap-1">
+                      Rate
+                      {sortField === 'rate' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                    </div>
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('miles')}>
+                    <div className="flex items-center gap-1">
+                      Miles
+                      {sortField === 'miles' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                    </div>
+                  </th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>RPM</th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>POD</th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Ratecon</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Status</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('status')}>
+                    <div className="flex items-center gap-1">
+                      Status
+                      {sortField === 'status' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white" style={{backgroundColor: 'var(--cell-background-base)'}}>
