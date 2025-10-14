@@ -19,6 +19,8 @@ interface EditableLoad extends Load {
   weekNumber?: number
   weekLabel?: string
   weekDateRange?: string
+  dayOfWeek?: number
+  dayLabel?: string
 }
 
 type EditingCell = {
@@ -57,6 +59,18 @@ function getWeekDateRange(date: Date): string {
   return `(${startMonth}/${startDay}-${endMonth}/${endDay})`
 }
 
+// Helper to get day label (e.g., "Monday, Dec 18")
+function getDayLabel(date: Date): string {
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+  const dayName = dayNames[date.getDay()]
+  const monthName = monthNames[date.getMonth()]
+  const dayNum = date.getDate()
+
+  return `${dayName}, ${monthName} ${dayNum}`
+}
+
 export default function LoadsPageInline() {
   const { data: loadsData, isLoading, refetch } = useLoads(1, 1000)
   const loads = loadsData?.items || []
@@ -75,7 +89,7 @@ export default function LoadsPageInline() {
 
   const [editableLoads, setEditableLoads] = useState<EditableLoad[]>([])
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
-  const [activeGroupings, setActiveGroupings] = useState<Set<'week' | 'driver' | 'customer'>>(new Set())
+  const [activeGroupings, setActiveGroupings] = useState<Set<'week' | 'day' | 'driver' | 'customer'>>(new Set())
   const [groupMenuOpen, setGroupMenuOpen] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
@@ -97,7 +111,9 @@ export default function LoadsPageInline() {
           ...load,
           weekNumber: getWeekNumber(pickupDate),
           weekLabel: getWeekLabel(pickupDate),
-          weekDateRange: getWeekDateRange(pickupDate)
+          weekDateRange: getWeekDateRange(pickupDate),
+          dayOfWeek: pickupDate.getDay(),
+          dayLabel: getDayLabel(pickupDate)
         }
       })
       setEditableLoads(loadsWithWeeks)
@@ -119,7 +135,7 @@ export default function LoadsPageInline() {
   }, [groupMenuOpen])
 
   // Toggle grouping
-  const toggleGrouping = (groupType: 'week' | 'driver' | 'customer') => {
+  const toggleGrouping = (groupType: 'week' | 'day' | 'driver' | 'customer') => {
     const newGroupings = new Set(activeGroupings)
     if (newGroupings.has(groupType)) {
       newGroupings.delete(groupType)
@@ -134,8 +150,9 @@ export default function LoadsPageInline() {
     if (activeGroupings.size === 0) return null
 
     // Create nested groups based on active groupings
-    const groupingOrder: ('week' | 'driver' | 'customer')[] = []
+    const groupingOrder: ('week' | 'day' | 'driver' | 'customer')[] = []
     if (activeGroupings.has('week')) groupingOrder.push('week')
+    if (activeGroupings.has('day')) groupingOrder.push('day')
     if (activeGroupings.has('driver')) groupingOrder.push('driver')
     if (activeGroupings.has('customer')) groupingOrder.push('customer')
 
@@ -151,6 +168,8 @@ export default function LoadsPageInline() {
         let groupKey = ''
         if (groupType === 'week') {
           groupKey = `Week ${load.weekNumber}`
+        } else if (groupType === 'day') {
+          groupKey = load.dayLabel || 'Unknown'
         } else if (groupType === 'driver') {
           groupKey = load.driver ? `${load.driver.first_name} ${load.driver.last_name}` : 'Unassigned'
         } else if (groupType === 'customer') {
@@ -171,24 +190,24 @@ export default function LoadsPageInline() {
       return groups
     }
 
-    return createNestedGroups(editableLoads, 0)
-  }, [editableLoads, activeGroupings, customers])
+    return createNestedGroups(filteredLoads, 0)
+  }, [filteredLoads, activeGroupings, customers])
 
   // Filter loads based on upcoming and status filters
   const filteredLoads = useMemo(() => {
     let filtered = editableLoads
 
-    // Apply upcoming filter (today and tomorrow)
+    // Apply upcoming filter (next 7 days)
     if (upcomingFilter) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
+      const sevenDaysLater = new Date(today)
+      sevenDaysLater.setDate(today.getDate() + 6)
 
       filtered = filtered.filter(load => {
         const pickupDate = new Date(load.pickup_date)
         pickupDate.setHours(0, 0, 0, 0)
-        return pickupDate.getTime() === today.getTime() || pickupDate.getTime() === tomorrow.getTime()
+        return pickupDate.getTime() >= today.getTime() && pickupDate.getTime() <= sevenDaysLater.getTime()
       })
     }
 
@@ -210,17 +229,17 @@ export default function LoadsPageInline() {
     setCollapsedGroups(newCollapsed)
   }
 
-  // Calculate upcoming loads statistics (today and tomorrow)
+  // Calculate upcoming loads statistics (next 7 days)
   const upcomingStats = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    const sevenDaysLater = new Date(today)
+    sevenDaysLater.setDate(today.getDate() + 6) // Today + 6 more days = 7 days total
 
     const upcomingLoads = editableLoads.filter(load => {
       const pickupDate = new Date(load.pickup_date)
       pickupDate.setHours(0, 0, 0, 0)
-      return pickupDate.getTime() === today.getTime() || pickupDate.getTime() === tomorrow.getTime()
+      return pickupDate.getTime() >= today.getTime() && pickupDate.getTime() <= sevenDaysLater.getTime()
     })
 
     return {
@@ -262,7 +281,9 @@ export default function LoadsPageInline() {
         ...result,
         weekNumber: getWeekNumber(pickupDate),
         weekLabel: getWeekLabel(pickupDate),
-        weekDateRange: getWeekDateRange(pickupDate)
+        weekDateRange: getWeekDateRange(pickupDate),
+        dayOfWeek: pickupDate.getDay(),
+        dayLabel: getDayLabel(pickupDate)
       }
 
       setEditableLoads([...editableLoads, newLoadWithWeek])
@@ -333,7 +354,9 @@ export default function LoadsPageInline() {
                       ...result,
                       weekNumber: getWeekNumber(pickupDate),
                       weekLabel: getWeekLabel(pickupDate),
-                      weekDateRange: getWeekDateRange(pickupDate)
+                      weekDateRange: getWeekDateRange(pickupDate),
+                      dayOfWeek: pickupDate.getDay(),
+                      dayLabel: getDayLabel(pickupDate)
                     }
                     setEditableLoads(prev => [...prev, restoredLoad])
                     toast.dismiss(toastId)
@@ -553,7 +576,9 @@ export default function LoadsPageInline() {
         ...result,
         weekNumber: getWeekNumber(pickupDate),
         weekLabel: getWeekLabel(pickupDate),
-        weekDateRange: getWeekDateRange(pickupDate)
+        weekDateRange: getWeekDateRange(pickupDate),
+        dayOfWeek: pickupDate.getDay(),
+        dayLabel: getDayLabel(pickupDate)
       }
       setEditableLoads([...editableLoads, newLoadWithWeek])
       refetch()
@@ -606,7 +631,9 @@ export default function LoadsPageInline() {
         ...result,
         weekNumber: getWeekNumber(pickupDate),
         weekLabel: getWeekLabel(pickupDate),
-        weekDateRange: getWeekDateRange(pickupDate)
+        weekDateRange: getWeekDateRange(pickupDate),
+        dayOfWeek: pickupDate.getDay(),
+        dayLabel: getDayLabel(pickupDate)
       }
       setEditableLoads([...editableLoads, newLoadWithWeek])
       refetch()
@@ -1218,8 +1245,19 @@ export default function LoadsPageInline() {
           <div
             className={`cursor-pointer transition-all ${upcomingFilter ? 'bg-blue-50 border-blue-500 border-2' : 'bg-white border border-gray-200'} rounded-lg p-4 hover:shadow-md`}
             onClick={() => {
-              setUpcomingFilter(!upcomingFilter)
-              if (!upcomingFilter) setStatusFilter(null)
+              const newUpcomingFilter = !upcomingFilter
+              setUpcomingFilter(newUpcomingFilter)
+
+              // Automatically enable day grouping when upcoming filter is turned on
+              if (newUpcomingFilter) {
+                setStatusFilter(null)
+                setActiveGroupings(new Set(['day']))
+              } else {
+                // Clear day grouping when upcoming filter is turned off
+                const newGroupings = new Set(activeGroupings)
+                newGroupings.delete('day')
+                setActiveGroupings(newGroupings)
+              }
             }}
           >
             <div className="flex items-center justify-between">
