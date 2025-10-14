@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X } from 'lucide-react'
+import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X, Check } from 'lucide-react'
 import { useLoads, useCreateLoad, useUpdateLoad, useDeleteLoad } from '@/hooks/use-loads'
 import { useCustomers } from '@/hooks/use-customers'
 import { useDrivers } from '@/hooks/use-drivers'
@@ -75,12 +75,14 @@ export default function LoadsPageInline() {
 
   const [editableLoads, setEditableLoads] = useState<EditableLoad[]>([])
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
-  const [groupBy, setGroupBy] = useState<'none' | 'week' | 'driver' | 'customer'>('none')
+  const [activeGroupings, setActiveGroupings] = useState<Set<'week' | 'driver' | 'customer'>>(new Set())
+  const [groupMenuOpen, setGroupMenuOpen] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [upcomingFilter, setUpcomingFilter] = useState<boolean>(false)
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, loadId: number} | null>(null)
   const [pdfModal, setPdfModal] = useState<{url: string, loadId: number, type: 'pod' | 'ratecon'} | null>(null)
+  const groupMenuRef = useRef<HTMLDivElement>(null)
 
   // Sync loads with editable state and add week info
   React.useEffect(() => {
@@ -102,29 +104,75 @@ export default function LoadsPageInline() {
     }
   }, [loads, loads.length, editableLoads])
 
-  // Group loads
+  // Close group menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (groupMenuRef.current && !groupMenuRef.current.contains(event.target as Node)) {
+        setGroupMenuOpen(false)
+      }
+    }
+
+    if (groupMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [groupMenuOpen])
+
+  // Toggle grouping
+  const toggleGrouping = (groupType: 'week' | 'driver' | 'customer') => {
+    const newGroupings = new Set(activeGroupings)
+    if (newGroupings.has(groupType)) {
+      newGroupings.delete(groupType)
+    } else {
+      newGroupings.add(groupType)
+    }
+    setActiveGroupings(newGroupings)
+  }
+
+  // Group loads - now supports multiple groupings
   const groupedLoads = useMemo(() => {
-    if (groupBy === 'none') return null
+    if (activeGroupings.size === 0) return null
 
-    const groups: Record<string, EditableLoad[]> = {}
-    editableLoads.forEach(load => {
-      let groupKey = ''
-      if (groupBy === 'week') {
-        groupKey = `Week ${load.weekNumber}`
-      } else if (groupBy === 'driver') {
-        groupKey = load.driver ? `${load.driver.first_name} ${load.driver.last_name}` : 'Unassigned'
-      } else if (groupBy === 'customer') {
-        groupKey = customers.find(c => c.id === load.customer_id)?.name || 'N/A'
+    // Create nested groups based on active groupings
+    const groupingOrder: ('week' | 'driver' | 'customer')[] = []
+    if (activeGroupings.has('week')) groupingOrder.push('week')
+    if (activeGroupings.has('driver')) groupingOrder.push('driver')
+    if (activeGroupings.has('customer')) groupingOrder.push('customer')
+
+    const createNestedGroups = (loads: EditableLoad[], level: number): any => {
+      if (level >= groupingOrder.length) {
+        return loads
       }
 
-      if (!groups[groupKey]) {
-        groups[groupKey] = []
-      }
-      groups[groupKey].push(load)
-    })
+      const groupType = groupingOrder[level]
+      const groups: Record<string, any> = {}
 
-    return groups
-  }, [editableLoads, groupBy, customers])
+      loads.forEach(load => {
+        let groupKey = ''
+        if (groupType === 'week') {
+          groupKey = `Week ${load.weekNumber}`
+        } else if (groupType === 'driver') {
+          groupKey = load.driver ? `${load.driver.first_name} ${load.driver.last_name}` : 'Unassigned'
+        } else if (groupType === 'customer') {
+          groupKey = customers.find(c => c.id === load.customer_id)?.name || 'N/A'
+        }
+
+        if (!groups[groupKey]) {
+          groups[groupKey] = []
+        }
+        groups[groupKey].push(load)
+      })
+
+      // Recursively create nested groups
+      Object.keys(groups).forEach(key => {
+        groups[key] = createNestedGroups(groups[key], level + 1)
+      })
+
+      return groups
+    }
+
+    return createNestedGroups(editableLoads, 0)
+  }, [editableLoads, activeGroupings, customers])
 
   // Filter loads based on upcoming and status filters
   const filteredLoads = useMemo(() => {
@@ -521,20 +569,18 @@ export default function LoadsPageInline() {
     let customer_id = customers.length > 0 ? customers[0].id : null
     let driver_id = null
 
-    if (groupBy === 'customer') {
-      // Find the customer by name
-      const customer = customers.find(c => c.name === groupKey)
-      if (customer) {
-        customer_id = customer.id
-      }
-    } else if (groupBy === 'driver') {
-      // Find the driver by name
-      if (groupKey !== 'Unassigned') {
-        const [firstName, lastName] = groupKey.split(' ')
-        const driver = drivers.find(d => d.first_name === firstName && d.last_name === lastName)
-        if (driver) {
-          driver_id = driver.id
-        }
+    // Find the customer by name
+    const customer = customers.find(c => c.name === groupKey)
+    if (customer) {
+      customer_id = customer.id
+    }
+
+    // Find the driver by name
+    if (groupKey !== 'Unassigned' && groupKey.includes(' ')) {
+      const [firstName, lastName] = groupKey.split(' ')
+      const driver = drivers.find(d => d.first_name === firstName && d.last_name === lastName)
+      if (driver) {
+        driver_id = driver.id
       }
     }
 
@@ -568,6 +614,90 @@ export default function LoadsPageInline() {
       console.error('Failed to create load:', error)
       alert(`Failed to create load: ${error.response?.data?.detail || error.message}`)
     }
+  }
+
+  // Recursive function to render nested groups
+  const renderNestedGroups = (data: any, paddingLeft = 0, rowIndexOffset = 0): JSX.Element[] => {
+    if (Array.isArray(data)) {
+      // Base case: render load rows
+      return data.map((load, index) => renderLoadRow(load, paddingLeft, rowIndexOffset + index))
+    }
+
+    // Recursive case: render group headers and nested content
+    const elements: JSX.Element[] = []
+    let globalRowIndex = rowIndexOffset
+
+    Object.entries(data).forEach(([groupKey, groupData]) => {
+      const isCollapsed = collapsedGroups.has(groupKey)
+
+      // Calculate totals for this group
+      const getAllLoads = (d: any): EditableLoad[] => {
+        if (Array.isArray(d)) return d
+        return Object.values(d).flatMap(getAllLoads)
+      }
+      const groupLoads = getAllLoads(groupData)
+      const groupTotalRate = groupLoads.reduce((sum, l) => sum + (Number(l.rate) || 0), 0)
+      const groupTotalMiles = groupLoads.reduce((sum, l) => sum + (Number(l.miles) || 0), 0)
+      const groupRPM = groupTotalMiles > 0 ? groupTotalRate / groupTotalMiles : 0
+
+      // Group header row
+      elements.push(
+        <tr key={`group-${groupKey}`} className="bg-gray-100 border-b border-gray-200 cursor-pointer" onClick={() => toggleGroup(groupKey)}>
+          <td colSpan={2} className="px-2 py-2 text-sm font-medium text-gray-700" style={{ paddingLeft: `${paddingLeft + 8}px` }}>
+            <div className="flex items-center gap-2">
+              {isCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+              <span>{groupKey}</span>
+              <span className="text-gray-500">({groupLoads.length} loads)</span>
+            </div>
+          </td>
+          <td className="px-2 py-2 text-sm" colSpan={7}></td>
+          <td className="px-2 py-2 text-sm font-medium text-green-700">
+            {formatCurrency(groupTotalRate)}
+          </td>
+          <td className="px-2 py-2 text-sm font-medium text-blue-700">
+            {groupTotalMiles.toLocaleString()} mi
+          </td>
+          <td className="px-2 py-2 text-sm font-medium text-purple-700">
+            ${groupRPM.toFixed(2)}
+          </td>
+          <td className="px-2 py-2 text-sm" colSpan={3}></td>
+        </tr>
+      )
+
+      // Nested content (if not collapsed)
+      if (!isCollapsed) {
+        const nestedElements = renderNestedGroups(groupData, paddingLeft + 20, globalRowIndex)
+        elements.push(...nestedElements)
+        globalRowIndex += nestedElements.length
+
+        // Add load button for leaf groups
+        if (Array.isArray(groupData)) {
+          elements.push(
+            <tr key={`add-${groupKey}`} className="border-b hover:bg-gray-50 transition-colors" style={{borderColor: 'var(--cell-borderColor)'}}>
+              <td colSpan={14} className="px-2 py-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleAddToGroup(groupKey)
+                  }}
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  style={{ marginLeft: `${paddingLeft + 20}px` }}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add load to {groupKey}</span>
+                </button>
+              </td>
+            </tr>
+          )
+        }
+      }
+    })
+
+    return elements
   }
 
   const renderLoadRow = (load: EditableLoad, paddingLeft = 0, rowIndex = 0) => {
@@ -1015,17 +1145,64 @@ export default function LoadsPageInline() {
             <p className="text-gray-600">Manage your shipments and deliveries</p>
           </div>
           <div className="flex gap-2">
-            <Select value={groupBy} onValueChange={(value: any) => setGroupBy(value)}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Group by..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No grouping</SelectItem>
-                <SelectItem value="week">Week</SelectItem>
-                <SelectItem value="driver">Driver</SelectItem>
-                <SelectItem value="customer">Customer</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="relative" ref={groupMenuRef}>
+              <Button
+                variant="outline"
+                onClick={() => setGroupMenuOpen(!groupMenuOpen)}
+                className="w-40"
+              >
+                Group by...
+                {activeGroupings.size > 0 && (
+                  <span className="ml-2 bg-blue-500 text-white rounded-full px-2 py-0.5 text-xs">
+                    {activeGroupings.size}
+                  </span>
+                )}
+              </Button>
+              {groupMenuOpen && (
+                <div className="absolute top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                  <div className="py-1">
+                    <button
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center justify-between"
+                      onClick={() => toggleGrouping('week')}
+                    >
+                      <span>Week</span>
+                      {activeGroupings.has('week') && (
+                        <Check className="h-4 w-4 text-blue-600" />
+                      )}
+                    </button>
+                    <button
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center justify-between"
+                      onClick={() => toggleGrouping('driver')}
+                    >
+                      <span>Driver</span>
+                      {activeGroupings.has('driver') && (
+                        <Check className="h-4 w-4 text-blue-600" />
+                      )}
+                    </button>
+                    <button
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center justify-between"
+                      onClick={() => toggleGrouping('customer')}
+                    >
+                      <span>Customer</span>
+                      {activeGroupings.has('customer') && (
+                        <Check className="h-4 w-4 text-blue-600" />
+                      )}
+                    </button>
+                    {activeGroupings.size > 0 && (
+                      <>
+                        <div className="border-t border-gray-200 my-1"></div>
+                        <button
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600"
+                          onClick={() => setActiveGroupings(new Set())}
+                        >
+                          Clear all
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             <Button
               className="bg-blue-600 hover:bg-blue-700"
               onClick={handleAddNew}
@@ -1132,64 +1309,10 @@ export default function LoadsPageInline() {
                 </tr>
               </thead>
               <tbody className="bg-white" style={{backgroundColor: 'var(--cell-background-base)'}}>
-                {groupBy === 'none' ? (
+                {activeGroupings.size === 0 ? (
                   filteredLoads.map((load, index) => renderLoadRow(load, 0, index))
                 ) : (
-                  groupedLoads && Object.entries(groupedLoads).map(([groupKey, groupLoads]) => {
-                    const isCollapsed = collapsedGroups.has(groupKey)
-                    const groupTotalRate = groupLoads.reduce((sum, l) => sum + (Number(l.rate) || 0), 0)
-                    const groupTotalMiles = groupLoads.reduce((sum, l) => sum + (Number(l.miles) || 0), 0)
-                    const groupRPM = groupTotalMiles > 0 ? groupTotalRate / groupTotalMiles : 0
-
-                    return (
-                      <React.Fragment key={groupKey}>
-                        {/* Group Header Row */}
-                        <tr className="bg-gray-100 border-b border-gray-200 cursor-pointer" onClick={() => toggleGroup(groupKey)}>
-                          <td colSpan={2} className="px-2 py-2 text-sm font-medium text-gray-700">
-                            <div className="flex items-center gap-2">
-                              {isCollapsed ? (
-                                <ChevronRight className="h-4 w-4" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )}
-                              <span>{groupKey}</span>
-                              <span className="text-gray-500">({groupLoads.length} loads)</span>
-                            </div>
-                          </td>
-                          <td className="px-2 py-2 text-sm" colSpan={7}></td>
-                          <td className="px-2 py-2 text-sm font-medium text-green-700">
-                            {formatCurrency(groupTotalRate)}
-                          </td>
-                          <td className="px-2 py-2 text-sm font-medium text-blue-700">
-                            {groupTotalMiles.toLocaleString()} mi
-                          </td>
-                          <td className="px-2 py-2 text-sm font-medium text-purple-700">
-                            ${groupRPM.toFixed(2)}
-                          </td>
-                          <td className="px-2 py-2 text-sm" colSpan={3}></td>
-                        </tr>
-                        {/* Group Loads */}
-                        {!isCollapsed && groupLoads.map((load, index) => renderLoadRow(load, 20, index))}
-                        {/* Add Load Button Row */}
-                        {!isCollapsed && (
-                          <tr className="border-b hover:bg-gray-50 transition-colors" style={{borderColor: 'var(--cell-borderColor)'}}>
-                            <td colSpan={14} className="px-2 py-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleAddToGroup(groupKey)
-                                }}
-                                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium ml-5"
-                              >
-                                <Plus className="h-4 w-4" />
-                                <span>Add load to {groupKey}</span>
-                              </button>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    )
-                  })
+                  groupedLoads && renderNestedGroups(groupedLoads, 0, 0)
                 )}
               </tbody>
               <tfoot className="sticky bottom-0 bg-white border-t-2 border-gray-300 shadow-lg">
