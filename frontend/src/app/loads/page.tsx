@@ -145,6 +145,32 @@ export default function LoadsPageInline() {
     setActiveGroupings(newGroupings)
   }
 
+  // Filter loads based on upcoming and status filters (MOVED BEFORE groupedLoads)
+  const filteredLoads = useMemo(() => {
+    let filtered = editableLoads
+
+    // Apply upcoming filter (next 7 days)
+    if (upcomingFilter) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const sevenDaysLater = new Date(today)
+      sevenDaysLater.setDate(today.getDate() + 6)
+
+      filtered = filtered.filter(load => {
+        const pickupDate = new Date(load.pickup_date)
+        pickupDate.setHours(0, 0, 0, 0)
+        return pickupDate.getTime() >= today.getTime() && pickupDate.getTime() <= sevenDaysLater.getTime()
+      })
+    }
+
+    // Apply status filter
+    if (statusFilter) {
+      filtered = filtered.filter(load => load.status === statusFilter)
+    }
+
+    return filtered
+  }, [editableLoads, upcomingFilter, statusFilter])
+
   // Group loads - now supports multiple groupings
   const groupedLoads = useMemo(() => {
     if (activeGroupings.size === 0) return null
@@ -192,32 +218,6 @@ export default function LoadsPageInline() {
 
     return createNestedGroups(filteredLoads, 0)
   }, [filteredLoads, activeGroupings, customers])
-
-  // Filter loads based on upcoming and status filters
-  const filteredLoads = useMemo(() => {
-    let filtered = editableLoads
-
-    // Apply upcoming filter (next 7 days)
-    if (upcomingFilter) {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const sevenDaysLater = new Date(today)
-      sevenDaysLater.setDate(today.getDate() + 6)
-
-      filtered = filtered.filter(load => {
-        const pickupDate = new Date(load.pickup_date)
-        pickupDate.setHours(0, 0, 0, 0)
-        return pickupDate.getTime() >= today.getTime() && pickupDate.getTime() <= sevenDaysLater.getTime()
-      })
-    }
-
-    // Apply status filter
-    if (statusFilter) {
-      filtered = filtered.filter(load => load.status === statusFilter)
-    }
-
-    return filtered
-  }, [editableLoads, upcomingFilter, statusFilter])
 
   const toggleGroup = (groupKey: string) => {
     const newCollapsed = new Set(collapsedGroups)
