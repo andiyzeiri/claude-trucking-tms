@@ -85,6 +85,121 @@ function formatDateTime(dateString: string): string {
   })
 }
 
+// Helper to parse location string into components
+function parseLocation(location: string): { street: string; city: string; state: string; zip: string } {
+  if (!location) return { street: '', city: '', state: '', zip: '' }
+
+  // Try to match pattern: "Street, City, ST Zip" or "City, ST Zip"
+  const zipMatch = location.match(/\b(\d{5})\b\s*$/)
+  const zip = zipMatch ? zipMatch[1] : ''
+
+  const stateMatch = location.match(/\b([A-Z]{2})\s+\d{5}\b/)
+  const state = stateMatch ? stateMatch[1] : ''
+
+  // Remove zip and state from the end
+  let remaining = location.replace(/\s*,?\s*[A-Z]{2}\s+\d{5}\s*$/, '').trim()
+
+  // Split by comma to separate street and city
+  const parts = remaining.split(',').map(p => p.trim())
+
+  if (parts.length >= 2) {
+    const street = parts[0] || ''
+    const city = parts.slice(1).join(', ') || ''
+    return { street, city, state, zip }
+  } else if (parts.length === 1) {
+    // If only one part, treat it as city
+    return { street: '', city: parts[0] || '', state, zip }
+  }
+
+  return { street: '', city: '', state, zip }
+}
+
+// Helper to combine location components back into string
+function combineLocation(street: string, city: string, state: string, zip: string): string {
+  const parts: string[] = []
+  if (street) parts.push(street)
+  if (city) parts.push(city)
+  if (state && zip) {
+    parts.push(`${state} ${zip}`)
+  } else if (state) {
+    parts.push(state)
+  } else if (zip) {
+    parts.push(zip)
+  }
+  return parts.join(', ')
+}
+
+// Helper to format date as MM/DD/YY
+function formatDateShort(dateString: string): string {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const year = String(date.getFullYear()).slice(-2)
+  return `${month}/${day}/${year}`
+}
+
+// Helper to format time as HH:MM AM/PM
+function formatTimeShort(dateString: string): string {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  let hours = date.getHours()
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12 || 12
+  return `${hours}:${minutes} ${ampm}`
+}
+
+// Helper to parse date input (MM/DD/YY) and combine with existing time
+function parseDateInput(dateInput: string, existingDateTime: string): string {
+  if (!dateInput) return existingDateTime
+
+  // Parse MM/DD/YY format
+  const parts = dateInput.split('/')
+  if (parts.length !== 3) return existingDateTime
+
+  const month = parseInt(parts[0]) - 1
+  const day = parseInt(parts[1])
+  let year = parseInt(parts[2])
+
+  // Handle 2-digit year
+  if (year < 100) {
+    year += year < 50 ? 2000 : 1900
+  }
+
+  // Get existing time or use midnight
+  const existingDate = existingDateTime ? new Date(existingDateTime) : new Date()
+  const newDate = new Date(year, month, day, existingDate.getHours(), existingDate.getMinutes())
+
+  return newDate.toISOString()
+}
+
+// Helper to parse time input (HH:MM AM/PM) and combine with existing date
+function parseTimeInput(timeInput: string, existingDateTime: string): string {
+  if (!timeInput) return existingDateTime
+
+  // Parse time format like "2:30 PM" or "14:30"
+  const match = timeInput.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i)
+  if (!match) return existingDateTime
+
+  let hours = parseInt(match[1])
+  const minutes = parseInt(match[2])
+  const ampm = match[3]?.toUpperCase()
+
+  // Handle 12-hour format
+  if (ampm === 'PM' && hours !== 12) {
+    hours += 12
+  } else if (ampm === 'AM' && hours === 12) {
+    hours = 0
+  }
+
+  // Get existing date or use today
+  const existingDate = existingDateTime ? new Date(existingDateTime) : new Date()
+  const newDate = new Date(existingDate.getFullYear(), existingDate.getMonth(), existingDate.getDate(), hours, minutes)
+
+  return newDate.toISOString()
+}
+
 export default function LoadsPageInline() {
   const { data: loadsData, isLoading, refetch } = useLoads(1, 1000)
   const loads = loadsData?.items || []
@@ -113,6 +228,18 @@ export default function LoadsPageInline() {
   const [sortField, setSortField] = useState<keyof EditableLoad>('pickup_date')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const groupMenuRef = useRef<HTMLDivElement>(null)
+
+  // Local state for editing location fields
+  const [editingLocation, setEditingLocation] = useState<{
+    loadId: number | 'new'
+    type: 'pickup' | 'delivery'
+    street: string
+    city: string
+    state: string
+    zip: string
+    date: string
+    time: string
+  } | null>(null)
 
   // Sync loads with editable state and add week info
   React.useEffect(() => {
@@ -595,6 +722,60 @@ export default function LoadsPageInline() {
     setEditingCell(null)
   }
 
+  const startLocationEdit = (loadId: number | 'new', type: 'pickup' | 'delivery', load: EditableLoad) => {
+    const location = type === 'pickup' ? load.pickup_location : load.delivery_location
+    const dateTime = type === 'pickup' ? load.pickup_date : load.delivery_date
+    const parsed = parseLocation(location)
+
+    setEditingLocation({
+      loadId,
+      type,
+      street: parsed.street,
+      city: parsed.city,
+      state: parsed.state,
+      zip: parsed.zip,
+      date: formatDateShort(dateTime),
+      time: formatTimeShort(dateTime)
+    })
+    setEditingCell({ loadId, field: type === 'pickup' ? 'pickup_location' : 'delivery_location' })
+  }
+
+  const stopLocationEdit = async () => {
+    if (editingLocation) {
+      const { loadId, type, street, city, state, zip, date, time } = editingLocation
+
+      // Combine location components
+      const locationString = combineLocation(street, city, state, zip)
+
+      // Update location
+      const locationField = type === 'pickup' ? 'pickup_location' : 'delivery_location'
+      await updateField(loadId, locationField, locationString)
+
+      // Parse and update date/time
+      const dateField = type === 'pickup' ? 'pickup_date' : 'delivery_date'
+      const load = editableLoads.find(l => (loadId === 'new' && l.isNew) || l.id === loadId)
+      if (load) {
+        let dateTime = load[dateField]
+        if (date) {
+          dateTime = parseDateInput(date, dateTime)
+        }
+        if (time) {
+          dateTime = parseTimeInput(time, dateTime)
+        }
+        await updateField(loadId, dateField, dateTime)
+      }
+
+      setEditingLocation(null)
+    }
+    setEditingCell(null)
+  }
+
+  const updateLocationField = (field: 'street' | 'city' | 'state' | 'zip' | 'date' | 'time', value: string) => {
+    if (editingLocation) {
+      setEditingLocation({ ...editingLocation, [field]: value })
+    }
+  }
+
   // Close context menu when clicking outside
   React.useEffect(() => {
     const handleClick = () => setContextMenu(null)
@@ -977,72 +1158,204 @@ export default function LoadsPageInline() {
           )}
         </td>
 
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)', minWidth: '200px'}} onClick={() => startEdit(loadKey, 'pickup_location')}>
-          {isEditing(loadKey, 'pickup_location') ? (
-            <Textarea
-              value={load.pickup_location}
-              onChange={(e) => updateField(loadKey, 'pickup_location', e.target.value)}
-              onBlur={stopEdit}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  stopEdit()
-                } else if (e.key === 'Tab' && !e.shiftKey) {
-                  e.preventDefault()
-                  stopEdit()
-                  setTimeout(() => startEdit(loadKey, 'delivery_location'), 0)
-                }
-              }}
-              autoFocus
-              placeholder="Street, City, ST Zip"
-              className="text-sm resize-none"
-              rows={3}
-            />
+        {/* Pickup Location */}
+        <td
+          className="px-3 py-2.5 border-r"
+          style={{borderColor: 'var(--cell-borderColor)', minWidth: '200px'}}
+          onClick={() => startLocationEdit(loadKey, 'pickup', load)}
+        >
+          {isEditing(loadKey, 'pickup_location') && editingLocation?.type === 'pickup' ? (
+            <div className="space-y-1">
+              {/* Top row: City, State, Zip */}
+              <div className="flex gap-1">
+                <Input
+                  value={editingLocation.city}
+                  onChange={(e) => updateLocationField('city', e.target.value)}
+                  placeholder="City"
+                  className="h-7 text-sm flex-1"
+                  style={{ minWidth: '80px' }}
+                />
+                <Input
+                  value={editingLocation.state}
+                  onChange={(e) => updateLocationField('state', e.target.value.toUpperCase())}
+                  placeholder="ST"
+                  maxLength={2}
+                  className="h-7 text-sm"
+                  style={{ width: '45px' }}
+                />
+                <Input
+                  value={editingLocation.zip}
+                  onChange={(e) => updateLocationField('zip', e.target.value)}
+                  placeholder="Zip"
+                  maxLength={5}
+                  className="h-7 text-sm"
+                  style={{ width: '65px' }}
+                />
+              </div>
+              {/* Bottom row: Street, Date, Time */}
+              <div className="flex gap-1">
+                <Input
+                  value={editingLocation.street}
+                  onChange={(e) => updateLocationField('street', e.target.value)}
+                  onBlur={stopLocationEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      stopLocationEdit()
+                    } else if (e.key === 'Tab' && !e.shiftKey) {
+                      e.preventDefault()
+                      stopLocationEdit()
+                      setTimeout(() => startLocationEdit(loadKey, 'delivery', load), 0)
+                    }
+                  }}
+                  placeholder="Street"
+                  autoFocus
+                  className="h-6 text-xs flex-1"
+                  style={{ minWidth: '80px', fontSize: '11px' }}
+                />
+                <Input
+                  value={editingLocation.date}
+                  onChange={(e) => updateLocationField('date', e.target.value)}
+                  placeholder="MM/DD/YY"
+                  className="h-6 text-xs"
+                  style={{ width: '75px', fontSize: '11px' }}
+                />
+                <Input
+                  value={editingLocation.time}
+                  onChange={(e) => updateLocationField('time', e.target.value)}
+                  placeholder="HH:MM AM"
+                  className="h-6 text-xs"
+                  style={{ width: '75px', fontSize: '11px' }}
+                />
+              </div>
+            </div>
           ) : (
             <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
-              <div className="text-sm whitespace-pre-wrap" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
-                {load.pickup_location || 'N/A'}
-              </div>
-              {load.pickup_date && (
-                <div className="text-xs text-gray-500 mt-1">
-                  {formatDateTime(load.pickup_date)}
+              {/* Top row: City, State, Zip */}
+              <div className="flex gap-1 mb-0.5">
+                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)', flex: 1}}>
+                  {parseLocation(load.pickup_location).city || 'City'}
                 </div>
-              )}
+                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)', width: '30px'}}>
+                  {parseLocation(load.pickup_location).state || 'ST'}
+                </div>
+                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)', width: '50px'}}>
+                  {parseLocation(load.pickup_location).zip || 'Zip'}
+                </div>
+              </div>
+              {/* Bottom row: Street, Date, Time */}
+              <div className="flex gap-1">
+                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)', flex: 1}}>
+                  {parseLocation(load.pickup_location).street || 'Street'}
+                </div>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)', width: '60px'}}>
+                  {formatDateShort(load.pickup_date)}
+                </div>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)', width: '65px'}}>
+                  {formatTimeShort(load.pickup_date)}
+                </div>
+              </div>
             </div>
           )}
         </td>
 
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)', minWidth: '200px'}} onClick={() => startEdit(loadKey, 'delivery_location')}>
-          {isEditing(loadKey, 'delivery_location') ? (
-            <Textarea
-              value={load.delivery_location}
-              onChange={(e) => updateField(loadKey, 'delivery_location', e.target.value)}
-              onBlur={stopEdit}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  stopEdit()
-                } else if (e.key === 'Tab' && !e.shiftKey) {
-                  e.preventDefault()
-                  stopEdit()
-                  setTimeout(() => startEdit(loadKey, 'rate'), 0)
-                }
-              }}
-              autoFocus
-              placeholder="Street, City, ST Zip"
-              className="text-sm resize-none"
-              rows={3}
-            />
+        {/* Delivery Location */}
+        <td
+          className="px-3 py-2.5 border-r"
+          style={{borderColor: 'var(--cell-borderColor)', minWidth: '200px'}}
+          onClick={() => startLocationEdit(loadKey, 'delivery', load)}
+        >
+          {isEditing(loadKey, 'delivery_location') && editingLocation?.type === 'delivery' ? (
+            <div className="space-y-1">
+              {/* Top row: City, State, Zip */}
+              <div className="flex gap-1">
+                <Input
+                  value={editingLocation.city}
+                  onChange={(e) => updateLocationField('city', e.target.value)}
+                  placeholder="City"
+                  className="h-7 text-sm flex-1"
+                  style={{ minWidth: '80px' }}
+                />
+                <Input
+                  value={editingLocation.state}
+                  onChange={(e) => updateLocationField('state', e.target.value.toUpperCase())}
+                  placeholder="ST"
+                  maxLength={2}
+                  className="h-7 text-sm"
+                  style={{ width: '45px' }}
+                />
+                <Input
+                  value={editingLocation.zip}
+                  onChange={(e) => updateLocationField('zip', e.target.value)}
+                  placeholder="Zip"
+                  maxLength={5}
+                  className="h-7 text-sm"
+                  style={{ width: '65px' }}
+                />
+              </div>
+              {/* Bottom row: Street, Date, Time */}
+              <div className="flex gap-1">
+                <Input
+                  value={editingLocation.street}
+                  onChange={(e) => updateLocationField('street', e.target.value)}
+                  onBlur={stopLocationEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      stopLocationEdit()
+                    } else if (e.key === 'Tab' && !e.shiftKey) {
+                      e.preventDefault()
+                      stopLocationEdit()
+                      setTimeout(() => startEdit(loadKey, 'rate'), 0)
+                    }
+                  }}
+                  placeholder="Street"
+                  autoFocus
+                  className="h-6 text-xs flex-1"
+                  style={{ minWidth: '80px', fontSize: '11px' }}
+                />
+                <Input
+                  value={editingLocation.date}
+                  onChange={(e) => updateLocationField('date', e.target.value)}
+                  placeholder="MM/DD/YY"
+                  className="h-6 text-xs"
+                  style={{ width: '75px', fontSize: '11px' }}
+                />
+                <Input
+                  value={editingLocation.time}
+                  onChange={(e) => updateLocationField('time', e.target.value)}
+                  placeholder="HH:MM AM"
+                  className="h-6 text-xs"
+                  style={{ width: '75px', fontSize: '11px' }}
+                />
+              </div>
+            </div>
           ) : (
             <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
-              <div className="text-sm whitespace-pre-wrap" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
-                {load.delivery_location || 'N/A'}
-              </div>
-              {load.delivery_date && (
-                <div className="text-xs text-gray-500 mt-1">
-                  {formatDateTime(load.delivery_date)}
+              {/* Top row: City, State, Zip */}
+              <div className="flex gap-1 mb-0.5">
+                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)', flex: 1}}>
+                  {parseLocation(load.delivery_location).city || 'City'}
                 </div>
-              )}
+                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)', width: '30px'}}>
+                  {parseLocation(load.delivery_location).state || 'ST'}
+                </div>
+                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)', width: '50px'}}>
+                  {parseLocation(load.delivery_location).zip || 'Zip'}
+                </div>
+              </div>
+              {/* Bottom row: Street, Date, Time */}
+              <div className="flex gap-1">
+                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)', flex: 1}}>
+                  {parseLocation(load.delivery_location).street || 'Street'}
+                </div>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)', width: '60px'}}>
+                  {formatDateShort(load.delivery_date)}
+                </div>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)', width: '65px'}}>
+                  {formatTimeShort(load.delivery_date)}
+                </div>
+              </div>
             </div>
           )}
         </td>
