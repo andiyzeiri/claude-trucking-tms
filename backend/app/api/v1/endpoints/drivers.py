@@ -86,6 +86,8 @@ async def delete_driver(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    from app.models.load import Load
+
     query = select(Driver).where(
         Driver.id == driver_id,
         Driver.company_id == current_user.company_id
@@ -94,6 +96,17 @@ async def delete_driver(
     driver = result.scalar_one_or_none()
     if not driver:
         raise HTTPException(status_code=404, detail="Driver not found")
+
+    # Check if driver has any loads assigned
+    load_query = select(Load).where(Load.driver_id == driver_id).limit(1)
+    load_result = await db.execute(load_query)
+    has_loads = load_result.scalar_one_or_none() is not None
+
+    if has_loads:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete driver with assigned loads. Please unassign all loads first."
+        )
 
     await db.delete(driver)
     await db.commit()
