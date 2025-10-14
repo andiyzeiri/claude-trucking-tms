@@ -614,6 +614,12 @@ export default function LoadsPageInline() {
               value={formatDateForInput(load.pickup_date)}
               onChange={(e) => updateField(loadKey, 'pickup_date', `${e.target.value}T00:00:00`)}
               onBlur={stopEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  stopEdit()
+                }
+              }}
               autoFocus
               className="h-8 text-sm"
             />
@@ -631,6 +637,17 @@ export default function LoadsPageInline() {
               value={load.load_number}
               onChange={(e) => updateField(loadKey, 'load_number', e.target.value)}
               onBlur={stopEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  stopEdit()
+                } else if (e.key === 'Tab' && !e.shiftKey) {
+                  e.preventDefault()
+                  stopEdit()
+                  // Move to next field (customer)
+                  setTimeout(() => startEdit(loadKey, 'customer_id'), 0)
+                }
+              }}
               autoFocus
               className="h-8 text-sm"
             />
@@ -743,6 +760,16 @@ export default function LoadsPageInline() {
               value={load.pickup_location}
               onChange={(e) => updateField(loadKey, 'pickup_location', e.target.value)}
               onBlur={stopEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  stopEdit()
+                } else if (e.key === 'Tab' && !e.shiftKey) {
+                  e.preventDefault()
+                  stopEdit()
+                  setTimeout(() => startEdit(loadKey, 'delivery_location'), 0)
+                }
+              }}
               autoFocus
               placeholder="City, ST"
               className="h-8 text-sm"
@@ -760,6 +787,16 @@ export default function LoadsPageInline() {
               value={load.delivery_location}
               onChange={(e) => updateField(loadKey, 'delivery_location', e.target.value)}
               onBlur={stopEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  stopEdit()
+                } else if (e.key === 'Tab' && !e.shiftKey) {
+                  e.preventDefault()
+                  stopEdit()
+                  setTimeout(() => startEdit(loadKey, 'rate'), 0)
+                }
+              }}
               autoFocus
               placeholder="City, ST"
               className="h-8 text-sm"
@@ -778,6 +815,16 @@ export default function LoadsPageInline() {
               value={load.rate}
               onChange={(e) => updateField(loadKey, 'rate', Number(e.target.value))}
               onBlur={stopEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  stopEdit()
+                } else if (e.key === 'Tab' && !e.shiftKey) {
+                  e.preventDefault()
+                  stopEdit()
+                  setTimeout(() => startEdit(loadKey, 'miles'), 0)
+                }
+              }}
               autoFocus
               className="h-8 text-sm text-right"
             />
@@ -795,6 +842,16 @@ export default function LoadsPageInline() {
               value={load.miles}
               onChange={(e) => updateField(loadKey, 'miles', Number(e.target.value))}
               onBlur={stopEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  stopEdit()
+                } else if (e.key === 'Tab' && !e.shiftKey) {
+                  e.preventDefault()
+                  stopEdit()
+                  setTimeout(() => startEdit(loadKey, 'status'), 0)
+                }
+              }}
               autoFocus
               className="h-8 text-sm text-right"
             />
