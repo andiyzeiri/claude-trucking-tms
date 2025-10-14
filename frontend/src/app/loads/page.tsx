@@ -646,6 +646,7 @@ export default function LoadsPageInline() {
     // Determine the customer_id or driver_id based on the grouping
     let customer_id = customers.length > 0 ? customers[0].id : null
     let driver_id = null
+    let pickup_date = new Date().toISOString()
 
     // Find the customer by name
     const customer = customers.find(c => c.name === groupKey)
@@ -662,7 +663,40 @@ export default function LoadsPageInline() {
       }
     }
 
-    // Create a new load with the determined customer/driver
+    // Parse day label if groupKey is a day (e.g., "Wednesday, Oct 15")
+    // Day labels follow format: "DayName, Month Day"
+    if (groupKey.match(/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),/)) {
+      // Find an existing load in this group to get the exact date
+      const loadInGroup = filteredLoads.find(load => load.dayLabel === groupKey)
+      if (loadInGroup) {
+        pickup_date = loadInGroup.pickup_date
+      } else {
+        // Parse the date from the group key
+        // Format: "Wednesday, Oct 15"
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        const match = groupKey.match(/^[A-Za-z]+,\s+([A-Za-z]+)\s+(\d+)$/)
+        if (match) {
+          const monthStr = match[1]
+          const day = parseInt(match[2])
+          const monthIndex = monthNames.indexOf(monthStr)
+
+          if (monthIndex !== -1) {
+            const today = new Date()
+            const currentYear = today.getFullYear()
+            const targetDate = new Date(currentYear, monthIndex, day)
+
+            // If the date has passed this year, use next year
+            if (targetDate < today) {
+              targetDate.setFullYear(currentYear + 1)
+            }
+
+            pickup_date = targetDate.toISOString()
+          }
+        }
+      }
+    }
+
+    // Create a new load with the determined customer/driver/date
     const backendData: any = {
       load_number: '',
       customer_id: customer_id,
@@ -670,8 +704,8 @@ export default function LoadsPageInline() {
       truck_id: null,
       pickup_location: '',
       delivery_location: '',
-      pickup_date: new Date().toISOString(),
-      delivery_date: new Date().toISOString(),
+      pickup_date: pickup_date,
+      delivery_date: pickup_date,
       miles: 0,
       rate: 0,
       status: 'available'
