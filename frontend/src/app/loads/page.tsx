@@ -97,7 +97,7 @@ export default function LoadsPageInline() {
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, loadId: number} | null>(null)
   const [pdfModal, setPdfModal] = useState<{url: string, loadId: number, type: 'pod' | 'ratecon'} | null>(null)
   const [sortField, setSortField] = useState<keyof EditableLoad>('pickup_date')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const groupMenuRef = useRef<HTMLDivElement>(null)
 
   // Sync loads with editable state and add week info
@@ -153,9 +153,9 @@ export default function LoadsPageInline() {
       // Toggle direction if clicking the same field
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
-      // Set new field and default to descending
+      // Set new field and default to ascending
       setSortField(field)
-      setSortDirection('desc')
+      setSortDirection('asc')
     }
   }
 
