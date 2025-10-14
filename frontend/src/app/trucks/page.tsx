@@ -275,6 +275,7 @@ export default function TrucksPage() {
           data={trucks}
           columns={columns}
           onRowRightClick={handleRowRightClick}
+          tableId="trucks-table"
         />
 
 

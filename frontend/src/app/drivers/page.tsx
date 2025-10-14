@@ -193,6 +193,7 @@ export default function DriversPage() {
           data={drivers}
           columns={columns}
           onRowRightClick={handleRowRightClick}
+          tableId="drivers-table"
         />
 
         <DriverModal

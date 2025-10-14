@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/select"
 import { ChevronUp, ChevronDown, Search, Filter, Group, ChevronRight, X, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useColumnWidths } from '@/hooks/use-column-widths'
+import { ColumnWidthControl } from '@/components/ui/column-width-control'
 
 export interface Column<T> {
   key: keyof T
@@ -33,6 +35,7 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void
   onRowRightClick?: (row: T, event: React.MouseEvent) => void
   calculateGroupTotals?: (rows: T[]) => { [key: string]: any }
+  tableId?: string
 }
 
 export function DataTable<T>({
@@ -42,12 +45,24 @@ export function DataTable<T>({
   searchable = true,
   onRowClick,
   onRowRightClick,
-  calculateGroupTotals
+  calculateGroupTotals,
+  tableId = 'data-table'
 }: DataTableProps<T>) {
   const [sortColumn, setSortColumn] = useState<keyof T | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [searchTerm, setSearchTerm] = useState('')
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
+
+  // Set up column width management
+  const defaultWidths = useMemo(() => {
+    const widths: Record<string, number> = {}
+    columns.forEach(col => {
+      widths[String(col.key)] = col.width ? parseInt(col.width) : 150
+    })
+    return widths
+  }, [columns])
+
+  const { columnWidths, adjustWidth } = useColumnWidths(tableId, defaultWidths)
   const [groupBy, setGroupBy] = useState<(keyof T)[]>([])
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
@@ -194,6 +209,7 @@ export function DataTable<T>({
           <React.Fragment key={groupKey}>
             <tr className="bg-gray-100 border-b border-gray-200">
               {columns.map((column, colIndex) => {
+                const currentWidth = columnWidths[String(column.key)] || defaultWidths[String(column.key)]
                 if (colIndex === 0) {
                   // First column - show group name and chevron
                   return (
@@ -202,8 +218,8 @@ export function DataTable<T>({
                       className="px-3 py-3 text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors"
                       style={{
                         paddingLeft: `${paddingLeft + 12}px`,
-                        width: column.width,
-                        minWidth: column.width
+                        width: `${currentWidth}px`,
+                        minWidth: `${currentWidth}px`
                       }}
                       onClick={() => toggleGroup(groupKey)}
                     >
@@ -228,8 +244,8 @@ export function DataTable<T>({
                     key={String(column.key)}
                     className="px-3 py-3 text-sm font-medium text-gray-600"
                     style={{
-                      width: column.width,
-                      minWidth: column.width
+                      width: `${currentWidth}px`,
+                      minWidth: `${currentWidth}px`
                     }}
                   >
                     {showTotal || ''}
@@ -254,28 +270,31 @@ export function DataTable<T>({
                         onRowRightClick?.(row, e)
                       }}
                     >
-                      {columns.map((column) => (
-                        <td
-                          key={String(column.key)}
-                          className={cn(
-                            "px-3 text-sm border-r border-gray-100 last:border-r-0",
-                            column.className
-                          )}
-                          style={{
-                            width: column.width,
-                            minWidth: column.width,
-                            paddingTop: '6px',
-                            paddingBottom: '6px',
-                            paddingLeft: String(column.key) === String(columns[0].key) ? `${paddingLeft + 32}px` : undefined
-                          }}
-                        >
-                          {column.render ? (
-                            column.render((row as any)[column.key], row)
-                          ) : (
-                            String((row as any)[column.key] || '')
-                          )}
-                        </td>
-                      ))}
+                      {columns.map((column) => {
+                        const currentWidth = columnWidths[String(column.key)] || defaultWidths[String(column.key)]
+                        return (
+                          <td
+                            key={String(column.key)}
+                            className={cn(
+                              "px-3 text-sm border-r border-gray-100 last:border-r-0",
+                              column.className
+                            )}
+                            style={{
+                              width: `${currentWidth}px`,
+                              minWidth: `${currentWidth}px`,
+                              paddingTop: '6px',
+                              paddingBottom: '6px',
+                              paddingLeft: String(column.key) === String(columns[0].key) ? `${paddingLeft + 32}px` : undefined
+                            }}
+                          >
+                            {column.render ? (
+                              column.render((row as any)[column.key], row)
+                            ) : (
+                              String((row as any)[column.key] || '')
+                            )}
+                          </td>
+                        )
+                      })}
                     </tr>
                   ))
                 ) : (
@@ -362,59 +381,66 @@ export function DataTable<T>({
         <table className="w-full table-auto">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              {columns.map((column) => (
-                <th
-                  key={String(column.key)}
-                  className={cn(
-                    "px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 last:border-r-0",
-                    column.className
-                  )}
-                  style={{ width: column.width, minWidth: column.width }}
-                >
-                  <div className="flex items-center justify-between min-w-0">
-                    <span className="truncate">{column.label}</span>
-                    <div className="flex items-center space-x-1 ml-1">
-                      {column.sortable !== false && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-5 w-5 p-0 hover:bg-gray-200 flex-shrink-0"
-                          onClick={() => handleSort(column.key)}
-                        >
-                          {sortColumn === column.key ? (
-                            sortDirection === 'asc' ? (
-                              <ChevronUp className="h-3 w-3" />
+              {columns.map((column) => {
+                const currentWidth = columnWidths[String(column.key)] || defaultWidths[String(column.key)]
+                return (
+                  <th
+                    key={String(column.key)}
+                    className={cn(
+                      "px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 last:border-r-0 relative group",
+                      column.className
+                    )}
+                    style={{ width: `${currentWidth}px`, minWidth: `${currentWidth}px` }}
+                  >
+                    <ColumnWidthControl
+                      currentWidth={currentWidth}
+                      onAdjust={(delta) => adjustWidth(String(column.key), delta)}
+                    />
+                    <div className="flex items-center justify-between min-w-0">
+                      <span className="truncate">{column.label}</span>
+                      <div className="flex items-center space-x-1 ml-1">
+                        {column.sortable !== false && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 p-0 hover:bg-gray-200 flex-shrink-0"
+                            onClick={() => handleSort(column.key)}
+                          >
+                            {sortColumn === column.key ? (
+                              sortDirection === 'asc' ? (
+                                <ChevronUp className="h-3 w-3" />
+                              ) : (
+                                <ChevronDown className="h-3 w-3" />
+                              )
                             ) : (
-                              <ChevronDown className="h-3 w-3" />
-                            )
-                          ) : (
-                            <div className="flex flex-col">
-                              <ChevronUp className="h-2 w-2 opacity-50" />
-                              <ChevronDown className="h-2 w-2 opacity-50" />
-                            </div>
-                          )}
-                        </Button>
-                      )}
-                      {column.filterable && (
-                        <Filter className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                      )}
+                              <div className="flex flex-col">
+                                <ChevronUp className="h-2 w-2 opacity-50" />
+                                <ChevronDown className="h-2 w-2 opacity-50" />
+                              </div>
+                            )}
+                          </Button>
+                        )}
+                        {column.filterable && (
+                          <Filter className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  {column.filterable && (
-                    <div className="mt-2">
-                      <Input
-                        placeholder="Filter..."
-                        value={columnFilters[String(column.key)] || ''}
-                        onChange={(e) => setColumnFilters(prev => ({
-                          ...prev,
-                          [String(column.key)]: e.target.value
-                        }))}
-                        className="h-6 text-xs"
-                      />
-                    </div>
-                  )}
-                </th>
-              ))}
+                    {column.filterable && (
+                      <div className="mt-2">
+                        <Input
+                          placeholder="Filter..."
+                          value={columnFilters[String(column.key)] || ''}
+                          onChange={(e) => setColumnFilters(prev => ({
+                            ...prev,
+                            [String(column.key)]: e.target.value
+                          }))}
+                          className="h-6 text-xs"
+                        />
+                      </div>
+                    )}
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody className="bg-white">
@@ -436,27 +462,30 @@ export function DataTable<T>({
                     onRowRightClick?.(row, e)
                   }}
                 >
-                  {columns.map((column) => (
-                    <td
-                      key={String(column.key)}
-                      className={cn(
-                        "px-3 text-sm border-r border-gray-100 last:border-r-0",
-                        column.className
-                      )}
-                      style={{
-                        width: column.width,
-                        minWidth: column.width,
-                        paddingTop: '6px',
-                        paddingBottom: '6px'
-                      }}
-                    >
-                      {column.render ? (
-                        column.render((row as any)[column.key], row)
-                      ) : (
-                        String((row as any)[column.key] || '')
-                      )}
-                    </td>
-                  ))}
+                  {columns.map((column) => {
+                    const currentWidth = columnWidths[String(column.key)] || defaultWidths[String(column.key)]
+                    return (
+                      <td
+                        key={String(column.key)}
+                        className={cn(
+                          "px-3 text-sm border-r border-gray-100 last:border-r-0",
+                          column.className
+                        )}
+                        style={{
+                          width: `${currentWidth}px`,
+                          minWidth: `${currentWidth}px`,
+                          paddingTop: '6px',
+                          paddingBottom: '6px'
+                        }}
+                      >
+                        {column.render ? (
+                          column.render((row as any)[column.key], row)
+                        ) : (
+                          String((row as any)[column.key] || '')
+                        )}
+                      </td>
+                    )
+                  })}
                 </tr>
               ))
             )}

@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input'
 import { formatCurrency } from '@/lib/utils'
 import { Calculator, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Edit2, Trash2, Copy } from 'lucide-react'
 import { useDrivers } from '@/hooks/use-drivers'
+import { useColumnWidths } from '@/hooks/use-column-widths'
+import { ColumnWidthControl } from '@/components/ui/column-width-control'
 
 // Generate 52 weeks starting from Monday, December 30, 2024
 function generateWeeks() {
@@ -69,6 +71,22 @@ export default function PayrollPage() {
   const [sortField, setSortField] = useState<string>('weekNumber')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, weekNumber: number, driverId: number} | null>(null)
+
+  // Column width management
+  const { columnWidths, adjustWidth } = useColumnWidths('payroll-table', {
+    week: 300,
+    driver: 200,
+    gross: 100,
+    extra: 100,
+    dispatch_fee: 110,
+    insurance: 100,
+    fuel: 100,
+    parking: 100,
+    trailer: 100,
+    misc: 100,
+    miles: 90,
+    pay: 120
+  })
 
   const weeks = useMemo(() => generateWeeks(), [])
 
@@ -442,7 +460,11 @@ export default function PayrollPage() {
               <table className="w-full table-auto" style={{borderCollapse: 'separate', borderSpacing: 0}}>
                 <thead style={{backgroundColor: 'var(--cell-background-header)'}}>
                   <tr>
-                    <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none sticky left-0 z-10" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, backgroundColor: 'var(--cell-background-header)', minWidth: '300px'}} onClick={() => handleSort('weekNumber')}>
+                    <th className="relative group px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none sticky left-0 z-10" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, backgroundColor: 'var(--cell-background-header)', width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px`}} onClick={() => handleSort('weekNumber')}>
+                      <ColumnWidthControl
+                        currentWidth={columnWidths.week}
+                        onAdjust={(delta) => adjustWidth('week', delta)}
+                      />
                       <div className="flex items-center gap-1">
                         Week
                         {sortField === 'weekNumber' ? (
@@ -450,7 +472,11 @@ export default function PayrollPage() {
                         ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                       </div>
                     </th>
-                    <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '200px'}} onClick={() => handleSort('driver')}>
+                    <th className="relative group px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px`}} onClick={() => handleSort('driver')}>
+                      <ColumnWidthControl
+                        currentWidth={columnWidths.driver}
+                        onAdjust={(delta) => adjustWidth('driver', delta)}
+                      />
                       <div className="flex items-center gap-1">
                         Driver
                         {sortField === 'driver' ? (
@@ -458,7 +484,11 @@ export default function PayrollPage() {
                         ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                       </div>
                     </th>
-                    <th className="px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '100px'}} onClick={() => handleSort('gross')}>
+                    <th className="relative group px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.gross}px`, minWidth: `${columnWidths.gross}px`}} onClick={() => handleSort('gross')}>
+                      <ColumnWidthControl
+                        currentWidth={columnWidths.gross}
+                        onAdjust={(delta) => adjustWidth('gross', delta)}
+                      />
                       <div className="flex items-center gap-1 justify-end">
                         Gross
                         {sortField === 'gross' ? (
@@ -466,7 +496,11 @@ export default function PayrollPage() {
                         ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                       </div>
                     </th>
-                    <th className="px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '100px'}} onClick={() => handleSort('extra')}>
+                    <th className="relative group px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.extra}px`, minWidth: `${columnWidths.extra}px`}} onClick={() => handleSort('extra')}>
+                      <ColumnWidthControl
+                        currentWidth={columnWidths.extra}
+                        onAdjust={(delta) => adjustWidth('extra', delta)}
+                      />
                       <div className="flex items-center gap-1 justify-end">
                         Extra
                         {sortField === 'extra' ? (
@@ -474,7 +508,11 @@ export default function PayrollPage() {
                         ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                       </div>
                     </th>
-                    <th className="px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '110px'}} onClick={() => handleSort('dispatch_fee')}>
+                    <th className="relative group px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.dispatch_fee}px`, minWidth: `${columnWidths.dispatch_fee}px`}} onClick={() => handleSort('dispatch_fee')}>
+                      <ColumnWidthControl
+                        currentWidth={columnWidths.dispatch_fee}
+                        onAdjust={(delta) => adjustWidth('dispatch_fee', delta)}
+                      />
                       <div className="flex items-center gap-1 justify-end">
                         Dispatch Fee
                         {sortField === 'dispatch_fee' ? (
@@ -482,7 +520,11 @@ export default function PayrollPage() {
                         ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                       </div>
                     </th>
-                    <th className="px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '100px'}} onClick={() => handleSort('insurance')}>
+                    <th className="relative group px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.insurance}px`, minWidth: `${columnWidths.insurance}px`}} onClick={() => handleSort('insurance')}>
+                      <ColumnWidthControl
+                        currentWidth={columnWidths.insurance}
+                        onAdjust={(delta) => adjustWidth('insurance', delta)}
+                      />
                       <div className="flex items-center gap-1 justify-end">
                         Insurance
                         {sortField === 'insurance' ? (
@@ -490,7 +532,11 @@ export default function PayrollPage() {
                         ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                       </div>
                     </th>
-                    <th className="px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '100px'}} onClick={() => handleSort('fuel')}>
+                    <th className="relative group px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.fuel}px`, minWidth: `${columnWidths.fuel}px`}} onClick={() => handleSort('fuel')}>
+                      <ColumnWidthControl
+                        currentWidth={columnWidths.fuel}
+                        onAdjust={(delta) => adjustWidth('fuel', delta)}
+                      />
                       <div className="flex items-center gap-1 justify-end">
                         Fuel
                         {sortField === 'fuel' ? (
@@ -498,7 +544,11 @@ export default function PayrollPage() {
                         ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                       </div>
                     </th>
-                    <th className="px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '100px'}} onClick={() => handleSort('parking')}>
+                    <th className="relative group px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.parking}px`, minWidth: `${columnWidths.parking}px`}} onClick={() => handleSort('parking')}>
+                      <ColumnWidthControl
+                        currentWidth={columnWidths.parking}
+                        onAdjust={(delta) => adjustWidth('parking', delta)}
+                      />
                       <div className="flex items-center gap-1 justify-end">
                         Parking
                         {sortField === 'parking' ? (
@@ -506,7 +556,11 @@ export default function PayrollPage() {
                         ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                       </div>
                     </th>
-                    <th className="px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '100px'}} onClick={() => handleSort('trailer')}>
+                    <th className="relative group px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.trailer}px`, minWidth: `${columnWidths.trailer}px`}} onClick={() => handleSort('trailer')}>
+                      <ColumnWidthControl
+                        currentWidth={columnWidths.trailer}
+                        onAdjust={(delta) => adjustWidth('trailer', delta)}
+                      />
                       <div className="flex items-center gap-1 justify-end">
                         Trailer
                         {sortField === 'trailer' ? (
@@ -514,7 +568,11 @@ export default function PayrollPage() {
                         ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                       </div>
                     </th>
-                    <th className="px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '100px'}} onClick={() => handleSort('misc')}>
+                    <th className="relative group px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.misc}px`, minWidth: `${columnWidths.misc}px`}} onClick={() => handleSort('misc')}>
+                      <ColumnWidthControl
+                        currentWidth={columnWidths.misc}
+                        onAdjust={(delta) => adjustWidth('misc', delta)}
+                      />
                       <div className="flex items-center gap-1 justify-end">
                         Misc
                         {sortField === 'misc' ? (
@@ -522,7 +580,11 @@ export default function PayrollPage() {
                         ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                       </div>
                     </th>
-                    <th className="px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '90px'}} onClick={() => handleSort('miles')}>
+                    <th className="relative group px-3 py-2.5 text-right text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.miles}px`, minWidth: `${columnWidths.miles}px`}} onClick={() => handleSort('miles')}>
+                      <ColumnWidthControl
+                        currentWidth={columnWidths.miles}
+                        onAdjust={(delta) => adjustWidth('miles', delta)}
+                      />
                       <div className="flex items-center gap-1 justify-end">
                         Miles
                         {sortField === 'miles' ? (
@@ -530,7 +592,11 @@ export default function PayrollPage() {
                         ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                       </div>
                     </th>
-                    <th className="px-3 py-2.5 text-right text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '120px', backgroundColor: 'var(--cell-background-highlight)'}}>
+                    <th className="relative group px-3 py-2.5 text-right text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.pay}px`, minWidth: `${columnWidths.pay}px`, backgroundColor: 'var(--cell-background-highlight)'}}>
+                      <ColumnWidthControl
+                        currentWidth={columnWidths.pay}
+                        onAdjust={(delta) => adjustWidth('pay', delta)}
+                      />
                       Pay
                     </th>
                   </tr>

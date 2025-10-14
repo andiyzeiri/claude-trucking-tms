@@ -14,6 +14,8 @@ import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
 import { Load } from '@/types'
 import toast from 'react-hot-toast'
+import { useColumnWidths } from '@/hooks/use-column-widths'
+import { ColumnWidthControl } from '@/components/ui/column-width-control'
 
 interface EditableLoad extends Load {
   isNew?: boolean
@@ -228,6 +230,23 @@ export default function LoadsPageInline() {
   const [sortField, setSortField] = useState<keyof EditableLoad>('pickup_date')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const groupMenuRef = useRef<HTMLDivElement>(null)
+
+  // Column width management
+  const { columnWidths, adjustWidth } = useColumnWidths('loads-table', {
+    week: 120,
+    date: 100,
+    load_number: 120,
+    customer: 180,
+    driver: 140,
+    pickup: 250,
+    delivery: 250,
+    rate: 100,
+    miles: 100,
+    rpm: 80,
+    pod: 100,
+    ratecon: 100,
+    status: 120
+  })
 
   // Local state for editing location fields
   const [editingLocation, setEditingLocation] = useState<{
@@ -1725,7 +1744,11 @@ export default function LoadsPageInline() {
             <table className="w-full table-auto" style={{borderCollapse: 'separate', borderSpacing: 0}}>
               <thead style={{backgroundColor: 'var(--cell-background-header)'}}>
                 <tr>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('weekNumber')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px`}} onClick={() => handleSort('weekNumber')}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.week}
+                      onAdjust={(delta) => adjustWidth('week', delta)}
+                    />
                     <div className="flex items-center gap-1">
                       Week
                       {sortField === 'weekNumber' ? (
@@ -1733,7 +1756,11 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('pickup_date')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.date}px`, minWidth: `${columnWidths.date}px`}} onClick={() => handleSort('pickup_date')}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.date}
+                      onAdjust={(delta) => adjustWidth('date', delta)}
+                    />
                     <div className="flex items-center gap-1">
                       Date
                       {sortField === 'pickup_date' ? (
@@ -1741,7 +1768,11 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('load_number')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.load_number}px`, minWidth: `${columnWidths.load_number}px`}} onClick={() => handleSort('load_number')}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.load_number}
+                      onAdjust={(delta) => adjustWidth('load_number', delta)}
+                    />
                     <div className="flex items-center gap-1">
                       Load #
                       {sortField === 'load_number' ? (
@@ -1749,7 +1780,11 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('customer_id')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.customer}px`, minWidth: `${columnWidths.customer}px`}} onClick={() => handleSort('customer_id')}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.customer}
+                      onAdjust={(delta) => adjustWidth('customer', delta)}
+                    />
                     <div className="flex items-center gap-1">
                       Customer
                       {sortField === 'customer_id' ? (
@@ -1757,7 +1792,11 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('driver_id')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px`}} onClick={() => handleSort('driver_id')}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.driver}
+                      onAdjust={(delta) => adjustWidth('driver', delta)}
+                    />
                     <div className="flex items-center gap-1">
                       Driver
                       {sortField === 'driver_id' ? (
@@ -1765,7 +1804,11 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '200px'}} onClick={() => handleSort('pickup_location')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.pickup}px`, minWidth: `${columnWidths.pickup}px`}} onClick={() => handleSort('pickup_location')}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.pickup}
+                      onAdjust={(delta) => adjustWidth('pickup', delta)}
+                    />
                     <div className="flex items-center gap-1">
                       Pickup
                       {sortField === 'pickup_location' ? (
@@ -1773,7 +1816,11 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '200px'}} onClick={() => handleSort('delivery_location')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.delivery}px`, minWidth: `${columnWidths.delivery}px`}} onClick={() => handleSort('delivery_location')}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.delivery}
+                      onAdjust={(delta) => adjustWidth('delivery', delta)}
+                    />
                     <div className="flex items-center gap-1">
                       Delivery
                       {sortField === 'delivery_location' ? (
@@ -1781,7 +1828,11 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('rate')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.rate}px`, minWidth: `${columnWidths.rate}px`}} onClick={() => handleSort('rate')}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.rate}
+                      onAdjust={(delta) => adjustWidth('rate', delta)}
+                    />
                     <div className="flex items-center gap-1">
                       Rate
                       {sortField === 'rate' ? (
@@ -1789,7 +1840,11 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('miles')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.miles}px`, minWidth: `${columnWidths.miles}px`}} onClick={() => handleSort('miles')}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.miles}
+                      onAdjust={(delta) => adjustWidth('miles', delta)}
+                    />
                     <div className="flex items-center gap-1">
                       Miles
                       {sortField === 'miles' ? (
@@ -1797,10 +1852,32 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>RPM</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>POD</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Ratecon</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}} onClick={() => handleSort('status')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.rpm}px`, minWidth: `${columnWidths.rpm}px`}}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.rpm}
+                      onAdjust={(delta) => adjustWidth('rpm', delta)}
+                    />
+                    RPM
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.pod}px`, minWidth: `${columnWidths.pod}px`}}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.pod}
+                      onAdjust={(delta) => adjustWidth('pod', delta)}
+                    />
+                    POD
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.ratecon}px`, minWidth: `${columnWidths.ratecon}px`}}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.ratecon}
+                      onAdjust={(delta) => adjustWidth('ratecon', delta)}
+                    />
+                    Ratecon
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.status}px`, minWidth: `${columnWidths.status}px`}} onClick={() => handleSort('status')}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.status}
+                      onAdjust={(delta) => adjustWidth('status', delta)}
+                    />
                     <div className="flex items-center gap-1">
                       Status
                       {sortField === 'status' ? (
