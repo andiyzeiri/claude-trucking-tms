@@ -103,3 +103,37 @@ export function useDeleteLoad() {
     },
   })
 }
+
+export function useUpdateLoadDocuments() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      pod_url,
+      ratecon_url
+    }: {
+      id: number
+      pod_url?: string
+      ratecon_url?: string
+    }): Promise<Load> => {
+      const response = await api.put(`/v1/loads/${id}`, {
+        pod_url,
+        ratecon_url
+      })
+      return response.data
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['loads'] })
+      queryClient.invalidateQueries({ queryKey: ['load', id] })
+      toast.success('Documents updated successfully')
+    },
+    onError: (error: any) => {
+      const detail = error.response?.data?.detail
+      const message = typeof detail === 'string'
+        ? detail
+        : 'Failed to update documents'
+      toast.error(message)
+    },
+  })
+}

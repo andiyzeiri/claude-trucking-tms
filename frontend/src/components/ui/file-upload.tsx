@@ -5,6 +5,8 @@ import { Button } from './button'
 import { Card, CardContent } from './card'
 import { Upload, File, X, Eye, Download, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { api } from '@/lib/api'
+import toast from 'react-hot-toast'
 
 interface UploadedFile {
   id: string
@@ -40,73 +42,70 @@ export function FileUpload({
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFileSelect = (selectedFiles: FileList) => {
+  const handleFileSelect = async (selectedFiles: FileList) => {
     if (!selectedFiles.length) return
 
     setIsUploading(true)
 
     const newFiles: UploadedFile[] = []
-    let filesProcessed = 0
+    const uploadPromises: Promise<void>[] = []
 
     Array.from(selectedFiles).forEach((file, index) => {
       // Validate file type
       if (accept && !file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
-        alert(`File ${file.name} is not a PDF file`)
-        filesProcessed++
-        if (filesProcessed === selectedFiles.length && newFiles.length > 0) {
-          const updatedFiles = multiple ? [...files, ...newFiles] : newFiles
-          onFilesChange(updatedFiles)
-          setIsUploading(false)
-        }
+        toast.error(`File ${file.name} is not a PDF file`)
         return
       }
 
       // Validate file size
       const fileSizeMB = file.size / (1024 * 1024)
       if (fileSizeMB > maxSize) {
-        alert(`File ${file.name} is too large. Maximum size is ${maxSize}MB`)
-        filesProcessed++
-        if (filesProcessed === selectedFiles.length && newFiles.length > 0) {
-          const updatedFiles = multiple ? [...files, ...newFiles] : newFiles
-          onFilesChange(updatedFiles)
-          setIsUploading(false)
-        }
+        toast.error(`File ${file.name} is too large. Maximum size is ${maxSize}MB`)
         return
       }
 
-      // Convert file to data URL so it persists in localStorage
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const uploadedFile: UploadedFile = {
-          id: `${Date.now()}-${index}`,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          url: reader.result as string, // Data URL persists across sessions
-          uploadedAt: new Date()
-        }
+      // Upload file to backend
+      const uploadPromise = (async () => {
+        try {
+          const formData = new FormData()
+          formData.append('file', file)
 
-        newFiles.push(uploadedFile)
-        filesProcessed++
+          const response = await api.post('/v1/uploads/', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          })
 
-        // When all files are processed, update the state
-        if (filesProcessed === selectedFiles.length) {
-          const updatedFiles = multiple ? [...files, ...newFiles] : newFiles
-          onFilesChange(updatedFiles)
-          setIsUploading(false)
+          const uploadedFile: UploadedFile = {
+            id: `${Date.now()}-${index}`,
+            name: response.data.filename,
+            size: response.data.size,
+            type: file.type,
+            url: response.data.url, // Backend URL (S3 or local storage path)
+            uploadedAt: new Date()
+          }
+
+          newFiles.push(uploadedFile)
+        } catch (error: any) {
+          console.error('Upload error:', error)
+          toast.error(`Failed to upload ${file.name}: ${error.response?.data?.detail || error.message}`)
         }
-      }
-      reader.onerror = () => {
-        alert(`Failed to read file ${file.name}`)
-        filesProcessed++
-        if (filesProcessed === selectedFiles.length && newFiles.length > 0) {
-          const updatedFiles = multiple ? [...files, ...newFiles] : newFiles
-          onFilesChange(updatedFiles)
-          setIsUploading(false)
-        }
-      }
-      reader.readAsDataURL(file)
+      })()
+
+      uploadPromises.push(uploadPromise)
     })
+
+    // Wait for all uploads to complete
+    await Promise.all(uploadPromises)
+
+    // Update state with uploaded files
+    if (newFiles.length > 0) {
+      const updatedFiles = multiple ? [...files, ...newFiles] : newFiles
+      onFilesChange(updatedFiles)
+      toast.success(`Successfully uploaded ${newFiles.length} file(s)`)
+    }
+
+    setIsUploading(false)
   }
 
   const handleDrop = (e: React.DragEvent) => {

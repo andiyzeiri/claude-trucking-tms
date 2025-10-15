@@ -58,7 +58,13 @@ export function DocumentModal({
   }
 
   const handleSave = () => {
-    onDocumentsChange(localDocuments)
+    // Extract URLs from uploaded files
+    // If multiple files, join them with comma (for now - could be enhanced to support multiple URLs)
+    const updatedDocuments = {
+      ratecon: localDocuments.ratecon,
+      pod: localDocuments.pod
+    }
+    onDocumentsChange(updatedDocuments)
     onClose()
   }
 
