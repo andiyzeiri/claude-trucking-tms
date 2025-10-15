@@ -54,7 +54,9 @@ async def upload_file(
                 Body=contents,
                 ContentType='application/pdf'
             )
-            file_url = f"https://{settings.S3_BUCKET}.s3.{settings.AWS_REGION}.amazonaws.com/{unique_filename}"
+            # Store the S3 key instead of the direct URL
+            # The key will be used to generate signed URLs when retrieving
+            file_url = f"/api/v1/uploads/s3/{unique_filename}"
         else:
             # Local storage fallback
             file_path = UPLOAD_DIR / unique_filename
@@ -71,12 +73,42 @@ async def upload_file(
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
 
 
+@router.get("/s3/{filename}")
+async def get_s3_file(
+    filename: str,
+    current_user: User = Depends(get_current_active_user)
+):
+    """Generate a presigned URL for an S3 file"""
+    if not settings.USE_S3 or not s3_client:
+        raise HTTPException(status_code=400, detail="S3 is not configured")
+
+    try:
+        # Generate a presigned URL that expires in 1 hour
+        presigned_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': settings.S3_BUCKET,
+                'Key': filename
+            },
+            ExpiresIn=3600  # 1 hour
+        )
+
+        # Return a redirect to the presigned URL
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=presigned_url)
+
+    except ClientError as e:
+        raise HTTPException(status_code=404, detail="File not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate signed URL: {str(e)}")
+
+
 @router.get("/files/{filename}")
 async def get_file(
     filename: str,
     current_user: User = Depends(get_current_active_user)
 ):
-    """Serve uploaded files"""
+    """Serve uploaded files from local storage"""
     from fastapi.responses import FileResponse
 
     file_path = UPLOAD_DIR / filename

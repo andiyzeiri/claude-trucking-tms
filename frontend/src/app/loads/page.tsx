@@ -1447,8 +1447,11 @@ export default function LoadsPageInline() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
+                    // Construct proper API URL
+                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.absolutetms.com/api'
+                    const baseUrl = apiUrl.replace('/api/v1', '').replace('/api', '')
                     setPdfModal({
-                      url: `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${load.pod_url}`,
+                      url: `${baseUrl}${load.pod_url}`,
                       loadId: load.id,
                       type: 'pod'
                     })
@@ -1501,8 +1504,11 @@ export default function LoadsPageInline() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
+                    // Construct proper API URL
+                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.absolutetms.com/api'
+                    const baseUrl = apiUrl.replace('/api/v1', '').replace('/api', '')
                     setPdfModal({
-                      url: `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${load.ratecon_url}`,
+                      url: `${baseUrl}${load.ratecon_url}`,
                       loadId: load.id,
                       type: 'ratecon'
                     })
