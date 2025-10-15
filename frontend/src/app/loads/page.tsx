@@ -1447,11 +1447,22 @@ export default function LoadsPageInline() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    // Construct proper API URL
+                    // Handle both old S3 URLs and new API paths
+                    let pdfUrl = load.pod_url
                     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.absolutetms.com/api'
                     const baseUrl = apiUrl.replace('/api/v1', '').replace('/api', '')
+
+                    if (pdfUrl.includes('s3.amazonaws.com')) {
+                      // Old S3 URL - extract filename and use API endpoint
+                      const filename = pdfUrl.split('/').pop()
+                      pdfUrl = `${baseUrl}/api/v1/uploads/s3/${filename}`
+                    } else if (!pdfUrl.startsWith('http')) {
+                      // It's a relative path, construct full API URL
+                      pdfUrl = `${baseUrl}${pdfUrl}`
+                    }
+
                     setPdfModal({
-                      url: `${baseUrl}${load.pod_url}`,
+                      url: pdfUrl,
                       loadId: load.id,
                       type: 'pod'
                     })
@@ -1504,11 +1515,22 @@ export default function LoadsPageInline() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    // Construct proper API URL
+                    // Handle both old S3 URLs and new API paths
+                    let pdfUrl = load.ratecon_url
                     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.absolutetms.com/api'
                     const baseUrl = apiUrl.replace('/api/v1', '').replace('/api', '')
+
+                    if (pdfUrl.includes('s3.amazonaws.com')) {
+                      // Old S3 URL - extract filename and use API endpoint
+                      const filename = pdfUrl.split('/').pop()
+                      pdfUrl = `${baseUrl}/api/v1/uploads/s3/${filename}`
+                    } else if (!pdfUrl.startsWith('http')) {
+                      // It's a relative path, construct full API URL
+                      pdfUrl = `${baseUrl}${pdfUrl}`
+                    }
+
                     setPdfModal({
-                      url: `${baseUrl}${load.ratecon_url}`,
+                      url: pdfUrl,
                       loadId: load.id,
                       type: 'ratecon'
                     })

@@ -73,16 +73,28 @@ async def upload_file(
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
 
 
-@router.get("/s3/{filename}")
+@router.get("/s3/{filename:path}")
 async def get_s3_file(
     filename: str,
     current_user: User = Depends(get_current_active_user)
 ):
-    """Generate a presigned URL for an S3 file"""
+    """Generate a presigned URL for an S3 file
+
+    Handles both:
+    - Direct filename: abc123.pdf
+    - Full S3 URL: https://bucket.s3.region.amazonaws.com/abc123.pdf
+    """
     if not settings.USE_S3 or not s3_client:
         raise HTTPException(status_code=400, detail="S3 is not configured")
 
     try:
+        # Extract filename if a full S3 URL was provided
+        if filename.startswith('http'):
+            # Parse S3 URL to get just the key
+            # Format: https://bucket.s3.region.amazonaws.com/key
+            parts = filename.split('/')
+            filename = parts[-1]  # Get last part (the actual file key)
+
         # Generate a presigned URL that expires in 1 hour
         presigned_url = s3_client.generate_presigned_url(
             'get_object',
