@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, users, companies, customers, trucks, drivers, loads, stops, invoices, payroll, lanes, expenses, uploads, shippers, receivers, notifications, ratecons, fuel
+from app.api.v1.endpoints import auth, users, companies, customers, trucks, drivers, loads, stops, invoices, payroll, lanes, expenses, uploads, shippers, receivers, notifications, ratecons, fuel, migrate
 
 api_router = APIRouter()
 
@@ -21,3 +21,4 @@ api_router.include_router(shippers.router, prefix="/shippers", tags=["shippers"]
 api_router.include_router(receivers.router, prefix="/receivers", tags=["receivers"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 api_router.include_router(ratecons.router, prefix="/ratecons", tags=["ratecons"])
+api_router.include_router(migrate.router, prefix="/migrate", tags=["migrations"])
