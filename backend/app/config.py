@@ -72,6 +72,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         extra = "ignore"
+        case_sensitive = True  # Make environment variable names case-sensitive
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -143,7 +144,9 @@ class Settings(BaseSettings):
     @property
     def backend_cors_origins(self) -> list[str]:
         """Parse CORS origins from comma-separated string."""
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+        origins = [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+        print(f"✓ CORS Origins loaded: {origins}")
+        return origins
 
     @property
     def is_production(self) -> bool:
