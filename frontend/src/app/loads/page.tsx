@@ -621,13 +621,15 @@ export default function LoadsPageInline() {
 
     // Validate file type
     if (!file.name.toLowerCase().endsWith('.pdf')) {
-      alert('Only PDF files are allowed')
+      toast.error('Only PDF files are allowed')
       return
     }
 
     // Create form data
     const formData = new FormData()
     formData.append('file', file)
+
+    const uploadToast = toast.loading('Uploading PDF...')
 
     try {
       // Get token from cookie
@@ -659,9 +661,11 @@ export default function LoadsPageInline() {
 
       // Update the field with the returned URL
       await updateField(loadKey, field, data.url)
+
+      toast.success('PDF uploaded successfully', { id: uploadToast })
     } catch (error) {
       console.error('File upload error:', error)
-      alert('Failed to upload file')
+      toast.error('Failed to upload PDF', { id: uploadToast })
     }
 
     // Reset the input
@@ -698,7 +702,9 @@ export default function LoadsPageInline() {
         delivery_date: load.delivery_date,
         miles: load.miles || 0,
         rate: load.rate || 0,
-        status: load.status
+        status: load.status,
+        pod_url: load.pod_url || null,
+        ratecon_url: load.ratecon_url || null
       }
       await updateLoad.mutateAsync({ id: load.id, data: backendData })
     }
