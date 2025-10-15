@@ -76,13 +76,17 @@ async def upload_file(
 @router.get("/s3/{filename:path}")
 async def get_s3_file(
     filename: str,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
+    redirect: bool = False
 ):
     """Generate a presigned URL for an S3 file
 
     Handles both:
     - Direct filename: abc123.pdf
     - Full S3 URL: https://bucket.s3.region.amazonaws.com/abc123.pdf
+
+    Args:
+        redirect: If True, redirects to the presigned URL. If False, returns JSON with the URL.
     """
     if not settings.USE_S3 or not s3_client:
         raise HTTPException(status_code=400, detail="S3 is not configured")
@@ -105,9 +109,12 @@ async def get_s3_file(
             ExpiresIn=3600  # 1 hour
         )
 
-        # Return a redirect to the presigned URL
-        from fastapi.responses import RedirectResponse
-        return RedirectResponse(url=presigned_url)
+        # Return redirect or JSON based on query parameter
+        if redirect:
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url=presigned_url)
+        else:
+            return {"url": presigned_url}
 
     except ClientError as e:
         raise HTTPException(status_code=404, detail="File not found")

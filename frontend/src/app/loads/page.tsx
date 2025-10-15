@@ -16,6 +16,7 @@ import { Load } from '@/types'
 import toast from 'react-hot-toast'
 import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
+import { PdfViewer } from '@/components/loads/pdf-viewer'
 
 interface EditableLoad extends Load {
   isNew?: boolean
@@ -2032,9 +2033,8 @@ export default function LoadsPageInline() {
 
               {/* PDF Viewer */}
               <div className="flex-1 p-4 overflow-hidden">
-                <iframe
-                  src={pdfModal.url}
-                  className="w-full h-full border-0"
+                <PdfViewer
+                  url={pdfModal.url}
                   title={pdfModal.type === 'pod' ? 'POD Viewer' : 'Ratecon Viewer'}
                 />
               </div>
