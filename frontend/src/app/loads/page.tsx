@@ -1459,14 +1459,22 @@ export default function LoadsPageInline() {
                     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.absolutetms.com/api'
                     const baseUrl = apiUrl.replace('/api/v1', '').replace('/api', '')
 
+                    console.log('POD Click - Original URL:', pdfUrl)
+                    console.log('POD Click - API URL:', apiUrl)
+                    console.log('POD Click - Base URL:', baseUrl)
+
                     if (pdfUrl.includes('s3.amazonaws.com')) {
                       // Old S3 URL - extract filename and use API endpoint
                       const filename = pdfUrl.split('/').pop()
                       pdfUrl = `${baseUrl}/api/v1/uploads/s3/${filename}`
+                      console.log('POD Click - Old S3 URL detected, converted to:', pdfUrl)
                     } else if (!pdfUrl.startsWith('http')) {
                       // It's a relative path, construct full API URL
                       pdfUrl = `${baseUrl}${pdfUrl}`
+                      console.log('POD Click - Relative path detected, converted to:', pdfUrl)
                     }
+
+                    console.log('POD Click - Final URL:', pdfUrl)
 
                     setPdfModal({
                       url: pdfUrl,
@@ -1527,14 +1535,20 @@ export default function LoadsPageInline() {
                     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.absolutetms.com/api'
                     const baseUrl = apiUrl.replace('/api/v1', '').replace('/api', '')
 
+                    console.log('Ratecon Click - Original URL:', pdfUrl)
+
                     if (pdfUrl.includes('s3.amazonaws.com')) {
                       // Old S3 URL - extract filename and use API endpoint
                       const filename = pdfUrl.split('/').pop()
                       pdfUrl = `${baseUrl}/api/v1/uploads/s3/${filename}`
+                      console.log('Ratecon Click - Old S3 URL detected, converted to:', pdfUrl)
                     } else if (!pdfUrl.startsWith('http')) {
                       // It's a relative path, construct full API URL
                       pdfUrl = `${baseUrl}${pdfUrl}`
+                      console.log('Ratecon Click - Relative path detected, converted to:', pdfUrl)
                     }
+
+                    console.log('Ratecon Click - Final URL:', pdfUrl)
 
                     setPdfModal({
                       url: pdfUrl,
@@ -2038,46 +2052,11 @@ export default function LoadsPageInline() {
               </div>
 
               {/* PDF Viewer */}
-              <div className="flex-1 p-4 overflow-hidden flex items-center justify-center">
-                <div className="text-center">
-                  <p className="text-gray-700 mb-4">
-                    Click the button below to view the PDF in a new tab
-                  </p>
-                  <Button
-                    onClick={async () => {
-                      try {
-                        // Get token from cookie
-                        const getCookie = (name: string) => {
-                          const value = `; ${document.cookie}`
-                          const parts = value.split(`; ${name}=`)
-                          if (parts.length === 2) return parts.pop()?.split(';').shift()
-                        }
-                        const token = getCookie('auth-token')
-
-                        // Fetch the presigned URL
-                        const response = await fetch(pdfModal.url, {
-                          headers: {
-                            'Authorization': `Bearer ${token}`,
-                          },
-                        })
-
-                        if (response.ok) {
-                          const data = await response.json()
-                          // Open the presigned URL in a new tab
-                          window.open(data.url, '_blank')
-                        } else {
-                          alert('Failed to load PDF')
-                        }
-                      } catch (error) {
-                        console.error('Error loading PDF:', error)
-                        alert('Failed to load PDF')
-                      }
-                    }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Open PDF in New Tab
-                  </Button>
-                </div>
+              <div className="flex-1 p-4 overflow-hidden">
+                <PdfViewer
+                  url={pdfModal.url}
+                  title={pdfModal.type === 'pod' ? 'POD Viewer' : 'Ratecon Viewer'}
+                />
               </div>
             </div>
           </div>

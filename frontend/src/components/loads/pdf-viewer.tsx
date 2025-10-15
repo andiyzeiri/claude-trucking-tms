@@ -18,6 +18,8 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
         setLoading(true)
         setError(null)
 
+        console.log('PdfViewer: Fetching presigned URL for:', url)
+
         // Get token from cookie
         const getCookie = (name: string) => {
           const value = `; ${document.cookie}`
@@ -33,15 +35,20 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
           },
         })
 
+        console.log('PdfViewer: Response status:', response.status)
+
         if (!response.ok) {
+          const errorText = await response.text()
+          console.error('PdfViewer: Error response:', errorText)
           throw new Error(`Failed to load PDF: ${response.status}`)
         }
 
         // Get the presigned URL from the JSON response
         const data = await response.json()
+        console.log('PdfViewer: Got presigned URL:', data.url?.substring(0, 50) + '...')
         setPresignedUrl(data.url)
       } catch (err) {
-        console.error('Error fetching PDF:', err)
+        console.error('PdfViewer: Error fetching PDF:', err)
         setError(err instanceof Error ? err.message : 'Failed to load PDF')
       } finally {
         setLoading(false)
