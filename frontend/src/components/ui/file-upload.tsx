@@ -151,17 +151,49 @@ export function FileUpload({
     onFilesChange(updatedFiles)
   }
 
-  const previewFile = (file: UploadedFile) => {
-    window.open(file.url, '_blank')
+  const getProxiedUrl = (url: string): string => {
+    // If it's a direct S3 URL, convert it to use the backend proxy
+    if (url.includes('s3.amazonaws.com') || url.includes('.s3.')) {
+      // Extract filename from S3 URL
+      const filename = url.split('/').pop() || ''
+      return `${process.env.NEXT_PUBLIC_API_URL || ''}/v1/uploads/s3/${filename}`
+    }
+    // If it's already a backend URL, use it as-is
+    if (url.startsWith('/api') || url.startsWith('/v1')) {
+      return `${process.env.NEXT_PUBLIC_API_URL || ''}${url}`
+    }
+    // Otherwise return as-is
+    return url
   }
 
-  const downloadFile = (file: UploadedFile) => {
-    const link = document.createElement('a')
-    link.href = file.url
-    link.download = file.name
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const previewFile = (file: UploadedFile) => {
+    const proxiedUrl = getProxiedUrl(file.url)
+    window.open(proxiedUrl, '_blank')
+  }
+
+  const downloadFile = async (file: UploadedFile) => {
+    try {
+      const proxiedUrl = getProxiedUrl(file.url)
+
+      // Fetch through backend with auth
+      const response = await api.get(proxiedUrl, {
+        responseType: 'blob'
+      })
+
+      // Create download link
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const blobUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = file.name
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(blobUrl)
+    } catch (error) {
+      console.error('Download error:', error)
+      toast.error('Failed to download file')
+    }
   }
 
   const formatFileSize = (bytes: number) => {

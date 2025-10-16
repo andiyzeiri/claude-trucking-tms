@@ -355,6 +355,22 @@ WHERE pod_url IS NOT NULL OR ratecon_url IS NOT NULL;
 3. Presigned URL generation working (for S3)
 4. Authentication required for retrieval endpoint
 
+### S3 Authorization Errors
+
+**Error**: `<Error><Code>InvalidArgument</Code><Message>Unsupported Authorization Type</Message>`
+
+**Cause**: Frontend is trying to access S3 URLs directly with JWT Bearer token. AWS S3 doesn't accept JWT tokens.
+
+**Solution**: All S3 access must go through the backend proxy:
+- Upload: Files are uploaded to `/v1/uploads/` which returns a proxy URL like `/api/v1/uploads/s3/filename.pdf`
+- Retrieval: Backend generates presigned URLs that work without auth headers
+- The components automatically convert old direct S3 URLs to proxy URLs
+
+**Components that handle this**:
+1. `FileUpload` component - converts S3 URLs in `getProxiedUrl()` function
+2. `PdfViewer` component - detects and converts S3 URLs before fetching
+3. `LoadDocumentsPanel` - converts S3 URLs when parsing existing files
+
 ### CORS Errors
 
 **Check backend CORS settings**:
@@ -362,6 +378,20 @@ WHERE pod_url IS NOT NULL OR ratecon_url IS NOT NULL;
 # backend/.env
 CORS_ORIGINS=http://localhost:3000,https://absolutetms.netlify.app
 ```
+
+### Old Direct S3 URLs in Database
+
+If you have old records with direct S3 URLs like:
+```
+https://trucking-tms-uploads-xxx.s3.us-east-1.amazonaws.com/file.pdf
+```
+
+The components will automatically convert them to:
+```
+/api/v1/uploads/s3/file.pdf
+```
+
+This routes through the backend which generates proper presigned URLs.
 
 ## Future Enhancements
 

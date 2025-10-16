@@ -31,14 +31,23 @@ export function LoadDocumentsPanel({ load }: LoadDocumentsPanelProps) {
     // Handle comma-separated URLs (if multiple files were uploaded)
     const urls = url.split(',').filter(Boolean)
 
-    return urls.map((fileUrl, index) => ({
-      id: `${type}-${index}`,
-      name: fileUrl.split('/').pop() || `${type}.pdf`,
-      size: 0, // Size not available from URL
-      type: 'application/pdf',
-      url: fileUrl,
-      uploadedAt: new Date()
-    }))
+    return urls.map((fileUrl, index) => {
+      // Convert direct S3 URLs to backend proxy URLs for consistency
+      let processedUrl = fileUrl.trim()
+      if (processedUrl.includes('s3.amazonaws.com') || processedUrl.includes('.s3.')) {
+        const filename = processedUrl.split('/').pop() || ''
+        processedUrl = `/api/v1/uploads/s3/${filename}`
+      }
+
+      return {
+        id: `${type}-${index}`,
+        name: processedUrl.split('/').pop() || `${type}.pdf`,
+        size: 0, // Size not available from URL
+        type: 'application/pdf',
+        url: processedUrl,
+        uploadedAt: new Date()
+      }
+    })
   }
 
   const [rateconFiles, setRateconFiles] = useState<UploadedFile[]>(

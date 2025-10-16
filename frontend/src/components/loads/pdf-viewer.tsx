@@ -18,7 +18,7 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
         setLoading(true)
         setError(null)
 
-        console.log('PdfViewer: Fetching presigned URL for:', url)
+        console.log('PdfViewer: Processing URL:', url)
 
         // Get token from cookie
         const getCookie = (name: string) => {
@@ -28,8 +28,24 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
         }
         const token = getCookie('auth-token')
 
+        let apiUrl = url
+
+        // Convert direct S3 URLs to backend proxy URLs
+        if (url.includes('s3.amazonaws.com') || url.includes('.s3.')) {
+          // Extract filename from S3 URL
+          const filename = url.split('/').pop() || ''
+          const baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api'
+          apiUrl = `${baseUrl}/v1/uploads/s3/${filename}`
+          console.log('PdfViewer: Converted S3 URL to proxy:', apiUrl)
+        } else if (url.startsWith('/v1/uploads/')) {
+          // Relative backend URL - add base URL
+          const baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api'
+          apiUrl = `${baseUrl}${url}`
+          console.log('PdfViewer: Added base URL:', apiUrl)
+        }
+
         // Fetch the presigned URL from the API
-        const response = await fetch(url, {
+        const response = await fetch(apiUrl, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -43,10 +59,22 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
           throw new Error(`Failed to load PDF: ${response.status}`)
         }
 
-        // Get the presigned URL from the JSON response
-        const data = await response.json()
-        console.log('PdfViewer: Got presigned URL:', data.url?.substring(0, 50) + '...')
-        setPresignedUrl(data.url)
+        // Check if response is JSON (presigned URL) or direct PDF
+        const contentType = response.headers.get('content-type')
+        if (contentType?.includes('application/json')) {
+          // Get the presigned URL from the JSON response
+          const data = await response.json()
+          console.log('PdfViewer: Got presigned URL')
+          setPresignedUrl(data.url)
+        } else if (contentType?.includes('application/pdf')) {
+          // Direct PDF response - use as blob URL
+          const blob = await response.blob()
+          const blobUrl = URL.createObjectURL(blob)
+          console.log('PdfViewer: Got direct PDF, created blob URL')
+          setPresignedUrl(blobUrl)
+        } else {
+          throw new Error('Unexpected response type: ' + contentType)
+        }
       } catch (err) {
         console.error('PdfViewer: Error fetching PDF:', err)
         setError(err instanceof Error ? err.message : 'Failed to load PDF')
