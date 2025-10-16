@@ -1723,16 +1723,9 @@ export default function LoadsPageInline() {
               }
             }}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Upcoming Loads</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{upcomingStats.total}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Upcoming Loads</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{upcomingStats.total}</p>
             </div>
           </div>
 
@@ -1740,16 +1733,9 @@ export default function LoadsPageInline() {
             className={`cursor-pointer transition-all ${statusFilter === 'available' ? 'bg-green-50 border-green-500 border-2' : 'bg-white border border-gray-200'} rounded-lg p-4 hover:shadow-md`}
             onClick={() => setStatusFilter(statusFilter === 'available' ? null : 'available')}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Available</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">{upcomingStats.available}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Available</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{upcomingStats.available}</p>
             </div>
           </div>
 
@@ -1757,16 +1743,9 @@ export default function LoadsPageInline() {
             className={`cursor-pointer transition-all ${statusFilter === 'dispatched' ? 'bg-orange-50 border-orange-500 border-2' : 'bg-white border border-gray-200'} rounded-lg p-4 hover:shadow-md`}
             onClick={() => setStatusFilter(statusFilter === 'dispatched' ? null : 'dispatched')}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Dispatched</p>
-                <p className="text-2xl font-bold text-orange-600 mt-1">{upcomingStats.dispatched}</p>
-              </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Dispatched</p>
+              <p className="text-2xl font-bold text-orange-600 mt-1">{upcomingStats.dispatched}</p>
             </div>
           </div>
 
@@ -1774,16 +1753,9 @@ export default function LoadsPageInline() {
             className={`cursor-pointer transition-all ${statusFilter === 'invoiced' ? 'bg-purple-50 border-purple-500 border-2' : 'bg-white border border-gray-200'} rounded-lg p-4 hover:shadow-md`}
             onClick={() => setStatusFilter(statusFilter === 'invoiced' ? null : 'invoiced')}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Invoiced</p>
-                <p className="text-2xl font-bold text-purple-600 mt-1">{upcomingStats.invoiced}</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Invoiced</p>
+              <p className="text-2xl font-bold text-purple-600 mt-1">{upcomingStats.invoiced}</p>
             </div>
           </div>
         </div>
