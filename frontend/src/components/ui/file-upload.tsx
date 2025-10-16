@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react'
 import { Button } from './button'
 import { Card, CardContent } from './card'
-import { Upload, File, X, Eye, Download, FileText } from 'lucide-react'
+import { Upload, File, X, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
@@ -151,51 +151,6 @@ export function FileUpload({
     onFilesChange(updatedFiles)
   }
 
-  const getProxiedUrl = (url: string): string => {
-    // If it's a direct S3 URL, convert it to use the backend proxy
-    if (url.includes('s3.amazonaws.com') || url.includes('.s3.')) {
-      // Extract filename from S3 URL
-      const filename = url.split('/').pop() || ''
-      return `${process.env.NEXT_PUBLIC_API_URL || ''}/v1/uploads/s3/${filename}`
-    }
-    // If it's already a backend URL, use it as-is
-    if (url.startsWith('/api') || url.startsWith('/v1')) {
-      return `${process.env.NEXT_PUBLIC_API_URL || ''}${url}`
-    }
-    // Otherwise return as-is
-    return url
-  }
-
-  const previewFile = (file: UploadedFile) => {
-    const proxiedUrl = getProxiedUrl(file.url)
-    window.open(proxiedUrl, '_blank')
-  }
-
-  const downloadFile = async (file: UploadedFile) => {
-    try {
-      const proxiedUrl = getProxiedUrl(file.url)
-
-      // Fetch through backend with auth
-      const response = await api.get(proxiedUrl, {
-        responseType: 'blob'
-      })
-
-      // Create download link
-      const blob = new Blob([response.data], { type: 'application/pdf' })
-      const blobUrl = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = blobUrl
-      link.download = file.name
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(blobUrl)
-    } catch (error) {
-      console.error('Download error:', error)
-      toast.error('Failed to download file')
-    }
-  }
-
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes'
     const k = 1024
@@ -273,27 +228,9 @@ export function FileUpload({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => previewFile(file)}
-                    className="h-8 w-8 p-0"
-                    title="Preview"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => downloadFile(file)}
-                    className="h-8 w-8 p-0"
-                    title="Download"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
                     onClick={() => removeFile(file.id)}
                     className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                    title="Remove"
+                    title="Delete"
                     disabled={disabled}
                   >
                     <X className="h-4 w-4" />

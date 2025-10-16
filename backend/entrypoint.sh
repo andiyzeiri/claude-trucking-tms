@@ -7,6 +7,7 @@ echo "🚀 Starting backend application..."
 echo "📦 Running database migrations..."
 python3 migrate.py
 python3 remove_unique_constraint.py
+python3 run_carrier_rate_migration.py
 
 # Start the application
 echo "✅ Migrations complete. Starting uvicorn..."
