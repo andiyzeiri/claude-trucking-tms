@@ -1217,7 +1217,7 @@ export default function LoadsPageInline() {
           onClick={() => startLocationEdit(loadKey, 'pickup', load)}
         >
           {isEditing(loadKey, 'pickup_location') && editingLocation?.type === 'pickup' ? (
-            <div ref={locationEditRef} className="space-y-1 relative" onClick={(e) => e.stopPropagation()}>
+            <div ref={locationEditRef} className="space-y-1 relative" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
               {/* Top row: City, State, Zip */}
               <div className="flex gap-1">
                 <Input
@@ -1320,7 +1320,7 @@ export default function LoadsPageInline() {
           onClick={() => startLocationEdit(loadKey, 'delivery', load)}
         >
           {isEditing(loadKey, 'delivery_location') && editingLocation?.type === 'delivery' ? (
-            <div ref={locationEditRef} className="space-y-1 relative" onClick={(e) => e.stopPropagation()}>
+            <div ref={locationEditRef} className="space-y-1 relative" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
               {/* Top row: City, State, Zip */}
               <div className="flex gap-1">
                 <Input
