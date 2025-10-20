@@ -62,6 +62,9 @@ export function LoadModal({ isOpen, onClose, onSave, load, mode }: LoadModalProp
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
+    // Only reset form when modal is opened (not on every state change)
+    if (!isOpen) return
+
     if (load && mode === 'edit') {
       setFormData({
         ...load,
@@ -95,7 +98,7 @@ export function LoadModal({ isOpen, onClose, onSave, load, mode }: LoadModalProp
       })
     }
     setErrors({})
-  }, [load, mode, isOpen])
+  }, [load, mode])
 
   const validateForm = () => {
     // All fields are optional - no validation needed

@@ -68,6 +68,14 @@ class LoadUpdate(BaseModel):
     pickup_notes: Optional[str] = None
     delivery_notes: Optional[str] = None
 
+    @field_validator('pickup_date', 'delivery_date', 'pickup_deadline', 'delivery_deadline', mode='after')
+    @classmethod
+    def ensure_naive_datetime(cls, v):
+        # Strip timezone from any datetime to match database TIMESTAMP WITHOUT TIME ZONE
+        if v is not None and isinstance(v, datetime) and v.tzinfo is not None:
+            return v.replace(tzinfo=None)
+        return v
+
 
 class LoadResponse(BaseModel):
     id: int
