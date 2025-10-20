@@ -4,15 +4,16 @@
   publish = "out"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
   SECRETS_SCAN_ENABLED = "false"
-  NEXT_PUBLIC_API_URL = "/api"
+  NEXT_PUBLIC_API_URL = "/api/v1"
 
 # Redirect API calls to your AWS backend
 [[redirects]]
   from = "/api/*"
   to = "http://18.212.79.137:8000/api/:splat"
   status = 200
+  force = true
 
 # Redirect all other requests to index.html for SPA routing
 [[redirects]]
