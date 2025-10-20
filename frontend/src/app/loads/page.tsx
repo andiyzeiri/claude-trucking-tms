@@ -229,7 +229,7 @@ export default function LoadsPageInline() {
 
   const [editableLoads, setEditableLoads] = useState<EditableLoad[]>([])
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
-  const [locationSuggestions, setLocationSuggestions] = useState<(Shipper | Receiver)[]>([])
+  // Removed locationSuggestions - autocomplete disabled
   const [activeGroupings, setActiveGroupings] = useState<Set<'week' | 'day' | 'driver' | 'customer'>>(new Set())
   const [groupMenuOpen, setGroupMenuOpen] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
@@ -240,6 +240,7 @@ export default function LoadsPageInline() {
   const [sortField, setSortField] = useState<keyof EditableLoad>('pickup_date')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const groupMenuRef = useRef<HTMLDivElement>(null)
+  const locationEditRef = useRef<HTMLDivElement>(null)
 
   // Column width management
   const { columnWidths, adjustWidth } = useColumnWidths('loads-table', {
@@ -305,6 +306,22 @@ export default function LoadsPageInline() {
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [groupMenuOpen])
+
+  // Close location editor when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (locationEditRef.current && !locationEditRef.current.contains(event.target as Node)) {
+        if (editingLocation) {
+          stopLocationEdit()
+        }
+      }
+    }
+
+    if (editingLocation) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [editingLocation])
 
   // Toggle grouping
   const toggleGrouping = (groupType: 'week' | 'day' | 'driver' | 'customer') => {
@@ -808,38 +825,6 @@ export default function LoadsPageInline() {
   const updateLocationField = (field: 'street' | 'city' | 'state' | 'zip' | 'date' | 'time', value: string) => {
     if (editingLocation) {
       setEditingLocation({ ...editingLocation, [field]: value })
-
-      // Filter suggestions based on input
-      if (field === 'city' || field === 'state' || field === 'zip' || field === 'street') {
-        const locations = editingLocation.type === 'pickup' ? shippers : receivers
-        const filtered = locations.filter(loc => {
-          const searchValue = value.toLowerCase()
-          if (!searchValue) return false
-
-          return (
-            (loc.city && loc.city.toLowerCase().includes(searchValue)) ||
-            (loc.state && loc.state.toLowerCase().includes(searchValue)) ||
-            (loc.zip_code && loc.zip_code.includes(searchValue)) ||
-            (loc.address && loc.address.toLowerCase().includes(searchValue))
-          )
-        })
-        setLocationSuggestions(filtered.slice(0, 5)) // Show top 5 matches
-      } else {
-        setLocationSuggestions([])
-      }
-    }
-  }
-
-  const selectLocationSuggestion = (location: Shipper | Receiver) => {
-    if (editingLocation) {
-      setEditingLocation({
-        ...editingLocation,
-        street: location.address || '',
-        city: location.city || '',
-        state: location.state || '',
-        zip: location.zip_code || ''
-      })
-      setLocationSuggestions([])
     }
   }
 
@@ -1232,7 +1217,7 @@ export default function LoadsPageInline() {
           onClick={() => startLocationEdit(loadKey, 'pickup', load)}
         >
           {isEditing(loadKey, 'pickup_location') && editingLocation?.type === 'pickup' ? (
-            <div className="space-y-1 relative" onClick={(e) => e.stopPropagation()}>
+            <div ref={locationEditRef} className="space-y-1 relative" onClick={(e) => e.stopPropagation()}>
               {/* Top row: City, State, Zip */}
               <div className="flex gap-1">
                 <Input
@@ -1259,33 +1244,11 @@ export default function LoadsPageInline() {
                   style={{ width: '65px' }}
                 />
               </div>
-              {/* Suggestions Dropdown */}
-              {locationSuggestions.length > 0 && (
-                <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto" style={{ top: '30px' }}>
-                  {locationSuggestions.map((suggestion, index) => (
-                    <div
-                      key={index}
-                      className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
-                      onMouseDown={(e) => {
-                        e.preventDefault()
-                        selectLocationSuggestion(suggestion)
-                      }}
-                    >
-                      <div className="font-medium">{suggestion.name}</div>
-                      <div className="text-xs text-gray-600">
-                        {suggestion.address && <div>{suggestion.address}</div>}
-                        <div>{suggestion.city}, {suggestion.state} {suggestion.zip_code}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
               {/* Bottom row: Street, Date, Time */}
               <div className="flex gap-1">
                 <Input
                   value={editingLocation.street}
                   onChange={(e) => updateLocationField('street', e.target.value)}
-                  onBlur={stopLocationEdit}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
@@ -1294,6 +1257,9 @@ export default function LoadsPageInline() {
                       e.preventDefault()
                       stopLocationEdit()
                       setTimeout(() => startLocationEdit(loadKey, 'delivery', load), 0)
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault()
+                      stopLocationEdit()
                     }
                   }}
                   placeholder="Street"
@@ -1354,7 +1320,7 @@ export default function LoadsPageInline() {
           onClick={() => startLocationEdit(loadKey, 'delivery', load)}
         >
           {isEditing(loadKey, 'delivery_location') && editingLocation?.type === 'delivery' ? (
-            <div className="space-y-1 relative" onClick={(e) => e.stopPropagation()}>
+            <div ref={locationEditRef} className="space-y-1 relative" onClick={(e) => e.stopPropagation()}>
               {/* Top row: City, State, Zip */}
               <div className="flex gap-1">
                 <Input
@@ -1381,33 +1347,11 @@ export default function LoadsPageInline() {
                   style={{ width: '65px' }}
                 />
               </div>
-              {/* Suggestions Dropdown */}
-              {locationSuggestions.length > 0 && (
-                <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto" style={{ top: '30px' }}>
-                  {locationSuggestions.map((suggestion, index) => (
-                    <div
-                      key={index}
-                      className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
-                      onMouseDown={(e) => {
-                        e.preventDefault()
-                        selectLocationSuggestion(suggestion)
-                      }}
-                    >
-                      <div className="font-medium">{suggestion.name}</div>
-                      <div className="text-xs text-gray-600">
-                        {suggestion.address && <div>{suggestion.address}</div>}
-                        <div>{suggestion.city}, {suggestion.state} {suggestion.zip_code}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
               {/* Bottom row: Street, Date, Time */}
               <div className="flex gap-1">
                 <Input
                   value={editingLocation.street}
                   onChange={(e) => updateLocationField('street', e.target.value)}
-                  onBlur={stopLocationEdit}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
@@ -1416,6 +1360,9 @@ export default function LoadsPageInline() {
                       e.preventDefault()
                       stopLocationEdit()
                       setTimeout(() => startEdit(loadKey, 'rate'), 0)
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault()
+                      stopLocationEdit()
                     }
                   }}
                   placeholder="Street"
