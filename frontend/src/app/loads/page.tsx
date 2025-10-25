@@ -818,22 +818,58 @@ export default function LoadsPageInline() {
         // Combine location components
         const locationString = combineLocation(street, city, state, zip)
 
-        // Update location
-        const locationField = type === 'pickup' ? 'pickup_location' : 'delivery_location'
-        await updateField(loadId, locationField, locationString)
-
-        // Parse and update date/time
-        const dateField = type === 'pickup' ? 'pickup_date' : 'delivery_date'
+        // Get the load to update
         const load = editableLoads.find(l => (loadId === 'new' && l.isNew) || l.id === loadId)
-        if (load) {
-          let dateTime = load[dateField]
-          if (date) {
-            dateTime = parseDateInput(date, dateTime)
+        if (!load) {
+          console.error('Load not found:', loadId)
+          return
+        }
+
+        // Parse date/time
+        const dateField = type === 'pickup' ? 'pickup_date' : 'delivery_date'
+        let dateTime = load[dateField]
+        if (date) {
+          dateTime = parseDateInput(date, dateTime)
+        }
+        if (time) {
+          dateTime = parseTimeInput(time, dateTime)
+        }
+
+        // Update both location AND date in local state
+        const locationField = type === 'pickup' ? 'pickup_location' : 'delivery_location'
+        const updatedLoads = editableLoads.map(l => {
+          if ((loadId === 'new' && l.isNew) || l.id === loadId) {
+            return {
+              ...l,
+              [locationField]: locationString,
+              [dateField]: dateTime
+            }
           }
-          if (time) {
-            dateTime = parseTimeInput(time, dateTime)
+          return l
+        })
+        setEditableLoads(updatedLoads)
+
+        // Send SINGLE update to backend with both changes
+        if (!load.isNew) {
+          const updatedLoad = updatedLoads.find(l => l.id === loadId)
+          if (updatedLoad) {
+            const backendData: any = {
+              load_number: updatedLoad.load_number,
+              customer_id: updatedLoad.customer_id,
+              driver_id: updatedLoad.driver_id || null,
+              truck_id: null,
+              pickup_location: updatedLoad.pickup_location,
+              delivery_location: updatedLoad.delivery_location,
+              pickup_date: updatedLoad.pickup_date,
+              delivery_date: updatedLoad.delivery_date,
+              miles: updatedLoad.miles || 0,
+              rate: updatedLoad.rate || 0,
+              status: updatedLoad.status,
+              pod_url: updatedLoad.pod_url || null,
+              ratecon_url: updatedLoad.ratecon_url || null
+            }
+            await updateLoad.mutateAsync({ id: updatedLoad.id, data: backendData })
           }
-          await updateField(loadId, dateField, dateTime)
         }
 
         setEditingLocation(null)
@@ -849,7 +885,10 @@ export default function LoadsPageInline() {
 
   const updateLocationField = (field: 'street' | 'city' | 'state' | 'zip' | 'date' | 'time', value: string) => {
     if (editingLocation) {
-      setEditingLocation({ ...editingLocation, [field]: value })
+      setEditingLocation(prev => {
+        if (!prev) return prev
+        return { ...prev, [field]: value }
+      })
     }
   }
 
