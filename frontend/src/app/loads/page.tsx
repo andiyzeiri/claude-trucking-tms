@@ -717,22 +717,28 @@ export default function LoadsPageInline() {
     // Auto-save to backend if not a new load
     const load = updatedLoads.find(l => (id === 'new' && l.isNew) || l.id === id)
     if (load && !load.isNew) {
-      const backendData: any = {
-        load_number: load.load_number,
-        customer_id: load.customer_id,
-        driver_id: load.driver_id || null,
-        truck_id: null,
-        pickup_location: load.pickup_location,
-        delivery_location: load.delivery_location,
-        pickup_date: load.pickup_date,
-        delivery_date: load.delivery_date,
-        miles: load.miles || 0,
-        rate: load.rate || 0,
-        status: load.status,
-        pod_url: load.pod_url || null,
-        ratecon_url: load.ratecon_url || null
+      try {
+        const backendData: any = {
+          load_number: load.load_number,
+          customer_id: load.customer_id,
+          driver_id: load.driver_id || null,
+          truck_id: null,
+          pickup_location: load.pickup_location,
+          delivery_location: load.delivery_location,
+          pickup_date: load.pickup_date,
+          delivery_date: load.delivery_date,
+          miles: load.miles || 0,
+          rate: load.rate || 0,
+          status: load.status,
+          pod_url: load.pod_url || null,
+          ratecon_url: load.ratecon_url || null
+        }
+        await updateLoad.mutateAsync({ id: load.id, data: backendData })
+      } catch (error) {
+        // Error is already handled by the mutation hook's onError
+        // But we need to rethrow to let callers know it failed
+        throw error
       }
-      await updateLoad.mutateAsync({ id: load.id, data: backendData })
     }
   }
 
@@ -796,30 +802,37 @@ export default function LoadsPageInline() {
     if (editingLocation) {
       const { loadId, type, street, city, state, zip, date, time } = editingLocation
 
-      // Combine location components
-      const locationString = combineLocation(street, city, state, zip)
+      try {
+        // Combine location components
+        const locationString = combineLocation(street, city, state, zip)
 
-      // Update location
-      const locationField = type === 'pickup' ? 'pickup_location' : 'delivery_location'
-      await updateField(loadId, locationField, locationString)
+        // Update location
+        const locationField = type === 'pickup' ? 'pickup_location' : 'delivery_location'
+        await updateField(loadId, locationField, locationString)
 
-      // Parse and update date/time
-      const dateField = type === 'pickup' ? 'pickup_date' : 'delivery_date'
-      const load = editableLoads.find(l => (loadId === 'new' && l.isNew) || l.id === loadId)
-      if (load) {
-        let dateTime = load[dateField]
-        if (date) {
-          dateTime = parseDateInput(date, dateTime)
+        // Parse and update date/time
+        const dateField = type === 'pickup' ? 'pickup_date' : 'delivery_date'
+        const load = editableLoads.find(l => (loadId === 'new' && l.isNew) || l.id === loadId)
+        if (load) {
+          let dateTime = load[dateField]
+          if (date) {
+            dateTime = parseDateInput(date, dateTime)
+          }
+          if (time) {
+            dateTime = parseTimeInput(time, dateTime)
+          }
+          await updateField(loadId, dateField, dateTime)
         }
-        if (time) {
-          dateTime = parseTimeInput(time, dateTime)
-        }
-        await updateField(loadId, dateField, dateTime)
+
+        setEditingLocation(null)
+        setEditingCell(null)
+      } catch (error) {
+        console.error('Error saving location:', error)
+        toast.error('Failed to save location changes')
       }
-
-      setEditingLocation(null)
+    } else {
+      setEditingCell(null)
     }
-    setEditingCell(null)
   }
 
   const updateLocationField = (field: 'street' | 'city' | 'state' | 'zip' | 'date' | 'time', value: string) => {

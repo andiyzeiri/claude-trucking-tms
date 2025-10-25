@@ -71,6 +71,7 @@ export function useUpdateLoad() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['loads'] })
       queryClient.invalidateQueries({ queryKey: ['load', id] })
+      toast.success('Load updated successfully')
     },
     onError: (error: any) => {
       const detail = error.response?.data?.detail
