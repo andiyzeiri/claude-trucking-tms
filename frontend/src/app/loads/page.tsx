@@ -277,11 +277,23 @@ export default function LoadsPageInline() {
     const loadIds = loads.map(l => l.id).sort().join(',')
     const editableIds = editableLoads.map(l => l.id).sort().join(',')
 
-    if (loadIds !== editableIds) {
+    if (loadIds !== editableIds || loads.length !== editableLoads.length) {
       const loadsWithWeeks = loads.map(load => {
         const pickupDate = new Date(load.pickup_date)
+        // Preserve the currently editing load to avoid losing user input
+        const existingEditableLoad = editableLoads.find(el => el.id === load.id)
+        const isCurrentlyEditing = editingLocation &&
+          ((editingLocation.loadId === load.id) || (editingLocation.loadId === 'new' && load.isNew))
+
         return {
           ...load,
+          // If this load is currently being edited, preserve its location data
+          ...(isCurrentlyEditing && existingEditableLoad ? {
+            pickup_location: existingEditableLoad.pickup_location,
+            delivery_location: existingEditableLoad.delivery_location,
+            pickup_date: existingEditableLoad.pickup_date,
+            delivery_date: existingEditableLoad.delivery_date
+          } : {}),
           weekNumber: getWeekNumber(pickupDate),
           weekLabel: getWeekLabel(pickupDate),
           weekDateRange: getWeekDateRange(pickupDate),
@@ -291,7 +303,7 @@ export default function LoadsPageInline() {
       })
       setEditableLoads(loadsWithWeeks)
     }
-  }, [loads, loads.length, editableLoads])
+  }, [loads, loads.length, editableLoads, editingLocation])
 
   // Close group menu when clicking outside
   useEffect(() => {
@@ -1236,6 +1248,12 @@ export default function LoadsPageInline() {
                 <Input
                   value={editingLocation.city}
                   onChange={(e) => updateLocationField('city', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      stopLocationEdit()
+                    }
+                  }}
                   placeholder="City"
                   className="h-7 text-sm flex-1"
                   style={{ minWidth: '80px' }}
@@ -1243,6 +1261,12 @@ export default function LoadsPageInline() {
                 <Input
                   value={editingLocation.state}
                   onChange={(e) => updateLocationField('state', e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      stopLocationEdit()
+                    }
+                  }}
                   placeholder="ST"
                   maxLength={2}
                   className="h-7 text-sm"
@@ -1251,6 +1275,12 @@ export default function LoadsPageInline() {
                 <Input
                   value={editingLocation.zip}
                   onChange={(e) => updateLocationField('zip', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      stopLocationEdit()
+                    }
+                  }}
                   placeholder="Zip"
                   maxLength={5}
                   className="h-7 text-sm"
@@ -1283,6 +1313,12 @@ export default function LoadsPageInline() {
                 <Input
                   value={editingLocation.date}
                   onChange={(e) => updateLocationField('date', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      stopLocationEdit()
+                    }
+                  }}
                   placeholder="MM/DD/YY"
                   className="h-6 text-xs"
                   style={{ width: '75px', fontSize: '11px' }}
@@ -1290,6 +1326,12 @@ export default function LoadsPageInline() {
                 <Input
                   value={editingLocation.time}
                   onChange={(e) => updateLocationField('time', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      stopLocationEdit()
+                    }
+                  }}
                   placeholder="HH:MM AM"
                   className="h-6 text-xs"
                   style={{ width: '75px', fontSize: '11px' }}
@@ -1339,6 +1381,12 @@ export default function LoadsPageInline() {
                 <Input
                   value={editingLocation.city}
                   onChange={(e) => updateLocationField('city', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      stopLocationEdit()
+                    }
+                  }}
                   placeholder="City"
                   className="h-7 text-sm flex-1"
                   style={{ minWidth: '80px' }}
@@ -1346,6 +1394,12 @@ export default function LoadsPageInline() {
                 <Input
                   value={editingLocation.state}
                   onChange={(e) => updateLocationField('state', e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      stopLocationEdit()
+                    }
+                  }}
                   placeholder="ST"
                   maxLength={2}
                   className="h-7 text-sm"
@@ -1354,6 +1408,12 @@ export default function LoadsPageInline() {
                 <Input
                   value={editingLocation.zip}
                   onChange={(e) => updateLocationField('zip', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      stopLocationEdit()
+                    }
+                  }}
                   placeholder="Zip"
                   maxLength={5}
                   className="h-7 text-sm"
@@ -1386,6 +1446,12 @@ export default function LoadsPageInline() {
                 <Input
                   value={editingLocation.date}
                   onChange={(e) => updateLocationField('date', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      stopLocationEdit()
+                    }
+                  }}
                   placeholder="MM/DD/YY"
                   className="h-6 text-xs"
                   style={{ width: '75px', fontSize: '11px' }}
@@ -1393,6 +1459,12 @@ export default function LoadsPageInline() {
                 <Input
                   value={editingLocation.time}
                   onChange={(e) => updateLocationField('time', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      stopLocationEdit()
+                    }
+                  }}
                   placeholder="HH:MM AM"
                   className="h-6 text-xs"
                   style={{ width: '75px', fontSize: '11px' }}
