@@ -209,6 +209,23 @@ export default function ShippersPage() {
           )}
         </td>
 
+        {/* Zip Code */}
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(shipperKey, 'zip_code')}>
+          {isEditing(shipperKey, 'zip_code') ? (
+            <Input
+              value={shipper.zip_code || ''}
+              onChange={(e) => updateField(shipperKey, 'zip_code', e.target.value)}
+              onBlur={stopEdit}
+              autoFocus
+              className="h-8 text-sm"
+            />
+          ) : (
+            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+              {shipper.zip_code || 'N/A'}
+            </div>
+          )}
+        </td>
+
         {/* Phone */}
         <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(shipperKey, 'phone')}>
           {isEditing(shipperKey, 'phone') ? (
@@ -337,6 +354,7 @@ export default function ShippersPage() {
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Address</th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>City</th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>State</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Zip Code</th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Phone</th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Contact</th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500}}>Product Type</th>
