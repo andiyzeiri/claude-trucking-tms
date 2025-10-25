@@ -753,7 +753,8 @@ export default function LoadsPageInline() {
           rate: load.rate || 0,
           status: load.status,
           pod_url: load.pod_url || null,
-          ratecon_url: load.ratecon_url || null
+          ratecon_url: load.ratecon_url || null,
+          notes: load.notes || null
         }
         await updateLoad.mutateAsync({ id: load.id, data: backendData })
       } catch (error) {
@@ -888,7 +889,8 @@ export default function LoadsPageInline() {
               rate: updatedLoad.rate || 0,
               status: updatedLoad.status,
               pod_url: updatedLoad.pod_url || null,
-              ratecon_url: updatedLoad.ratecon_url || null
+              ratecon_url: updatedLoad.ratecon_url || null,
+              notes: updatedLoad.notes || null
             }
             await updateLoad.mutateAsync({ id: updatedLoad.id, data: backendData })
           }
@@ -1562,6 +1564,33 @@ export default function LoadsPageInline() {
           )}
         </td>
 
+        {/* Notes */}
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)', minWidth: '150px'}} onClick={() => startEdit(loadKey, 'notes')}>
+          {isEditing(loadKey, 'notes') ? (
+            <Textarea
+              value={load.notes || ''}
+              onChange={(e) => updateField(loadKey, 'notes', e.target.value)}
+              onBlur={stopEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  stopEdit()
+                } else if (e.key === 'Escape') {
+                  e.preventDefault()
+                  stopEdit()
+                }
+              }}
+              autoFocus
+              placeholder="Add notes..."
+              className="text-sm min-h-[60px]"
+            />
+          ) : (
+            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1 whitespace-pre-wrap">
+              {load.notes || 'N/A'}
+            </div>
+          )}
+        </td>
+
         <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'rate')}>
           {isEditing(loadKey, 'rate') ? (
             <Input
@@ -2024,6 +2053,9 @@ export default function LoadsPageInline() {
                         sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '150px'}}>
+                    Notes
                   </th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.rate}px`, minWidth: `${columnWidths.rate}px`}} onClick={() => handleSort('rate')}>
                     <ColumnWidthControl
