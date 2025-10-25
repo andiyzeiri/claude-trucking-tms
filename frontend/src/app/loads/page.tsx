@@ -720,6 +720,16 @@ export default function LoadsPageInline() {
           updated.driver = value ? drivers.find(d => d.id === value) : undefined
         }
 
+        // Recalculate week info when pickup_date changes
+        if (field === 'pickup_date' && value) {
+          const pickupDate = new Date(value)
+          updated.weekNumber = getWeekNumber(pickupDate)
+          updated.weekLabel = getWeekLabel(pickupDate)
+          updated.weekDateRange = getWeekDateRange(pickupDate)
+          updated.dayOfWeek = pickupDate.getDay()
+          updated.dayLabel = getDayLabel(pickupDate)
+        }
+
         return updated
       }
       return load
@@ -839,11 +849,23 @@ export default function LoadsPageInline() {
         const locationField = type === 'pickup' ? 'pickup_location' : 'delivery_location'
         const updatedLoads = editableLoads.map(l => {
           if ((loadId === 'new' && l.isNew) || l.id === loadId) {
-            return {
+            const updated = {
               ...l,
               [locationField]: locationString,
               [dateField]: dateTime
             }
+
+            // Recalculate week info if pickup_date changed
+            if (type === 'pickup' && dateTime) {
+              const pickupDate = new Date(dateTime)
+              updated.weekNumber = getWeekNumber(pickupDate)
+              updated.weekLabel = getWeekLabel(pickupDate)
+              updated.weekDateRange = getWeekDateRange(pickupDate)
+              updated.dayOfWeek = pickupDate.getDay()
+              updated.dayLabel = getDayLabel(pickupDate)
+            }
+
+            return updated
           }
           return l
         })
