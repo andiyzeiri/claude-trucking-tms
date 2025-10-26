@@ -23,6 +23,19 @@ export function useShippers(page = 1, limit = 100) {
   })
 }
 
+export function useSearchShippers(zipCode: string) {
+  return useQuery({
+    queryKey: ['shippers', 'search', zipCode],
+    queryFn: async (): Promise<Shipper[]> => {
+      if (!zipCode) return []
+      const response = await api.get(`/v1/shippers/search?zip_code=${zipCode}`)
+      return Array.isArray(response.data) ? response.data : []
+    },
+    enabled: zipCode.length >= 3,
+    retry: false,
+  })
+}
+
 export function useShipper(id: number) {
   return useQuery({
     queryKey: ['shipper', id],

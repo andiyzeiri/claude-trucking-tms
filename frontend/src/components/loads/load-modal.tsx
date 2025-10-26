@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AddressAutocomplete } from '@/components/ui/address-autocomplete'
 import { useCustomers } from '@/hooks/use-customers'
 import { useDrivers } from '@/hooks/use-drivers'
 
@@ -211,26 +212,26 @@ export function LoadModal({ isOpen, onClose, onSave, load, mode }: LoadModalProp
             {errors.driver && <p className="text-sm text-red-500">{errors.driver}</p>}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="pickup_location">Pickup Location</Label>
-            <Input
+          <div>
+            <AddressAutocomplete
               id="pickup_location"
+              label="Pickup Location"
               value={formData.pickup_location || ''}
-              onChange={(e) => setFormData({ ...formData, pickup_location: e.target.value })}
+              onChange={(value) => setFormData({ ...formData, pickup_location: value })}
+              placeholder="Enter zip code or full address"
               className={errors.pickup_location ? 'border-red-500' : ''}
-              placeholder="City, State"
             />
             {errors.pickup_location && <p className="text-sm text-red-500">{errors.pickup_location}</p>}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="delivery_location">Delivery Location</Label>
-            <Input
+          <div>
+            <AddressAutocomplete
               id="delivery_location"
+              label="Delivery Location"
               value={formData.delivery_location || ''}
-              onChange={(e) => setFormData({ ...formData, delivery_location: e.target.value })}
+              onChange={(value) => setFormData({ ...formData, delivery_location: value })}
+              placeholder="Enter zip code or full address"
               className={errors.delivery_location ? 'border-red-500' : ''}
-              placeholder="City, State"
             />
             {errors.delivery_location && <p className="text-sm text-red-500">{errors.delivery_location}</p>}
           </div>

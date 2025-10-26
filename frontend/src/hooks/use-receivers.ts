@@ -23,6 +23,19 @@ export function useReceivers(page = 1, limit = 100) {
   })
 }
 
+export function useSearchReceivers(zipCode: string) {
+  return useQuery({
+    queryKey: ['receivers', 'search', zipCode],
+    queryFn: async (): Promise<Receiver[]> => {
+      if (!zipCode) return []
+      const response = await api.get(`/v1/receivers/search?zip_code=${zipCode}`)
+      return Array.isArray(response.data) ? response.data : []
+    },
+    enabled: zipCode.length >= 3,
+    retry: false,
+  })
+}
+
 export function useReceiver(id: number) {
   return useQuery({
     queryKey: ['receiver', id],

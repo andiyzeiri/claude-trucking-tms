@@ -11,6 +11,24 @@ from app.models.user import User
 router = APIRouter()
 
 
+@router.get("/search", response_model=List[ReceiverResponse])
+async def search_receivers(
+    zip_code: str = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Search receivers by zip code"""
+    query = select(Receiver).where(Receiver.company_id == current_user.company_id)
+
+    if zip_code:
+        query = query.where(Receiver.zip_code.like(f"{zip_code}%"))
+
+    query = query.limit(20)
+    result = await db.execute(query)
+    receivers = result.scalars().all()
+    return receivers
+
+
 @router.get("/", response_model=List[ReceiverResponse])
 @router.get("", response_model=List[ReceiverResponse])
 async def get_receivers(
