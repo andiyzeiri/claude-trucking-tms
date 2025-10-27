@@ -243,7 +243,7 @@ export function LoadModal({ isOpen, onClose, onSave, load, mode }: LoadModalProp
               type="date"
               value={formData.pickup_date}
               onChange={(e) => setFormData({ ...formData, pickup_date: e.target.value })}
-              className={errors.pickup_date ? 'border-red-500' : ''}
+              className={errors.pickup_date ? 'border-red-500 text-green-700' : 'text-green-700'}
             />
             {errors.pickup_date && <p className="text-sm text-red-500">{errors.pickup_date}</p>}
           </div>
@@ -255,7 +255,7 @@ export function LoadModal({ isOpen, onClose, onSave, load, mode }: LoadModalProp
               type="time"
               value={formData.pickup_time}
               onChange={(e) => setFormData({ ...formData, pickup_time: e.target.value })}
-              className={errors.pickup_time ? 'border-red-500' : ''}
+              className={errors.pickup_time ? 'border-red-500 text-green-700' : 'text-green-700'}
             />
             {errors.pickup_time && <p className="text-sm text-red-500">{errors.pickup_time}</p>}
           </div>
@@ -267,7 +267,7 @@ export function LoadModal({ isOpen, onClose, onSave, load, mode }: LoadModalProp
               type="date"
               value={formData.delivery_date}
               onChange={(e) => setFormData({ ...formData, delivery_date: e.target.value })}
-              className={errors.delivery_date ? 'border-red-500' : ''}
+              className={errors.delivery_date ? 'border-red-500 text-green-700' : 'text-green-700'}
             />
             {errors.delivery_date && <p className="text-sm text-red-500">{errors.delivery_date}</p>}
           </div>
@@ -279,7 +279,7 @@ export function LoadModal({ isOpen, onClose, onSave, load, mode }: LoadModalProp
               type="time"
               value={formData.delivery_time}
               onChange={(e) => setFormData({ ...formData, delivery_time: e.target.value })}
-              className={errors.delivery_time ? 'border-red-500' : ''}
+              className={errors.delivery_time ? 'border-red-500 text-green-700' : 'text-green-700'}
             />
             {errors.delivery_time && <p className="text-sm text-red-500">{errors.delivery_time}</p>}
           </div>
