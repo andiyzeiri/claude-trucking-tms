@@ -46,7 +46,7 @@ export function useCreateLoad() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loads'] })
-      toast.success('Load created successfully')
+      // toast.success('Load created successfully')
     },
     onError: (error: any) => {
       const detail = error.response?.data?.detail
@@ -71,7 +71,7 @@ export function useUpdateLoad() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['loads'] })
       queryClient.invalidateQueries({ queryKey: ['load', id] })
-      toast.success('Load updated successfully')
+      // toast.success('Load updated successfully')
     },
     onError: (error: any) => {
       const detail = error.response?.data?.detail
@@ -94,7 +94,7 @@ export function useDeleteLoad() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loads'] })
-      toast.success('Load deleted successfully')
+      // toast.success('Load deleted successfully')
     },
     onError: (error: any) => {
       const message = typeof error.response?.data?.detail === 'string'
@@ -127,7 +127,7 @@ export function useUpdateLoadDocuments() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['loads'] })
       queryClient.invalidateQueries({ queryKey: ['load', id] })
-      toast.success('Documents updated successfully')
+      // toast.success('Documents updated successfully')
     },
     onError: (error: any) => {
       const detail = error.response?.data?.detail
