@@ -65,6 +65,15 @@ function getWeekDateRange(date: Date): string {
   return `(${startMonth}/${startDay}-${endMonth}/${endDay})`
 }
 
+// Helper to get a date from a week number
+function getDateFromWeekNumber(weekNumber: number, year?: number): Date {
+  const currentYear = year || new Date().getFullYear()
+  const startOfYear = new Date(currentYear, 0, 1)
+  const daysToAdd = (weekNumber - 1) * 7 - startOfYear.getDay() + 1
+  const targetDate = new Date(currentYear, 0, 1 + daysToAdd)
+  return targetDate
+}
+
 // Helper to get day label (e.g., "Monday, Dec 18")
 function getDayLabel(date: Date): string {
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -996,6 +1005,17 @@ export default function LoadsPageInline() {
     let customer_id = customers.length > 0 ? customers[0].id : null
     let driver_id = null
     let pickup_date = new Date().toISOString()
+
+    // Parse week label if groupKey is a week (e.g., "Week 43")
+    if (groupKey.startsWith('Week ')) {
+      const weekNumberStr = groupKey.replace('Week ', '')
+      const weekNumber = parseInt(weekNumberStr)
+      if (!isNaN(weekNumber)) {
+        // Get the Monday of this week
+        const targetDate = getDateFromWeekNumber(weekNumber)
+        pickup_date = targetDate.toISOString()
+      }
+    }
 
     // Find the customer by name
     const customer = customers.find(c => c.name === groupKey)
