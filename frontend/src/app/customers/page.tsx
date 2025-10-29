@@ -27,14 +27,6 @@ export default function CustomersPage() {
     row: CustomerData | null
   }>({ isVisible: false, x: 0, y: 0, row: null })
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'inactive': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<CustomerData | null>(null)
@@ -89,9 +81,7 @@ export default function CustomersPage() {
     'name': <span className="text-sm font-medium text-gray-900">{rows.length} customer{rows.length !== 1 ? 's' : ''}</span>
   })
   const totals = useMemo(() => ({
-    total: customers.length,
-    active: customers.filter(c => c.status === 'active').length,
-    inactive: customers.filter(c => c.status === 'inactive').length
+    total: customers.length
   }), [customers])
 
   const columns: Column<typeof customers[0]>[] = [
@@ -151,24 +141,6 @@ export default function CustomersPage() {
         </div>
       )
     },
-    {
-      key: 'status',
-      label: 'Status',
-      width: '100px',
-      filterable: true,
-      groupable: true,
-      render: (value) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
-          {value}
-        </span>
-      )
-    },
-    {
-      key: 'created_at',
-      label: 'Created',
-      width: '120px',
-      render: (value) => formatDate(value)
-    }
   ]
 
   return (
@@ -191,7 +163,7 @@ export default function CustomersPage() {
         <DataTable data={customers} columns={columns} onRowRightClick={handleRowRightClick} calculateGroupTotals={calculateGroupTotals} />
 
         <div className="sticky bottom-0 bg-white border-t-2 border-gray-300 shadow-lg mt-4">
-          <div style={{ minWidth: '1520px', width: '100%' }}>
+          <div style={{ minWidth: '1080px', width: '100%' }}>
             <table className="w-full table-auto">
               <tbody><tr className="bg-gray-50">
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '160px' }}>
@@ -201,13 +173,7 @@ export default function CustomersPage() {
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '140px' }}></td>
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '140px' }}></td>
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '180px' }}></td>
-                <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '140px' }}></td>
-                <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '100px' }}>
-                  <span className="text-green-700">{totals.active} Active</span>
-                </td>
-                <td className="px-3 py-2 text-sm" style={{ width: '120px' }}>
-                  <span className="text-gray-700">{totals.inactive} Inactive</span>
-                </td>
+                <td className="px-3 py-2 text-sm" style={{ width: '140px' }}></td>
               </tr></tbody>
             </table>
           </div>
