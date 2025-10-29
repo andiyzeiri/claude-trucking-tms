@@ -19,7 +19,7 @@ async def get_drivers(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    query = select(Driver).where(Driver.company_id == current_user.company_id).offset(skip).limit(limit)
+    query = select(Driver).where(Driver.company_id == current_user.company_id).order_by(Driver.first_name, Driver.last_name).offset(skip).limit(limit)
     result = await db.execute(query)
     drivers = result.scalars().all()
     return drivers
