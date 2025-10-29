@@ -250,6 +250,7 @@ export default function LoadsPageInline() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const groupMenuRef = useRef<HTMLDivElement>(null)
   const locationEditRef = useRef<HTMLDivElement>(null)
+  const hasInitiallyCollapsed = useRef<boolean>(false)
 
   // Column width management
   const { columnWidths, adjustWidth } = useColumnWidths('loads-table', {
@@ -477,9 +478,9 @@ export default function LoadsPageInline() {
     return createNestedGroups(filteredLoads, 0)
   }, [filteredLoads, activeGroupings, customers])
 
-  // Collapse all groups by default
+  // Collapse all groups by default on initial load only
   useEffect(() => {
-    if (!groupedLoads) return
+    if (!groupedLoads || hasInitiallyCollapsed.current) return
 
     const getAllGroupKeys = (data: any): string[] => {
       if (Array.isArray(data)) return []
@@ -494,6 +495,7 @@ export default function LoadsPageInline() {
 
     const allGroupKeys = getAllGroupKeys(groupedLoads)
     setCollapsedGroups(new Set(allGroupKeys))
+    hasInitiallyCollapsed.current = true
   }, [groupedLoads])
 
   const toggleGroup = (groupKey: string) => {
