@@ -67,7 +67,7 @@ export default function CustomersPage() {
   const handleSaveCustomer = (customerData: CustomerData) => {
     const backendData = {
       name: customerData.name,
-      contact_name: customerData.contact_name,
+      contact_person: customerData.contact_person,
       email: customerData.email,
       phone: customerData.phone,
       address: customerData.address,
@@ -103,7 +103,7 @@ export default function CustomersPage() {
       render: (value) => <span className="font-medium text-gray-900">{value}</span>
     },
     {
-      key: 'contact_name',
+      key: 'contact_person',
       label: 'Contact Person',
       width: '140px',
       filterable: true,

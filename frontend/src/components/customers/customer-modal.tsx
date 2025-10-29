@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 export interface CustomerData {
   id?: number
   name: string
-  contact_name?: string
+  contact_person?: string
   phone?: string
   email?: string
   address?: string
@@ -40,7 +40,7 @@ const states = [
 export function CustomerModal({ isOpen, onClose, onSave, customer, mode }: CustomerModalProps) {
   const [formData, setFormData] = useState<CustomerData>({
     name: '',
-    contact_name: '',
+    contact_person: '',
     phone: '',
     email: '',
     city: '',
@@ -56,7 +56,7 @@ export function CustomerModal({ isOpen, onClose, onSave, customer, mode }: Custo
     } else if (mode === 'create') {
       setFormData({
         name: '',
-        contact_name: '',
+        contact_person: '',
         phone: '',
         email: '',
         city: '',
@@ -71,13 +71,8 @@ export function CustomerModal({ isOpen, onClose, onSave, customer, mode }: Custo
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name.trim()) newErrors.name = 'Company name is required'
-    if (!formData.contact_name.trim()) newErrors.contact_name = 'Contact person is required'
-    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required'
-    if (!formData.email.trim()) newErrors.email = 'Email is required'
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid'
-    if (!formData.city.trim()) newErrors.city = 'City is required'
-    if (!formData.state) newErrors.state = 'State is required'
+    if (!formData.name?.trim()) newErrors.name = 'Company name is required'
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid'
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -113,22 +108,22 @@ export function CustomerModal({ isOpen, onClose, onSave, customer, mode }: Custo
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contact_name">Contact Person</Label>
+            <Label htmlFor="contact_person">Contact Person</Label>
             <Input
-              id="contact_name"
-              value={formData.contact_name}
-              onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
-              className={errors.contact_name ? 'border-red-500' : ''}
+              id="contact_person"
+              value={formData.contact_person || ''}
+              onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+              className={errors.contact_person ? 'border-red-500' : ''}
               placeholder="John Smith"
             />
-            {errors.contact_name && <p className="text-sm text-red-500">{errors.contact_name}</p>}
+            {errors.contact_person && <p className="text-sm text-red-500">{errors.contact_person}</p>}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="phone">Phone Number</Label>
             <Input
               id="phone"
-              value={formData.phone}
+              value={formData.phone || ''}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               className={errors.phone ? 'border-red-500' : ''}
               placeholder="(555) 123-4567"
@@ -141,7 +136,7 @@ export function CustomerModal({ isOpen, onClose, onSave, customer, mode }: Custo
             <Input
               id="email"
               type="email"
-              value={formData.email}
+              value={formData.email || ''}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className={errors.email ? 'border-red-500' : ''}
               placeholder="contact@company.com"
@@ -153,7 +148,7 @@ export function CustomerModal({ isOpen, onClose, onSave, customer, mode }: Custo
             <Label htmlFor="city">City</Label>
             <Input
               id="city"
-              value={formData.city}
+              value={formData.city || ''}
               onChange={(e) => setFormData({ ...formData, city: e.target.value })}
               className={errors.city ? 'border-red-500' : ''}
               placeholder="Los Angeles"
@@ -163,7 +158,7 @@ export function CustomerModal({ isOpen, onClose, onSave, customer, mode }: Custo
 
           <div className="space-y-2">
             <Label htmlFor="state">State</Label>
-            <Select value={formData.state} onValueChange={(value) => setFormData({ ...formData, state: value })}>
+            <Select value={formData.state || ''} onValueChange={(value) => setFormData({ ...formData, state: value })}>
               <SelectTrigger className={errors.state ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Select state" />
               </SelectTrigger>
