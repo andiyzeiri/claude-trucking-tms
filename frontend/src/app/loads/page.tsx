@@ -1140,14 +1140,20 @@ export default function LoadsPageInline() {
             </div>
           </td>
           <td className="px-2 py-2 text-sm" colSpan={6}></td>
-          <td className="px-2 py-2 text-sm font-medium text-green-700">
-            {formatCurrency(groupTotalRate)}
-          </td>
-          <td className="px-2 py-2 text-sm font-medium text-blue-700">
-            {groupTotalMiles.toLocaleString()} mi
-          </td>
-          <td className="px-2 py-2 text-sm font-medium text-purple-700">
-            ${groupRPM.toFixed(2)}
+          <td className="px-2 py-2 text-sm">
+            <div className="mb-0.5">
+              <div style={{fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: '#16a34a'}}>
+                {formatCurrency(groupTotalRate)}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: '#2563eb'}}>
+                {groupTotalMiles.toLocaleString()} mi
+              </div>
+              <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: '#9333ea'}}>
+                ${groupRPM.toFixed(2)}/mi
+              </div>
+            </div>
           </td>
           <td className="px-2 py-2 text-sm" colSpan={3}></td>
         </tr>
@@ -1163,7 +1169,7 @@ export default function LoadsPageInline() {
         if (Array.isArray(groupData)) {
           elements.push(
             <tr key={`add-${groupKey}`} className="border-b hover:bg-gray-50 transition-colors" style={{borderColor: 'var(--cell-borderColor)'}}>
-              <td colSpan={13} className="px-2 py-2">
+              <td colSpan={11} className="px-2 py-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -1632,64 +1638,60 @@ export default function LoadsPageInline() {
           )}
         </td>
 
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'rate')}>
-          {isEditing(loadKey, 'rate') ? (
-            <Input
-              type="number"
-              value={load.rate}
-              onChange={(e) => updateField(loadKey, 'rate', Number(e.target.value))}
-              onBlur={stopEdit}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  stopEdit()
-                } else if (e.key === 'Tab' && !e.shiftKey) {
-                  e.preventDefault()
-                  stopEdit()
-                  setTimeout(() => startEdit(loadKey, 'miles'), 0)
-                }
-              }}
-              autoFocus
-              className="h-8 text-sm text-right"
-            />
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)', minWidth: '120px'}}>
+          {isEditing(loadKey, 'rate') || isEditing(loadKey, 'miles') ? (
+            <div className="space-y-1">
+              <Input
+                type="number"
+                value={load.rate}
+                onChange={(e) => updateField(loadKey, 'rate', Number(e.target.value))}
+                onFocus={() => startEdit(loadKey, 'rate')}
+                onBlur={stopEdit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === 'Tab') {
+                    e.preventDefault()
+                    stopEdit()
+                  }
+                }}
+                placeholder="Rate"
+                className="h-7 text-sm"
+              />
+              <Input
+                type="number"
+                value={load.miles}
+                onChange={(e) => updateField(loadKey, 'miles', Number(e.target.value))}
+                onFocus={() => startEdit(loadKey, 'miles')}
+                onBlur={stopEdit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === 'Tab') {
+                    e.preventDefault()
+                    stopEdit()
+                  }
+                }}
+                placeholder="Miles"
+                className="h-6 text-xs"
+                style={{fontSize: '11px'}}
+              />
+            </div>
           ) : (
-            <div className="text-sm font-medium cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
-              {formatCurrency(load.rate)}
+            <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1" onClick={() => startEdit(loadKey, 'rate')}>
+              {/* Top row: Rate */}
+              <div className="mb-0.5">
+                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)', fontWeight: 500}}>
+                  {formatCurrency(load.rate)}
+                </div>
+              </div>
+              {/* Bottom row: Miles and RPM */}
+              <div className="flex gap-2">
+                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)'}}>
+                  {load.miles?.toLocaleString() || 0} mi
+                </div>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)'}}>
+                  ${rpm.toFixed(2)}/mi
+                </div>
+              </div>
             </div>
           )}
-        </td>
-
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'miles')}>
-          {isEditing(loadKey, 'miles') ? (
-            <Input
-              type="number"
-              value={load.miles}
-              onChange={(e) => updateField(loadKey, 'miles', Number(e.target.value))}
-              onBlur={stopEdit}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  stopEdit()
-                } else if (e.key === 'Tab' && !e.shiftKey) {
-                  e.preventDefault()
-                  stopEdit()
-                  setTimeout(() => startEdit(loadKey, 'status'), 0)
-                }
-              }}
-              autoFocus
-              className="h-8 text-sm text-right"
-            />
-          ) : (
-            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
-              {load.miles?.toLocaleString() || 0}
-            </div>
-          )}
-        </td>
-
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}}>
-          <div className="text-sm text-gray-600">
-            ${rpm.toFixed(2)}
-          </div>
         </td>
 
         {/* POD */}
@@ -2110,25 +2112,6 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.miles}px`, minWidth: `${columnWidths.miles}px`}} onClick={() => handleSort('miles')}>
-                    <ColumnWidthControl
-                      currentWidth={columnWidths.miles}
-                      onAdjust={(delta) => adjustWidth('miles', delta)}
-                    />
-                    <div className="flex items-center gap-1">
-                      Miles
-                      {sortField === 'miles' ? (
-                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                      ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
-                    </div>
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.rpm}px`, minWidth: `${columnWidths.rpm}px`}}>
-                    <ColumnWidthControl
-                      currentWidth={columnWidths.rpm}
-                      onAdjust={(delta) => adjustWidth('rpm', delta)}
-                    />
-                    RPM
-                  </th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.pod}px`, minWidth: `${columnWidths.pod}px`}}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.pod}
@@ -2173,14 +2156,20 @@ export default function LoadsPageInline() {
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
-                  <td className="px-2 py-2 text-sm font-medium text-green-700">
-                    {formatCurrency(totals.rate)}
-                  </td>
-                  <td className="px-2 py-2 text-sm font-medium text-blue-700">
-                    {totals.miles.toLocaleString()} mi
-                  </td>
-                  <td className="px-2 py-2 text-sm font-medium text-purple-700">
-                    ${totals.rpm.toFixed(2)}
+                  <td className="px-2 py-2 text-sm">
+                    <div className="mb-0.5">
+                      <div style={{fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: '#16a34a'}}>
+                        {formatCurrency(totals.rate)}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: '#2563eb'}}>
+                        {totals.miles.toLocaleString()} mi
+                      </div>
+                      <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: '#9333ea'}}>
+                        ${totals.rpm.toFixed(2)}/mi
+                      </div>
+                    </div>
                   </td>
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
