@@ -1026,10 +1026,13 @@ export default function LoadsPageInline() {
       customer_id = customer.id
     }
 
-    // Find the driver by name
-    if (groupKey !== 'Unassigned' && groupKey.includes(' ')) {
-      const [firstName, lastName] = groupKey.split(' ')
-      const driver = drivers.find(d => d.first_name === firstName && d.last_name === lastName)
+    // Find the driver by name (improved logic with case-insensitive matching)
+    if (groupKey !== 'Unassigned' && groupKey.trim().length > 0) {
+      // Try to match driver by full name (case-insensitive)
+      const driver = drivers.find(d => {
+        const driverFullName = `${d.first_name} ${d.last_name}`.toLowerCase()
+        return driverFullName === groupKey.toLowerCase()
+      })
       if (driver) {
         driver_id = driver.id
       }
