@@ -117,7 +117,7 @@ export default function DashboardPage() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/loads')}>
             <CardHeader className="space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Loads</CardTitle>
             </CardHeader>
@@ -131,7 +131,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/drivers')}>
             <CardHeader className="space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Drivers</CardTitle>
             </CardHeader>
@@ -145,7 +145,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/trucks')}>
             <CardHeader className="space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Available Trucks</CardTitle>
             </CardHeader>
@@ -159,7 +159,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/customers')}>
             <CardHeader className="space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
             </CardHeader>
