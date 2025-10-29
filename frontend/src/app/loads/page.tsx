@@ -1141,9 +1141,9 @@ export default function LoadsPageInline() {
       // Determine background color based on group type
       let bgColor = 'bg-gray-100'
       if (currentGroupType === 'week') {
-        bgColor = 'bg-blue-100'
+        bgColor = 'bg-cyan-50'
       } else if (currentGroupType === 'driver') {
-        bgColor = 'bg-orange-100'
+        bgColor = 'bg-orange-50'
       }
 
       // Group header row
