@@ -67,6 +67,7 @@ export default function CustomersPage() {
   const handleSaveCustomer = (customerData: CustomerData) => {
     const backendData = {
       name: customerData.name,
+      mc: customerData.mc,
       contact_person: customerData.contact_person,
       email: customerData.email,
       phone: customerData.phone,
@@ -101,6 +102,13 @@ export default function CustomersPage() {
       filterable: true,
       groupable: true,
       render: (value) => <span className="font-medium text-gray-900">{value}</span>
+    },
+    {
+      key: 'mc',
+      label: 'MC Number',
+      width: '120px',
+      filterable: true,
+      render: (value) => value || 'N/A'
     },
     {
       key: 'contact_person',
@@ -183,12 +191,13 @@ export default function CustomersPage() {
         <DataTable data={customers} columns={columns} onRowRightClick={handleRowRightClick} calculateGroupTotals={calculateGroupTotals} />
 
         <div className="sticky bottom-0 bg-white border-t-2 border-gray-300 shadow-lg mt-4">
-          <div style={{ minWidth: '1400px', width: '100%' }}>
+          <div style={{ minWidth: '1520px', width: '100%' }}>
             <table className="w-full table-auto">
               <tbody><tr className="bg-gray-50">
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '160px' }}>
                   <span className="font-medium text-gray-900">{totals.total} Customer{totals.total !== 1 ? 's' : ''}</span>
                 </td>
+                <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px' }}></td>
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '140px' }}></td>
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '140px' }}></td>
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '180px' }}></td>

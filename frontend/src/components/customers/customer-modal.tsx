@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 export interface CustomerData {
   id?: number
   name: string
+  mc?: string
   contact_person?: string
   phone?: string
   email?: string
@@ -40,6 +41,7 @@ const states = [
 export function CustomerModal({ isOpen, onClose, onSave, customer, mode }: CustomerModalProps) {
   const [formData, setFormData] = useState<CustomerData>({
     name: '',
+    mc: '',
     contact_person: '',
     phone: '',
     email: '',
@@ -56,6 +58,7 @@ export function CustomerModal({ isOpen, onClose, onSave, customer, mode }: Custo
     } else if (mode === 'create') {
       setFormData({
         name: '',
+        mc: '',
         contact_person: '',
         phone: '',
         email: '',
@@ -105,6 +108,16 @@ export function CustomerModal({ isOpen, onClose, onSave, customer, mode }: Custo
               placeholder="ABC Logistics"
             />
             {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="mc">MC Number</Label>
+            <Input
+              id="mc"
+              value={formData.mc || ''}
+              onChange={(e) => setFormData({ ...formData, mc: e.target.value })}
+              placeholder="123456"
+            />
           </div>
 
           <div className="space-y-2">
