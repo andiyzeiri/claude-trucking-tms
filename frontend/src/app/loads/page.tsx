@@ -468,6 +468,25 @@ export default function LoadsPageInline() {
     return createNestedGroups(filteredLoads, 0)
   }, [filteredLoads, activeGroupings, customers])
 
+  // Collapse all groups by default
+  useEffect(() => {
+    if (!groupedLoads) return
+
+    const getAllGroupKeys = (data: any): string[] => {
+      if (Array.isArray(data)) return []
+      const keys: string[] = []
+      Object.keys(data).forEach(key => {
+        keys.push(key)
+        const nestedKeys = getAllGroupKeys(data[key])
+        keys.push(...nestedKeys)
+      })
+      return keys
+    }
+
+    const allGroupKeys = getAllGroupKeys(groupedLoads)
+    setCollapsedGroups(new Set(allGroupKeys))
+  }, [groupedLoads])
+
   const toggleGroup = (groupKey: string) => {
     const newCollapsed = new Set(collapsedGroups)
     if (newCollapsed.has(groupKey)) {
