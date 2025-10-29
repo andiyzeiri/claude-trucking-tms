@@ -261,6 +261,7 @@ export default function LoadsPageInline() {
     driver: 140,
     pickup: 250,
     delivery: 250,
+    notes: 150,
     rate: 100,
     miles: 100,
     rpm: 80,
@@ -2097,7 +2098,11 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, minWidth: '150px'}}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.notes}px`, minWidth: `${columnWidths.notes}px`}}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.notes}
+                      onAdjust={(delta) => adjustWidth('notes', delta)}
+                    />
                     Notes
                   </th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.rate}px`, minWidth: `${columnWidths.rate}px`}} onClick={() => handleSort('rate')}>
