@@ -47,7 +47,12 @@ export default function DriversPage() {
       license_number: driver.license_number,
       phone: driver.phone || '',
       email: driver.email || '',
-      status: driver.status
+      status: driver.status,
+      date_hired: driver.date_hired || '',
+      date_of_birth: driver.date_of_birth || '',
+      experience: driver.experience || '',
+      mvr_expiry: driver.mvr_expiry || '',
+      medical_card_expiry: driver.medical_card_expiry || ''
     }
     setEditingDriver(driverData)
     setModalMode('edit')
@@ -67,7 +72,12 @@ export default function DriversPage() {
       license_number: driverData.license_number,
       phone: driverData.phone,
       email: driverData.email,
-      status: driverData.status
+      status: driverData.status,
+      date_hired: driverData.date_hired || null,
+      date_of_birth: driverData.date_of_birth || null,
+      experience: driverData.experience || null,
+      mvr_expiry: driverData.mvr_expiry || null,
+      medical_card_expiry: driverData.medical_card_expiry || null
     }
 
     if (modalMode === 'create') {
@@ -165,10 +175,70 @@ export default function DriversPage() {
       )
     },
     {
-      key: 'created_at',
-      label: 'Created',
-      width: '150px',
+      key: 'date_hired',
+      label: 'Date Hired',
+      width: '120px',
       render: (value) => value ? new Date(value).toLocaleDateString() : 'N/A'
+    },
+    {
+      key: 'date_of_birth',
+      label: 'Date of Birth',
+      width: '120px',
+      render: (value) => value ? new Date(value).toLocaleDateString() : 'N/A'
+    },
+    {
+      key: 'date_of_birth',
+      label: 'Age',
+      width: '80px',
+      render: (value) => {
+        if (!value) return 'N/A'
+        const birthDate = new Date(value)
+        const today = new Date()
+        let age = today.getFullYear() - birthDate.getFullYear()
+        const monthDiff = today.getMonth() - birthDate.getMonth()
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--
+        }
+        return age.toString()
+      }
+    },
+    {
+      key: 'experience',
+      label: 'Experience',
+      width: '120px',
+      render: (value) => value || 'N/A'
+    },
+    {
+      key: 'mvr_expiry',
+      label: 'MVR',
+      width: '120px',
+      render: (value) => {
+        if (!value) return 'N/A'
+        const expiryDate = new Date(value)
+        const today = new Date()
+        const isExpired = expiryDate < today
+        return (
+          <span className={isExpired ? 'text-red-600 font-semibold' : 'text-gray-700'}>
+            {expiryDate.toLocaleDateString()}
+          </span>
+        )
+      }
+    },
+    {
+      key: 'medical_card_expiry',
+      label: 'Medical Card',
+      width: '120px',
+      render: (value) => {
+        if (!value) return 'N/A'
+        const expiryDate = new Date(value)
+        const today = new Date()
+        const isExpired = expiryDate < today
+        return (
+          <span className={isExpired ? 'text-red-600 font-semibold' : 'text-gray-700'}>
+            {expiryDate.toLocaleDateString()}
+          </span>
+        )
+      }
     }
   ]
 

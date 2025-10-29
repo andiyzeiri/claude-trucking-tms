@@ -15,6 +15,11 @@ export interface DriverData {
   phone: string
   email: string
   status: 'available' | 'on_trip' | 'off_duty'
+  date_hired?: string
+  date_of_birth?: string
+  experience?: string
+  mvr_expiry?: string
+  medical_card_expiry?: string
   created_at?: string
 }
 
@@ -33,7 +38,12 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
     license_number: '',
     phone: '',
     email: '',
-    status: 'available'
+    status: 'available',
+    date_hired: '',
+    date_of_birth: '',
+    experience: '',
+    mvr_expiry: '',
+    medical_card_expiry: ''
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -49,6 +59,11 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
         phone: '',
         email: '',
         status: 'available',
+        date_hired: '',
+        date_of_birth: '',
+        experience: '',
+        mvr_expiry: '',
+        medical_card_expiry: '',
         created_at: new Date().toISOString()
       })
     }
@@ -182,6 +197,56 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
                 <SelectItem value="off_duty">Off Duty</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date_hired">Date Hired</Label>
+            <Input
+              id="date_hired"
+              type="date"
+              value={formData.date_hired || ''}
+              onChange={(e) => setFormData({ ...formData, date_hired: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date_of_birth">Date of Birth</Label>
+            <Input
+              id="date_of_birth"
+              type="date"
+              value={formData.date_of_birth || ''}
+              onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="experience">Experience</Label>
+            <Input
+              id="experience"
+              value={formData.experience || ''}
+              onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+              placeholder="5 years"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="mvr_expiry">MVR Expiry</Label>
+            <Input
+              id="mvr_expiry"
+              type="date"
+              value={formData.mvr_expiry || ''}
+              onChange={(e) => setFormData({ ...formData, mvr_expiry: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="medical_card_expiry">Medical Card Expiry</Label>
+            <Input
+              id="medical_card_expiry"
+              type="date"
+              value={formData.medical_card_expiry || ''}
+              onChange={(e) => setFormData({ ...formData, medical_card_expiry: e.target.value })}
+            />
           </div>
         </div>
 

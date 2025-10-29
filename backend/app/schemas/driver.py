@@ -12,6 +12,11 @@ class DriverBase(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     status: DriverStatus = DriverStatus.OFF_DUTY
+    date_hired: Optional[date] = None
+    date_of_birth: Optional[date] = None
+    experience: Optional[str] = None
+    mvr_expiry: Optional[date] = None
+    medical_card_expiry: Optional[date] = None
 
 
 class DriverCreate(DriverBase):
@@ -26,6 +31,11 @@ class DriverUpdate(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     status: Optional[DriverStatus] = None
+    date_hired: Optional[date] = None
+    date_of_birth: Optional[date] = None
+    experience: Optional[str] = None
+    mvr_expiry: Optional[date] = None
+    medical_card_expiry: Optional[date] = None
 
 
 class DriverResponse(DriverBase):

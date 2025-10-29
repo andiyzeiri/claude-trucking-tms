@@ -23,6 +23,13 @@ class Driver(Base):
     email = Column(String)
     status = Column(Enum(DriverStatus), default=DriverStatus.OFF_DUTY)
 
+    # Additional driver information
+    date_hired = Column(Date)
+    date_of_birth = Column(Date)
+    experience = Column(String)  # e.g., "5 years", "2 years"
+    mvr_expiry = Column(Date)  # Motor Vehicle Record expiry date
+    medical_card_expiry = Column(Date)  # Medical Card expiry date
+
     # Multi-tenant
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
     company = relationship("Company", back_populates="drivers")
