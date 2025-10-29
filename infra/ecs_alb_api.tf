@@ -291,6 +291,14 @@ resource "aws_ecs_task_definition" "api" {
         {
           name  = "S3_BUCKET"
           value = aws_s3_bucket.documents.id
+        },
+        {
+          name  = "CORS_ORIGINS"
+          value = "https://absolutetms.netlify.app,https://www.absolutetms.netlify.app,https://absolutetms.com,https://www.absolutetms.com"
+        },
+        {
+          name  = "SECRET_KEY"
+          value = "CHANGE-THIS-IN-PRODUCTION-USE-SECRETS-MANAGER"
         }
       ]
 

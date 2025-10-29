@@ -357,7 +357,7 @@ export default function ReportsPage() {
                       <React.Fragment key={driverGroup.driver}>
                         {/* Driver Row */}
                         <tr
-                          className="border-t-2 border-gray-300 cursor-pointer hover:bg-blue-50 bg-blue-50"
+                          className="border-t-2 border-gray-300 cursor-pointer hover:bg-groupDriver/80 bg-groupDriver"
                           onClick={() => toggleDriver(driverGroup.driver)}
                         >
                           <td className="px-4 py-3 text-sm font-bold text-gray-900">
@@ -395,7 +395,7 @@ export default function ReportsPage() {
                           return (
                             <React.Fragment key={weekGroup.weekKey}>
                               <tr
-                                className="border-t border-gray-200 cursor-pointer hover:bg-gray-100 bg-gray-50"
+                                className="border-t border-gray-200 cursor-pointer hover:bg-groupWeek/80 bg-groupWeek"
                                 onClick={() => toggleWeek(weekGroup.weekKey)}
                               >
                                 <td className="px-4 py-2 text-sm font-semibold text-gray-800 pl-12">

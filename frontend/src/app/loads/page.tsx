@@ -1003,15 +1003,16 @@ export default function LoadsPageInline() {
     }
   }
 
-  const handleAddToGroup = async (groupKey: string) => {
+  const handleAddToGroup = async (groupKey: string, parentKeys: string[] = []) => {
     // Determine the customer_id or driver_id based on the grouping
     let customer_id = customers.length > 0 ? customers[0].id : null
     let driver_id = null
     let pickup_date = new Date().toISOString()
 
-    // Parse week label if groupKey is a week (e.g., "Week 43")
-    if (groupKey.startsWith('Week ')) {
-      const weekNumberStr = groupKey.replace('Week ', '')
+    // Check parent keys for week information first
+    const weekKey = parentKeys.find(key => key.startsWith('Week ')) || (groupKey.startsWith('Week ') ? groupKey : null)
+    if (weekKey) {
+      const weekNumberStr = weekKey.replace('Week ', '')
       const weekNumber = parseInt(weekNumberStr)
       if (!isNaN(weekNumber)) {
         // Get the Monday of this week
@@ -1106,7 +1107,7 @@ export default function LoadsPageInline() {
   }
 
   // Recursive function to render nested groups
-  const renderNestedGroups = (data: any, paddingLeft = 0, rowIndexOffset = 0, level = 0): JSX.Element[] => {
+  const renderNestedGroups = (data: any, paddingLeft = 0, rowIndexOffset = 0, level = 0, parentKeys: string[] = []): JSX.Element[] => {
     if (Array.isArray(data)) {
       // Base case: render load rows
       return data.map((load, index) => renderLoadRow(load, paddingLeft, rowIndexOffset + index))
@@ -1182,7 +1183,7 @@ export default function LoadsPageInline() {
 
       // Nested content (if not collapsed)
       if (!isCollapsed) {
-        const nestedElements = renderNestedGroups(groupData, paddingLeft + 20, globalRowIndex, level + 1)
+        const nestedElements = renderNestedGroups(groupData, paddingLeft + 20, globalRowIndex, level + 1, [...parentKeys, groupKey])
         elements.push(...nestedElements)
         globalRowIndex += nestedElements.length
 
@@ -1194,7 +1195,7 @@ export default function LoadsPageInline() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    handleAddToGroup(groupKey)
+                    handleAddToGroup(groupKey, parentKeys)
                   }}
                   className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
                   style={{ marginLeft: `${paddingLeft + 20}px` }}

@@ -44,17 +44,35 @@ async def create_load(
     current_user: User = Depends(get_current_active_user)
 ):
     # Validate customer_id
-    if load.customer_id <= 0:
+    if load.customer_id is None or load.customer_id <= 0:
         raise HTTPException(
             status_code=400,
             detail="customer_id must be a valid positive integer"
         )
 
-    db_load = Load(**load.dict(), company_id=current_user.company_id)
-    db.add(db_load)
-    await db.commit()
-    await db.refresh(db_load)
-    return db_load
+    try:
+        db_load = Load(**load.dict(), company_id=current_user.company_id)
+        db.add(db_load)
+        await db.commit()
+        await db.refresh(db_load)
+        return db_load
+    except Exception as e:
+        await db.rollback()
+        # Log the error for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error creating load: {str(e)}")
+
+        # Return a more helpful error message
+        error_msg = str(e)
+        if "foreign key" in error_msg.lower():
+            if "customer_id" in error_msg:
+                raise HTTPException(status_code=400, detail="Invalid customer_id: Customer does not exist")
+            elif "driver_id" in error_msg:
+                raise HTTPException(status_code=400, detail="Invalid driver_id: Driver does not exist")
+            elif "truck_id" in error_msg:
+                raise HTTPException(status_code=400, detail="Invalid truck_id: Truck does not exist")
+        raise HTTPException(status_code=500, detail=f"Failed to create load: {error_msg}")
 
 
 @router.get("/{load_id}", response_model=LoadResponse)
