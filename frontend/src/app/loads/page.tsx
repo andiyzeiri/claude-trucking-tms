@@ -1106,7 +1106,7 @@ export default function LoadsPageInline() {
   }
 
   // Recursive function to render nested groups
-  const renderNestedGroups = (data: any, paddingLeft = 0, rowIndexOffset = 0): JSX.Element[] => {
+  const renderNestedGroups = (data: any, paddingLeft = 0, rowIndexOffset = 0, level = 0): JSX.Element[] => {
     if (Array.isArray(data)) {
       // Base case: render load rows
       return data.map((load, index) => renderLoadRow(load, paddingLeft, rowIndexOffset + index))
@@ -1115,6 +1115,15 @@ export default function LoadsPageInline() {
     // Recursive case: render group headers and nested content
     const elements: JSX.Element[] = []
     let globalRowIndex = rowIndexOffset
+
+    // Determine grouping order to know what type each level is
+    const groupingOrder: ('week' | 'day' | 'driver' | 'customer')[] = []
+    if (activeGroupings.has('week')) groupingOrder.push('week')
+    if (activeGroupings.has('day')) groupingOrder.push('day')
+    if (activeGroupings.has('driver')) groupingOrder.push('driver')
+    if (activeGroupings.has('customer')) groupingOrder.push('customer')
+
+    const currentGroupType = groupingOrder[level]
 
     Object.entries(data).forEach(([groupKey, groupData]) => {
       const isCollapsed = collapsedGroups.has(groupKey)
@@ -1129,9 +1138,17 @@ export default function LoadsPageInline() {
       const groupTotalMiles = groupLoads.reduce((sum, l) => sum + (Number(l.miles) || 0), 0)
       const groupRPM = groupTotalMiles > 0 ? groupTotalRate / groupTotalMiles : 0
 
+      // Determine background color based on group type
+      let bgColor = 'bg-gray-100'
+      if (currentGroupType === 'week') {
+        bgColor = 'bg-blue-100'
+      } else if (currentGroupType === 'driver') {
+        bgColor = 'bg-orange-100'
+      }
+
       // Group header row
       elements.push(
-        <tr key={`group-${groupKey}`} className="bg-gray-100 border-b border-gray-200 cursor-pointer" onClick={() => toggleGroup(groupKey)}>
+        <tr key={`group-${groupKey}`} className={`${bgColor} border-b border-gray-200 cursor-pointer`} onClick={() => toggleGroup(groupKey)}>
           <td colSpan={2} className="px-2 py-2 text-sm font-medium text-gray-700" style={{ paddingLeft: `${paddingLeft + 8}px` }}>
             <div className="flex items-center gap-2">
               {isCollapsed ? (
@@ -1165,7 +1182,7 @@ export default function LoadsPageInline() {
 
       // Nested content (if not collapsed)
       if (!isCollapsed) {
-        const nestedElements = renderNestedGroups(groupData, paddingLeft + 20, globalRowIndex)
+        const nestedElements = renderNestedGroups(groupData, paddingLeft + 20, globalRowIndex, level + 1)
         elements.push(...nestedElements)
         globalRowIndex += nestedElements.length
 
