@@ -1420,10 +1420,10 @@ export default function LoadsPageInline() {
                 <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)', flex: 1}}>
                   {parseLocation(load.pickup_location).street || 'Street'}
                 </div>
-                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)', width: '60px'}}>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: '#22c55e', width: '60px'}}>
                   {formatDateShort(load.pickup_date)}
                 </div>
-                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)', width: '65px'}}>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: '#22c55e', width: '65px'}}>
                   {formatTimeShort(load.pickup_date)}
                 </div>
               </div>
@@ -1553,10 +1553,10 @@ export default function LoadsPageInline() {
                 <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)', flex: 1}}>
                   {parseLocation(load.delivery_location).street || 'Street'}
                 </div>
-                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)', width: '60px'}}>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: '#22c55e', width: '60px'}}>
                   {formatDateShort(load.delivery_date)}
                 </div>
-                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)', width: '65px'}}>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: '#22c55e', width: '65px'}}>
                   {formatTimeShort(load.delivery_date)}
                 </div>
               </div>
