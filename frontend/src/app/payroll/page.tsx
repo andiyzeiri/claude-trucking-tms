@@ -260,11 +260,15 @@ export default function PayrollPage() {
 
   // Close context menu when clicking outside
   useEffect(() => {
-    if (!contextMenu) return
-
     const handleClick = () => setContextMenu(null)
-    document.addEventListener('click', handleClick)
-    return () => document.removeEventListener('click', handleClick)
+
+    if (contextMenu) {
+      document.addEventListener('click', handleClick)
+      return () => document.removeEventListener('click', handleClick)
+    }
+
+    // Always return a cleanup function for consistency
+    return () => {}
   }, [contextMenu])
 
   const handleContextMenu = (e: React.MouseEvent, weekNumber: number, driverId: number) => {
