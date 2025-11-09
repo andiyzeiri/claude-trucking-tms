@@ -5,8 +5,9 @@ import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatCurrency } from '@/lib/utils'
-import { Calculator, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Edit2, Trash2, Copy } from 'lucide-react'
+import { Calculator, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Edit2, Trash2, Copy, RefreshCw } from 'lucide-react'
 import { useDrivers } from '@/hooks/use-drivers'
+import { useCalculatedPayroll } from '@/hooks/use-payroll'
 import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
 
@@ -64,13 +65,17 @@ type EditingCell = {
 } | null
 
 export default function PayrollPage() {
-  const { data: driversData, isLoading } = useDrivers()
+  const currentYear = new Date().getFullYear()
+  const { data: driversData, isLoading: driversLoading } = useDrivers()
+  const { data: calculatedPayroll, isLoading: payrollLoading, refetch: refetchPayroll } = useCalculatedPayroll(currentYear)
   const drivers = driversData?.items || []
   const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([1])) // Week 1 expanded by default
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
   const [sortField, setSortField] = useState<string>('weekNumber')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, weekNumber: number, driverId: number} | null>(null)
+
+  const isLoading = driversLoading || payrollLoading
 
   // Column width management
   const { columnWidths, adjustWidth } = useColumnWidths('payroll-table', {
@@ -90,14 +95,43 @@ export default function PayrollPage() {
 
   const weeks = useMemo(() => generateWeeks(), [])
 
-  // Mock payroll data - in real app, this would come from API
+  // Transform calculated payroll data into the format expected by the page
   const payrollData: DriverPayrollData[] = useMemo(() => {
-    return drivers.map(driver => ({
-      driver_id: driver.id,
-      driver_name: `${driver.first_name} ${driver.last_name}`,
-      weeks: {} // Empty for now - will be populated by API
-    }))
-  }, [drivers])
+    // Create a map from driver ID to driver data
+    const driverMap = new Map(
+      drivers.map(driver => [
+        driver.id,
+        {
+          driver_id: driver.id,
+          driver_name: `${driver.first_name} ${driver.last_name}`,
+          weeks: {} as DriverPayrollData['weeks']
+        }
+      ])
+    )
+
+    // Populate weeks data from calculated payroll
+    if (calculatedPayroll) {
+      calculatedPayroll.forEach(entry => {
+        const driverData = driverMap.get(entry.driver_id)
+        if (driverData) {
+          driverData.weeks[entry.week_number] = {
+            gross: entry.gross,
+            extra: 0, // Not calculated from loads yet
+            dispatch_fee: 0,
+            insurance: 0,
+            fuel: 0,
+            parking: 0,
+            trailer: 0,
+            misc: 0,
+            miles: entry.miles,
+            check_amount: entry.gross // For now, check amount = gross
+          }
+        }
+      })
+    }
+
+    return Array.from(driverMap.values())
+  }, [drivers, calculatedPayroll])
 
   const toggleWeek = (weekNumber: number) => {
     const newExpanded = new Set(expandedWeeks)
@@ -283,9 +317,13 @@ export default function PayrollPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Payroll</h1>
-            <p className="text-gray-600">52-week driver payroll overview</p>
+            <p className="text-gray-600">52-week driver payroll overview (auto-calculated from loads)</p>
           </div>
           <div className="flex gap-2">
+            <Button onClick={() => refetchPayroll()} variant="outline" disabled={payrollLoading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${payrollLoading ? 'animate-spin' : ''}`} />
+              Refresh from Loads
+            </Button>
             <Button onClick={goToCurrentWeek} variant="outline">
               Go to Current Week
             </Button>

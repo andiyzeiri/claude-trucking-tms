@@ -119,3 +119,33 @@ export function useDeletePayroll() {
     },
   })
 }
+
+export interface CalculatedPayrollData {
+  driver_id: number
+  driver_name: string
+  week_number: number
+  week_start: string
+  week_end: string
+  gross: number
+  miles: number
+  load_count: number
+  loads: Array<{
+    load_number: string
+    pickup_date: string
+    miles: number
+    carrier_rate: number
+  }>
+}
+
+export function useCalculatedPayroll(year?: number) {
+  const currentYear = year || new Date().getFullYear()
+
+  return useQuery({
+    queryKey: ['payroll', 'calculated', currentYear],
+    queryFn: async (): Promise<CalculatedPayrollData[]> => {
+      const response = await api.get(`/v1/payroll/calculate-from-loads?year=${currentYear}`)
+      return response.data
+    },
+    retry: false,
+  })
+}
