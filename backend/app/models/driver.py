@@ -24,11 +24,12 @@ class Driver(Base):
     status = Column(Enum(DriverStatus), default=DriverStatus.OFF_DUTY)
 
     # Additional driver information
-    date_hired = Column(Date)
-    date_of_birth = Column(Date)
-    experience = Column(String)  # e.g., "5 years", "2 years"
-    mvr_expiry = Column(Date)  # Motor Vehicle Record expiry date
-    medical_card_expiry = Column(Date)  # Medical Card expiry date
+    # TODO: These columns need to be added to the database via migration
+    # date_hired = Column(Date, nullable=True)
+    # date_of_birth = Column(Date, nullable=True)
+    # experience = Column(String, nullable=True)  # e.g., "5 years", "2 years"
+    # mvr_expiry = Column(Date, nullable=True)  # Motor Vehicle Record expiry date
+    # medical_card_expiry = Column(Date, nullable=True)  # Medical Card expiry date
 
     # Multi-tenant
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
