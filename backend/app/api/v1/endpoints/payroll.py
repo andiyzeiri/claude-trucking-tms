@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from datetime import datetime, timedelta
@@ -7,7 +7,7 @@ from app.database import get_db
 from app.models.payroll import Payroll
 from app.models.load import Load
 from app.models.driver import Driver
-from app.schemas.payroll import PayrollCreate, PayrollUpdate, PayrollResponse
+from app.schemas.payroll import PayrollCreate, PayrollUpdate, PayrollResponse, CalculatedPayrollResponse
 from app.core.security import get_current_active_user
 from app.models.user import User
 
@@ -120,9 +120,9 @@ def get_week_start_end(date: datetime) -> tuple:
     return monday.date(), sunday.date()
 
 
-@router.get("/calculate-from-loads", response_model=List[Dict[str, Any]])
+@router.get("/calculate-from-loads", response_model=List[CalculatedPayrollResponse])
 async def calculate_payroll_from_loads(
-    year: int = None,
+    year: int = Query(default=None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):

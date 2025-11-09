@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, List
 from app.models.payroll import PayrollType
 
 
@@ -53,3 +53,22 @@ class PayrollResponse(PayrollBase):
 
     class Config:
         from_attributes = True
+
+
+class LoadDetail(BaseModel):
+    load_number: str
+    pickup_date: Optional[str] = None
+    miles: int
+    carrier_rate: float
+
+
+class CalculatedPayrollResponse(BaseModel):
+    driver_id: int
+    driver_name: str
+    week_number: int
+    week_start: str
+    week_end: str
+    gross: float
+    miles: int
+    load_count: int
+    loads: List[LoadDetail]
