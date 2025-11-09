@@ -32,14 +32,14 @@ export function DriverSettingsModal({ isOpen, onClose }: DriverSettingsModalProp
   const [driverSettings, setDriverSettings] = useState<DriverSettings[]>([])
 
   useEffect(() => {
-    if (drivers && allSettings) {
+    if (drivers?.items && allSettings) {
       // Create a map of existing settings
       const settingsMap = new Map(
         allSettings.map(s => [s.driver_id, s])
       )
 
       // Initialize settings for all drivers
-      const initialSettings = drivers.map(driver => {
+      const initialSettings = drivers.items.map(driver => {
         const existing = settingsMap.get(driver.id)
         return {
           driver_id: driver.id,
@@ -92,6 +92,10 @@ export function DriverSettingsModal({ isOpen, onClose }: DriverSettingsModalProp
         {isLoading ? (
           <div className="flex justify-center items-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : driverSettings.length === 0 ? (
+          <div className="flex flex-col justify-center items-center py-8 text-center">
+            <p className="text-muted-foreground">No drivers found. Please add drivers first.</p>
           </div>
         ) : (
           <div className="space-y-4">
