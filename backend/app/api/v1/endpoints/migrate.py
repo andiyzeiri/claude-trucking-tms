@@ -4,7 +4,7 @@ This should be removed after migration is complete.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, text
 from app.database import get_db
 from app.core.security import get_current_active_user
 from app.models.user import User
@@ -179,8 +179,8 @@ async def create_driver_payroll_settings_table(
     This migration can be run safely multiple times.
     """
     try:
-        # Run the migration SQL
-        await db.execute("""
+        # Create the table
+        await db.execute(text("""
             CREATE TABLE IF NOT EXISTS driver_payroll_settings (
                 id SERIAL PRIMARY KEY,
                 driver_id INTEGER NOT NULL UNIQUE,
@@ -194,11 +194,14 @@ async def create_driver_payroll_settings_table(
                 updated_at TIMESTAMP WITH TIME ZONE,
                 FOREIGN KEY (driver_id) REFERENCES drivers(id),
                 FOREIGN KEY (company_id) REFERENCES companies(id)
-            );
+            )
+        """))
 
+        # Create the index
+        await db.execute(text("""
             CREATE INDEX IF NOT EXISTS ix_driver_payroll_settings_id
-            ON driver_payroll_settings(id);
-        """)
+            ON driver_payroll_settings(id)
+        """))
 
         await db.commit()
 

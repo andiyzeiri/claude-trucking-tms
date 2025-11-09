@@ -123,15 +123,15 @@ export default function PayrollPage() {
         if (driverData) {
           driverData.weeks[entry.week_number] = {
             gross: Number(entry.gross) || 0,
-            extra: 0, // Not calculated from loads yet
-            dispatch_fee: 0,
-            insurance: 0,
-            fuel: 0,
-            parking: 0,
-            trailer: 0,
-            misc: 0,
+            extra: Number(entry.extra) || 0,
+            dispatch_fee: Number(entry.dispatch_fee) || 0,
+            insurance: Number(entry.insurance) || 0,
+            fuel: 0, // Not used yet
+            parking: Number(entry.parking) || 0,
+            trailer: Number(entry.trailer) || 0,
+            misc: Number(entry.misc) || 0,
             miles: Number(entry.miles) || 0,
-            check_amount: Number(entry.gross) || 0 // For now, check amount = gross
+            check_amount: Number(entry.check_amount) || 0
           }
         }
       })

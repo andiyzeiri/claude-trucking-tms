@@ -27,7 +27,7 @@ class DriverPayrollSettingsResponse(DriverPayrollSettingsBase):
     id: int
     driver_id: int
     company_id: int
-    created_at: datetime
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     class Config:
