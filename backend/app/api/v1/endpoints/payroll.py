@@ -117,8 +117,8 @@ async def calculate_payroll_from_loads(
             }
 
         # Add load data to aggregated totals
-        # Use carrier_rate as the driver's gross pay (what the driver receives)
-        gross_amount = float(load.carrier_rate) if load.carrier_rate else 0.0
+        # Use rate as the driver's gross pay
+        gross_amount = float(load.rate) if load.rate else 0.0
         miles_amount = load.miles if load.miles else 0
 
         payroll_data[key]["gross"] += gross_amount
@@ -128,7 +128,7 @@ async def calculate_payroll_from_loads(
             "load_number": load.load_number,
             "pickup_date": load.pickup_date.isoformat() if load.pickup_date else None,
             "miles": miles_amount,
-            "carrier_rate": gross_amount
+            "carrier_rate": gross_amount  # Using rate field for payroll
         })
 
     # Convert to list and sort by driver name and week
