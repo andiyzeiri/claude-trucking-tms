@@ -3,7 +3,7 @@
   publish = ".next"
 
 [build.environment]
-  NEXT_PUBLIC_API_URL = "https://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com/api"
+  NEXT_PUBLIC_API_URL = "https://api.absolutetms.com/api"
   NODE_VERSION = "18"
 
 [[plugins]]
