@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AddressAutocomplete } from '@/components/ui/address-autocomplete'
 import { useCustomers } from '@/hooks/use-customers'
 import { useDrivers } from '@/hooks/use-drivers'
+import api from '@/lib/api'
+import toast from 'react-hot-toast'
+import { Calculator, Loader2 } from 'lucide-react'
 
 export interface LoadData {
   id?: number
@@ -61,6 +64,50 @@ export function LoadModal({ isOpen, onClose, onSave, load, mode }: LoadModalProp
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isCalculatingMiles, setIsCalculatingMiles] = useState(false)
+
+  // Auto-calculate miles when both addresses are entered
+  useEffect(() => {
+    const calculateMiles = async () => {
+      if (!formData.pickup_location || !formData.delivery_location) {
+        return
+      }
+
+      // Skip if miles are already set (editing existing load)
+      if (formData.miles && mode === 'edit') {
+        return
+      }
+
+      setIsCalculatingMiles(true)
+
+      try {
+        const response = await api.post('/v1/maps/calculate-distance', {
+          origin: formData.pickup_location,
+          destination: formData.delivery_location,
+          unit: 'imperial'
+        })
+
+        if (response.data.status === 'success' && response.data.distance_miles) {
+          setFormData(prev => ({
+            ...prev,
+            miles: Math.round(response.data.distance_miles)
+          }))
+          toast.success(`Calculated ${Math.round(response.data.distance_miles)} miles`)
+        } else {
+          toast.error(response.data.error || 'Could not calculate distance')
+        }
+      } catch (error: any) {
+        console.error('Error calculating distance:', error)
+        // Silently fail - user can still enter miles manually
+      } finally {
+        setIsCalculatingMiles(false)
+      }
+    }
+
+    // Debounce the calculation by 1 second
+    const timeoutId = setTimeout(calculateMiles, 1000)
+    return () => clearTimeout(timeoutId)
+  }, [formData.pickup_location, formData.delivery_location])
 
   useEffect(() => {
     // Only reset form when modal is opened (not on every state change)
@@ -299,15 +346,61 @@ export function LoadModal({ isOpen, onClose, onSave, load, mode }: LoadModalProp
 
           <div className="space-y-2">
             <Label htmlFor="miles">Miles</Label>
-            <Input
-              id="miles"
-              type="number"
-              value={formData.miles || ''}
-              onChange={(e) => setFormData({ ...formData, miles: e.target.value ? parseInt(e.target.value) : undefined })}
-              className={errors.miles ? 'border-red-500' : ''}
-              placeholder="0"
-            />
+            <div className="flex gap-2">
+              <Input
+                id="miles"
+                type="number"
+                value={formData.miles || ''}
+                onChange={(e) => setFormData({ ...formData, miles: e.target.value ? parseInt(e.target.value) : undefined })}
+                className={errors.miles ? 'border-red-500' : ''}
+                placeholder="0"
+                disabled={isCalculatingMiles}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={async () => {
+                  if (!formData.pickup_location || !formData.delivery_location) {
+                    toast.error('Please enter both pickup and delivery locations')
+                    return
+                  }
+
+                  setIsCalculatingMiles(true)
+                  try {
+                    const response = await api.post('/v1/maps/calculate-distance', {
+                      origin: formData.pickup_location,
+                      destination: formData.delivery_location,
+                      unit: 'imperial'
+                    })
+
+                    if (response.data.status === 'success' && response.data.distance_miles) {
+                      setFormData(prev => ({
+                        ...prev,
+                        miles: Math.round(response.data.distance_miles)
+                      }))
+                      toast.success(`Calculated ${Math.round(response.data.distance_miles)} miles`)
+                    } else {
+                      toast.error(response.data.error || 'Could not calculate distance')
+                    }
+                  } catch (error: any) {
+                    toast.error(error.response?.data?.detail || 'Error calculating distance')
+                  } finally {
+                    setIsCalculatingMiles(false)
+                  }
+                }}
+                disabled={isCalculatingMiles || !formData.pickup_location || !formData.delivery_location}
+                title="Calculate miles using Google Maps"
+              >
+                {isCalculatingMiles ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Calculator className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
             {errors.miles && <p className="text-sm text-red-500">{errors.miles}</p>}
+            {isCalculatingMiles && <p className="text-sm text-muted-foreground">Calculating distance...</p>}
           </div>
         </div>
 

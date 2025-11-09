@@ -69,6 +69,9 @@ class Settings(BaseSettings):
     TWILIO_PHONE_NUMBER: Optional[str] = None
     TWILIO_EMAIL_FROM: Optional[str] = None
 
+    # Google Maps Configuration
+    GOOGLE_MAPS_API_KEY: Optional[str] = None
+
     class Config:
         env_file = ".env"
         extra = "ignore"
