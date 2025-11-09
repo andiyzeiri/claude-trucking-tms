@@ -5,9 +5,3 @@
 [build.environment]
   NEXT_PUBLIC_API_URL = "http://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com/api"
   NODE_VERSION = "20"
-
-# Explicitly disable the Next.js plugin - we're using static export
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-  [plugins.inputs]
-    disabled = true
