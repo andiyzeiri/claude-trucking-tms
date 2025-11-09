@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export', // Enable static export for Netlify
+  // Use server mode with Netlify's Next.js plugin instead of static export
   trailingSlash: false,
   typescript: {
     // !! WARN !!
