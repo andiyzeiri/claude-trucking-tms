@@ -237,6 +237,21 @@ export default function PayrollPage() {
     return totals
   }, [payrollData, weeks])
 
+  // Close context menu when clicking outside
+  // IMPORTANT: This must be before any early returns to maintain hook order
+  useEffect(() => {
+    if (!contextMenu) {
+      return undefined
+    }
+
+    const handleClick = () => setContextMenu(null)
+    document.addEventListener('click', handleClick)
+
+    return () => {
+      document.removeEventListener('click', handleClick)
+    }
+  }, [contextMenu])
+
   if (isLoading) {
     return (
       <Layout>
@@ -257,20 +272,6 @@ export default function PayrollPage() {
       </Layout>
     )
   }
-
-  // Close context menu when clicking outside
-  useEffect(() => {
-    if (!contextMenu) {
-      return undefined
-    }
-
-    const handleClick = () => setContextMenu(null)
-    document.addEventListener('click', handleClick)
-
-    return () => {
-      document.removeEventListener('click', handleClick)
-    }
-  }, [contextMenu])
 
   const handleContextMenu = (e: React.MouseEvent, weekNumber: number, driverId: number) => {
     e.preventDefault()
