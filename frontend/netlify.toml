@@ -1,9 +1,13 @@
 [build]
-  command = "npm run build"
-  publish = ".next"
+  command = "NODE_OPTIONS='--max-old-space-size=4096' NEXT_TELEMETRY_DISABLED=1 npx next build --experimental-build-mode=compile"
+  publish = "out"
 
 [build.environment]
-  NEXT_PUBLIC_API_URL = "https://api.absolutetms.com/api"
+  NEXT_PUBLIC_API_URL = "http://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com/api"
+  NODE_VERSION = "20"
 
+# Explicitly disable the Next.js plugin - we're using static export
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+  [plugins.inputs]
+    disabled = true

@@ -69,6 +69,13 @@ class CalculatedPayrollResponse(BaseModel):
     week_start: str
     week_end: str
     gross: float
+    extra: float
+    dispatch_fee: float
+    insurance: float
+    parking: float
+    trailer: float
+    misc: float
     miles: int
+    check_amount: float
     load_count: int
     loads: List[LoadDetail]

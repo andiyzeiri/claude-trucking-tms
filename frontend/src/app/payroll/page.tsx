@@ -5,11 +5,12 @@ import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatCurrency } from '@/lib/utils'
-import { Calculator, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Edit2, Trash2, Copy, RefreshCw } from 'lucide-react'
+import { Calculator, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Edit2, Trash2, Copy, RefreshCw, Settings } from 'lucide-react'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useCalculatedPayroll } from '@/hooks/use-payroll'
 import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
+import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
 
 // Generate 52 weeks starting from Monday, December 30, 2024
 function generateWeeks() {
@@ -74,6 +75,7 @@ export default function PayrollPage() {
   const [sortField, setSortField] = useState<string>('weekNumber')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, weekNumber: number, driverId: number} | null>(null)
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false)
 
   const isLoading = driversLoading || payrollLoading
 
@@ -332,6 +334,10 @@ export default function PayrollPage() {
             <p className="text-gray-600">52-week driver payroll overview (auto-calculated from loads)</p>
           </div>
           <div className="flex gap-2">
+            <Button onClick={() => setSettingsModalOpen(true)} variant="default">
+              <Settings className="h-4 w-4 mr-2" />
+              Driver Settings
+            </Button>
             <Button onClick={() => refetchPayroll()} variant="outline" disabled={payrollLoading}>
               <RefreshCw className={`h-4 w-4 mr-2 ${payrollLoading ? 'animate-spin' : ''}`} />
               Refresh from Loads
@@ -960,6 +966,12 @@ export default function PayrollPage() {
             </button>
           </div>
         )}
+
+        {/* Driver Settings Modal */}
+        <DriverSettingsModal
+          isOpen={settingsModalOpen}
+          onClose={() => setSettingsModalOpen(false)}
+        />
       </div>
     </Layout>
   )

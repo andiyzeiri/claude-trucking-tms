@@ -168,3 +168,47 @@ async def delete_all_pdfs(
         "files_failed": len(failed_files),
         "failed_files": failed_files
     }
+
+
+@router.post("/driver-settings")
+async def create_driver_payroll_settings_table(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create the driver_payroll_settings table.
+    This migration can be run safely multiple times.
+    """
+    try:
+        # Run the migration SQL
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS driver_payroll_settings (
+                id SERIAL PRIMARY KEY,
+                driver_id INTEGER NOT NULL UNIQUE,
+                company_id INTEGER NOT NULL,
+                dispatch_fee_percent NUMERIC(5, 2) DEFAULT 0,
+                insurance_weekly NUMERIC(10, 2) DEFAULT 0,
+                parking_weekly NUMERIC(10, 2) DEFAULT 0,
+                trailer_weekly NUMERIC(10, 2) DEFAULT 0,
+                misc_weekly NUMERIC(10, 2) DEFAULT 0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE,
+                FOREIGN KEY (driver_id) REFERENCES drivers(id),
+                FOREIGN KEY (company_id) REFERENCES companies(id)
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_driver_payroll_settings_id
+            ON driver_payroll_settings(id);
+        """)
+
+        await db.commit()
+
+        return {
+            "message": "Driver payroll settings table created successfully",
+            "status": "success"
+        }
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Migration failed: {str(e)}"
+        )

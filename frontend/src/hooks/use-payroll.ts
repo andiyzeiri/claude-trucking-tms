@@ -127,7 +127,14 @@ export interface CalculatedPayrollData {
   week_start: string
   week_end: string
   gross: number
+  extra: number
+  dispatch_fee: number
+  insurance: number
+  parking: number
+  trailer: number
+  misc: number
   miles: number
+  check_amount: number
   load_count: number
   loads: Array<{
     load_number: string

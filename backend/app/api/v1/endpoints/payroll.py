@@ -7,6 +7,7 @@ from app.database import get_db
 from app.models.payroll import Payroll
 from app.models.load import Load
 from app.models.driver import Driver
+from app.models.driver_payroll_settings import DriverPayrollSettings
 from app.schemas.payroll import PayrollCreate, PayrollUpdate, PayrollResponse, CalculatedPayrollResponse
 from app.core.security import get_current_active_user
 from app.models.user import User
@@ -82,6 +83,11 @@ async def calculate_payroll_from_loads(
     drivers_result = await db.execute(drivers_query)
     drivers = {driver.id: driver for driver in drivers_result.scalars().all()}
 
+    # Get driver payroll settings
+    settings_query = select(DriverPayrollSettings).where(DriverPayrollSettings.company_id == current_user.company_id)
+    settings_result = await db.execute(settings_query)
+    driver_settings = {setting.driver_id: setting for setting in settings_result.scalars().all()}
+
     # Group loads by driver and week
     payroll_data = {}
 
@@ -130,6 +136,38 @@ async def calculate_payroll_from_loads(
             "miles": miles_amount,
             "carrier_rate": gross_amount  # Using rate field for payroll
         })
+
+    # Apply driver settings and calculate deductions
+    for key, data in payroll_data.items():
+        driver_id = data["driver_id"]
+        settings = driver_settings.get(driver_id)
+
+        gross = data["gross"]
+
+        # Calculate deductions based on driver settings
+        if settings:
+            dispatch_fee = gross * (float(settings.dispatch_fee_percent) / 100)
+            insurance = float(settings.insurance_weekly)
+            parking = float(settings.parking_weekly)
+            trailer = float(settings.trailer_weekly)
+            misc = float(settings.misc_weekly)
+        else:
+            dispatch_fee = 0
+            insurance = 0
+            parking = 0
+            trailer = 0
+            misc = 0
+
+        # Add deduction fields to the data
+        data["dispatch_fee"] = dispatch_fee
+        data["insurance"] = insurance
+        data["parking"] = parking
+        data["trailer"] = trailer
+        data["misc"] = misc
+        data["extra"] = 0  # Can be manually added later
+
+        # Calculate check amount: gross - deductions + extra
+        data["check_amount"] = gross - dispatch_fee - insurance - parking - trailer - misc + data["extra"]
 
     # Convert to list and sort by driver name and week
     result_list = sorted(

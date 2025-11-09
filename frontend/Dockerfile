@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -16,7 +16,10 @@ COPY . .
 
 # Build the Next.js application (skip type checking - errors handled in next.config.mjs)
 ENV SKIP_ENV_VALIDATION=1
-RUN npm run build
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NEXT_TELEMETRY_DISABLED=1
+# Disable parallel builds to avoid crashes
+RUN npm run build -- --experimental-build-mode=compile
 
 # Expose port
 EXPOSE 3000
