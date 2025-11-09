@@ -103,26 +103,33 @@ function formatDateTime(dateString: string): string {
 function parseLocation(location: string): { street: string; city: string; state: string; zip: string } {
   if (!location) return { street: '', city: '', state: '', zip: '' }
 
-  // Try to match pattern: "Street, City, ST Zip" or "City, ST Zip"
+  // Try to match pattern: "Street, City, ST Zip" or "City, ST Zip" or "City, ST"
   const zipMatch = location.match(/\b(\d{5})\b\s*$/)
   const zip = zipMatch ? zipMatch[1] : ''
 
-  const stateMatch = location.match(/\b([A-Z]{2})\s+\d{5}\b/)
+  // Match state (2 capital letters) followed by optional zip or end of string
+  const stateMatch = location.match(/\b([A-Z]{2})(?:\s+\d{5})?\s*$/)
   const state = stateMatch ? stateMatch[1] : ''
 
   // Remove zip and state from the end
-  let remaining = location.replace(/\s*,?\s*[A-Z]{2}\s+\d{5}\s*$/, '').trim()
+  let remaining = location
+    .replace(/\s*,?\s*[A-Z]{2}\s*(?:\d{5})?\s*$/, '')
+    .trim()
 
-  // Split by comma to separate street and city
-  const parts = remaining.split(',').map(p => p.trim())
+  // Split by comma to separate parts
+  const parts = remaining.split(',').map(p => p.trim()).filter(p => p)
 
   if (parts.length >= 2) {
+    // Has street and city: "123 Main St, Chicago" or "123 Main, Chicago, IL"
     const street = parts[0] || ''
     const city = parts.slice(1).join(', ') || ''
     return { street, city, state, zip }
-  } else if (parts.length === 1) {
-    // If only one part, treat it as city
-    return { street: '', city: parts[0] || '', state, zip }
+  } else if (parts.length === 1 && parts[0]) {
+    // Only one part before state: "Chicago, IL" → city only
+    return { street: '', city: parts[0], state, zip }
+  } else if (!parts.length && state) {
+    // Just state/zip: "IL 60601"
+    return { street: '', city: '', state, zip }
   }
 
   return { street: '', city: '', state, zip }
