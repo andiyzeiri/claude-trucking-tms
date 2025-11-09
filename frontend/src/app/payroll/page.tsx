@@ -688,7 +688,14 @@ export default function PayrollPage() {
                               ) : (
                                 <ChevronRight className="h-4 w-4" style={{color: 'var(--colors-foreground-muted)'}} />
                               )}
-                              <span style={{fontSize: '13px', fontWeight: 600, color: 'var(--colors-foreground-default)'}}>{week.label}</span>
+                              <div className="flex flex-col">
+                                <span style={{fontSize: '13px', fontWeight: 600, color: 'var(--colors-foreground-default)'}}>
+                                  Week {week.weekNumber}
+                                </span>
+                                <span style={{fontSize: '11px', fontWeight: 400, color: 'var(--colors-foreground-muted)', lineHeight: '16px'}}>
+                                  {week.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {week.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </span>
+                              </div>
                             </div>
                           </td>
                           <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'var(--colors-foreground-muted)'}}>
