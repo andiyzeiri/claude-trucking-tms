@@ -354,69 +354,12 @@ export default function PayrollPage() {
           </div>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Current Week Pay</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(currentWeekStats.total)}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Calculator className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Paid</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(currentWeekStats.paid)}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-orange-600 mt-1">{formatCurrency(currentWeekStats.pending)}</p>
-              </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Miles This Week</p>
-                <p className="text-2xl font-bold text-purple-600 mt-1">{currentWeekStats.miles.toLocaleString()}</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Grand Totals Summary */}
         {drivers.length > 0 && (
           <div className="border border-gray-200 rounded-lg bg-gradient-to-r from-blue-50 to-green-50 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-800 text-white">
+                <thead className="bg-blue-600 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider min-w-[300px]">
                       52-Week Totals
@@ -671,14 +614,14 @@ export default function PayrollPage() {
                           className="border-t-2 cursor-pointer transition-colors"
                           style={{
                             borderColor: 'var(--cell-borderColor)',
-                            backgroundColor: hasData ? 'rgba(59, 130, 246, 0.1)' : 'rgba(0, 0, 0, 0.02)'
+                            backgroundColor: hasData ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.05)'
                           }}
                           onClick={() => toggleWeek(week.weekNumber)}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.backgroundColor = 'var(--row-background-cursor)'
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = hasData ? 'rgba(59, 130, 246, 0.1)' : 'rgba(0, 0, 0, 0.02)'
+                            e.currentTarget.style.backgroundColor = hasData ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.05)'
                           }}
                         >
                           <td className="px-3 py-2.5 border-r sticky left-0 z-10" style={{borderColor: 'var(--cell-borderColor)', backgroundColor: 'inherit'}}>
@@ -890,8 +833,8 @@ export default function PayrollPage() {
                   })}
                 </tbody>
                 <tfoot className="sticky bottom-0 bg-white border-t-2 shadow-lg" style={{borderColor: 'var(--cell-borderColor)'}}>
-                  <tr className="bg-gray-50">
-                    <td className="px-3 py-2.5 text-sm font-medium sticky left-0 bg-gray-50">52 Weeks</td>
+                  <tr className="bg-blue-100">
+                    <td className="px-3 py-2.5 text-sm font-medium sticky left-0 bg-blue-100">52 Weeks</td>
                     <td className="px-3 py-2.5 text-sm font-medium">{payrollData.length} drivers</td>
                     <td className="px-3 py-2.5 text-sm font-medium text-right text-green-700">
                       {formatCurrency(grandTotals.gross)}
