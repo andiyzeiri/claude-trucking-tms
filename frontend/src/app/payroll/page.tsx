@@ -650,23 +650,23 @@ export default function PayrollPage() {
                           <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'var(--colors-foreground-default)'}}>
                             {formatCurrency(weekTotals.extra)}
                           </td>
-                          <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'var(--colors-foreground-default)'}}>
-                            {formatCurrency(weekTotals.dispatch_fee)}
+                          <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'rgb(220, 38, 38)'}}>
+                            {formatCurrency(-weekTotals.dispatch_fee)}
                           </td>
-                          <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'var(--colors-foreground-default)'}}>
-                            {formatCurrency(weekTotals.insurance)}
+                          <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'rgb(220, 38, 38)'}}>
+                            {formatCurrency(-weekTotals.insurance)}
                           </td>
-                          <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'var(--colors-foreground-default)'}}>
-                            {formatCurrency(weekTotals.fuel)}
+                          <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'rgb(220, 38, 38)'}}>
+                            {formatCurrency(-weekTotals.fuel)}
                           </td>
-                          <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'var(--colors-foreground-default)'}}>
-                            {formatCurrency(weekTotals.parking)}
+                          <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'rgb(220, 38, 38)'}}>
+                            {formatCurrency(-weekTotals.parking)}
                           </td>
-                          <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'var(--colors-foreground-default)'}}>
-                            {formatCurrency(weekTotals.trailer)}
+                          <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'rgb(220, 38, 38)'}}>
+                            {formatCurrency(-weekTotals.trailer)}
                           </td>
-                          <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'var(--colors-foreground-default)'}}>
-                            {formatCurrency(weekTotals.misc)}
+                          <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'rgb(220, 38, 38)'}}>
+                            {formatCurrency(-weekTotals.misc)}
                           </td>
                           <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'var(--colors-foreground-default)'}}>
                             {weekTotals.miles.toLocaleString()}
@@ -731,7 +731,7 @@ export default function PayrollPage() {
                                   <span>{weekData ? formatCurrency(weekData.extra) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'var(--colors-foreground-default)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'dispatch_fee')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'dispatch_fee')}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'dispatch_fee') ? (
                                   <Input
                                     type="number"
@@ -741,10 +741,10 @@ export default function PayrollPage() {
                                     className="h-8 text-sm text-right"
                                   />
                                 ) : (
-                                  <span>{weekData ? formatCurrency(weekData.dispatch_fee) : '-'}</span>
+                                  <span>{weekData ? formatCurrency(-weekData.dispatch_fee) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'var(--colors-foreground-default)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'insurance')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'insurance')}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'insurance') ? (
                                   <Input
                                     type="number"
@@ -754,10 +754,10 @@ export default function PayrollPage() {
                                     className="h-8 text-sm text-right"
                                   />
                                 ) : (
-                                  <span>{weekData ? formatCurrency(weekData.insurance) : '-'}</span>
+                                  <span>{weekData ? formatCurrency(-weekData.insurance) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'var(--colors-foreground-default)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'fuel')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'fuel')}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'fuel') ? (
                                   <Input
                                     type="number"
@@ -767,10 +767,10 @@ export default function PayrollPage() {
                                     className="h-8 text-sm text-right"
                                   />
                                 ) : (
-                                  <span>{weekData ? formatCurrency(weekData.fuel) : '-'}</span>
+                                  <span>{weekData ? formatCurrency(-weekData.fuel) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'var(--colors-foreground-default)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'parking')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'parking')}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'parking') ? (
                                   <Input
                                     type="number"
@@ -780,10 +780,10 @@ export default function PayrollPage() {
                                     className="h-8 text-sm text-right"
                                   />
                                 ) : (
-                                  <span>{weekData ? formatCurrency(weekData.parking) : '-'}</span>
+                                  <span>{weekData ? formatCurrency(-weekData.parking) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'var(--colors-foreground-default)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'trailer')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'trailer')}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'trailer') ? (
                                   <Input
                                     type="number"
@@ -793,10 +793,10 @@ export default function PayrollPage() {
                                     className="h-8 text-sm text-right"
                                   />
                                 ) : (
-                                  <span>{weekData ? formatCurrency(weekData.trailer) : '-'}</span>
+                                  <span>{weekData ? formatCurrency(-weekData.trailer) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'var(--colors-foreground-default)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'misc')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'misc')}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'misc') ? (
                                   <Input
                                     type="number"
@@ -806,7 +806,7 @@ export default function PayrollPage() {
                                     className="h-8 text-sm text-right"
                                   />
                                 ) : (
-                                  <span>{weekData ? formatCurrency(weekData.misc) : '-'}</span>
+                                  <span>{weekData ? formatCurrency(-weekData.misc) : '-'}</span>
                                 )}
                               </td>
                               <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'var(--colors-foreground-default)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'miles')}>
@@ -843,22 +843,22 @@ export default function PayrollPage() {
                       {formatCurrency(grandTotals.extra)}
                     </td>
                     <td className="px-3 py-2.5 text-sm font-medium text-right text-red-700">
-                      {formatCurrency(grandTotals.dispatch_fee)}
+                      {formatCurrency(-grandTotals.dispatch_fee)}
                     </td>
                     <td className="px-3 py-2.5 text-sm font-medium text-right text-red-700">
-                      {formatCurrency(grandTotals.insurance)}
+                      {formatCurrency(-grandTotals.insurance)}
                     </td>
                     <td className="px-3 py-2.5 text-sm font-medium text-right text-red-700">
-                      {formatCurrency(grandTotals.fuel)}
+                      {formatCurrency(-grandTotals.fuel)}
                     </td>
                     <td className="px-3 py-2.5 text-sm font-medium text-right text-red-700">
-                      {formatCurrency(grandTotals.parking)}
+                      {formatCurrency(-grandTotals.parking)}
                     </td>
                     <td className="px-3 py-2.5 text-sm font-medium text-right text-red-700">
-                      {formatCurrency(grandTotals.trailer)}
+                      {formatCurrency(-grandTotals.trailer)}
                     </td>
                     <td className="px-3 py-2.5 text-sm font-medium text-right text-red-700">
-                      {formatCurrency(grandTotals.misc)}
+                      {formatCurrency(-grandTotals.misc)}
                     </td>
                     <td className="px-3 py-2.5 text-sm font-medium text-right text-blue-700">
                       {grandTotals.miles.toLocaleString()} mi
