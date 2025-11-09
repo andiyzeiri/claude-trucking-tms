@@ -252,6 +252,24 @@ export default function PayrollPage() {
     }
   }, [contextMenu])
 
+  // Calculate stats for the current week
+  // IMPORTANT: This must be before any early returns to maintain hook order
+  const currentWeekStats = useMemo(() => {
+    const today = new Date()
+    const currentWeek = weeks.find(week =>
+      today >= week.startDate && today <= week.endDate
+    )
+    if (!currentWeek) return { total: 0, paid: 0, pending: 0, miles: 0 }
+
+    const totals = getWeekTotals(currentWeek.weekNumber)
+    return {
+      total: totals.check_amount,
+      paid: totals.check_amount > 0 ? totals.check_amount : 0,
+      pending: 0, // TODO: Add pending logic
+      miles: totals.miles
+    }
+  }, [payrollData, weeks])
+
   if (isLoading) {
     return (
       <Layout>
@@ -303,23 +321,6 @@ export default function PayrollPage() {
   const stopEdit = () => {
     setEditingCell(null)
   }
-
-  // Calculate stats for the current week
-  const currentWeekStats = useMemo(() => {
-    const today = new Date()
-    const currentWeek = weeks.find(week =>
-      today >= week.startDate && today <= week.endDate
-    )
-    if (!currentWeek) return { total: 0, paid: 0, pending: 0, miles: 0 }
-
-    const totals = getWeekTotals(currentWeek.weekNumber)
-    return {
-      total: totals.check_amount,
-      paid: totals.check_amount > 0 ? totals.check_amount : 0,
-      pending: 0, // TODO: Add pending logic
-      miles: totals.miles
-    }
-  }, [payrollData, weeks])
 
   return (
     <Layout>
