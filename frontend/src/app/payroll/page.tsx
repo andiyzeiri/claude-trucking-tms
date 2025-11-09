@@ -110,12 +110,17 @@ export default function PayrollPage() {
     )
 
     // Populate weeks data from calculated payroll
-    if (calculatedPayroll) {
+    if (calculatedPayroll && Array.isArray(calculatedPayroll)) {
       calculatedPayroll.forEach(entry => {
+        if (!entry || typeof entry.driver_id !== 'number' || typeof entry.week_number !== 'number') {
+          console.warn('Invalid payroll entry:', entry)
+          return
+        }
+
         const driverData = driverMap.get(entry.driver_id)
         if (driverData) {
           driverData.weeks[entry.week_number] = {
-            gross: entry.gross,
+            gross: Number(entry.gross) || 0,
             extra: 0, // Not calculated from loads yet
             dispatch_fee: 0,
             insurance: 0,
@@ -123,8 +128,8 @@ export default function PayrollPage() {
             parking: 0,
             trailer: 0,
             misc: 0,
-            miles: entry.miles,
-            check_amount: entry.gross // For now, check amount = gross
+            miles: Number(entry.miles) || 0,
+            check_amount: Number(entry.gross) || 0 // For now, check amount = gross
           }
         }
       })
