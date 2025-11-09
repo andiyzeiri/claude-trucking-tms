@@ -1,5 +1,5 @@
 [build]
-  command = "NODE_OPTIONS='--max-old-space-size=4096' NEXT_TELEMETRY_DISABLED=1 npx next build --experimental-build-mode=compile"
+  command = "NODE_OPTIONS='--max-old-space-size=4096' NEXT_TELEMETRY_DISABLED=1 npx next build --experimental-build-mode=compile && npx next build --experimental-build-mode=generate"
   publish = "out"
 
 [build.environment]
