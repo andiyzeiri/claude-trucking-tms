@@ -29,7 +29,7 @@ class DistanceResponse(BaseModel):
     error: Optional[str] = None
 
 
-@router.post("/calculate-distance", response_model=DistanceResponse)
+@router.post("/calculate-distance")
 async def calculate_distance(
     request: DistanceRequest,
     current_user: User = Depends(get_current_active_user)
@@ -44,12 +44,22 @@ async def calculate_distance(
     Returns:
         DistanceResponse with calculated distance in miles and kilometers
     """
-    # Check if Google Maps API key is configured
-    if not settings.GOOGLE_MAPS_API_KEY:
-        raise HTTPException(
-            status_code=503,
-            detail="Google Maps API is not configured. Please contact administrator."
-        )
+    import logging
+    logger = logging.getLogger(__name__)
+
+    try:
+        logger.info(f"Calculate distance request: origin={request.origin}, destination={request.destination}")
+
+        # Check if Google Maps API key is configured
+        if not settings.GOOGLE_MAPS_API_KEY:
+            raise HTTPException(
+                status_code=503,
+                detail="Google Maps API is not configured. Please contact administrator."
+            )
+
+    except Exception as e:
+        logger.error(f"Error in calculate_distance: {str(e)}", exc_info=True)
+        raise
 
     try:
         # Initialize Google Maps client
@@ -65,29 +75,33 @@ async def calculate_distance(
 
         # Check if we got valid results
         if result["status"] != "OK":
-            return DistanceResponse(
-                distance_miles=None,
-                distance_km=None,
-                duration_minutes=None,
-                origin_address=request.origin,
-                destination_address=request.destination,
-                status="error",
-                error=f"Google Maps API returned status: {result['status']}"
-            )
+            error_response = {
+                "distance_miles": None,
+                "distance_km": None,
+                "duration_minutes": None,
+                "origin_address": request.origin,
+                "destination_address": request.destination,
+                "status": "error",
+                "error": f"Google Maps API returned status: {result['status']}"
+            }
+            logger.warning(f"Google Maps API error: {error_response}")
+            return error_response
 
         # Extract the first (and only) element
         element = result["rows"][0]["elements"][0]
 
         if element["status"] != "OK":
-            return DistanceResponse(
-                distance_miles=None,
-                distance_km=None,
-                duration_minutes=None,
-                origin_address=request.origin,
-                destination_address=request.destination,
-                status="error",
-                error=f"Route not found: {element['status']}"
-            )
+            error_response = {
+                "distance_miles": None,
+                "distance_km": None,
+                "duration_minutes": None,
+                "origin_address": request.origin,
+                "destination_address": request.destination,
+                "status": "error",
+                "error": f"Route not found: {element['status']}"
+            }
+            logger.warning(f"Route not found: {error_response}")
+            return error_response
 
         # Extract distance and duration
         distance_meters = element["distance"]["value"]
@@ -102,14 +116,18 @@ async def calculate_distance(
         origin_address = result["origin_addresses"][0]
         destination_address = result["destination_addresses"][0]
 
-        return DistanceResponse(
-            distance_miles=round(distance_miles, 1),
-            distance_km=round(distance_km, 1),
-            duration_minutes=round(duration_minutes, 1),
-            origin_address=origin_address,
-            destination_address=destination_address,
-            status="success"
-        )
+        response_data = {
+            "distance_miles": round(distance_miles, 1),
+            "distance_km": round(distance_km, 1),
+            "duration_minutes": round(duration_minutes, 1),
+            "origin_address": origin_address,
+            "destination_address": destination_address,
+            "status": "success",
+            "error": None
+        }
+
+        logger.info(f"Returning success response: {response_data}")
+        return response_data
 
     except ApiError as e:
         raise HTTPException(
