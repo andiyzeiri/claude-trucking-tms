@@ -913,6 +913,8 @@ export default function LoadsPageInline() {
 
         // Auto-calculate miles using Google Maps API if both locations are filled
         const currentLoad = updatedLoads.find(l => (loadId === 'new' && l.isNew) || l.id === loadId)
+        let finalLoadsWithMiles = updatedLoads // Initialize with updatedLoads
+
         if (currentLoad && currentLoad.pickup_location && currentLoad.delivery_location) {
           try {
             const response = await api.post('/v1/maps/calculate-distance', {
@@ -925,16 +927,13 @@ export default function LoadsPageInline() {
               const calculatedMiles = Math.round(response.data.distance_miles)
 
               // Update miles in local state
-              const loadsWithMiles = updatedLoads.map(l => {
+              finalLoadsWithMiles = updatedLoads.map(l => {
                 if ((loadId === 'new' && l.isNew) || l.id === loadId) {
                   return { ...l, miles: calculatedMiles }
                 }
                 return l
               })
-              setEditableLoads(loadsWithMiles)
-
-              // Update the currentLoad reference for backend save
-              currentLoad.miles = calculatedMiles
+              setEditableLoads(finalLoadsWithMiles)
 
               toast.success(`Calculated ${calculatedMiles} miles`)
             }
@@ -946,9 +945,8 @@ export default function LoadsPageInline() {
 
         // Send SINGLE update to backend with both changes (including calculated miles)
         if (!load.isNew) {
-          // Get the most recent load data (with potentially updated miles)
-          const finalLoads = editableLoads
-          const updatedLoad = finalLoads.find(l => l.id === loadId)
+          // Get the most recent load data (with potentially updated miles from Google Maps)
+          const updatedLoad = finalLoadsWithMiles.find(l => l.id === loadId)
           if (updatedLoad) {
             const backendData: any = {
               load_number: updatedLoad.load_number,
