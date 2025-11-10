@@ -916,12 +916,15 @@ export default function LoadsPageInline() {
         let finalLoadsWithMiles = updatedLoads // Initialize with updatedLoads
 
         if (currentLoad && currentLoad.pickup_location && currentLoad.delivery_location) {
+          console.log('[Maps] Attempting to calculate distance from', currentLoad.pickup_location, 'to', currentLoad.delivery_location)
           try {
             const response = await api.post('/v1/maps/calculate-distance', {
               origin: currentLoad.pickup_location,
               destination: currentLoad.delivery_location,
               unit: 'imperial'
             })
+
+            console.log('[Maps] API response:', response.data)
 
             if (response.data.status === 'success' && response.data.distance_miles) {
               const calculatedMiles = Math.round(response.data.distance_miles)
@@ -936,11 +939,17 @@ export default function LoadsPageInline() {
               setEditableLoads(finalLoadsWithMiles)
 
               toast.success(`Calculated ${calculatedMiles} miles`)
+            } else {
+              console.warn('[Maps] API returned non-success status:', response.data)
+              toast.error(`Could not calculate distance: ${response.data.error || 'Unknown error'}`)
             }
           } catch (error: any) {
-            console.error('Error calculating miles:', error)
-            // Silently fail - user can still enter miles manually
+            console.error('[Maps] Error calculating miles:', error)
+            const errorMsg = error.response?.data?.detail || error.message || 'Unknown error'
+            toast.error(`Distance calculation failed: ${errorMsg}`)
           }
+        } else {
+          console.log('[Maps] Skipping calculation - missing location data. Pickup:', currentLoad?.pickup_location, 'Delivery:', currentLoad?.delivery_location)
         }
 
         // Send SINGLE update to backend with both changes (including calculated miles)
