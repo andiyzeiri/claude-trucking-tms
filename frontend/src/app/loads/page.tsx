@@ -19,6 +19,7 @@ import toast from 'react-hot-toast'
 import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
 import { PdfViewer } from '@/components/loads/pdf-viewer'
+import { AddressAutocomplete } from '@/components/ui/address-autocomplete'
 import api from '@/lib/api'
 
 interface EditableLoad extends Load {
@@ -1425,6 +1426,30 @@ export default function LoadsPageInline() {
         >
           {isEditing(loadKey, 'pickup_location') && editingLocation?.type === 'pickup' ? (
             <div ref={locationEditRef} className="space-y-1 relative" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+              {/* Autocomplete field */}
+              <div className="mb-1">
+                <AddressAutocomplete
+                  value=""
+                  onChange={(address) => {
+                    // Parse the formatted address
+                    const parts = address.split(', ')
+                    if (parts.length >= 3) {
+                      const street = parts[0]
+                      const city = parts[1]
+                      const stateZip = parts[2].split(' ')
+                      const state = stateZip[0]
+                      const zip = stateZip[1] || ''
+
+                      updateLocationField('street', street)
+                      updateLocationField('city', city)
+                      updateLocationField('state', state)
+                      updateLocationField('zip', zip)
+                    }
+                  }}
+                  placeholder="Search address..."
+                  className="h-7 text-sm w-full px-2 border rounded"
+                />
+              </div>
               {/* Top row: City, State, Zip */}
               <div className="flex gap-1">
                 <Input
@@ -1558,6 +1583,30 @@ export default function LoadsPageInline() {
         >
           {isEditing(loadKey, 'delivery_location') && editingLocation?.type === 'delivery' ? (
             <div ref={locationEditRef} className="space-y-1 relative" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+              {/* Autocomplete field */}
+              <div className="mb-1">
+                <AddressAutocomplete
+                  value=""
+                  onChange={(address) => {
+                    // Parse the formatted address
+                    const parts = address.split(', ')
+                    if (parts.length >= 3) {
+                      const street = parts[0]
+                      const city = parts[1]
+                      const stateZip = parts[2].split(' ')
+                      const state = stateZip[0]
+                      const zip = stateZip[1] || ''
+
+                      updateLocationField('street', street)
+                      updateLocationField('city', city)
+                      updateLocationField('state', state)
+                      updateLocationField('zip', zip)
+                    }
+                  }}
+                  placeholder="Search address..."
+                  className="h-7 text-sm w-full px-2 border rounded"
+                />
+              </div>
               {/* Top row: City, State, Zip */}
               <div className="flex gap-1">
                 <Input

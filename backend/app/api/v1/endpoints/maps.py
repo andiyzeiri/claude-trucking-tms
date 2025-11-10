@@ -29,6 +29,8 @@ class DistanceResponse(BaseModel):
     error: Optional[str] = None
 
 
+from fastapi.responses import JSONResponse
+
 @router.post("/calculate-distance")
 async def calculate_distance(
     request: DistanceRequest,
@@ -66,42 +68,42 @@ async def calculate_distance(
         gmaps = googlemaps.Client(key=settings.GOOGLE_MAPS_API_KEY)
 
         # Request distance matrix
-        result = gmaps.distance_matrix(
-            origins=[request.origin],
-            destinations=[request.destination],
-            mode="driving",
-            units=request.unit
-        )
+        try:
+            result = gmaps.distance_matrix(
+                origins=[request.origin],
+                destinations=[request.destination],
+                mode="driving",
+                units=request.unit
+            )
+            logger.info(f"Google Maps API call successful")
+            logger.info(f"Google Maps raw response: {result}")
+        except Exception as e:
+            logger.error(f"Exception during Google Maps API call: {type(e).__name__}: {str(e)}", exc_info=True)
+            raise
 
         # Check if we got valid results
         if result["status"] != "OK":
             error_response = {
-                "distance_miles": None,
-                "distance_km": None,
-                "duration_minutes": None,
                 "origin_address": request.origin,
                 "destination_address": request.destination,
                 "status": "error",
                 "error": f"Google Maps API returned status: {result['status']}"
             }
             logger.warning(f"Google Maps API error: {error_response}")
-            return error_response
+            return JSONResponse(content=error_response, status_code=200)
 
         # Extract the first (and only) element
         element = result["rows"][0]["elements"][0]
 
         if element["status"] != "OK":
             error_response = {
-                "distance_miles": None,
-                "distance_km": None,
-                "duration_minutes": None,
                 "origin_address": request.origin,
                 "destination_address": request.destination,
                 "status": "error",
                 "error": f"Route not found: {element['status']}"
             }
             logger.warning(f"Route not found: {error_response}")
-            return error_response
+            return JSONResponse(content=error_response, status_code=200)
 
         # Extract distance and duration
         distance_meters = element["distance"]["value"]
@@ -122,12 +124,11 @@ async def calculate_distance(
             "duration_minutes": round(duration_minutes, 1),
             "origin_address": origin_address,
             "destination_address": destination_address,
-            "status": "success",
-            "error": None
+            "status": "success"
         }
 
         logger.info(f"Returning success response: {response_data}")
-        return response_data
+        return JSONResponse(content=response_data)
 
     except ApiError as e:
         raise HTTPException(
