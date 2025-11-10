@@ -1436,14 +1436,19 @@ export default function LoadsPageInline() {
                     if (parts.length >= 3) {
                       const street = parts[0]
                       const city = parts[1]
-                      const stateZip = parts[2].split(' ')
-                      const state = stateZip[0]
-                      const zip = stateZip[1] || ''
+                      // Handle "State ZIP, Country" format by removing country
+                      const stateZipCountry = parts.slice(2).join(', ')
+                      const stateZipParts = stateZipCountry.replace(/, USA$/, '').split(' ')
+                      const state = stateZipParts[0]
+                      const zip = stateZipParts[1] || ''
 
                       updateLocationField('street', street)
                       updateLocationField('city', city)
                       updateLocationField('state', state)
                       updateLocationField('zip', zip)
+
+                      // Auto-save after filling fields
+                      setTimeout(() => stopLocationEdit(), 100)
                     }
                   }}
                   placeholder="Search address..."
@@ -1593,14 +1598,19 @@ export default function LoadsPageInline() {
                     if (parts.length >= 3) {
                       const street = parts[0]
                       const city = parts[1]
-                      const stateZip = parts[2].split(' ')
-                      const state = stateZip[0]
-                      const zip = stateZip[1] || ''
+                      // Handle "State ZIP, Country" format by removing country
+                      const stateZipCountry = parts.slice(2).join(', ')
+                      const stateZipParts = stateZipCountry.replace(/, USA$/, '').split(' ')
+                      const state = stateZipParts[0]
+                      const zip = stateZipParts[1] || ''
 
                       updateLocationField('street', street)
                       updateLocationField('city', city)
                       updateLocationField('state', state)
                       updateLocationField('zip', zip)
+
+                      // Auto-save after filling fields
+                      setTimeout(() => stopLocationEdit(), 100)
                     }
                   }}
                   placeholder="Search address..."
