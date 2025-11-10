@@ -19,6 +19,7 @@ import toast from 'react-hot-toast'
 import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
 import { PdfViewer } from '@/components/loads/pdf-viewer'
+import api from '@/lib/api'
 
 interface EditableLoad extends Load {
   isNew?: boolean
@@ -910,9 +911,44 @@ export default function LoadsPageInline() {
         })
         setEditableLoads(updatedLoads)
 
-        // Send SINGLE update to backend with both changes
+        // Auto-calculate miles using Google Maps API if both locations are filled
+        const currentLoad = updatedLoads.find(l => (loadId === 'new' && l.isNew) || l.id === loadId)
+        if (currentLoad && currentLoad.pickup_location && currentLoad.delivery_location) {
+          try {
+            const response = await api.post('/v1/maps/calculate-distance', {
+              origin: currentLoad.pickup_location,
+              destination: currentLoad.delivery_location,
+              unit: 'imperial'
+            })
+
+            if (response.data.status === 'success' && response.data.distance_miles) {
+              const calculatedMiles = Math.round(response.data.distance_miles)
+
+              // Update miles in local state
+              const loadsWithMiles = updatedLoads.map(l => {
+                if ((loadId === 'new' && l.isNew) || l.id === loadId) {
+                  return { ...l, miles: calculatedMiles }
+                }
+                return l
+              })
+              setEditableLoads(loadsWithMiles)
+
+              // Update the currentLoad reference for backend save
+              currentLoad.miles = calculatedMiles
+
+              toast.success(`Calculated ${calculatedMiles} miles`)
+            }
+          } catch (error: any) {
+            console.error('Error calculating miles:', error)
+            // Silently fail - user can still enter miles manually
+          }
+        }
+
+        // Send SINGLE update to backend with both changes (including calculated miles)
         if (!load.isNew) {
-          const updatedLoad = updatedLoads.find(l => l.id === loadId)
+          // Get the most recent load data (with potentially updated miles)
+          const finalLoads = editableLoads
+          const updatedLoad = finalLoads.find(l => l.id === loadId)
           if (updatedLoad) {
             const backendData: any = {
               load_number: updatedLoad.load_number,
