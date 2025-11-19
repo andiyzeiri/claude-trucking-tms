@@ -3,7 +3,7 @@
   publish = ".next"
 
 [build.environment]
-  NEXT_PUBLIC_API_URL = "/api/v1"
+  NEXT_PUBLIC_API_URL = "/api"
   NODE_VERSION = "20"
 
 [[plugins]]
