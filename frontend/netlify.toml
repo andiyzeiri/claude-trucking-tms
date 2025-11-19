@@ -3,7 +3,7 @@
   publish = ".next"
 
 [build.environment]
-  NEXT_PUBLIC_API_URL = "https://api.absolutetms.com/api"
+  NEXT_PUBLIC_API_URL = "/api/v1"
   NODE_VERSION = "20"
 
 [[plugins]]
