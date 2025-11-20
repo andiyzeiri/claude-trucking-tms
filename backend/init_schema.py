@@ -46,6 +46,12 @@ async def init_schema():
         with open(schema_path, 'r') as f:
             schema_sql = f.read()
 
+        # Remove role-related statements that may fail on RDS
+        # RDS doesn't allow creating roles with standard master user
+        import re
+        schema_sql = re.sub(r'CREATE ROLE.*?;', '', schema_sql, flags=re.IGNORECASE)
+        schema_sql = re.sub(r'GRANT.*?TO application_role.*?;', '', schema_sql, flags=re.IGNORECASE)
+
         # Execute schema
         await conn.execute(schema_sql)
 
