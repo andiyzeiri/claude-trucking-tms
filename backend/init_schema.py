@@ -37,7 +37,7 @@ async def init_schema():
         print("📦 Initializing database schema...")
 
         # Read schema file
-        schema_path = '/app/../database/schema.sql'
+        schema_path = '/app/schema.sql'
         if not os.path.exists(schema_path):
             print(f"⚠️  Schema file not found at {schema_path}, skipping schema init")
             await conn.close()
