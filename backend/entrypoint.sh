@@ -10,6 +10,10 @@ python3 init_schema.py || echo "⚠️  Schema initialization had warnings"
 echo "🔧 Fixing users table..."
 python3 fix_users_table.py || echo "⚠️  fix_users_table.py had errors, continuing..."
 
+# Create initial user
+echo "🔧 Creating initial user..."
+python3 create_initial_user.py || echo "⚠️  create_initial_user.py had errors, continuing..."
+
 # Run database migrations (continue on errors)
 echo "📦 Running database migrations..."
 python3 migrate.py || echo "⚠️  migrate.py had errors, continuing..."
