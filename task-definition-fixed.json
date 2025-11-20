@@ -20,7 +20,7 @@
       "environment": [
         {
           "name": "DATABASE_URL",
-          "value": "postgresql+asyncpg://anditms:AndiTMS2024SecurePass!@andi-tms-db-v2.csla6kaago6t.us-east-1.rds.amazonaws.com:5432/anditms"
+          "value": "postgresql+asyncpg://anditms:AndiTMS2024SecurePass%21@andi-tms-db-v2.csla6kaago6t.us-east-1.rds.amazonaws.com:5432/anditms"
         },
         {
           "name": "AWS_REGION",
