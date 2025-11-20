@@ -48,7 +48,11 @@ async def run_migration():
 
         # Rename password_hash to hashed_password if needed
         print("🔧 Checking password column name...")
-        await conn.execute("ALTER TABLE users RENAME COLUMN password_hash TO hashed_password")
+        try:
+            await conn.execute("ALTER TABLE users RENAME COLUMN password_hash TO hashed_password")
+            print("✅ Renamed password_hash to hashed_password")
+        except Exception:
+            print("⚠️  Column already renamed or doesn't exist, skipping...")
 
         print("✅ Migration completed successfully!")
 
