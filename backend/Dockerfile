@@ -40,6 +40,7 @@ COPY migrate.py ./
 COPY init_schema.py ./
 COPY fix_users_table.py ./
 COPY create_initial_user.py ./
+COPY reset_user_password.py ./
 COPY schema.sql ./
 COPY remove_unique_constraint.py ./
 COPY update_status_enum.py ./
