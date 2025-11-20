@@ -37,6 +37,7 @@ COPY check-db-state.py ./
 COPY run-migration-sql.py ./
 COPY migration.sql ./
 COPY migrate.py ./
+COPY init_schema.py ./
 COPY remove_unique_constraint.py ./
 COPY update_status_enum.py ./
 COPY cleanup_old_statuses.py ./
@@ -44,6 +45,9 @@ COPY run_carrier_rate_migration.py ./
 COPY create_driver_payroll_settings.sql ./
 COPY run_driver_settings_migration.py ./
 COPY entrypoint.sh ./
+
+# Copy database schema
+COPY ../database/schema.sql ../database/
 
 # Copy application code
 COPY app/ ./app/

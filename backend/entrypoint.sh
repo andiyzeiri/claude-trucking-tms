@@ -3,6 +3,10 @@ set -e
 
 echo "🚀 Starting backend application..."
 
+# Initialize database schema if needed
+echo "🔧 Checking database schema..."
+python3 init_schema.py
+
 # Run database migrations
 echo "📦 Running database migrations..."
 python3 migrate.py
