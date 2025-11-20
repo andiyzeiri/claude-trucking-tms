@@ -36,11 +36,26 @@ async def reset_password():
 
         # Update the user's password
         print("🔧 Updating password for absolutetruckingbusiness@gmail.com...")
-        await conn.execute("""
+        result = await conn.execute("""
             UPDATE users
             SET hashed_password = $1
             WHERE email = $2
         """, hashed_password, "absolutetruckingbusiness@gmail.com")
+
+        print(f"📊 Update result: {result}")
+
+        # Verify the update
+        check_user = await conn.fetchrow("""
+            SELECT email, hashed_password
+            FROM users
+            WHERE email = $1
+        """, "absolutetruckingbusiness@gmail.com")
+
+        if check_user:
+            print(f"✅ Verified - Password hash starts with: {check_user['hashed_password'][:20]}...")
+            print(f"   Hash length: {len(check_user['hashed_password'])}")
+        else:
+            print("❌ User not found after update!")
 
         print("✅ Password reset successfully!")
 
