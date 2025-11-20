@@ -18,10 +18,10 @@
     X-Frame-Options = "SAMEORIGIN"
     X-XSS-Protection = "1; mode=block"
 
-# Redirect API calls to your AWS backend via Application Load Balancer
+# Redirect API calls to your AWS backend via Application Load Balancer (HTTPS)
 [[redirects]]
   from = "/api/*"
-  to = "http://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com/api/:splat"
+  to = "https://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com/:splat"
   status = 200
   force = true
 

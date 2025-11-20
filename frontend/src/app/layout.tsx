@@ -10,6 +10,9 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Claude Trucking TMS",
   description: "Transportation Management System for Claude Trucking",
+  icons: {
+    icon: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({
