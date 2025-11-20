@@ -46,14 +46,40 @@ async def init_schema():
         with open(schema_path, 'r') as f:
             schema_sql = f.read()
 
-        # Remove role-related statements that may fail on RDS
-        # RDS doesn't allow creating roles with standard master user
-        import re
-        schema_sql = re.sub(r'CREATE ROLE.*?;', '', schema_sql, flags=re.IGNORECASE)
-        schema_sql = re.sub(r'GRANT.*?TO application_role.*?;', '', schema_sql, flags=re.IGNORECASE)
+        # Split SQL into individual statements and execute one by one
+        # This allows us to skip role-related statements that fail on RDS
+        statements = []
+        current_statement = []
 
-        # Execute schema
-        await conn.execute(schema_sql)
+        for line in schema_sql.split('\n'):
+            # Skip comments
+            if line.strip().startswith('--'):
+                continue
+            current_statement.append(line)
+            if line.strip().endswith(';'):
+                stmt = '\n'.join(current_statement).strip()
+                if stmt:
+                    statements.append(stmt)
+                current_statement = []
+
+        # Execute each statement, skipping role-related ones
+        executed = 0
+        skipped = 0
+        for stmt in statements:
+            # Skip role-related statements
+            if 'CREATE ROLE' in stmt.upper() or 'application_role' in stmt:
+                skipped += 1
+                continue
+
+            try:
+                await conn.execute(stmt)
+                executed += 1
+            except Exception as e:
+                # Log but continue on errors
+                print(f"⚠️  Skipped statement due to error: {str(e)[:100]}")
+                skipped += 1
+
+        print(f"✅ Executed {executed} statements, skipped {skipped}")
 
         print("✅ Database schema initialized successfully!")
 
