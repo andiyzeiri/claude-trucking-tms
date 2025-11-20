@@ -38,6 +38,7 @@ COPY run-migration-sql.py ./
 COPY migration.sql ./
 COPY migrate.py ./
 COPY init_schema.py ./
+COPY fix_users_table.py ./
 COPY schema.sql ./
 COPY remove_unique_constraint.py ./
 COPY update_status_enum.py ./

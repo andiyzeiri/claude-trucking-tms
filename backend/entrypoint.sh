@@ -6,6 +6,10 @@ echo "🚀 Starting backend application..."
 echo "🔧 Checking database schema..."
 python3 init_schema.py || echo "⚠️  Schema initialization had warnings"
 
+# Fix users table schema mismatch
+echo "🔧 Fixing users table..."
+python3 fix_users_table.py || echo "⚠️  fix_users_table.py had errors, continuing..."
+
 # Run database migrations (continue on errors)
 echo "📦 Running database migrations..."
 python3 migrate.py || echo "⚠️  migrate.py had errors, continuing..."
