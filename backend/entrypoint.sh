@@ -24,6 +24,10 @@ python3 migrate.py || echo "⚠️  migrate.py had errors, continuing..."
 python3 remove_unique_constraint.py || echo "⚠️  remove_unique_constraint.py had errors, continuing..."
 python3 run_carrier_rate_migration.py || echo "⚠️  run_carrier_rate_migration.py had errors, continuing..."
 
+# Run Alembic migrations
+echo "📦 Running Alembic migrations..."
+alembic upgrade head || echo "⚠️  Alembic migrations had errors, continuing..."
+
 # Start the application
 echo "✅ Migrations complete. Starting uvicorn..."
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
