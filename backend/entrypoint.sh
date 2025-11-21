@@ -24,9 +24,13 @@ python3 migrate.py || echo "⚠️  migrate.py had errors, continuing..."
 python3 remove_unique_constraint.py || echo "⚠️  remove_unique_constraint.py had errors, continuing..."
 python3 run_carrier_rate_migration.py || echo "⚠️  run_carrier_rate_migration.py had errors, continuing..."
 
-# Run Alembic migrations
-echo "📦 Running Alembic migrations..."
-alembic upgrade head || echo "⚠️  Alembic migrations had errors, continuing..."
+# Fix missing tables directly
+echo "🔧 Adding missing tables and columns..."
+python3 fix_missing_tables.py || echo "⚠️  fix_missing_tables.py had errors, continuing..."
+
+# Stamp Alembic version to match current state
+echo "📦 Stamping Alembic version..."
+python3 stamp_alembic.py || echo "⚠️  stamp_alembic.py had errors, continuing..."
 
 # Start the application
 echo "✅ Migrations complete. Starting uvicorn..."
