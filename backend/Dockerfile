@@ -48,6 +48,8 @@ COPY cleanup_old_statuses.py ./
 COPY run_carrier_rate_migration.py ./
 COPY create_driver_payroll_settings.sql ./
 COPY run_driver_settings_migration.py ./
+COPY fix_missing_tables.py ./
+COPY stamp_alembic.py ./
 COPY entrypoint.sh ./
 
 # Copy application code
