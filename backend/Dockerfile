@@ -50,6 +50,7 @@ COPY create_driver_payroll_settings.sql ./
 COPY run_driver_settings_migration.py ./
 COPY fix_missing_tables.py ./
 COPY stamp_alembic.py ./
+COPY fix_enum_types.py ./
 COPY entrypoint.sh ./
 
 # Copy application code

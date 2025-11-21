@@ -28,6 +28,10 @@ python3 run_carrier_rate_migration.py || echo "⚠️  run_carrier_rate_migratio
 echo "🔧 Adding missing tables and columns..."
 python3 fix_missing_tables.py || echo "⚠️  fix_missing_tables.py had errors, continuing..."
 
+# Fix enum types
+echo "🔧 Fixing enum types..."
+python3 fix_enum_types.py || echo "⚠️  fix_enum_types.py had errors, continuing..."
+
 # Stamp Alembic version to match current state
 echo "📦 Stamping Alembic version..."
 python3 stamp_alembic.py || echo "⚠️  stamp_alembic.py had errors, continuing..."
