@@ -15,6 +15,9 @@ class TruckBase(BaseModel):
     status: TruckStatus = TruckStatus.AVAILABLE
     current_driver_id: Optional[int] = None
 
+    class Config:
+        use_enum_values = True
+
 
 class TruckCreate(TruckBase):
     pass
