@@ -97,6 +97,7 @@ export default function TrucksPage() {
 
   const handleSaveTruck = (truckData: TruckData) => {
     const backendData = {
+      type: truckData.type,
       truck_number: truckData.unit_number,
       make: truckData.make,
       model: truckData.model,
