@@ -742,57 +742,64 @@ export default function LoadsPageInline() {
   }
 
   const updateField = async (id: number | 'new', field: keyof EditableLoad, value: any) => {
-    const updatedLoads = editableLoads.map(load => {
-      if ((id === 'new' && load.isNew) || load.id === id) {
-        const updated = { ...load, [field]: value }
+    // Find the load to update
+    const load = editableLoads.find(l => (id === 'new' && l.isNew) || l.id === id)
+    if (!load) return
 
-        // Update nested objects when IDs change
-        if (field === 'driver_id') {
-          updated.driver = value ? drivers.find(d => d.id === value) : undefined
+    // For new loads, update state locally only
+    if (load.isNew) {
+      const updatedLoads = editableLoads.map(l => {
+        if ((id === 'new' && l.isNew) || l.id === id) {
+          const updated = { ...l, [field]: value }
+
+          // Update nested objects when IDs change
+          if (field === 'driver_id') {
+            updated.driver = value ? drivers.find(d => d.id === value) : undefined
+          }
+
+          // Recalculate week info when pickup_date changes
+          if (field === 'pickup_date' && value) {
+            const pickupDate = new Date(value)
+            updated.weekNumber = getWeekNumber(pickupDate)
+            updated.weekLabel = getWeekLabel(pickupDate)
+            updated.weekDateRange = getWeekDateRange(pickupDate)
+            updated.dayOfWeek = pickupDate.getDay()
+            updated.dayLabel = getDayLabel(pickupDate)
+          }
+
+          return updated
         }
+        return l
+      })
+      setEditableLoads(updatedLoads)
+      return
+    }
 
-        // Recalculate week info when pickup_date changes
-        if (field === 'pickup_date' && value) {
-          const pickupDate = new Date(value)
-          updated.weekNumber = getWeekNumber(pickupDate)
-          updated.weekLabel = getWeekLabel(pickupDate)
-          updated.weekDateRange = getWeekDateRange(pickupDate)
-          updated.dayOfWeek = pickupDate.getDay()
-          updated.dayLabel = getDayLabel(pickupDate)
-        }
-
-        return updated
+    // For existing loads, update backend directly
+    // React Query will automatically refetch via query invalidation in the mutation's onSuccess
+    try {
+      const backendData: any = {
+        load_number: load.load_number,
+        customer_id: load.customer_id,
+        driver_id: field === 'driver_id' ? (value || null) : (load.driver_id || null),
+        truck_id: null,
+        pickup_location: field === 'pickup_location' ? value : load.pickup_location,
+        delivery_location: field === 'delivery_location' ? value : load.delivery_location,
+        pickup_date: field === 'pickup_date' ? value : load.pickup_date,
+        delivery_date: field === 'delivery_date' ? value : load.delivery_date,
+        miles: field === 'miles' ? value : (load.miles || 0),
+        rate: field === 'rate' ? value : (load.rate || 0),
+        status: field === 'status' ? value : load.status,
+        pod_url: field === 'pod_url' ? value : (load.pod_url || null),
+        ratecon_url: field === 'ratecon_url' ? value : (load.ratecon_url || null),
+        notes: field === 'notes' ? value : (load.notes || null),
+        [field]: value
       }
-      return load
-    })
-    setEditableLoads(updatedLoads)
-
-    // Auto-save to backend if not a new load
-    const load = updatedLoads.find(l => (id === 'new' && l.isNew) || l.id === id)
-    if (load && !load.isNew) {
-      try {
-        const backendData: any = {
-          load_number: load.load_number,
-          customer_id: load.customer_id,
-          driver_id: load.driver_id || null,
-          truck_id: null,
-          pickup_location: load.pickup_location,
-          delivery_location: load.delivery_location,
-          pickup_date: load.pickup_date,
-          delivery_date: load.delivery_date,
-          miles: load.miles || 0,
-          rate: load.rate || 0,
-          status: load.status,
-          pod_url: load.pod_url || null,
-          ratecon_url: load.ratecon_url || null,
-          notes: load.notes || null
-        }
-        await updateLoad.mutateAsync({ id: load.id, data: backendData })
-      } catch (error) {
-        // Error is already handled by the mutation hook's onError
-        // But we need to rethrow to let callers know it failed
-        throw error
-      }
+      await updateLoad.mutateAsync({ id: load.id, data: backendData })
+    } catch (error) {
+      // Error is already handled by the mutation hook's onError
+      // But we need to rethrow to let callers know it failed
+      throw error
     }
   }
 
