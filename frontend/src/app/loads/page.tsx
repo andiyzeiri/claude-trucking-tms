@@ -1231,12 +1231,12 @@ export default function LoadsPageInline() {
           <td colSpan={2} className="px-2 py-2 text-sm font-medium text-gray-700" style={{ paddingLeft: `${paddingLeft + 8}px` }}>
             <div className="flex items-center gap-2">
               {isCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4 flex-shrink-0" />
               ) : (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-4 w-4 flex-shrink-0" />
               )}
-              <span>{groupKey}</span>
-              <span className="text-gray-500">({groupLoads.length} loads)</span>
+              <span className="whitespace-nowrap">{groupKey}</span>
+              <span className="text-gray-500 whitespace-nowrap">({groupLoads.length} loads)</span>
             </div>
           </td>
           <td className="px-2 py-2 text-sm" colSpan={6}></td>
