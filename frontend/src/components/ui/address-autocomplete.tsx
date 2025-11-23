@@ -114,19 +114,29 @@ export function AddressAutocomplete({
     }
 
     const listener = autocomplete.addListener('place_changed', handlePlaceSelect)
+    console.log('✅ Google place_changed listener attached')
 
     // Also listen for Enter key and click events on the dropdown as fallback
     const inputElement = inputRef.current
+    console.log('📍 Input element for keyboard listener:', inputElement)
+
     const handleKeyDown = (e: KeyboardEvent) => {
+      console.log('⌨️ Key pressed:', e.key)
       if (e.key === 'Enter') {
-        console.log('⌨️ Enter key pressed')
+        console.log('⌨️ Enter key detected, calling handlePlaceSelect')
         // Give Google a moment to process the selection
         setTimeout(handlePlaceSelect, 10)
       }
     }
-    inputElement.addEventListener('keydown', handleKeyDown)
 
-    console.log('✅ Event listener attached')
+    if (inputElement) {
+      inputElement.addEventListener('keydown', handleKeyDown)
+      console.log('✅ Keyboard listener attached to input')
+    } else {
+      console.error('❌ Input element not found for keyboard listener')
+    }
+
+    console.log('✅ All event listeners attached')
 
     return () => {
       console.log('🧹 Cleaning up autocomplete')
