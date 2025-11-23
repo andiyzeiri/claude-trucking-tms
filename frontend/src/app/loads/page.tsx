@@ -503,8 +503,9 @@ export default function LoadsPageInline() {
           groupKey = load.dayLabel || 'Unknown'
         } else if (groupType === 'driver') {
           // Normalize driver check - handle null, undefined, and missing driver
-          const hasDriver = load.driver && load.driver.first_name && load.driver.last_name
-          groupKey = hasDriver ? `${load.driver.first_name} ${load.driver.last_name}` : 'Unassigned'
+          // Explicitly check driver_id to ensure consistent grouping
+          const hasValidDriver = load.driver_id && load.driver && load.driver.first_name && load.driver.last_name
+          groupKey = hasValidDriver ? `${load.driver.first_name} ${load.driver.last_name}` : 'Unassigned'
         } else if (groupType === 'customer') {
           groupKey = customers.find(c => c.id === load.customer_id)?.name || 'N/A'
         }
