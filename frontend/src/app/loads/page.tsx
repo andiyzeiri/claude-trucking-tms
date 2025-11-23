@@ -19,7 +19,7 @@ import toast from 'react-hot-toast'
 import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
 import { PdfViewer } from '@/components/loads/pdf-viewer'
-import { AddressAutocomplete } from '@/components/ui/address-autocomplete'
+import { AddressAutocomplete, AddressData } from '@/components/ui/address-autocomplete'
 import api from '@/lib/api'
 
 interface EditableLoad extends Load {
@@ -1430,26 +1430,27 @@ export default function LoadsPageInline() {
               <div className="mb-1">
                 <AddressAutocomplete
                   value=""
-                  onChange={(address) => {
-                    // Parse the formatted address
-                    const parts = address.split(', ')
-                    if (parts.length >= 3) {
-                      const street = parts[0]
-                      const city = parts[1]
-                      // Handle "State ZIP, Country" format by removing country
-                      const stateZipCountry = parts.slice(2).join(', ')
-                      const stateZipParts = stateZipCountry.replace(/, USA$/, '').split(' ')
-                      const state = stateZipParts[0]
-                      const zip = stateZipParts[1] || ''
+                  onChange={(addressData) => {
+                    console.log('📬 Received address data in loads page:', addressData)
 
-                      updateLocationField('street', street)
-                      updateLocationField('city', city)
-                      updateLocationField('state', state)
-                      updateLocationField('zip', zip)
+                    // Use structured address components from Google Places API
+                    const street = addressData.street_number && addressData.route
+                      ? `${addressData.street_number} ${addressData.route}`
+                      : addressData.formatted_address.split(',')[0]  // Fallback for manual entry
 
-                      // Auto-save after filling fields
-                      setTimeout(() => stopLocationEdit(), 100)
-                    }
+                    const city = addressData.locality || ''
+                    const state = addressData.administrative_area_level_1 || ''
+                    const zip = addressData.postal_code || ''
+
+                    console.log('🏘️ Extracted fields:', { street, city, state, zip })
+
+                    updateLocationField('street', street)
+                    updateLocationField('city', city)
+                    updateLocationField('state', state)
+                    updateLocationField('zip', zip)
+
+                    // Auto-save after filling fields
+                    setTimeout(() => stopLocationEdit(), 100)
                   }}
                   placeholder="Search address..."
                   className="h-7 text-sm w-full px-2 border rounded"
@@ -1592,26 +1593,27 @@ export default function LoadsPageInline() {
               <div className="mb-1">
                 <AddressAutocomplete
                   value=""
-                  onChange={(address) => {
-                    // Parse the formatted address
-                    const parts = address.split(', ')
-                    if (parts.length >= 3) {
-                      const street = parts[0]
-                      const city = parts[1]
-                      // Handle "State ZIP, Country" format by removing country
-                      const stateZipCountry = parts.slice(2).join(', ')
-                      const stateZipParts = stateZipCountry.replace(/, USA$/, '').split(' ')
-                      const state = stateZipParts[0]
-                      const zip = stateZipParts[1] || ''
+                  onChange={(addressData) => {
+                    console.log('📬 Received address data in loads page:', addressData)
 
-                      updateLocationField('street', street)
-                      updateLocationField('city', city)
-                      updateLocationField('state', state)
-                      updateLocationField('zip', zip)
+                    // Use structured address components from Google Places API
+                    const street = addressData.street_number && addressData.route
+                      ? `${addressData.street_number} ${addressData.route}`
+                      : addressData.formatted_address.split(',')[0]  // Fallback for manual entry
 
-                      // Auto-save after filling fields
-                      setTimeout(() => stopLocationEdit(), 100)
-                    }
+                    const city = addressData.locality || ''
+                    const state = addressData.administrative_area_level_1 || ''
+                    const zip = addressData.postal_code || ''
+
+                    console.log('🏘️ Extracted fields:', { street, city, state, zip })
+
+                    updateLocationField('street', street)
+                    updateLocationField('city', city)
+                    updateLocationField('state', state)
+                    updateLocationField('zip', zip)
+
+                    // Auto-save after filling fields
+                    setTimeout(() => stopLocationEdit(), 100)
                   }}
                   placeholder="Search address..."
                   className="h-7 text-sm w-full px-2 border rounded"
