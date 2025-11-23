@@ -316,37 +316,32 @@ export default function LoadsPageInline() {
 
   // Sync loads with editable state and add week info
   React.useEffect(() => {
-    // Only update if the loads have actually changed
-    const loadIds = loads.map(l => l.id).sort().join(',')
-    const editableIds = editableLoads.map(l => l.id).sort().join(',')
+    const loadsWithWeeks = loads.map(load => {
+      const pickupDate = new Date(load.pickup_date)
+      // Preserve the currently editing load to avoid losing user input
+      const existingEditableLoad = editableLoads.find(el => el.id === load.id)
+      const isCurrentlyEditing = editingLocation &&
+        ((editingLocation.loadId === load.id) || (editingLocation.loadId === 'new' && load.isNew))
 
-    if (loadIds !== editableIds || loads.length !== editableLoads.length) {
-      const loadsWithWeeks = loads.map(load => {
-        const pickupDate = new Date(load.pickup_date)
-        // Preserve the currently editing load to avoid losing user input
-        const existingEditableLoad = editableLoads.find(el => el.id === load.id)
-        const isCurrentlyEditing = editingLocation &&
-          ((editingLocation.loadId === load.id) || (editingLocation.loadId === 'new' && load.isNew))
-
-        return {
-          ...load,
-          // If this load is currently being edited, preserve its location data
-          ...(isCurrentlyEditing && existingEditableLoad ? {
-            pickup_location: existingEditableLoad.pickup_location,
-            delivery_location: existingEditableLoad.delivery_location,
-            pickup_date: existingEditableLoad.pickup_date,
-            delivery_date: existingEditableLoad.delivery_date
-          } : {}),
-          weekNumber: getWeekNumber(pickupDate),
-          weekLabel: getWeekLabel(pickupDate),
-          weekDateRange: getWeekDateRange(pickupDate),
-          dayOfWeek: pickupDate.getDay(),
-          dayLabel: getDayLabel(pickupDate)
-        }
-      })
-      setEditableLoads(loadsWithWeeks)
-    }
-  }, [loads, loads.length, editableLoads, editingLocation])
+      return {
+        ...load,
+        // If this load is currently being edited, preserve its location data
+        ...(isCurrentlyEditing && existingEditableLoad ? {
+          pickup_location: existingEditableLoad.pickup_location,
+          delivery_location: existingEditableLoad.delivery_location,
+          pickup_date: existingEditableLoad.pickup_date,
+          delivery_date: existingEditableLoad.delivery_date
+        } : {}),
+        weekNumber: getWeekNumber(pickupDate),
+        weekLabel: getWeekLabel(pickupDate),
+        weekDateRange: getWeekDateRange(pickupDate),
+        dayOfWeek: pickupDate.getDay(),
+        dayLabel: getDayLabel(pickupDate)
+      }
+    })
+    setEditableLoads(loadsWithWeeks)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loads, editingLocation])
 
   // Close group menu when clicking outside
   useEffect(() => {
