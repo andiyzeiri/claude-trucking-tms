@@ -157,6 +157,20 @@ export function AddressAutocomplete({
   }
 
   const handleBlur = () => {
+    // Try to get the selected place on blur (for click selections)
+    // Give Google a moment to process the click selection
+    setTimeout(() => {
+      if (autocompleteRef.current) {
+        const place = autocompleteRef.current.getPlace()
+        if (place && place.formatted_address && !isSelectingFromAutocomplete.current) {
+          console.log('🖱️ Place detected on blur (click):', place)
+          // Trigger the place selection handler
+          const event = new Event('place_changed')
+          google.maps.event.trigger(autocompleteRef.current, 'place_changed')
+        }
+      }
+    }, 100)
+
     if (onBlur) {
       onBlur()
     }
