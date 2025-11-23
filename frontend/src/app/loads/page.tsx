@@ -537,9 +537,9 @@ export default function LoadsPageInline() {
     return createNestedGroups(filteredLoads, 0)
   }, [filteredLoads, activeGroupings, customers])
 
-  // Collapse all groups by default on initial load only
+  // Collapse all groups by default on initial load
   useEffect(() => {
-    if (!groupedLoads || hasInitiallyCollapsed.current) return
+    if (!groupedLoads) return
 
     const getAllGroupKeys = (data: any): string[] => {
       if (Array.isArray(data)) return []
@@ -552,10 +552,20 @@ export default function LoadsPageInline() {
       return keys
     }
 
-    const allGroupKeys = getAllGroupKeys(groupedLoads)
-    setCollapsedGroups(new Set(allGroupKeys))
-    hasInitiallyCollapsed.current = true
+    // Only set collapsed groups if we haven't manually interacted with them yet
+    // Or if this is the first load
+    if (!hasInitiallyCollapsed.current) {
+      const allGroupKeys = getAllGroupKeys(groupedLoads)
+      setCollapsedGroups(new Set(allGroupKeys))
+      hasInitiallyCollapsed.current = true
+    }
   }, [groupedLoads])
+
+  // Reset the hasInitiallyCollapsed flag when activeGroupings changes
+  // This ensures groups are collapsed when switching grouping modes
+  useEffect(() => {
+    hasInitiallyCollapsed.current = false
+  }, [activeGroupings])
 
   const toggleGroup = (groupKey: string) => {
     const newCollapsed = new Set(collapsedGroups)
