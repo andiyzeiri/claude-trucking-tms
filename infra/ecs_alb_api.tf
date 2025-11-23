@@ -299,6 +299,10 @@ resource "aws_ecs_task_definition" "api" {
         {
           name  = "SECRET_KEY"
           value = "CHANGE-THIS-IN-PRODUCTION-USE-SECRETS-MANAGER"
+        },
+        {
+          name  = "GOOGLE_MAPS_API_KEY"
+          value = "AIzaSyDZUHavr1W8hSUnxcMUZEF3m09LTpO4Cls"
         }
       ]
 
