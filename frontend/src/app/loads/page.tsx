@@ -715,40 +715,21 @@ export default function LoadsPageInline() {
     const uploadToast = toast.loading('Uploading PDF...')
 
     try {
-      // Get token from cookie
-      const getCookie = (name: string) => {
-        const value = `; ${document.cookie}`
-        const parts = value.split(`; ${name}=`)
-        if (parts.length === 2) return parts.pop()?.split(';').shift()
-      }
-      const token = getCookie('auth-token')
-
-      // Upload file
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL
-      if (!apiUrl) {
-        throw new Error('API URL not configured')
-      }
-      const response = await fetch(`${apiUrl}/v1/uploads/`, {
-        method: 'POST',
+      // Upload file using api client (handles auth automatically)
+      const response = await api.post('/v1/uploads/', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
         },
-        body: formData,
       })
 
-      if (!response.ok) {
-        throw new Error('Upload failed')
-      }
-
-      const data = await response.json()
-
       // Update the field with the returned URL
-      await updateField(loadKey, field, data.url)
+      await updateField(loadKey, field, response.data.url)
 
       toast.success('PDF uploaded successfully', { id: uploadToast })
-    } catch (error) {
+    } catch (error: any) {
       console.error('File upload error:', error)
-      toast.error('Failed to upload PDF', { id: uploadToast })
+      const errorMsg = error.response?.data?.detail || 'Failed to upload PDF'
+      toast.error(errorMsg, { id: uploadToast })
     }
 
     // Reset the input
