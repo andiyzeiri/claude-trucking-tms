@@ -1,6 +1,8 @@
 from sqlalchemy import Column, String, Text, Numeric, DateTime, ForeignKey, Integer, Enum
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 import enum
+import uuid
 from .base import Base
 
 
@@ -58,6 +60,7 @@ class Load(Base):
     driver_id = Column(Integer, ForeignKey("drivers.id"))
     driver = relationship("Driver", back_populates="loads")
 
-    stops = relationship("Stop", back_populates="load", cascade="all, delete-orphan")
+    # Temporarily commented out until stops table is created
+    # stops = relationship("Stop", back_populates="load", cascade="all, delete-orphan")
     # invoices = relationship("Invoice", back_populates="load")
     # expenses = relationship("Expense", back_populates="load")
