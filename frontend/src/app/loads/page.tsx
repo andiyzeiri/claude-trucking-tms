@@ -316,6 +316,14 @@ export default function LoadsPageInline() {
 
   // Sync loads with editable state and add week info
   React.useEffect(() => {
+    // Only update if loads have actually changed (prevent unnecessary re-renders)
+    const newLoadIds = loads.map(l => l.id).sort().join(',')
+    const currentLoadIds = editableLoads.map(l => l.id).sort().join(',')
+
+    if (newLoadIds === currentLoadIds && loads.length === editableLoads.length) {
+      return // No changes, skip update
+    }
+
     // Deduplicate loads by ID to prevent duplicate groups
     const uniqueLoads = loads.filter((load, index, self) =>
       index === self.findIndex(l => l.id === load.id)
