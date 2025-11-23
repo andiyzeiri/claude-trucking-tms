@@ -1818,23 +1818,29 @@ export default function LoadsPageInline() {
           {isEditing(loadKey, 'rate') || isEditing(loadKey, 'miles') ? (
             <div className="space-y-1">
               <Input
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={load.rate || ''}
                 onChange={(e) => {
-                  const input = e.target
-                  const cursorPos = input.selectionStart
-                  updateField(loadKey, 'rate', e.target.value === '' ? 0 : Number(e.target.value))
-                  // Restore cursor position after state update
-                  requestAnimationFrame(() => {
-                    input.setSelectionRange(cursorPos, cursorPos)
-                  })
+                  // Only update local state, not backend
+                  const value = e.target.value
+                  if (value === '' || !isNaN(Number(value))) {
+                    setEditableLoads(prev => prev.map(l =>
+                      ((loadKey === 'new' && l.isNew) || l.id === loadKey)
+                        ? { ...l, rate: value === '' ? 0 : Number(value) }
+                        : l
+                    ))
+                  }
                 }}
                 onFocus={() => startEdit(loadKey, 'rate')}
-                onBlur={stopEdit}
+                onBlur={(e) => {
+                  updateField(loadKey, 'rate', e.target.value === '' ? 0 : Number(e.target.value))
+                  stopEdit()
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === 'Tab') {
                     e.preventDefault()
+                    updateField(loadKey, 'rate', (e.target as HTMLInputElement).value === '' ? 0 : Number((e.target as HTMLInputElement).value))
                     stopEdit()
                   }
                 }}
@@ -1842,23 +1848,29 @@ export default function LoadsPageInline() {
                 className="h-7 text-sm"
               />
               <Input
-                type="number"
-                step="1"
+                type="text"
+                inputMode="numeric"
                 value={load.miles || ''}
                 onChange={(e) => {
-                  const input = e.target
-                  const cursorPos = input.selectionStart
-                  updateField(loadKey, 'miles', e.target.value === '' ? 0 : Number(e.target.value))
-                  // Restore cursor position after state update
-                  requestAnimationFrame(() => {
-                    input.setSelectionRange(cursorPos, cursorPos)
-                  })
+                  // Only update local state, not backend
+                  const value = e.target.value
+                  if (value === '' || (!isNaN(Number(value)) && Number.isInteger(Number(value)))) {
+                    setEditableLoads(prev => prev.map(l =>
+                      ((loadKey === 'new' && l.isNew) || l.id === loadKey)
+                        ? { ...l, miles: value === '' ? 0 : Number(value) }
+                        : l
+                    ))
+                  }
                 }}
                 onFocus={() => startEdit(loadKey, 'miles')}
-                onBlur={stopEdit}
+                onBlur={(e) => {
+                  updateField(loadKey, 'miles', e.target.value === '' ? 0 : Number(e.target.value))
+                  stopEdit()
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === 'Tab') {
                     e.preventDefault()
+                    updateField(loadKey, 'miles', (e.target as HTMLInputElement).value === '' ? 0 : Number((e.target as HTMLInputElement).value))
                     stopEdit()
                   }
                 }}
