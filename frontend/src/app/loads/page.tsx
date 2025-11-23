@@ -861,9 +861,14 @@ export default function LoadsPageInline() {
     setEditingCell({ loadId, field: type === 'pickup' ? 'pickup_location' : 'delivery_location' })
   }
 
-  const stopLocationEdit = async () => {
+  const stopLocationEdit = async (overrideValues?: { street?: string; city?: string; state?: string; zip?: string }) => {
     if (editingLocation) {
-      const { loadId, type, street, city, state, zip, date, time } = editingLocation
+      const { loadId, type, street: stateStreet, city: stateCity, state: stateState, zip: stateZip, date, time } = editingLocation
+      // Use override values if provided, otherwise use state values
+      const street = overrideValues?.street ?? stateStreet
+      const city = overrideValues?.city ?? stateCity
+      const state = overrideValues?.state ?? stateState
+      const zip = overrideValues?.zip ?? stateZip
 
       try {
         // Combine location components
@@ -1456,8 +1461,9 @@ export default function LoadsPageInline() {
                       }
                     })
 
-                    // Auto-save after filling fields - increased timeout to ensure state updates complete
-                    setTimeout(() => stopLocationEdit(), 200)
+                    // Auto-save immediately with the values we just extracted
+                    // Pass values directly to avoid stale state closure issue
+                    setTimeout(() => stopLocationEdit({ street, city, state, zip }), 100)
                   }}
                   placeholder="Search address..."
                   className="h-7 text-sm w-full px-2 border rounded"
@@ -1626,8 +1632,9 @@ export default function LoadsPageInline() {
                       }
                     })
 
-                    // Auto-save after filling fields - increased timeout to ensure state updates complete
-                    setTimeout(() => stopLocationEdit(), 200)
+                    // Auto-save immediately with the values we just extracted
+                    // Pass values directly to avoid stale state closure issue
+                    setTimeout(() => stopLocationEdit({ street, city, state, zip }), 100)
                   }}
                   placeholder="Search address..."
                   className="h-7 text-sm w-full px-2 border rounded"
