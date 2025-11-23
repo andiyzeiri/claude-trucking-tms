@@ -36,11 +36,23 @@ type EditingCell = {
   field: string
 } | null
 
-// Helper to get week number from date
+// Helper to get week number from date (ISO 8601)
 function getWeekNumber(date: Date): number {
-  const startOfYear = new Date(date.getFullYear(), 0, 1)
-  const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000))
-  return Math.ceil((days + startOfYear.getDay() + 1) / 7)
+  // Copy date so we don't mutate the original
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+
+  // Set to nearest Thursday: current date + 4 - current day number
+  // Make Sunday's day number 7
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+
+  // Get first day of year
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+
+  // Calculate full weeks to nearest Thursday
+  const weekNum = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+
+  return weekNum
 }
 
 // Helper to get week label with date range
@@ -67,13 +79,24 @@ function getWeekDateRange(date: Date): string {
   return `(${startMonth}/${startDay}-${endMonth}/${endDay})`
 }
 
-// Helper to get a date from a week number
+// Helper to get a date from a week number (ISO 8601)
 function getDateFromWeekNumber(weekNumber: number, year?: number): Date {
   const currentYear = year || new Date().getFullYear()
-  const startOfYear = new Date(currentYear, 0, 1)
-  const daysToAdd = (weekNumber - 1) * 7 - startOfYear.getDay() + 1
-  const targetDate = new Date(currentYear, 0, 1 + daysToAdd)
-  return targetDate
+
+  // January 4th is always in week 1
+  const jan4 = new Date(Date.UTC(currentYear, 0, 4))
+
+  // Get the Monday of week 1
+  const dayNum = jan4.getUTCDay() || 7
+  const week1Monday = new Date(jan4)
+  week1Monday.setUTCDate(jan4.getUTCDate() - dayNum + 1)
+
+  // Add weeks
+  const targetDate = new Date(week1Monday)
+  targetDate.setUTCDate(week1Monday.getUTCDate() + (weekNumber - 1) * 7)
+
+  // Convert to local date
+  return new Date(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate())
 }
 
 // Helper to get day label (e.g., "Monday, Dec 18")
