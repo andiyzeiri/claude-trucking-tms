@@ -1819,8 +1819,17 @@ export default function LoadsPageInline() {
             <div className="space-y-1">
               <Input
                 type="number"
-                value={load.rate}
-                onChange={(e) => updateField(loadKey, 'rate', Number(e.target.value))}
+                step="0.01"
+                value={load.rate || ''}
+                onChange={(e) => {
+                  const input = e.target
+                  const cursorPos = input.selectionStart
+                  updateField(loadKey, 'rate', e.target.value === '' ? 0 : Number(e.target.value))
+                  // Restore cursor position after state update
+                  requestAnimationFrame(() => {
+                    input.setSelectionRange(cursorPos, cursorPos)
+                  })
+                }}
                 onFocus={() => startEdit(loadKey, 'rate')}
                 onBlur={stopEdit}
                 onKeyDown={(e) => {
@@ -1834,8 +1843,17 @@ export default function LoadsPageInline() {
               />
               <Input
                 type="number"
-                value={load.miles}
-                onChange={(e) => updateField(loadKey, 'miles', Number(e.target.value))}
+                step="1"
+                value={load.miles || ''}
+                onChange={(e) => {
+                  const input = e.target
+                  const cursorPos = input.selectionStart
+                  updateField(loadKey, 'miles', e.target.value === '' ? 0 : Number(e.target.value))
+                  // Restore cursor position after state update
+                  requestAnimationFrame(() => {
+                    input.setSelectionRange(cursorPos, cursorPos)
+                  })
+                }}
                 onFocus={() => startEdit(loadKey, 'miles')}
                 onBlur={stopEdit}
                 onKeyDown={(e) => {
