@@ -342,8 +342,13 @@ export default function LoadsPageInline() {
   // Close location editor when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Check if click is on Google Places autocomplete dropdown
+      const target = event.target as HTMLElement
+      const isGoogleAutocomplete = target.closest('.pac-container') !== null
+
       if (locationEditRef.current && !locationEditRef.current.contains(event.target as Node)) {
-        if (editingLocation) {
+        // Don't close if clicking on Google autocomplete dropdown
+        if (editingLocation && !isGoogleAutocomplete) {
           stopLocationEdit()
         }
       }
