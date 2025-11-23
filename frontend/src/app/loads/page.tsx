@@ -316,7 +316,12 @@ export default function LoadsPageInline() {
 
   // Sync loads with editable state and add week info
   React.useEffect(() => {
-    const loadsWithWeeks = loads.map(load => {
+    // Deduplicate loads by ID to prevent duplicate groups
+    const uniqueLoads = loads.filter((load, index, self) =>
+      index === self.findIndex(l => l.id === load.id)
+    )
+
+    const loadsWithWeeks = uniqueLoads.map(load => {
       const pickupDate = new Date(load.pickup_date)
       // Preserve the currently editing load to avoid losing user input
       const existingEditableLoad = editableLoads.find(el => el.id === load.id)
