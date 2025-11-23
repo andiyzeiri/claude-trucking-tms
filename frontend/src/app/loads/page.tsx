@@ -1792,11 +1792,23 @@ export default function LoadsPageInline() {
           {isEditing(loadKey, 'notes') ? (
             <Textarea
               value={load.notes || ''}
-              onChange={(e) => updateField(loadKey, 'notes', e.target.value)}
-              onBlur={stopEdit}
+              onChange={(e) => {
+                // Only update local state, not backend
+                const value = e.target.value
+                setEditableLoads(prev => prev.map(l =>
+                  ((loadKey === 'new' && l.isNew) || l.id === loadKey)
+                    ? { ...l, notes: value }
+                    : l
+                ))
+              }}
+              onBlur={(e) => {
+                updateField(loadKey, 'notes', e.target.value)
+                stopEdit()
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
+                  updateField(loadKey, 'notes', (e.target as HTMLTextAreaElement).value)
                   stopEdit()
                 } else if (e.key === 'Escape') {
                   e.preventDefault()
