@@ -32,9 +32,12 @@ export function AddressAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null)
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
   const [localValue, setLocalValue] = useState(value)
+  const isSelectingFromAutocomplete = useRef(false)
 
   useEffect(() => {
-    setLocalValue(value)
+    if (!isSelectingFromAutocomplete.current) {
+      setLocalValue(value)
+    }
   }, [value])
 
   useEffect(() => {
@@ -55,50 +58,73 @@ export function AddressAutocomplete({
     autocompleteRef.current = autocomplete
 
     // Handle place selection
-    const listener = autocomplete.addListener('place_changed', () => {
-      console.log('🎯 place_changed event fired!')
-      const place = autocomplete.getPlace()
-      console.log('🗺️ Google Place selected:', place)
+    const handlePlaceSelect = () => {
+      try {
+        console.log('🎯 place_changed event fired!')
+        const place = autocomplete.getPlace()
+        console.log('🗺️ Google Place selected:', place)
 
-      if (!place || !place.formatted_address) {
-        console.log('⚠️ No place or formatted_address found')
-        return
-      }
-
-      const formattedAddress = place.formatted_address
-      console.log('📝 Formatted address:', formattedAddress)
-
-      setLocalValue(formattedAddress)
-
-      // Extract structured address components from Google Places API
-      const addressData: AddressData = {
-        formatted_address: formattedAddress
-      }
-
-      // Parse address_components to extract structured data
-      console.log('📍 Address components:', place.address_components)
-      place.address_components?.forEach(component => {
-        const types = component.types
-        if (types.includes('street_number')) {
-          addressData.street_number = component.short_name
-        } else if (types.includes('route')) {
-          addressData.route = component.short_name
-        } else if (types.includes('locality')) {
-          addressData.locality = component.long_name
-        } else if (types.includes('administrative_area_level_1')) {
-          addressData.administrative_area_level_1 = component.short_name
-        } else if (types.includes('postal_code')) {
-          addressData.postal_code = component.short_name
-        } else if (types.includes('country')) {
-          addressData.country = component.short_name
+        if (!place || !place.formatted_address) {
+          console.log('⚠️ No place or formatted_address found')
+          return
         }
-      })
 
-      console.log('✅ Extracted address data:', addressData)
-      console.log('📤 Calling onChange with addressData')
-      onChange(addressData)
-      console.log('✅ onChange called')
-    })
+        isSelectingFromAutocomplete.current = true
+        const formattedAddress = place.formatted_address
+        console.log('📝 Formatted address:', formattedAddress)
+
+        setLocalValue(formattedAddress)
+
+        // Extract structured address components from Google Places API
+        const addressData: AddressData = {
+          formatted_address: formattedAddress
+        }
+
+        // Parse address_components to extract structured data
+        console.log('📍 Address components:', place.address_components)
+        place.address_components?.forEach(component => {
+          const types = component.types
+          if (types.includes('street_number')) {
+            addressData.street_number = component.short_name
+          } else if (types.includes('route')) {
+            addressData.route = component.short_name
+          } else if (types.includes('locality')) {
+            addressData.locality = component.long_name
+          } else if (types.includes('administrative_area_level_1')) {
+            addressData.administrative_area_level_1 = component.short_name
+          } else if (types.includes('postal_code')) {
+            addressData.postal_code = component.short_name
+          } else if (types.includes('country')) {
+            addressData.country = component.short_name
+          }
+        })
+
+        console.log('✅ Extracted address data:', addressData)
+        console.log('📤 Calling onChange with addressData')
+        onChange(addressData)
+        console.log('✅ onChange called')
+
+        setTimeout(() => {
+          isSelectingFromAutocomplete.current = false
+        }, 100)
+      } catch (error) {
+        console.error('❌ Error in place_changed handler:', error)
+        isSelectingFromAutocomplete.current = false
+      }
+    }
+
+    const listener = autocomplete.addListener('place_changed', handlePlaceSelect)
+
+    // Also listen for Enter key and click events on the dropdown as fallback
+    const inputElement = inputRef.current
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        console.log('⌨️ Enter key pressed')
+        // Give Google a moment to process the selection
+        setTimeout(handlePlaceSelect, 10)
+      }
+    }
+    inputElement.addEventListener('keydown', handleKeyDown)
 
     console.log('✅ Event listener attached')
 
@@ -106,6 +132,9 @@ export function AddressAutocomplete({
       console.log('🧹 Cleaning up autocomplete')
       if (listener) {
         google.maps.event.removeListener(listener)
+      }
+      if (inputElement) {
+        inputElement.removeEventListener('keydown', handleKeyDown)
       }
     }
   }, [])
