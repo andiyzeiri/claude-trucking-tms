@@ -1429,7 +1429,7 @@ export default function LoadsPageInline() {
               {/* Autocomplete field */}
               <div className="mb-1">
                 <AddressAutocomplete
-                  value=""
+                  value={editingLocation?.street || ''}
                   onChange={(addressData) => {
                     console.log('📬 Received address data in loads page:', addressData)
 
@@ -1599,7 +1599,7 @@ export default function LoadsPageInline() {
               {/* Autocomplete field */}
               <div className="mb-1">
                 <AddressAutocomplete
-                  value=""
+                  value={editingLocation?.street || ''}
                   onChange={(addressData) => {
                     console.log('📬 Received address data in loads page:', addressData)
 
