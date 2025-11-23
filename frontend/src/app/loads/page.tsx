@@ -1832,27 +1832,30 @@ export default function LoadsPageInline() {
               <Input
                 type="text"
                 inputMode="decimal"
-                value={load.rate || ''}
+                value={load.rate ?? ''}
                 onChange={(e) => {
-                  // Only update local state, not backend
+                  // Keep as string while editing to preserve decimal points and cursor position
                   const value = e.target.value
-                  if (value === '' || !isNaN(Number(value))) {
+                  // Allow empty, numbers, and decimal points
+                  if (value === '' || /^-?\d*\.?\d*$/.test(value)) {
                     setEditableLoads(prev => prev.map(l =>
                       ((loadKey === 'new' && l.isNew) || l.id === loadKey)
-                        ? { ...l, rate: value === '' ? 0 : Number(value) }
+                        ? { ...l, rate: value }
                         : l
                     ))
                   }
                 }}
                 onFocus={() => startEdit(loadKey, 'rate')}
                 onBlur={(e) => {
-                  updateField(loadKey, 'rate', e.target.value === '' ? 0 : Number(e.target.value))
+                  const numValue = e.target.value === '' ? 0 : Number(e.target.value)
+                  updateField(loadKey, 'rate', numValue)
                   stopEdit()
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === 'Tab') {
                     e.preventDefault()
-                    updateField(loadKey, 'rate', (e.target as HTMLInputElement).value === '' ? 0 : Number((e.target as HTMLInputElement).value))
+                    const numValue = (e.target as HTMLInputElement).value === '' ? 0 : Number((e.target as HTMLInputElement).value)
+                    updateField(loadKey, 'rate', numValue)
                     stopEdit()
                   }
                 }}
@@ -1862,27 +1865,30 @@ export default function LoadsPageInline() {
               <Input
                 type="text"
                 inputMode="numeric"
-                value={load.miles || ''}
+                value={load.miles ?? ''}
                 onChange={(e) => {
-                  // Only update local state, not backend
+                  // Keep as string while editing
                   const value = e.target.value
-                  if (value === '' || (!isNaN(Number(value)) && Number.isInteger(Number(value)))) {
+                  // Allow empty and integers only
+                  if (value === '' || /^\d*$/.test(value)) {
                     setEditableLoads(prev => prev.map(l =>
                       ((loadKey === 'new' && l.isNew) || l.id === loadKey)
-                        ? { ...l, miles: value === '' ? 0 : Number(value) }
+                        ? { ...l, miles: value }
                         : l
                     ))
                   }
                 }}
                 onFocus={() => startEdit(loadKey, 'miles')}
                 onBlur={(e) => {
-                  updateField(loadKey, 'miles', e.target.value === '' ? 0 : Number(e.target.value))
+                  const numValue = e.target.value === '' ? 0 : Number(e.target.value)
+                  updateField(loadKey, 'miles', numValue)
                   stopEdit()
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === 'Tab') {
                     e.preventDefault()
-                    updateField(loadKey, 'miles', (e.target as HTMLInputElement).value === '' ? 0 : Number((e.target as HTMLInputElement).value))
+                    const numValue = (e.target as HTMLInputElement).value === '' ? 0 : Number((e.target as HTMLInputElement).value)
+                    updateField(loadKey, 'miles', numValue)
                     stopEdit()
                   }
                 }}
