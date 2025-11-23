@@ -271,7 +271,7 @@ export default function LoadsPageInline() {
   const [editableLoads, setEditableLoads] = useState<EditableLoad[]>([])
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
   // Removed locationSuggestions - autocomplete disabled
-  const [activeGroupings, setActiveGroupings] = useState<Set<'week' | 'day' | 'driver' | 'customer'>>(new Set(['week']))
+  const [activeGroupings, setActiveGroupings] = useState<Set<'week' | 'day' | 'driver' | 'customer'>>(new Set(['week', 'driver']))
   const [groupMenuOpen, setGroupMenuOpen] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
@@ -507,7 +507,31 @@ export default function LoadsPageInline() {
         groups[key] = createNestedGroups(groups[key], level + 1)
       })
 
-      return groups
+      // Sort groups based on type
+      const sortedGroups: Record<string, any> = {}
+      const sortedKeys = Object.keys(groups).sort((a, b) => {
+        if (groupType === 'week') {
+          // Sort weeks chronologically by extracting week number
+          const weekA = parseInt(a.replace('Week ', ''))
+          const weekB = parseInt(b.replace('Week ', ''))
+          return weekA - weekB
+        } else if (groupType === 'driver') {
+          // Sort drivers alphabetically with "Unassigned" always first
+          if (a === 'Unassigned') return -1
+          if (b === 'Unassigned') return 1
+          return a.localeCompare(b)
+        } else if (groupType === 'customer') {
+          // Sort customers alphabetically
+          return a.localeCompare(b)
+        }
+        return 0
+      })
+
+      sortedKeys.forEach(key => {
+        sortedGroups[key] = groups[key]
+      })
+
+      return sortedGroups
     }
 
     return createNestedGroups(filteredLoads, 0)
