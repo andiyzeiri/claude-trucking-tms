@@ -316,20 +316,7 @@ export default function LoadsPageInline() {
 
   // Sync loads with editable state and add week info
   React.useEffect(() => {
-    // Only update if loads have actually changed (prevent unnecessary re-renders)
-    const newLoadIds = loads.map(l => l.id).sort().join(',')
-    const currentLoadIds = editableLoads.map(l => l.id).sort().join(',')
-
-    if (newLoadIds === currentLoadIds && loads.length === editableLoads.length) {
-      return // No changes, skip update
-    }
-
-    // Deduplicate loads by ID to prevent duplicate groups
-    const uniqueLoads = loads.filter((load, index, self) =>
-      index === self.findIndex(l => l.id === load.id)
-    )
-
-    const loadsWithWeeks = uniqueLoads.map(load => {
+    const loadsWithWeeks = loads.map(load => {
       const pickupDate = new Date(load.pickup_date)
       // Preserve the currently editing load to avoid losing user input
       const existingEditableLoad = editableLoads.find(el => el.id === load.id)
@@ -503,9 +490,8 @@ export default function LoadsPageInline() {
           groupKey = load.dayLabel || 'Unknown'
         } else if (groupType === 'driver') {
           // Normalize driver check - handle null, undefined, and missing driver
-          // Explicitly check driver_id to ensure consistent grouping
-          const hasValidDriver = load.driver_id && load.driver && load.driver.first_name && load.driver.last_name
-          groupKey = hasValidDriver ? `${load.driver.first_name} ${load.driver.last_name}` : 'Unassigned'
+          const hasDriver = load.driver && load.driver.first_name && load.driver.last_name
+          groupKey = hasDriver ? `${load.driver.first_name} ${load.driver.last_name}` : 'Unassigned'
         } else if (groupType === 'customer') {
           groupKey = customers.find(c => c.id === load.customer_id)?.name || 'N/A'
         }
