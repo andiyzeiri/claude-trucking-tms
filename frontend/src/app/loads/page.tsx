@@ -889,59 +889,63 @@ export default function LoadsPageInline() {
           dateTime = parseTimeInput(time, dateTime)
         }
 
-        // Update both location AND date in local state
         const locationField = type === 'pickup' ? 'pickup_location' : 'delivery_location'
-        const updatedLoads = editableLoads.map(l => {
-          if ((loadId === 'new' && l.isNew) || l.id === loadId) {
-            const updated = {
-              ...l,
-              [locationField]: locationString,
-              [dateField]: dateTime
+
+        // For new loads, update local state
+        if (load.isNew) {
+          const updatedLoads = editableLoads.map(l => {
+            if (loadId === 'new' && l.isNew) {
+              const updated = {
+                ...l,
+                [locationField]: locationString,
+                [dateField]: dateTime
+              }
+
+              // Recalculate week info if pickup_date changed
+              if (type === 'pickup' && dateTime) {
+                const pickupDate = new Date(dateTime)
+                updated.weekNumber = getWeekNumber(pickupDate)
+                updated.weekLabel = getWeekLabel(pickupDate)
+                updated.weekDateRange = getWeekDateRange(pickupDate)
+                updated.dayOfWeek = pickupDate.getDay()
+                updated.dayLabel = getDayLabel(pickupDate)
+              }
+
+              return updated
             }
+            return l
+          })
+          setEditableLoads(updatedLoads)
+          setEditingLocation(null)
+          setEditingCell(null)
+          return
+        }
 
-            // Recalculate week info if pickup_date changed
-            if (type === 'pickup' && dateTime) {
-              const pickupDate = new Date(dateTime)
-              updated.weekNumber = getWeekNumber(pickupDate)
-              updated.weekLabel = getWeekLabel(pickupDate)
-              updated.weekDateRange = getWeekDateRange(pickupDate)
-              updated.dayOfWeek = pickupDate.getDay()
-              updated.dayLabel = getDayLabel(pickupDate)
-            }
+        // For existing loads, prepare data for backend
+        const updatedLocationData = {
+          ...load,
+          [locationField]: locationString,
+          [dateField]: dateTime
+        }
 
-            return updated
-          }
-          return l
-        })
-        setEditableLoads(updatedLoads)
+        // Calculate miles if both locations are filled
+        let calculatedMiles = load.miles || 0
+        const pickup = type === 'pickup' ? locationString : load.pickup_location
+        const delivery = type === 'delivery' ? locationString : load.delivery_location
 
-        // Auto-calculate miles using Google Maps API if both locations are filled
-        const currentLoad = updatedLoads.find(l => (loadId === 'new' && l.isNew) || l.id === loadId)
-        let finalLoadsWithMiles = updatedLoads // Initialize with updatedLoads
-
-        if (currentLoad && currentLoad.pickup_location && currentLoad.delivery_location) {
-          console.log('[Maps] Attempting to calculate distance from', currentLoad.pickup_location, 'to', currentLoad.delivery_location)
+        if (pickup && delivery) {
+          console.log('[Maps] Attempting to calculate distance from', pickup, 'to', delivery)
           try {
             const response = await api.post('/v1/maps/calculate-distance', {
-              origin: currentLoad.pickup_location,
-              destination: currentLoad.delivery_location,
+              origin: pickup,
+              destination: delivery,
               unit: 'imperial'
             })
 
             console.log('[Maps] API response:', response.data)
 
             if (response.data.status === 'success' && response.data.distance_miles) {
-              const calculatedMiles = Math.round(response.data.distance_miles)
-
-              // Update miles in local state
-              finalLoadsWithMiles = updatedLoads.map(l => {
-                if ((loadId === 'new' && l.isNew) || l.id === loadId) {
-                  return { ...l, miles: calculatedMiles }
-                }
-                return l
-              })
-              setEditableLoads(finalLoadsWithMiles)
-
+              calculatedMiles = Math.round(response.data.distance_miles)
               toast.success(`Calculated ${calculatedMiles} miles`)
             } else {
               console.warn('[Maps] API returned non-success status:', response.data)
@@ -952,34 +956,27 @@ export default function LoadsPageInline() {
             const errorMsg = error.response?.data?.detail || error.message || 'Unknown error'
             toast.error(`Distance calculation failed: ${errorMsg}`)
           }
-        } else {
-          console.log('[Maps] Skipping calculation - missing location data. Pickup:', currentLoad?.pickup_location, 'Delivery:', currentLoad?.delivery_location)
         }
 
-        // Send SINGLE update to backend with both changes (including calculated miles)
-        if (!load.isNew) {
-          // Get the most recent load data (with potentially updated miles from Google Maps)
-          const updatedLoad = finalLoadsWithMiles.find(l => l.id === loadId)
-          if (updatedLoad) {
-            const backendData: any = {
-              load_number: updatedLoad.load_number,
-              customer_id: updatedLoad.customer_id,
-              driver_id: updatedLoad.driver_id || null,
-              truck_id: null,
-              pickup_location: updatedLoad.pickup_location,
-              delivery_location: updatedLoad.delivery_location,
-              pickup_date: updatedLoad.pickup_date,
-              delivery_date: updatedLoad.delivery_date,
-              miles: updatedLoad.miles || 0,
-              rate: updatedLoad.rate || 0,
-              status: updatedLoad.status,
-              pod_url: updatedLoad.pod_url || null,
-              ratecon_url: updatedLoad.ratecon_url || null,
-              notes: updatedLoad.notes || null
-            }
-            await updateLoad.mutateAsync({ id: updatedLoad.id, data: backendData })
-          }
+        // Update backend with location, date, and miles
+        // React Query will automatically refetch via query invalidation
+        const backendData: any = {
+          load_number: load.load_number,
+          customer_id: load.customer_id,
+          driver_id: load.driver_id || null,
+          truck_id: null,
+          pickup_location: type === 'pickup' ? locationString : load.pickup_location,
+          delivery_location: type === 'delivery' ? locationString : load.delivery_location,
+          pickup_date: type === 'pickup' ? dateTime : load.pickup_date,
+          delivery_date: type === 'delivery' ? dateTime : load.delivery_date,
+          miles: calculatedMiles,
+          rate: load.rate || 0,
+          status: load.status,
+          pod_url: load.pod_url || null,
+          ratecon_url: load.ratecon_url || null,
+          notes: load.notes || null
         }
+        await updateLoad.mutateAsync({ id: load.id, data: backendData })
 
         setEditingLocation(null)
         setEditingCell(null)
