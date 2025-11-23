@@ -1444,13 +1444,20 @@ export default function LoadsPageInline() {
 
                     console.log('🏘️ Extracted fields:', { street, city, state, zip })
 
-                    updateLocationField('street', street)
-                    updateLocationField('city', city)
-                    updateLocationField('state', state)
-                    updateLocationField('zip', zip)
+                    // Update all fields at once to avoid race conditions
+                    setEditingLocation(prev => {
+                      if (!prev) return prev
+                      return {
+                        ...prev,
+                        street,
+                        city,
+                        state,
+                        zip
+                      }
+                    })
 
-                    // Auto-save after filling fields
-                    setTimeout(() => stopLocationEdit(), 100)
+                    // Auto-save after filling fields - increased timeout to ensure state updates complete
+                    setTimeout(() => stopLocationEdit(), 200)
                   }}
                   placeholder="Search address..."
                   className="h-7 text-sm w-full px-2 border rounded"
@@ -1607,13 +1614,20 @@ export default function LoadsPageInline() {
 
                     console.log('🏘️ Extracted fields:', { street, city, state, zip })
 
-                    updateLocationField('street', street)
-                    updateLocationField('city', city)
-                    updateLocationField('state', state)
-                    updateLocationField('zip', zip)
+                    // Update all fields at once to avoid race conditions
+                    setEditingLocation(prev => {
+                      if (!prev) return prev
+                      return {
+                        ...prev,
+                        street,
+                        city,
+                        state,
+                        zip
+                      }
+                    })
 
-                    // Auto-save after filling fields
-                    setTimeout(() => stopLocationEdit(), 100)
+                    // Auto-save after filling fields - increased timeout to ensure state updates complete
+                    setTimeout(() => stopLocationEdit(), 200)
                   }}
                   placeholder="Search address..."
                   className="h-7 text-sm w-full px-2 border rounded"
