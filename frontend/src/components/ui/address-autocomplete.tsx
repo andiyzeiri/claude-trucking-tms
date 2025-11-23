@@ -113,8 +113,8 @@ export function AddressAutocomplete({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value
     setLocalValue(newValue)
-    // When user types manually, send minimal AddressData with just the formatted_address
-    onChange({ formatted_address: newValue })
+    // Don't call onChange here - only call it when user selects from Google dropdown
+    // This prevents the input from losing focus on every keystroke
   }
 
   const handleBlur = () => {
