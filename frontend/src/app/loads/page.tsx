@@ -1190,8 +1190,10 @@ export default function LoadsPageInline() {
       }
 
       // Group header row
+      // Use parentKeys to create unique keys for nested groups
+      const uniqueGroupKey = [...parentKeys, groupKey].join('-')
       elements.push(
-        <tr key={`group-${groupKey}`} className={`${bgColor} border-b border-gray-200 cursor-pointer`} onClick={() => toggleGroup(groupKey)}>
+        <tr key={`group-${uniqueGroupKey}`} className={`${bgColor} border-b border-gray-200 cursor-pointer`} onClick={() => toggleGroup(groupKey)}>
           <td colSpan={2} className="px-2 py-2 text-sm font-medium text-gray-700" style={{ paddingLeft: `${paddingLeft + 8}px` }}>
             <div className="flex items-center gap-2">
               {isCollapsed ? (
@@ -1232,7 +1234,7 @@ export default function LoadsPageInline() {
         // Add load button for leaf groups
         if (Array.isArray(groupData)) {
           elements.push(
-            <tr key={`add-${groupKey}`} className="border-b hover:bg-gray-50 transition-colors" style={{borderColor: 'var(--cell-borderColor)'}}>
+            <tr key={`add-${uniqueGroupKey}`} className="border-b hover:bg-gray-50 transition-colors" style={{borderColor: 'var(--cell-borderColor)'}}>
               <td colSpan={11} className="px-2 py-2">
                 <button
                   onClick={(e) => {
