@@ -590,23 +590,8 @@ export default function LoadsPageInline() {
     }
 
     try {
-      const result = await createLoad.mutateAsync(backendData)
-
-      // Immediately add the new load to the local state
-      const pickupDate = new Date(result.pickup_date)
-      const newLoadWithWeek = {
-        ...result,
-        weekNumber: getWeekNumber(pickupDate),
-        weekLabel: getWeekLabel(pickupDate),
-        weekDateRange: getWeekDateRange(pickupDate),
-        dayOfWeek: pickupDate.getDay(),
-        dayLabel: getDayLabel(pickupDate)
-      }
-
-      setEditableLoads([...editableLoads, newLoadWithWeek])
-
-      // Also refetch to sync with backend
-      refetch()
+      await createLoad.mutateAsync(backendData)
+      // React Query will automatically refetch via query invalidation in the mutation's onSuccess
     } catch (error: any) {
       console.error('Failed to create load:', error)
       alert(`Failed to create load: ${error.response?.data?.detail || error.message}`)
