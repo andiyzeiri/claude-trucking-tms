@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { format, startOfWeek, endOfWeek } from 'date-fns'
+import Layout from '@/components/layout/layout'
 import {
   Table,
   TableBody,
@@ -126,14 +127,19 @@ export default function FuelPage() {
   }
 
   if (isLoading) {
-    return <div className="container mx-auto py-8">Loading...</div>
+    return (
+      <Layout>
+        <div className="container mx-auto py-8">Loading...</div>
+      </Layout>
+    )
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Fuel Summary by Week</h1>
-      </div>
+    <Layout>
+      <div className="container mx-auto py-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Fuel Summary by Week</h1>
+        </div>
 
       <div className="rounded-md border">
         <Table>
@@ -259,9 +265,10 @@ export default function FuelPage() {
         </Table>
       </div>
 
-      <div className="mt-4 text-sm text-muted-foreground">
-        <p>* DEF (Diesel Exhaust Fluid) tracking coming soon</p>
+        <div className="mt-4 text-sm text-muted-foreground">
+          <p>* DEF (Diesel Exhaust Fluid) tracking coming soon</p>
+        </div>
       </div>
-    </div>
+    </Layout>
   )
 }
