@@ -35,7 +35,7 @@ export function useCompany() {
   const { data: company, isLoading } = useQuery({
     queryKey: ['company'],
     queryFn: async (): Promise<Company> => {
-      const response = await api.get('/v1/companies/me')
+      const response = await api.get('/companies/me')
       return response.data
     },
     retry: false,
@@ -43,7 +43,7 @@ export function useCompany() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: CompanyUpdate): Promise<Company> => {
-      const response = await api.put('/v1/companies/me', data)
+      const response = await api.put('/companies/me', data)
       return response.data
     },
     onSuccess: (data) => {

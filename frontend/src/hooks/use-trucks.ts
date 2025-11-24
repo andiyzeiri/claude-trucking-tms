@@ -10,7 +10,7 @@ export function useTrucks(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['trucks', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Truck>> => {
-      const response = await api.get(`/v1/trucks/?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/trucks/?skip=${(page - 1) * limit}&limit=${limit}`)
       console.log('useTrucks - fetched trucks:', JSON.stringify(response.data, null, 2))
       const trucks = Array.isArray(response.data) ? response.data : []
       return {
@@ -29,7 +29,7 @@ export function useTruck(id: number) {
   return useQuery({
     queryKey: ['truck', id],
     queryFn: async (): Promise<Truck> => {
-      const response = await api.get(`/v1/trucks/${id}`)
+      const response = await api.get(`/trucks/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -41,7 +41,7 @@ export function useCreateTruck() {
 
   return useMutation({
     mutationFn: async (data: TruckFormData): Promise<Truck> => {
-      const response = await api.post('/v1/trucks/', data)
+      const response = await api.post('/trucks/', data)
       return response.data
     },
     onSuccess: () => {
@@ -59,7 +59,7 @@ export function useUpdateTruck() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: TruckFormData }): Promise<Truck> => {
-      const response = await api.put(`/v1/trucks/${id}`, data)
+      const response = await api.put(`/trucks/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {

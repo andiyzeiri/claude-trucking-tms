@@ -6,7 +6,7 @@
 [build.environment]
   NODE_VERSION = "20"
   SECRETS_SCAN_ENABLED = "false"
-  NEXT_PUBLIC_API_URL = "/api"
+  NEXT_PUBLIC_API_URL = "/api/v1"
 
 # Security headers
 [[headers]]
@@ -20,8 +20,8 @@
 
 # Redirect API calls to your AWS backend via Application Load Balancer (HTTPS)
 [[redirects]]
-  from = "/api/*"
-  to = "https://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com/api/:splat"
+  from = "/api/v1/*"
+  to = "https://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com/api/v1/:splat"
   status = 200
   force = true
 

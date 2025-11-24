@@ -10,7 +10,7 @@ export function useDrivers(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['drivers', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Driver>> => {
-      const response = await api.get(`/v1/drivers?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/drivers?skip=${(page - 1) * limit}&limit=${limit}`)
       console.log('useDrivers - fetched drivers:', JSON.stringify(response.data, null, 2))
       // Backend returns array, convert to paginated format
       const drivers = Array.isArray(response.data) ? response.data : []
@@ -29,7 +29,7 @@ export function useDriver(id: number) {
   return useQuery({
     queryKey: ['driver', id],
     queryFn: async (): Promise<Driver> => {
-      const response = await api.get(`/v1/drivers/${id}`)
+      const response = await api.get(`/drivers/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -41,7 +41,7 @@ export function useCreateDriver() {
 
   return useMutation({
     mutationFn: async (data: DriverFormData): Promise<Driver> => {
-      const response = await api.post('/v1/drivers', data)
+      const response = await api.post('/drivers', data)
       return response.data
     },
     onSuccess: () => {
@@ -66,7 +66,7 @@ export function useUpdateDriver() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: DriverFormData }): Promise<Driver> => {
-      const response = await api.put(`/v1/drivers/${id}`, data)
+      const response = await api.put(`/drivers/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -92,7 +92,7 @@ export function useDeleteDriver() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/drivers/${id}`)
+      await api.delete(`/drivers/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['drivers'] })

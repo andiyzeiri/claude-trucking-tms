@@ -27,7 +27,7 @@ export function useInvoices(page = 1, limit = 10) {
   return useQuery({
     queryKey: ['invoices', page, limit],
     queryFn: async (): Promise<PaginatedInvoices> => {
-      const response = await api.get(`/v1/invoices?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/invoices?skip=${(page - 1) * limit}&limit=${limit}`)
       const invoices = Array.isArray(response.data) ? response.data : []
       return {
         items: invoices,
@@ -44,7 +44,7 @@ export function useInvoice(id: number) {
   return useQuery({
     queryKey: ['invoice', id],
     queryFn: async (): Promise<Invoice> => {
-      const response = await api.get(`/v1/invoices/${id}`)
+      const response = await api.get(`/invoices/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -56,7 +56,7 @@ export function useCreateInvoice() {
 
   return useMutation({
     mutationFn: async (data: Partial<Invoice>): Promise<Invoice> => {
-      const response = await api.post('/v1/invoices', data)
+      const response = await api.post('/invoices', data)
       return response.data
     },
     onSuccess: () => {
@@ -75,7 +75,7 @@ export function useUpdateInvoice() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Invoice> }): Promise<Invoice> => {
-      const response = await api.put(`/v1/invoices/${id}`, data)
+      const response = await api.put(`/invoices/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -95,7 +95,7 @@ export function useDeleteInvoice() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/invoices/${id}`)
+      await api.delete(`/invoices/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] })

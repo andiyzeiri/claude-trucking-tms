@@ -22,7 +22,7 @@ export function useExpenses(page = 1, limit = 10) {
   return useQuery({
     queryKey: ['expenses', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Expense>> => {
-      const response = await api.get(`/v1/expenses?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/expenses?skip=${(page - 1) * limit}&limit=${limit}`)
       const expenses = Array.isArray(response.data) ? response.data : []
       return {
         items: expenses,
@@ -40,7 +40,7 @@ export function useExpense(id: number) {
   return useQuery({
     queryKey: ['expense', id],
     queryFn: async (): Promise<Expense> => {
-      const response = await api.get(`/v1/expenses/${id}`)
+      const response = await api.get(`/expenses/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -52,7 +52,7 @@ export function useCreateExpense() {
 
   return useMutation({
     mutationFn: async (data: ExpenseFormData): Promise<Expense> => {
-      const response = await api.post('/v1/expenses', data)
+      const response = await api.post('/expenses', data)
       return response.data
     },
     onSuccess: () => {
@@ -75,7 +75,7 @@ export function useUpdateExpense() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<ExpenseFormData> }): Promise<Expense> => {
-      const response = await api.put(`/v1/expenses/${id}`, data)
+      const response = await api.put(`/expenses/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -99,7 +99,7 @@ export function useDeleteExpense() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/expenses/${id}`)
+      await api.delete(`/expenses/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] })

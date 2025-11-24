@@ -29,7 +29,7 @@ export function useLanes(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['lanes', page, limit],
     queryFn: async (): Promise<PaginatedLanes> => {
-      const response = await api.get(`/v1/lanes?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/lanes?skip=${(page - 1) * limit}&limit=${limit}`)
       const lanes = Array.isArray(response.data) ? response.data : []
       return {
         items: lanes,
@@ -46,7 +46,7 @@ export function useLane(id: number) {
   return useQuery({
     queryKey: ['lane', id],
     queryFn: async (): Promise<Lane> => {
-      const response = await api.get(`/v1/lanes/${id}`)
+      const response = await api.get(`/lanes/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -58,7 +58,7 @@ export function useCreateLane() {
 
   return useMutation({
     mutationFn: async (data: Partial<Lane>): Promise<Lane> => {
-      const response = await api.post('/v1/lanes', data)
+      const response = await api.post('/lanes', data)
       return response.data
     },
     onSuccess: () => {
@@ -77,7 +77,7 @@ export function useUpdateLane() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Lane> }): Promise<Lane> => {
-      const response = await api.put(`/v1/lanes/${id}`, data)
+      const response = await api.put(`/lanes/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -97,7 +97,7 @@ export function useDeleteLane() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/lanes/${id}`)
+      await api.delete(`/lanes/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lanes'] })
