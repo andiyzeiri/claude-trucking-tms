@@ -43,7 +43,7 @@ export function useDriverPayrollSetting(driverId: number) {
   return useQuery({
     queryKey: ['driver-payroll-settings', driverId],
     queryFn: async (): Promise<DriverPayrollSettings> => {
-      const response = await api.get(`/driver-payroll-settings/${driverId}`)
+      const response = await api.get(`/v1/driver-payroll-settings/${driverId}`)
       return response.data
     },
     enabled: !!driverId,
@@ -85,7 +85,7 @@ export function useUpdateDriverPayrollSettings() {
       driverId: number
       data: Partial<DriverPayrollSettingsInput>
     }): Promise<DriverPayrollSettings> => {
-      const response = await api.put(`/driver-payroll-settings/${driverId}`, data)
+      const response = await api.put(`/v1/driver-payroll-settings/${driverId}`, data)
       return response.data
     },
     onSuccess: (_, { driverId }) => {

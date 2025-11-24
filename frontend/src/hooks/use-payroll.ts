@@ -39,7 +39,7 @@ export function usePayroll(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['payroll', page, limit],
     queryFn: async (): Promise<PaginatedPayroll> => {
-      const response = await api.get(`/payroll?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/v1/payroll?skip=${(page - 1) * limit}&limit=${limit}`)
       const payroll = Array.isArray(response.data) ? response.data : []
       return {
         items: payroll,
@@ -56,7 +56,7 @@ export function usePayrollEntry(id: number) {
   return useQuery({
     queryKey: ['payroll', id],
     queryFn: async (): Promise<Payroll> => {
-      const response = await api.get(`/payroll/${id}`)
+      const response = await api.get(`/v1/payroll/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -87,7 +87,7 @@ export function useUpdatePayroll() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Payroll> }): Promise<Payroll> => {
-      const response = await api.put(`/payroll/${id}`, data)
+      const response = await api.put(`/v1/payroll/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -107,7 +107,7 @@ export function useDeletePayroll() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/payroll/${id}`)
+      await api.delete(`/v1/payroll/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payroll'] })
@@ -150,7 +150,7 @@ export function useCalculatedPayroll(year?: number) {
   return useQuery({
     queryKey: ['payroll', 'calculated', currentYear],
     queryFn: async (): Promise<CalculatedPayrollData[]> => {
-      const response = await api.get(`/payroll/calculate-from-loads?year=${currentYear}`)
+      const response = await api.get(`/v1/payroll/calculate-from-loads?year=${currentYear}`)
       return response.data
     },
     retry: false,

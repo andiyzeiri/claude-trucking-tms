@@ -9,7 +9,7 @@ export function useRatecons(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['ratecons', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Ratecon>> => {
-      const response = await api.get(`/ratecons?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/v1/ratecons?skip=${(page - 1) * limit}&limit=${limit}`)
       const ratecons = Array.isArray(response.data) ? response.data : []
       return {
         items: ratecons,
@@ -27,7 +27,7 @@ export function useRatecon(id: number) {
   return useQuery({
     queryKey: ['ratecon', id],
     queryFn: async (): Promise<Ratecon> => {
-      const response = await api.get(`/ratecons/${id}`)
+      const response = await api.get(`/v1/ratecons/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -57,7 +57,7 @@ export function useUpdateRatecon() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Ratecon> }): Promise<Ratecon> => {
-      const response = await api.put(`/ratecons/${id}`, data)
+      const response = await api.put(`/v1/ratecons/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -76,7 +76,7 @@ export function useDeleteRatecon() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/ratecons/${id}`)
+      await api.delete(`/v1/ratecons/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ratecons'] })

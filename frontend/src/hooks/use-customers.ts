@@ -10,7 +10,7 @@ export function useCustomers(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['customers', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Customer>> => {
-      const response = await api.get(`/customers?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/v1/customers?skip=${(page - 1) * limit}&limit=${limit}`)
       const customers = Array.isArray(response.data) ? response.data : []
       return {
         items: customers,
@@ -27,7 +27,7 @@ export function useCustomer(id: number) {
   return useQuery({
     queryKey: ['customer', id],
     queryFn: async (): Promise<Customer> => {
-      const response = await api.get(`/customers/${id}`)
+      const response = await api.get(`/v1/customers/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -57,7 +57,7 @@ export function useUpdateCustomer() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: CustomerFormData }): Promise<Customer> => {
-      const response = await api.put(`/customers/${id}`, data)
+      const response = await api.put(`/v1/customers/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -76,7 +76,7 @@ export function useDeleteCustomer() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/customers/${id}`)
+      await api.delete(`/v1/customers/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] })

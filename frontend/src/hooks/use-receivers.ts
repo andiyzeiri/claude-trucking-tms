@@ -9,7 +9,7 @@ export function useReceivers(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['receivers', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Receiver>> => {
-      const response = await api.get(`/receivers?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/v1/receivers?skip=${(page - 1) * limit}&limit=${limit}`)
       const receivers = Array.isArray(response.data) ? response.data : []
       return {
         items: receivers,
@@ -28,7 +28,7 @@ export function useSearchReceivers(zipCode: string) {
     queryKey: ['receivers', 'search', zipCode],
     queryFn: async (): Promise<Receiver[]> => {
       if (!zipCode) return []
-      const response = await api.get(`/receivers/search?zip_code=${zipCode}`)
+      const response = await api.get(`/v1/receivers/search?zip_code=${zipCode}`)
       return Array.isArray(response.data) ? response.data : []
     },
     enabled: zipCode.length >= 3,
@@ -40,7 +40,7 @@ export function useReceiver(id: number) {
   return useQuery({
     queryKey: ['receiver', id],
     queryFn: async (): Promise<Receiver> => {
-      const response = await api.get(`/receivers/${id}`)
+      const response = await api.get(`/v1/receivers/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -70,7 +70,7 @@ export function useUpdateReceiver() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Receiver> }): Promise<Receiver> => {
-      const response = await api.put(`/receivers/${id}`, data)
+      const response = await api.put(`/v1/receivers/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -89,7 +89,7 @@ export function useDeleteReceiver() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/receivers/${id}`)
+      await api.delete(`/v1/receivers/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['receivers'] })

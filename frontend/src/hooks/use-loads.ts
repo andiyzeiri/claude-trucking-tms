@@ -10,7 +10,7 @@ export function useLoads(page = 1, limit = 10) {
   return useQuery({
     queryKey: ['loads', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Load>> => {
-      const response = await api.get(`/loads?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/v1/loads?skip=${(page - 1) * limit}&limit=${limit}`)
       // Backend returns array, convert to paginated format
       const loads = Array.isArray(response.data) ? response.data : []
       return {
@@ -29,7 +29,7 @@ export function useLoad(id: number) {
   return useQuery({
     queryKey: ['load', id],
     queryFn: async (): Promise<Load> => {
-      const response = await api.get(`/loads/${id}`)
+      const response = await api.get(`/v1/loads/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -65,7 +65,7 @@ export function useUpdateLoad() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<LoadFormData> }): Promise<Load> => {
-      const response = await api.put(`/loads/${id}`, data)
+      const response = await api.put(`/v1/loads/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -90,7 +90,7 @@ export function useDeleteLoad() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/loads/${id}`)
+      await api.delete(`/v1/loads/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loads'] })
@@ -118,7 +118,7 @@ export function useUpdateLoadDocuments() {
       pod_url?: string
       ratecon_url?: string
     }): Promise<Load> => {
-      const response = await api.put(`/loads/${id}`, {
+      const response = await api.put(`/v1/loads/${id}`, {
         pod_url,
         ratecon_url
       })

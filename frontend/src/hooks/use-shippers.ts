@@ -9,7 +9,7 @@ export function useShippers(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['shippers', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Shipper>> => {
-      const response = await api.get(`/shippers?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/v1/shippers?skip=${(page - 1) * limit}&limit=${limit}`)
       const shippers = Array.isArray(response.data) ? response.data : []
       return {
         items: shippers,
@@ -28,7 +28,7 @@ export function useSearchShippers(zipCode: string) {
     queryKey: ['shippers', 'search', zipCode],
     queryFn: async (): Promise<Shipper[]> => {
       if (!zipCode) return []
-      const response = await api.get(`/shippers/search?zip_code=${zipCode}`)
+      const response = await api.get(`/v1/shippers/search?zip_code=${zipCode}`)
       return Array.isArray(response.data) ? response.data : []
     },
     enabled: zipCode.length >= 3,
@@ -40,7 +40,7 @@ export function useShipper(id: number) {
   return useQuery({
     queryKey: ['shipper', id],
     queryFn: async (): Promise<Shipper> => {
-      const response = await api.get(`/shippers/${id}`)
+      const response = await api.get(`/v1/shippers/${id}`)
       return response.data
     },
     enabled: !!id,
@@ -70,7 +70,7 @@ export function useUpdateShipper() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Shipper> }): Promise<Shipper> => {
-      const response = await api.put(`/shippers/${id}`, data)
+      const response = await api.put(`/v1/shippers/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -89,7 +89,7 @@ export function useDeleteShipper() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/shippers/${id}`)
+      await api.delete(`/v1/shippers/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shippers'] })
