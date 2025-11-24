@@ -88,10 +88,8 @@ async def calculate_payroll_from_loads(
     drivers_result = await db.execute(drivers_query)
     drivers = {driver.id: driver for driver in drivers_result.scalars().all()}
 
-    # Get driver payroll settings
-    settings_query = select(DriverPayrollSettings).where(DriverPayrollSettings.company_id == current_user.company_id)
-    settings_result = await db.execute(settings_query)
-    driver_settings = {setting.driver_id: setting for setting in settings_result.scalars().all()}
+    # Skip driver settings for now - just calculate gross from loads
+    driver_settings = {}
 
     # Group loads by driver and week
     payroll_data = {}
