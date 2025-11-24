@@ -231,7 +231,6 @@ export default function FuelPage() {
               <tr className="bg-gray-100 border-b">
                 <th className="p-2 text-left w-40">Week</th>
                 <th className="p-2 text-left w-48">Driver</th>
-                <th className="p-2 text-left w-32">Date</th>
                 <th className="p-2 text-left w-32">Truck</th>
                 <th className="p-2 text-right w-28">Gallons</th>
                 <th className="p-2 text-right w-28">Price/Gal</th>
@@ -269,7 +268,7 @@ export default function FuelPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-2 py-2 text-sm" colSpan={4}></td>
+                      <td className="px-2 py-2 text-sm" colSpan={3}></td>
                       <td className="px-2 py-2 text-sm text-right font-semibold">
                         {weekGallons.toFixed(1)} gal
                       </td>
@@ -301,26 +300,6 @@ export default function FuelPage() {
                           <td className="p-2"></td>
                           <td className="p-2 text-sm">
                             {driver.first_name} {driver.last_name}
-                          </td>
-                          <td className="p-2">
-                            {isEditing('date') ? (
-                              <input
-                                type="date"
-                                className="w-full px-2 py-1 border rounded text-sm"
-                                value={editValues.date || ''}
-                                onChange={(e) => handleCellChange('date', e.target.value)}
-                                onBlur={handleCellBlur}
-                                onKeyDown={handleKeyDown}
-                                autoFocus
-                              />
-                            ) : (
-                              <div
-                                onClick={() => handleCellClick(weekNum, driver.id, 'date', mainEntry)}
-                                className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                              >
-                                {mainEntry ? new Date(mainEntry.date).toLocaleDateString() : '-'}
-                              </div>
-                            )}
                           </td>
                           <td className="p-2">
                             {isEditing('truck_id') ? (
