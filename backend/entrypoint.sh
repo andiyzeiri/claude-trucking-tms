@@ -23,6 +23,7 @@ echo "📦 Running database migrations..."
 python3 migrate.py || echo "⚠️  migrate.py had errors, continuing..."
 python3 remove_unique_constraint.py || echo "⚠️  remove_unique_constraint.py had errors, continuing..."
 python3 run_carrier_rate_migration.py || echo "⚠️  run_carrier_rate_migration.py had errors, continuing..."
+python3 run_driver_settings_migration.py || echo "⚠️  run_driver_settings_migration.py had errors, continuing..."
 
 # Fix missing tables directly
 echo "🔧 Adding missing tables and columns..."
@@ -31,6 +32,10 @@ python3 fix_missing_tables.py || echo "⚠️  fix_missing_tables.py had errors,
 # Fix enum types
 echo "🔧 Fixing enum types..."
 python3 fix_enum_types.py || echo "⚠️  fix_enum_types.py had errors, continuing..."
+
+# Fix truck enum columns
+echo "🔧 Converting truck enum columns to varchar..."
+python3 scripts/fix_truck_enum_columns.py || echo "⚠️  fix_truck_enum_columns.py had errors, continuing..."
 
 # Stamp Alembic version to match current state
 echo "📦 Stamping Alembic version..."
