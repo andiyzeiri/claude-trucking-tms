@@ -320,17 +320,27 @@ export default function LoadsPageInline() {
       const pickupDate = new Date(load.pickup_date)
       // Preserve the currently editing load to avoid losing user input
       const existingEditableLoad = editableLoads.find(el => el.id === load.id)
-      const isCurrentlyEditing = editingLocation &&
+      const isCurrentlyEditingLocation = editingLocation &&
         ((editingLocation.loadId === load.id) || (editingLocation.loadId === 'new' && load.isNew))
+
+      // Check if any field is currently being edited for this load
+      const isEditingAnyField = editingCell &&
+        ((editingCell.loadId === load.id) || (editingCell.loadId === 'new' && load.isNew))
 
       return {
         ...load,
-        // If this load is currently being edited, preserve its location data
-        ...(isCurrentlyEditing && existingEditableLoad ? {
+        // Preserve location data if location is being edited
+        ...(isCurrentlyEditingLocation && existingEditableLoad ? {
           pickup_location: existingEditableLoad.pickup_location,
           delivery_location: existingEditableLoad.delivery_location,
           pickup_date: existingEditableLoad.pickup_date,
           delivery_date: existingEditableLoad.delivery_date
+        } : {}),
+        // Preserve field being edited to avoid losing user input during typing
+        ...(isEditingAnyField && existingEditableLoad ? {
+          notes: existingEditableLoad.notes,
+          rate: existingEditableLoad.rate,
+          miles: existingEditableLoad.miles
         } : {}),
         weekNumber: getWeekNumber(pickupDate),
         weekLabel: getWeekLabel(pickupDate),
@@ -341,7 +351,7 @@ export default function LoadsPageInline() {
     })
     setEditableLoads(loadsWithWeeks)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loads, editingLocation])
+  }, [loads, editingLocation, editingCell])
 
   // Close group menu when clicking outside
   useEffect(() => {
