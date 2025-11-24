@@ -106,15 +106,9 @@ async def calculate_payroll_from_loads(
         week_num = get_week_number(load.pickup_date)
         week_start, week_end = get_week_start_end(load.pickup_date)
 
-        # Only include loads where the week start is in the specified year
-        # This handles ISO weeks that span year boundaries (like Week 1 starting in December)
-        if week_start.year != year:
-            loads_filtered_by_year += 1
-            continue
-
         loads_processed += 1
         if loads_processed <= 3:  # Log first 3 loads for debugging
-            print(f"  Load {load.id}: pickup={load.pickup_date}, week={week_num}, rate={load.rate}, miles={load.miles}")
+            print(f"  Load {load.id}: pickup={load.pickup_date}, week={week_num}, week_start={week_start}, rate={load.rate}, miles={load.miles}")
 
         # Create unique key for driver + week
         key = f"{load.driver_id}_{week_num}"
