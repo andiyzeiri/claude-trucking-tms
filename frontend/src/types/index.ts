@@ -111,6 +111,8 @@ export interface Fuel {
   location?: string
   gallons: number
   price_per_gallon?: number
+  def_gallons?: number
+  def_price?: number
   total_amount: number
   odometer?: number
   notes?: string

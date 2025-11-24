@@ -29,6 +29,10 @@ python3 run_driver_settings_migration.py || echo "⚠️  run_driver_settings_mi
 echo "🔧 Adding missing tables and columns..."
 python3 fix_missing_tables.py || echo "⚠️  fix_missing_tables.py had errors, continuing..."
 
+# Add DEF columns to fuel table
+echo "🔧 Adding DEF columns to fuel table..."
+python3 fix_fuel_def_columns.py || echo "⚠️  fix_fuel_def_columns.py had errors, continuing..."
+
 # Fix enum types
 echo "🔧 Fixing enum types..."
 python3 fix_enum_types.py || echo "⚠️  fix_enum_types.py had errors, continuing..."

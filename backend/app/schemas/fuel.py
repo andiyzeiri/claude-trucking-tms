@@ -11,6 +11,8 @@ class FuelBase(BaseModel):
     location: Optional[str] = None
     gallons: Decimal
     price_per_gallon: Optional[Decimal] = None
+    def_gallons: Optional[Decimal] = None
+    def_price: Optional[Decimal] = None
     total_amount: Decimal
     odometer: Optional[int] = None
     notes: Optional[str] = None
@@ -28,6 +30,8 @@ class FuelUpdate(BaseModel):
     location: Optional[str] = None
     gallons: Optional[Decimal] = None
     price_per_gallon: Optional[Decimal] = None
+    def_gallons: Optional[Decimal] = None
+    def_price: Optional[Decimal] = None
     total_amount: Optional[Decimal] = None
     odometer: Optional[int] = None
     notes: Optional[str] = None
@@ -42,6 +46,8 @@ class FuelResponse(BaseModel):
     location: Optional[str] = None
     gallons: Decimal
     price_per_gallon: Optional[Decimal] = None
+    def_gallons: Optional[Decimal] = None
+    def_price: Optional[Decimal] = None
     total_amount: Decimal
     odometer: Optional[int] = None
     notes: Optional[str] = None

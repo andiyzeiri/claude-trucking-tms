@@ -10,6 +10,8 @@ class Fuel(Base):
     location = Column(String)  # Gas station name/location
     gallons = Column(Numeric(10, 2), nullable=False)
     price_per_gallon = Column(Numeric(10, 3))  # Allow 3 decimals for precise pricing
+    def_gallons = Column(Numeric(10, 2))  # Diesel Exhaust Fluid gallons
+    def_price = Column(Numeric(10, 2))  # DEF price per gallon
     total_amount = Column(Numeric(10, 2), nullable=False)
     odometer = Column(Integer)  # Odometer reading
     notes = Column(Text)
