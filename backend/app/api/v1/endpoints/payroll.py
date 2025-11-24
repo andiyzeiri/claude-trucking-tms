@@ -56,11 +56,14 @@ async def calculate_payroll_from_loads(
 ):
     """
     Calculate payroll data from loads, grouped by driver and week.
-    Aggregates miles and gross pay (carrier_rate) from completed loads.
+    Aggregates miles and gross pay (rate) from completed loads.
+    Uses ISO week numbering that can span year boundaries.
     """
     # Default to current year if not specified
     if year is None:
         year = datetime.now().year
+
+    print(f"🔍 Calculating payroll for year: {year}")
 
     # Get all loads for the company with driver information
     query = (
@@ -78,6 +81,8 @@ async def calculate_payroll_from_loads(
     result = await db.execute(query)
     loads = result.scalars().all()
 
+    print(f"📦 Total loads found: {len(loads)}")
+
     # Get driver information
     drivers_query = select(Driver).where(Driver.company_id == current_user.company_id)
     drivers_result = await db.execute(drivers_query)
@@ -90,6 +95,8 @@ async def calculate_payroll_from_loads(
 
     # Group loads by driver and week
     payroll_data = {}
+    loads_processed = 0
+    loads_filtered_by_year = 0
 
     for load in loads:
         if not load.pickup_date:
@@ -99,9 +106,15 @@ async def calculate_payroll_from_loads(
         week_num = get_week_number(load.pickup_date)
         week_start, week_end = get_week_start_end(load.pickup_date)
 
-        # Only include loads from the specified year
-        if load.pickup_date.year != year:
+        # Only include loads where the week start is in the specified year
+        # This handles ISO weeks that span year boundaries (like Week 1 starting in December)
+        if week_start.year != year:
+            loads_filtered_by_year += 1
             continue
+
+        loads_processed += 1
+        if loads_processed <= 3:  # Log first 3 loads for debugging
+            print(f"  Load {load.id}: pickup={load.pickup_date}, week={week_num}, rate={load.rate}, miles={load.miles}")
 
         # Create unique key for driver + week
         key = f"{load.driver_id}_{week_num}"
@@ -123,8 +136,8 @@ async def calculate_payroll_from_loads(
             }
 
         # Add load data to aggregated totals
-        # Use carrier_rate as the driver's gross pay (amount paid to carrier/driver)
-        gross_amount = float(load.carrier_rate) if load.carrier_rate else 0.0
+        # Use rate as the driver's gross pay
+        gross_amount = float(load.rate) if load.rate else 0.0
         miles_amount = load.miles if load.miles else 0
 
         payroll_data[key]["gross"] += gross_amount
@@ -134,7 +147,7 @@ async def calculate_payroll_from_loads(
             "load_number": load.load_number,
             "pickup_date": load.pickup_date.isoformat() if load.pickup_date else None,
             "miles": miles_amount,
-            "carrier_rate": gross_amount  # Using carrier_rate field for payroll
+            "carrier_rate": gross_amount  # Using rate field for payroll
         })
 
     # Apply driver settings and calculate deductions
@@ -174,6 +187,9 @@ async def calculate_payroll_from_loads(
         payroll_data.values(),
         key=lambda x: (x["driver_name"], x["week_number"])
     )
+
+    print(f"✅ Loads processed: {loads_processed}, Filtered by year: {loads_filtered_by_year}")
+    print(f"📊 Payroll entries created: {len(result_list)}")
 
     return result_list
 
