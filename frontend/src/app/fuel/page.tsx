@@ -1,272 +1,410 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { format, startOfWeek, endOfWeek } from 'date-fns'
+import React, { useState, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { useFuel, useCreateFuel, useUpdateFuel } from '@/hooks/use-fuel'
+import { useFuel, useCreateFuel, useUpdateFuel, useDeleteFuel } from '@/hooks/use-fuel'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
 import { Fuel } from '@/types'
+import { Trash2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
-interface FuelWeeklyRow {
-  id?: number
-  week: string
-  weekStart: Date
-  driver_id: number
-  driverName: string
-  truck_id: number
-  truckNumber: string
-  gallons: number
-  pricePerGallon: number
-  defGallons: number
-  defPrice: number
-  total: number
+interface EditableFuel extends Fuel {
+  isNew?: boolean
+}
+
+type EditingCell = {
+  fuelId: number | 'new'
+  field: string
+} | null
+
+// Get week number from date
+function getWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  const weekNum = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+  return weekNum
 }
 
 export default function FuelPage() {
-  const { data: fuelEntries, isLoading } = useFuel()
+  const { data: fuelData, isLoading } = useFuel()
   const { data: driversData } = useDrivers()
   const { data: trucksData } = useTrucks()
   const createFuel = useCreateFuel()
   const updateFuel = useUpdateFuel()
+  const deleteFuel = useDeleteFuel()
 
   const drivers = driversData?.items || []
   const trucks = trucksData?.items || []
 
-  // Group fuel entries by week, driver, and truck
-  const weeklyData = useMemo(() => {
-    if (!fuelEntries) return []
-
-    const grouped: { [key: string]: FuelWeeklyRow } = {}
-
-    fuelEntries.forEach((entry) => {
-      const date = new Date(entry.date)
-      const weekStart = startOfWeek(date, { weekStartsOn: 1 }) // Start week on Monday
-      const weekEnd = endOfWeek(date, { weekStartsOn: 1 })
-      const weekKey = format(weekStart, 'yyyy-MM-dd')
-      const weekLabel = `${format(weekStart, 'MM/dd')} - ${format(weekEnd, 'MM/dd')}`
-
-      const driverName = entry.driver
-        ? `${entry.driver.first_name} ${entry.driver.last_name}`
-        : 'Unknown'
-
-      const truckNumber = entry.truck?.truck_number || 'Unknown'
-
-      const key = `${weekKey}-${entry.driver_id}-${entry.truck_id}`
-
-      if (!grouped[key]) {
-        grouped[key] = {
-          id: entry.id,
-          week: weekLabel,
-          weekStart,
-          driver_id: entry.driver_id || 0,
-          driverName,
-          truck_id: entry.truck_id || 0,
-          truckNumber,
-          gallons: 0,
-          pricePerGallon: 0,
-          defGallons: 0,
-          defPrice: 0,
-          total: 0,
-        }
-      }
-
-      grouped[key].gallons += Number(entry.gallons) || 0
-      grouped[key].total += Number(entry.total_amount) || 0
-
-      // Calculate average price per gallon
-      if (entry.price_per_gallon) {
-        grouped[key].pricePerGallon = Number(entry.price_per_gallon)
-      }
-    })
-
-    return Object.values(grouped).sort((a, b) =>
-      b.weekStart.getTime() - a.weekStart.getTime()
-    )
-  }, [fuelEntries])
-
-  const [newRow, setNewRow] = useState<Partial<FuelWeeklyRow>>({
+  const [editingCell, setEditingCell] = useState<EditingCell>(null)
+  const [editValues, setEditValues] = useState<Record<string, any>>({})
+  const [newRow, setNewRow] = useState<Partial<Fuel>>({
+    date: new Date().toISOString().split('T')[0],
     gallons: 0,
-    pricePerGallon: 0,
-    defGallons: 0,
-    defPrice: 0,
+    price_per_gallon: 0,
+    total_amount: 0,
   })
 
-  const handleAddRow = async () => {
-    if (!newRow.driver_id || !newRow.truck_id) {
-      alert('Please select driver and truck')
-      return
-    }
+  // Group fuel by week
+  const groupedFuel = useMemo(() => {
+    if (!fuelData) return []
 
-    const total = (newRow.gallons || 0) * (newRow.pricePerGallon || 0)
+    const fuelWithWeek = (fuelData as Fuel[]).map(fuel => ({
+      ...fuel,
+      weekNumber: getWeekNumber(new Date(fuel.date)),
+    }))
 
-    await createFuel.mutateAsync({
-      date: new Date().toISOString().split('T')[0],
-      driver_id: newRow.driver_id,
-      truck_id: newRow.truck_id,
-      gallons: newRow.gallons || 0,
-      price_per_gallon: newRow.pricePerGallon || 0,
-      total_amount: total,
+    fuelWithWeek.sort((a, b) => {
+      if (b.weekNumber !== a.weekNumber) return b.weekNumber - a.weekNumber
+      return new Date(b.date).getTime() - new Date(a.date).getTime()
     })
 
-    setNewRow({
-      gallons: 0,
-      pricePerGallon: 0,
-      defGallons: 0,
-      defPrice: 0,
+    return fuelWithWeek
+  }, [fuelData])
+
+  const handleCellClick = (fuelId: number, field: string) => {
+    setEditingCell({ fuelId, field })
+    const fuel = groupedFuel.find(f => f.id === fuelId)
+    if (fuel) {
+      setEditValues({ ...fuel })
+    }
+  }
+
+  const handleCellChange = (field: string, value: any) => {
+    setEditValues(prev => {
+      const updated = { ...prev, [field]: value }
+
+      // Auto-calculate total if gallons or price changes
+      if (field === 'gallons' || field === 'price_per_gallon') {
+        const gallons = parseFloat(updated.gallons || 0)
+        const price = parseFloat(updated.price_per_gallon || 0)
+        updated.total_amount = (gallons * price).toFixed(2)
+      }
+
+      return updated
     })
   }
 
+  const handleCellBlur = async () => {
+    if (!editingCell || editingCell.fuelId === 'new') {
+      setEditingCell(null)
+      return
+    }
+
+    try {
+      await updateFuel.mutateAsync({
+        id: editingCell.fuelId as number,
+        data: editValues
+      })
+      setEditingCell(null)
+    } catch (error) {
+      console.error('Update failed:', error)
+    }
+  }
+
+  const handleAddRow = async () => {
+    if (!newRow.driver_id || !newRow.truck_id) {
+      toast.error('Please select driver and truck')
+      return
+    }
+
+    try {
+      await createFuel.mutateAsync({
+        date: newRow.date!,
+        driver_id: newRow.driver_id,
+        truck_id: newRow.truck_id,
+        gallons: newRow.gallons || 0,
+        price_per_gallon: newRow.price_per_gallon || 0,
+        total_amount: newRow.total_amount || 0,
+      })
+
+      setNewRow({
+        date: new Date().toISOString().split('T')[0],
+        gallons: 0,
+        price_per_gallon: 0,
+        total_amount: 0,
+      })
+    } catch (error) {
+      console.error('Create failed:', error)
+    }
+  }
+
+  const handleDeleteRow = async (id: number) => {
+    if (confirm('Delete this fuel entry?')) {
+      await deleteFuel.mutateAsync(id)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleCellBlur()
+    } else if (e.key === 'Escape') {
+      setEditingCell(null)
+    }
+  }
+
   if (isLoading) {
-    return (
-      <Layout>
-        <div className="container mx-auto py-8">Loading...</div>
-      </Layout>
-    )
+    return <Layout><div className="p-8">Loading...</div></Layout>
   }
 
   return (
     <Layout>
-      <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Fuel Summary by Week</h1>
+      <div className="p-4">
+        <h1 className="text-3xl font-bold mb-6">Fuel</h1>
+
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="bg-gray-100 border-b">
+                <th className="p-2 text-left w-16">Week</th>
+                <th className="p-2 text-left w-24">Date</th>
+                <th className="p-2 text-left w-32">Driver</th>
+                <th className="p-2 text-left w-24">Truck</th>
+                <th className="p-2 text-left w-32">Location</th>
+                <th className="p-2 text-right w-24">Gallons</th>
+                <th className="p-2 text-right w-24">Price/Gal</th>
+                <th className="p-2 text-right w-24">DEF Gal</th>
+                <th className="p-2 text-right w-24">DEF Price</th>
+                <th className="p-2 text-right w-24">Total</th>
+                <th className="p-2 w-10"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* New row */}
+              <tr className="bg-blue-50 border-b">
+                <td className="p-2">New</td>
+                <td className="p-2">
+                  <input
+                    type="date"
+                    className="w-full px-2 py-1 border rounded"
+                    value={newRow.date || ''}
+                    onChange={(e) => setNewRow({ ...newRow, date: e.target.value })}
+                  />
+                </td>
+                <td className="p-2">
+                  <select
+                    className="w-full px-2 py-1 border rounded"
+                    value={newRow.driver_id || ''}
+                    onChange={(e) => setNewRow({ ...newRow, driver_id: parseInt(e.target.value) })}
+                  >
+                    <option value="">Select</option>
+                    {drivers.map((driver) => (
+                      <option key={driver.id} value={driver.id}>
+                        {driver.first_name} {driver.last_name}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="p-2">
+                  <select
+                    className="w-full px-2 py-1 border rounded"
+                    value={newRow.truck_id || ''}
+                    onChange={(e) => setNewRow({ ...newRow, truck_id: parseInt(e.target.value) })}
+                  >
+                    <option value="">Select</option>
+                    {trucks.map((truck) => (
+                      <option key={truck.id} value={truck.id}>
+                        {truck.truck_number}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="p-2">
+                  <input
+                    type="text"
+                    className="w-full px-2 py-1 border rounded"
+                    value={newRow.location || ''}
+                    onChange={(e) => setNewRow({ ...newRow, location: e.target.value })}
+                    placeholder="Location"
+                  />
+                </td>
+                <td className="p-2 text-right">
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="w-full px-2 py-1 border rounded text-right"
+                    value={newRow.gallons || ''}
+                    onChange={(e) => {
+                      const gallons = parseFloat(e.target.value) || 0
+                      const total = gallons * (newRow.price_per_gallon || 0)
+                      setNewRow({ ...newRow, gallons, total_amount: total })
+                    }}
+                  />
+                </td>
+                <td className="p-2 text-right">
+                  <input
+                    type="number"
+                    step="0.001"
+                    className="w-full px-2 py-1 border rounded text-right"
+                    value={newRow.price_per_gallon || ''}
+                    onChange={(e) => {
+                      const price = parseFloat(e.target.value) || 0
+                      const total = (newRow.gallons || 0) * price
+                      setNewRow({ ...newRow, price_per_gallon: price, total_amount: total })
+                    }}
+                  />
+                </td>
+                <td className="p-2 text-right text-gray-400">-</td>
+                <td className="p-2 text-right text-gray-400">-</td>
+                <td className="p-2 text-right font-semibold">
+                  ${(newRow.total_amount || 0).toFixed(2)}
+                </td>
+                <td className="p-2">
+                  <button
+                    onClick={handleAddRow}
+                    className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
+                  >
+                    Add
+                  </button>
+                </td>
+              </tr>
+
+              {/* Existing rows */}
+              {groupedFuel.map((fuel) => {
+                const isEditing = (field: string) =>
+                  editingCell?.fuelId === fuel.id && editingCell?.field === field
+
+                return (
+                  <tr key={fuel.id} className="border-b hover:bg-gray-50">
+                    <td className="p-2">{fuel.weekNumber}</td>
+                    <td className="p-2">
+                      {isEditing('date') ? (
+                        <input
+                          type="date"
+                          className="w-full px-2 py-1 border rounded"
+                          value={editValues.date || ''}
+                          onChange={(e) => handleCellChange('date', e.target.value)}
+                          onBlur={handleCellBlur}
+                          onKeyDown={handleKeyDown}
+                          autoFocus
+                        />
+                      ) : (
+                        <div onClick={() => handleCellClick(fuel.id, 'date')}>
+                          {new Date(fuel.date).toLocaleDateString()}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-2">
+                      {isEditing('driver_id') ? (
+                        <select
+                          className="w-full px-2 py-1 border rounded"
+                          value={editValues.driver_id || ''}
+                          onChange={(e) => handleCellChange('driver_id', parseInt(e.target.value))}
+                          onBlur={handleCellBlur}
+                          autoFocus
+                        >
+                          {drivers.map((driver) => (
+                            <option key={driver.id} value={driver.id}>
+                              {driver.first_name} {driver.last_name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div onClick={() => handleCellClick(fuel.id, 'driver_id')}>
+                          {fuel.driver ? `${fuel.driver.first_name} ${fuel.driver.last_name}` : '-'}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-2">
+                      {isEditing('truck_id') ? (
+                        <select
+                          className="w-full px-2 py-1 border rounded"
+                          value={editValues.truck_id || ''}
+                          onChange={(e) => handleCellChange('truck_id', parseInt(e.target.value))}
+                          onBlur={handleCellBlur}
+                          autoFocus
+                        >
+                          {trucks.map((truck) => (
+                            <option key={truck.id} value={truck.id}>
+                              {truck.truck_number}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div onClick={() => handleCellClick(fuel.id, 'truck_id')}>
+                          {fuel.truck?.truck_number || '-'}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-2">
+                      {isEditing('location') ? (
+                        <input
+                          type="text"
+                          className="w-full px-2 py-1 border rounded"
+                          value={editValues.location || ''}
+                          onChange={(e) => handleCellChange('location', e.target.value)}
+                          onBlur={handleCellBlur}
+                          onKeyDown={handleKeyDown}
+                          autoFocus
+                        />
+                      ) : (
+                        <div onClick={() => handleCellClick(fuel.id, 'location')}>
+                          {fuel.location || '-'}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-2 text-right">
+                      {isEditing('gallons') ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="w-full px-2 py-1 border rounded text-right"
+                          value={editValues.gallons || ''}
+                          onChange={(e) => handleCellChange('gallons', parseFloat(e.target.value))}
+                          onBlur={handleCellBlur}
+                          onKeyDown={handleKeyDown}
+                          autoFocus
+                        />
+                      ) : (
+                        <div onClick={() => handleCellClick(fuel.id, 'gallons')}>
+                          {fuel.gallons}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-2 text-right">
+                      {isEditing('price_per_gallon') ? (
+                        <input
+                          type="number"
+                          step="0.001"
+                          className="w-full px-2 py-1 border rounded text-right"
+                          value={editValues.price_per_gallon || ''}
+                          onChange={(e) => handleCellChange('price_per_gallon', parseFloat(e.target.value))}
+                          onBlur={handleCellBlur}
+                          onKeyDown={handleKeyDown}
+                          autoFocus
+                        />
+                      ) : (
+                        <div onClick={() => handleCellClick(fuel.id, 'price_per_gallon')}>
+                          ${fuel.price_per_gallon?.toFixed(3) || '-'}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-2 text-right text-gray-400">-</td>
+                    <td className="p-2 text-right text-gray-400">-</td>
+                    <td className="p-2 text-right font-semibold">
+                      ${fuel.total_amount.toFixed(2)}
+                    </td>
+                    <td className="p-2">
+                      <button
+                        onClick={() => handleDeleteRow(fuel.id)}
+                        className="p-1 hover:bg-red-100 rounded"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-32">Week</TableHead>
-              <TableHead>Driver</TableHead>
-              <TableHead>Truck</TableHead>
-              <TableHead className="text-right w-24">Gallons</TableHead>
-              <TableHead className="text-right w-24">Price/Gal</TableHead>
-              <TableHead className="text-right w-24">DEF Gallons</TableHead>
-              <TableHead className="text-right w-24">DEF Price</TableHead>
-              <TableHead className="text-right w-28">Total</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {/* Add new row */}
-            <TableRow className="bg-muted/50">
-              <TableCell>Current Week</TableCell>
-              <TableCell>
-                <select
-                  className="w-full border rounded px-2 py-1"
-                  value={newRow.driver_id || ''}
-                  onChange={(e) => setNewRow({ ...newRow, driver_id: parseInt(e.target.value) })}
-                >
-                  <option value="">Select Driver</option>
-                  {drivers.map((driver) => (
-                    <option key={driver.id} value={driver.id}>
-                      {driver.first_name} {driver.last_name}
-                    </option>
-                  ))}
-                </select>
-              </TableCell>
-              <TableCell>
-                <select
-                  className="w-full border rounded px-2 py-1"
-                  value={newRow.truck_id || ''}
-                  onChange={(e) => setNewRow({ ...newRow, truck_id: parseInt(e.target.value) })}
-                >
-                  <option value="">Select Truck</option>
-                  {trucks.map((truck) => (
-                    <option key={truck.id} value={truck.id}>
-                      {truck.truck_number}
-                    </option>
-                  ))}
-                </select>
-              </TableCell>
-              <TableCell className="text-right">
-                <Input
-                  type="number"
-                  step="0.01"
-                  className="w-20 text-right"
-                  value={newRow.gallons || ''}
-                  onChange={(e) => setNewRow({ ...newRow, gallons: parseFloat(e.target.value) || 0 })}
-                />
-              </TableCell>
-              <TableCell className="text-right">
-                <Input
-                  type="number"
-                  step="0.001"
-                  className="w-20 text-right"
-                  value={newRow.pricePerGallon || ''}
-                  onChange={(e) => setNewRow({ ...newRow, pricePerGallon: parseFloat(e.target.value) || 0 })}
-                />
-              </TableCell>
-              <TableCell className="text-right">
-                <Input
-                  type="number"
-                  step="0.01"
-                  className="w-20 text-right"
-                  value={newRow.defGallons || ''}
-                  onChange={(e) => setNewRow({ ...newRow, defGallons: parseFloat(e.target.value) || 0 })}
-                  disabled
-                  placeholder="0"
-                />
-              </TableCell>
-              <TableCell className="text-right">
-                <Input
-                  type="number"
-                  step="0.01"
-                  className="w-20 text-right"
-                  value={newRow.defPrice || ''}
-                  onChange={(e) => setNewRow({ ...newRow, defPrice: parseFloat(e.target.value) || 0 })}
-                  disabled
-                  placeholder="0"
-                />
-              </TableCell>
-              <TableCell className="text-right font-semibold">
-                ${((newRow.gallons || 0) * (newRow.pricePerGallon || 0)).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                <button
-                  onClick={handleAddRow}
-                  className="px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-                >
-                  Add
-                </button>
-              </TableCell>
-            </TableRow>
-
-            {/* Display grouped weekly data */}
-            {weeklyData.length > 0 ? (
-              weeklyData.map((row, index) => (
-                <TableRow key={index}>
-                  <TableCell>{row.week}</TableCell>
-                  <TableCell>{row.driverName}</TableCell>
-                  <TableCell>{row.truckNumber}</TableCell>
-                  <TableCell className="text-right">{row.gallons.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">${row.pricePerGallon.toFixed(3)}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">-</TableCell>
-                  <TableCell className="text-right text-muted-foreground">-</TableCell>
-                  <TableCell className="text-right font-semibold">${row.total.toFixed(2)}</TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
-                  No fuel data found
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-        <div className="mt-4 text-sm text-muted-foreground">
-          <p>* DEF (Diesel Exhaust Fluid) tracking coming soon</p>
+        <div className="mt-4 text-sm text-gray-500">
+          * DEF (Diesel Exhaust Fluid) tracking coming soon
         </div>
       </div>
     </Layout>
