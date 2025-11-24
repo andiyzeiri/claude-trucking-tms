@@ -276,7 +276,7 @@ export default function LoadsPageInline() {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [upcomingFilter, setUpcomingFilter] = useState<boolean>(false)
-  const [contextMenu, setContextMenu] = useState<{x: number, y: number, loadId: number} | null>(null)
+  const [contextMenu, setContextMenu] = useState<{x: number, y: number, loadId?: number, type: 'load' | 'general'} | null>(null)
   const [pdfModal, setPdfModal] = useState<{url: string, loadId: number, type: 'pod' | 'ratecon'} | null>(null)
   const [sortField, setSortField] = useState<keyof EditableLoad>('pickup_date')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
@@ -1057,8 +1057,53 @@ export default function LoadsPageInline() {
     setContextMenu({
       x: e.clientX,
       y: e.clientY,
-      loadId
+      loadId,
+      type: 'load'
     })
+  }
+
+  const handleGeneralContextMenu = (e: React.MouseEvent) => {
+    // Only show general context menu if not clicking on a load row
+    const target = e.target as HTMLElement
+    if (target.closest('tr[data-load-row="true"]')) {
+      return
+    }
+    e.preventDefault()
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      type: 'general'
+    })
+  }
+
+  const expandAllGroups = () => {
+    setCollapsedGroups(new Set())
+    setContextMenu(null)
+  }
+
+  const collapseAllGroups = () => {
+    const allGroupKeys = new Set<string>()
+
+    // Collect all group keys based on active groupings
+    const collectGroupKeys = (loads: EditableLoad[], groupings: ('week' | 'day' | 'driver' | 'customer')[], parentKeys: string[] = []) => {
+      if (groupings.length === 0) return
+
+      const [currentGrouping, ...remainingGroupings] = groupings
+      const groups = groupByField(loads, currentGrouping)
+
+      Object.keys(groups).forEach(groupKey => {
+        const fullKey = [...parentKeys, groupKey].join('-')
+        allGroupKeys.add(fullKey)
+
+        if (remainingGroupings.length > 0) {
+          collectGroupKeys(groups[groupKey], remainingGroupings, [...parentKeys, groupKey])
+        }
+      })
+    }
+
+    collectGroupKeys(filteredLoads, Array.from(activeGroupings))
+    setCollapsedGroups(allGroupKeys)
+    setContextMenu(null)
   }
 
   const handleDuplicate = async (id: number) => {
@@ -1311,6 +1356,7 @@ export default function LoadsPageInline() {
     return (
       <tr
         key={loadKey}
+        data-load-row="true"
         className="border-b transition-colors"
         style={{
           borderColor: 'var(--cell-borderColor)',
@@ -2260,7 +2306,7 @@ export default function LoadsPageInline() {
           </div>
         </div>
 
-        <div className="border rounded-lg bg-white overflow-hidden shadow-sm" style={{borderColor: 'var(--cell-borderColor)'}}>
+        <div className="border rounded-lg bg-white overflow-hidden shadow-sm" style={{borderColor: 'var(--cell-borderColor)'}} onContextMenu={handleGeneralContextMenu}>
           <div className="overflow-x-auto">
             <table className="w-full table-auto" style={{borderCollapse: 'separate', borderSpacing: 0}}>
               <thead style={{backgroundColor: 'var(--cell-background-header)'}}>
@@ -2446,37 +2492,59 @@ export default function LoadsPageInline() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
-              onClick={() => {
-                // Start editing the first editable field (load_number)
-                startEdit(contextMenu.loadId, 'load_number')
-                setContextMenu(null)
-              }}
-            >
-              <Edit2 className="h-4 w-4 text-blue-600" />
-              <span>Edit Load</span>
-            </button>
-            <button
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
-              onClick={() => {
-                handleDuplicate(contextMenu.loadId)
-              }}
-            >
-              <Copy className="h-4 w-4 text-green-600" />
-              <span>Duplicate Load</span>
-            </button>
-            <div className="border-t border-gray-200 my-1"></div>
-            <button
-              className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 flex items-center gap-2 text-red-600"
-              onClick={() => {
-                handleDelete(contextMenu.loadId)
-                setContextMenu(null)
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-              <span>Delete Load</span>
-            </button>
+            {contextMenu.type === 'load' && contextMenu.loadId && (
+              <>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                  onClick={() => {
+                    // Start editing the first editable field (load_number)
+                    startEdit(contextMenu.loadId!, 'load_number')
+                    setContextMenu(null)
+                  }}
+                >
+                  <Edit2 className="h-4 w-4 text-blue-600" />
+                  <span>Edit Load</span>
+                </button>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                  onClick={() => {
+                    handleDuplicate(contextMenu.loadId!)
+                  }}
+                >
+                  <Copy className="h-4 w-4 text-green-600" />
+                  <span>Duplicate Load</span>
+                </button>
+                <div className="border-t border-gray-200 my-1"></div>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 flex items-center gap-2 text-red-600"
+                  onClick={() => {
+                    handleDelete(contextMenu.loadId!)
+                    setContextMenu(null)
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Delete Load</span>
+                </button>
+              </>
+            )}
+            {contextMenu.type === 'general' && (
+              <>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                  onClick={expandAllGroups}
+                >
+                  <ChevronDown className="h-4 w-4 text-blue-600" />
+                  <span>Expand All</span>
+                </button>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                  onClick={collapseAllGroups}
+                >
+                  <ChevronRight className="h-4 w-4 text-blue-600" />
+                  <span>Collapse All</span>
+                </button>
+              </>
+            )}
           </div>
         )}
 
