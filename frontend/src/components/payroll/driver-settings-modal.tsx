@@ -32,10 +32,10 @@ export function DriverSettingsModal({ isOpen, onClose }: DriverSettingsModalProp
   const [driverSettings, setDriverSettings] = useState<DriverSettings[]>([])
 
   useEffect(() => {
-    if (drivers?.items && allSettings) {
-      // Create a map of existing settings
+    if (drivers?.items) {
+      // Create a map of existing settings (if any)
       const settingsMap = new Map(
-        allSettings.map(s => [s.driver_id, s])
+        allSettings ? allSettings.map(s => [s.driver_id, s]) : []
       )
 
       // Initialize settings for all drivers
