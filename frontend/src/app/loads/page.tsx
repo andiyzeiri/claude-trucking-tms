@@ -1081,6 +1081,33 @@ export default function LoadsPageInline() {
     setContextMenu(null)
   }
 
+  // Helper function to group loads by a specific field
+  const groupByField = (loads: EditableLoad[], groupType: 'week' | 'day' | 'driver' | 'customer'): Record<string, EditableLoad[]> => {
+    const groups: Record<string, EditableLoad[]> = {}
+
+    loads.forEach(load => {
+      let groupKey = ''
+      if (groupType === 'week') {
+        groupKey = `Week ${load.weekNumber}`
+      } else if (groupType === 'day') {
+        groupKey = load.dayLabel || 'Unknown'
+      } else if (groupType === 'driver') {
+        // Normalize driver check - handle null, undefined, and missing driver
+        const hasDriver = load.driver && load.driver.first_name && load.driver.last_name
+        groupKey = hasDriver ? `${load.driver.first_name} ${load.driver.last_name}` : 'Unassigned'
+      } else if (groupType === 'customer') {
+        groupKey = customers.find(c => c.id === load.customer_id)?.name || 'N/A'
+      }
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = []
+      }
+      groups[groupKey].push(load)
+    })
+
+    return groups
+  }
+
   const collapseAllGroups = () => {
     const allGroupKeys = new Set<string>()
 
