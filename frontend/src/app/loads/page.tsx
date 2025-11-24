@@ -1834,6 +1834,10 @@ export default function LoadsPageInline() {
                   e.preventDefault()
                   updateField(loadKey, 'notes', (e.target as HTMLTextAreaElement).value)
                   stopEdit()
+                } else if (e.key === 'Tab') {
+                  e.preventDefault()
+                  updateField(loadKey, 'notes', (e.target as HTMLTextAreaElement).value)
+                  stopEdit()
                 } else if (e.key === 'Escape') {
                   e.preventDefault()
                   stopEdit()
