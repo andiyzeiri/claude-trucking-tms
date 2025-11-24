@@ -17,7 +17,24 @@ async def fix_schema():
     )
 
     try:
-        print("Adding mc column to customers table...")
+        # Fix trucks table - add type column
+        print("Creating TruckType enum...")
+        await conn.execute("""
+            DO $$ BEGIN
+                CREATE TYPE trucktype AS ENUM ('truck', 'trailer');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+        """)
+        print("✓ Created trucktype enum")
+
+        print("\nAdding type column to trucks table...")
+        await conn.execute("""
+            ALTER TABLE trucks ADD COLUMN IF NOT EXISTS type trucktype DEFAULT 'truck' NOT NULL;
+        """)
+        print("✓ Added type column to trucks")
+
+        print("\nAdding mc column to customers table...")
         await conn.execute("""
             ALTER TABLE customers ADD COLUMN IF NOT EXISTS mc VARCHAR;
         """)

@@ -20,7 +20,7 @@ export function useFuel() {
   return useQuery<Fuel[]>({
     queryKey: ['fuel'],
     queryFn: async () => {
-      const response = await api.get('/fuel')
+      const response = await api.get('/v1/fuel')
       return response.data
     }
   })
@@ -30,7 +30,7 @@ export function useFuelEntry(id: number) {
   return useQuery<Fuel>({
     queryKey: ['fuel', id],
     queryFn: async () => {
-      const response = await api.get(`/fuel/${id}`)
+      const response = await api.get(`/v1/fuel/${id}`)
       return response.data
     },
     enabled: !!id
@@ -42,7 +42,7 @@ export function useCreateFuel() {
 
   return useMutation({
     mutationFn: async (data: FuelFormData) => {
-      const response = await api.post('/fuel', data)
+      const response = await api.post('/v1/fuel', data)
       return response.data
     },
     onSuccess: () => {
@@ -60,7 +60,7 @@ export function useUpdateFuel() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<FuelFormData> }) => {
-      const response = await api.put(`/fuel/${id}`, data)
+      const response = await api.put(`/v1/fuel/${id}`, data)
       return response.data
     },
     onSuccess: () => {
@@ -78,7 +78,7 @@ export function useDeleteFuel() {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      await api.delete(`/fuel/${id}`)
+      await api.delete(`/v1/fuel/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fuel'] })

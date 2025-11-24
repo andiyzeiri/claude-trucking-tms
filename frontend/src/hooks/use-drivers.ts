@@ -41,7 +41,7 @@ export function useCreateDriver() {
 
   return useMutation({
     mutationFn: async (data: DriverFormData): Promise<Driver> => {
-      const response = await api.post('/drivers', data)
+      const response = await api.post('/v1/drivers', data)
       return response.data
     },
     onSuccess: () => {

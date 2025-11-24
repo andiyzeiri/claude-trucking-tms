@@ -1,7 +1,8 @@
 from __future__ import annotations
 from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional
+from typing import Optional, Union
 from datetime import datetime
+from uuid import UUID
 
 
 class CompanyRegistration(BaseModel):
@@ -104,8 +105,8 @@ class LoginRequest(BaseModel):
 
 class UserResponse(BaseModel):
     """User response schema"""
-    id: int
-    username: str
+    id: Union[int, UUID]  # Support both int and UUID for backward compatibility
+    username: Optional[str]  # Make username optional
     email: str
     first_name: str
     last_name: str
@@ -114,7 +115,7 @@ class UserResponse(BaseModel):
     email_verified: bool
     email_verified_at: Optional[datetime]
     role: str
-    company_id: int
+    company_id: Optional[Union[int, UUID]] = None  # Make company_id optional and support both types
     page_permissions: Optional[dict] = None
     allowed_pages: Optional[list[str]] = None
 

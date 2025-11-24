@@ -52,7 +52,7 @@ export function useCreateReceiver() {
 
   return useMutation({
     mutationFn: async (data: Partial<Receiver>): Promise<Receiver> => {
-      const response = await api.post('/receivers', data)
+      const response = await api.post('/v1/receivers', data)
       return response.data
     },
     onSuccess: () => {

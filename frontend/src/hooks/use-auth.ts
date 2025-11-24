@@ -18,7 +18,7 @@ export function useAuth() {
       if (!token) return null
 
       try {
-        const response = await api.get('/users/me')
+        const response = await api.get('/v1/users/me')
         return response.data
       } catch (error) {
         // Invalid token, remove it
@@ -32,7 +32,7 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginCredentials): Promise<AuthResponse> => {
       console.log('[Auth] Login attempt for:', credentials.email)
-      const response = await api.post('/auth/login-json', {
+      const response = await api.post('/v1/auth/login-json', {
         username_or_email: credentials.email,
         password: credentials.password
       })

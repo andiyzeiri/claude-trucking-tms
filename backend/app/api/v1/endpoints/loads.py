@@ -55,6 +55,20 @@ async def create_load(
         db.add(db_load)
         await db.commit()
         await db.refresh(db_load)
+
+        # Reload with relationships to avoid greenlet error
+        query = (
+            select(Load)
+            .options(
+                selectinload(Load.driver),
+                selectinload(Load.truck),
+                selectinload(Load.customer)
+            )
+            .where(Load.id == db_load.id)
+        )
+        result = await db.execute(query)
+        db_load = result.scalar_one()
+
         return db_load
     except Exception as e:
         await db.rollback()

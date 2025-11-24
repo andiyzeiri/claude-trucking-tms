@@ -39,7 +39,7 @@ export function useCreateCustomer() {
 
   return useMutation({
     mutationFn: async (data: CustomerFormData): Promise<Customer> => {
-      const response = await api.post('/customers', data)
+      const response = await api.post('/v1/customers', data)
       return response.data
     },
     onSuccess: () => {

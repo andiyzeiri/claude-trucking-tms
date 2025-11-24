@@ -21,7 +21,7 @@ class Driver(Base):
     license_expiry = Column(Date)
     phone = Column(String)
     email = Column(String)
-    status = Column(Enum(DriverStatus), default=DriverStatus.OFF_DUTY)
+    status = Column(String, default="off_duty")
 
     # Additional driver information
     # TODO: These columns need to be added to the database via migration

@@ -58,7 +58,7 @@ export function useCreateLane() {
 
   return useMutation({
     mutationFn: async (data: Partial<Lane>): Promise<Lane> => {
-      const response = await api.post('/lanes', data)
+      const response = await api.post('/v1/lanes', data)
       return response.data
     },
     onSuccess: () => {

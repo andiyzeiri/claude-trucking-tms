@@ -39,7 +39,7 @@ export function useCreateRatecon() {
 
   return useMutation({
     mutationFn: async (data: Partial<Ratecon>): Promise<Ratecon> => {
-      const response = await api.post('/ratecons', data)
+      const response = await api.post('/v1/ratecons', data)
       return response.data
     },
     onSuccess: () => {

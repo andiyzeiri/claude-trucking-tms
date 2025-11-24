@@ -32,7 +32,9 @@ async def create_truck(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    db_truck = Truck(**truck.dict(), company_id=current_user.company_id)
+    truck_data = truck.model_dump(exclude_unset=True)
+    db_truck = Truck(**truck_data, company_id=current_user.company_id)
+
     db.add(db_truck)
     await db.commit()
     await db.refresh(db_truck)
@@ -72,7 +74,8 @@ async def update_truck(
     if not truck:
         raise HTTPException(status_code=404, detail="Truck not found")
 
-    for field, value in truck_update.dict(exclude_unset=True).items():
+    update_data = truck_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
         setattr(truck, field, value)
 
     await db.commit()

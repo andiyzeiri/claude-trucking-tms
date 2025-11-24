@@ -56,7 +56,7 @@ export function useCreateInvoice() {
 
   return useMutation({
     mutationFn: async (data: Partial<Invoice>): Promise<Invoice> => {
-      const response = await api.post('/invoices', data)
+      const response = await api.post('/v1/invoices', data)
       return response.data
     },
     onSuccess: () => {

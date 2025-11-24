@@ -53,6 +53,9 @@ COPY stamp_alembic.py ./
 COPY fix_enum_types.py ./
 COPY entrypoint.sh ./
 
+# Copy scripts directory
+COPY scripts/ ./scripts/
+
 # Copy application code
 COPY app/ ./app/
 

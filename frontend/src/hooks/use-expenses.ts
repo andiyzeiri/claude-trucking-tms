@@ -52,7 +52,7 @@ export function useCreateExpense() {
 
   return useMutation({
     mutationFn: async (data: ExpenseFormData): Promise<Expense> => {
-      const response = await api.post('/expenses', data)
+      const response = await api.post('/v1/expenses', data)
       return response.data
     },
     onSuccess: () => {

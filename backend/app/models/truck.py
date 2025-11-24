@@ -20,14 +20,14 @@ class TruckType(str, enum.Enum):
 class Truck(Base):
     __tablename__ = "trucks"
 
-    type = Column(Enum(TruckType), default=TruckType.TRUCK, nullable=False)
+    type = Column(String, default="truck", nullable=False)
     truck_number = Column(String, nullable=False)
     vin = Column(String, unique=True)
     make = Column(String)
     model = Column(String)
     year = Column(Integer)
     license_plate = Column(String)
-    status = Column(Enum(TruckStatus), default=TruckStatus.AVAILABLE)
+    status = Column(String, default="available")
 
     # Current location (PostGIS)
     current_location = Column(Geometry("POINT", srid=4326))

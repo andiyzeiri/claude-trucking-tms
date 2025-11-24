@@ -41,7 +41,7 @@ export function useCreateTruck() {
 
   return useMutation({
     mutationFn: async (data: TruckFormData): Promise<Truck> => {
-      const response = await api.post('/trucks/', data)
+      const response = await api.post('/v1/trucks/', data)
       return response.data
     },
     onSuccess: () => {

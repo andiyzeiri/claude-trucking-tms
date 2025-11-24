@@ -52,7 +52,7 @@ export function useCreateShipper() {
 
   return useMutation({
     mutationFn: async (data: Partial<Shipper>): Promise<Shipper> => {
-      const response = await api.post('/shippers', data)
+      const response = await api.post('/v1/shippers', data)
       return response.data
     },
     onSuccess: () => {

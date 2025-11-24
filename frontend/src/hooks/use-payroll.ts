@@ -68,7 +68,7 @@ export function useCreatePayroll() {
 
   return useMutation({
     mutationFn: async (data: Partial<Payroll>): Promise<Payroll> => {
-      const response = await api.post('/payroll', data)
+      const response = await api.post('/v1/payroll', data)
       return response.data
     },
     onSuccess: () => {

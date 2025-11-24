@@ -31,7 +31,7 @@ export function useDriverPayrollSettings() {
   return useQuery({
     queryKey: ['driver-payroll-settings'],
     queryFn: async (): Promise<DriverPayrollSettings[]> => {
-      const response = await api.get('/driver-payroll-settings/')
+      const response = await api.get('/v1/driver-payroll-settings/')
       return response.data
     },
     retry: false,
@@ -57,7 +57,7 @@ export function useCreateOrUpdateDriverPayrollSettings() {
 
   return useMutation({
     mutationFn: async (data: DriverPayrollSettingsInput): Promise<DriverPayrollSettings> => {
-      const response = await api.post('/driver-payroll-settings/', data)
+      const response = await api.post('/v1/driver-payroll-settings/', data)
       return response.data
     },
     onSuccess: (_, variables) => {

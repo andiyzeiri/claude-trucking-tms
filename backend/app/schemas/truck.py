@@ -1,10 +1,12 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
 from app.models.truck import TruckStatus, TruckType
 
 
 class TruckBase(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
     type: TruckType = TruckType.TRUCK
     truck_number: str
     vin: Optional[str] = None
@@ -15,15 +17,14 @@ class TruckBase(BaseModel):
     status: TruckStatus = TruckStatus.AVAILABLE
     current_driver_id: Optional[int] = None
 
-    class Config:
-        use_enum_values = True
-
 
 class TruckCreate(TruckBase):
     pass
 
 
 class TruckUpdate(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
     type: Optional[TruckType] = None
     truck_number: Optional[str] = None
     vin: Optional[str] = None
@@ -36,10 +37,9 @@ class TruckUpdate(BaseModel):
 
 
 class TruckResponse(TruckBase):
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
+
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
     company_id: int
-
-    class Config:
-        from_attributes = True
