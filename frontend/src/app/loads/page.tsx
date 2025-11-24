@@ -338,6 +338,7 @@ export default function LoadsPageInline() {
         } : {}),
         // Preserve field being edited to avoid losing user input during typing
         ...(isEditingAnyField && existingEditableLoad ? {
+          load_number: existingEditableLoad.load_number,
           notes: existingEditableLoad.notes,
           rate: existingEditableLoad.rate,
           miles: existingEditableLoad.miles
@@ -1365,15 +1366,28 @@ export default function LoadsPageInline() {
         <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'load_number')}>
           {isEditing(loadKey, 'load_number') ? (
             <Input
-              value={load.load_number}
-              onChange={(e) => updateField(loadKey, 'load_number', e.target.value)}
-              onBlur={stopEdit}
+              value={load.load_number || ''}
+              onChange={(e) => {
+                // Only update local state, not backend
+                const value = e.target.value
+                setEditableLoads(prev => prev.map(l =>
+                  ((loadKey === 'new' && l.isNew) || l.id === loadKey)
+                    ? { ...l, load_number: value }
+                    : l
+                ))
+              }}
+              onBlur={(e) => {
+                updateField(loadKey, 'load_number', e.target.value)
+                stopEdit()
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
+                  updateField(loadKey, 'load_number', e.currentTarget.value)
                   stopEdit()
                 } else if (e.key === 'Tab' && !e.shiftKey) {
                   e.preventDefault()
+                  updateField(loadKey, 'load_number', e.currentTarget.value)
                   stopEdit()
                   // Move to next field (customer)
                   setTimeout(() => startEdit(loadKey, 'customer_id'), 0)
