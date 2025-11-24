@@ -1,15 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { useState, useMemo } from 'react'
+import { format, startOfWeek, endOfWeek } from 'date-fns'
 import {
   Table,
   TableBody,
@@ -19,339 +11,256 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { useFuel, useCreateFuel, useUpdateFuel, useDeleteFuel } from '@/hooks/use-fuel'
+import { useFuel, useCreateFuel, useUpdateFuel } from '@/hooks/use-fuel'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
 import { Fuel } from '@/types'
-import { format } from 'date-fns'
 
-interface FuelFormData {
-  date: string
-  location: string
-  gallons: string
-  price_per_gallon: string
-  total_amount: string
-  odometer: string
-  notes: string
-  driver_id: string
-  truck_id: string
-}
-
-const initialFormData: FuelFormData = {
-  date: new Date().toISOString().split('T')[0],
-  location: '',
-  gallons: '',
-  price_per_gallon: '',
-  total_amount: '',
-  odometer: '',
-  notes: '',
-  driver_id: '',
-  truck_id: ''
+interface FuelWeeklyRow {
+  id?: number
+  week: string
+  weekStart: Date
+  driver_id: number
+  driverName: string
+  truck_id: number
+  truckNumber: string
+  gallons: number
+  pricePerGallon: number
+  defGallons: number
+  defPrice: number
+  total: number
 }
 
 export default function FuelPage() {
-  const [open, setOpen] = useState(false)
-  const [editingFuel, setEditingFuel] = useState<Fuel | null>(null)
-  const [formData, setFormData] = useState<FuelFormData>(initialFormData)
-
   const { data: fuelEntries, isLoading } = useFuel()
-  const { data: drivers } = useDrivers()
-  const { data: trucks } = useTrucks()
+  const { data: driversData } = useDrivers()
+  const { data: trucksData } = useTrucks()
   const createFuel = useCreateFuel()
   const updateFuel = useUpdateFuel()
-  const deleteFuel = useDeleteFuel()
 
-  const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen)
-    if (!newOpen) {
-      setEditingFuel(null)
-      setFormData(initialFormData)
-    }
-  }
+  const drivers = driversData?.items || []
+  const trucks = trucksData?.items || []
 
-  const handleEdit = (fuel: Fuel) => {
-    setEditingFuel(fuel)
-    setFormData({
-      date: fuel.date,
-      location: fuel.location || '',
-      gallons: fuel.gallons.toString(),
-      price_per_gallon: fuel.price_per_gallon?.toString() || '',
-      total_amount: fuel.total_amount.toString(),
-      odometer: fuel.odometer?.toString() || '',
-      notes: fuel.notes || '',
-      driver_id: fuel.driver_id?.toString() || '',
-      truck_id: fuel.truck_id?.toString() || ''
-    })
-    setOpen(true)
-  }
+  // Group fuel entries by week, driver, and truck
+  const weeklyData = useMemo(() => {
+    if (!fuelEntries) return []
 
-  const handleDelete = async (id: number) => {
-    if (confirm('Are you sure you want to delete this fuel entry?')) {
-      await deleteFuel.mutateAsync(id)
-    }
-  }
+    const grouped: { [key: string]: FuelWeeklyRow } = {}
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    fuelEntries.forEach((entry) => {
+      const date = new Date(entry.date)
+      const weekStart = startOfWeek(date, { weekStartsOn: 1 }) // Start week on Monday
+      const weekEnd = endOfWeek(date, { weekStartsOn: 1 })
+      const weekKey = format(weekStart, 'yyyy-MM-dd')
+      const weekLabel = `${format(weekStart, 'MM/dd')} - ${format(weekEnd, 'MM/dd')}`
 
-    const data = {
-      date: formData.date,
-      location: formData.location || undefined,
-      gallons: parseFloat(formData.gallons),
-      price_per_gallon: formData.price_per_gallon ? parseFloat(formData.price_per_gallon) : undefined,
-      total_amount: parseFloat(formData.total_amount),
-      odometer: formData.odometer ? parseInt(formData.odometer) : undefined,
-      notes: formData.notes || undefined,
-      driver_id: formData.driver_id ? parseInt(formData.driver_id) : undefined,
-      truck_id: formData.truck_id ? parseInt(formData.truck_id) : undefined
-    }
+      const driverName = entry.driver
+        ? `${entry.driver.first_name} ${entry.driver.last_name}`
+        : 'Unknown'
 
-    if (editingFuel) {
-      await updateFuel.mutateAsync({ id: editingFuel.id, data })
-    } else {
-      await createFuel.mutateAsync(data)
-    }
+      const truckNumber = entry.truck?.truck_number || 'Unknown'
 
-    handleOpenChange(false)
-  }
+      const key = `${weekKey}-${entry.driver_id}-${entry.truck_id}`
 
-  // Calculate total amount automatically when gallons or price changes
-  const handleGallonsOrPriceChange = (field: 'gallons' | 'price_per_gallon', value: string) => {
-    const newFormData = { ...formData, [field]: value }
-
-    if (newFormData.gallons && newFormData.price_per_gallon) {
-      const gallons = parseFloat(newFormData.gallons)
-      const pricePerGallon = parseFloat(newFormData.price_per_gallon)
-      if (!isNaN(gallons) && !isNaN(pricePerGallon)) {
-        newFormData.total_amount = (gallons * pricePerGallon).toFixed(2)
+      if (!grouped[key]) {
+        grouped[key] = {
+          id: entry.id,
+          week: weekLabel,
+          weekStart,
+          driver_id: entry.driver_id || 0,
+          driverName,
+          truck_id: entry.truck_id || 0,
+          truckNumber,
+          gallons: 0,
+          pricePerGallon: 0,
+          defGallons: 0,
+          defPrice: 0,
+          total: 0,
+        }
       }
+
+      grouped[key].gallons += Number(entry.gallons) || 0
+      grouped[key].total += Number(entry.total_amount) || 0
+
+      // Calculate average price per gallon
+      if (entry.price_per_gallon) {
+        grouped[key].pricePerGallon = Number(entry.price_per_gallon)
+      }
+    })
+
+    return Object.values(grouped).sort((a, b) =>
+      b.weekStart.getTime() - a.weekStart.getTime()
+    )
+  }, [fuelEntries])
+
+  const [newRow, setNewRow] = useState<Partial<FuelWeeklyRow>>({
+    gallons: 0,
+    pricePerGallon: 0,
+    defGallons: 0,
+    defPrice: 0,
+  })
+
+  const handleAddRow = async () => {
+    if (!newRow.driver_id || !newRow.truck_id) {
+      alert('Please select driver and truck')
+      return
     }
 
-    setFormData(newFormData)
+    const total = (newRow.gallons || 0) * (newRow.pricePerGallon || 0)
+
+    await createFuel.mutateAsync({
+      date: new Date().toISOString().split('T')[0],
+      driver_id: newRow.driver_id,
+      truck_id: newRow.truck_id,
+      gallons: newRow.gallons || 0,
+      price_per_gallon: newRow.pricePerGallon || 0,
+      total_amount: total,
+    })
+
+    setNewRow({
+      gallons: 0,
+      pricePerGallon: 0,
+      defGallons: 0,
+      defPrice: 0,
+    })
   }
 
   if (isLoading) {
-    return <div>Loading...</div>
+    return <div className="container mx-auto py-8">Loading...</div>
   }
 
   return (
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Fuel</h1>
-        <Dialog open={open} onOpenChange={handleOpenChange}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Fuel Entry
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingFuel ? 'Edit' : 'Add'} Fuel Entry</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date *</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="Gas station name/location"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="gallons">Gallons *</Label>
-                  <Input
-                    id="gallons"
-                    type="number"
-                    step="0.01"
-                    value={formData.gallons}
-                    onChange={(e) => handleGallonsOrPriceChange('gallons', e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="price_per_gallon">Price per Gallon</Label>
-                  <Input
-                    id="price_per_gallon"
-                    type="number"
-                    step="0.001"
-                    value={formData.price_per_gallon}
-                    onChange={(e) => handleGallonsOrPriceChange('price_per_gallon', e.target.value)}
-                    placeholder="0.000"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="total_amount">Total Amount *</Label>
-                  <Input
-                    id="total_amount"
-                    type="number"
-                    step="0.01"
-                    value={formData.total_amount}
-                    onChange={(e) => setFormData({ ...formData, total_amount: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="odometer">Odometer</Label>
-                  <Input
-                    id="odometer"
-                    type="number"
-                    value={formData.odometer}
-                    onChange={(e) => setFormData({ ...formData, odometer: e.target.value })}
-                    placeholder="Odometer reading"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="driver">Driver</Label>
-                  <Select
-                    value={formData.driver_id}
-                    onValueChange={(value) => setFormData({ ...formData, driver_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select driver" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">None</SelectItem>
-                      {drivers?.map((driver) => (
-                        <SelectItem key={driver.id} value={driver.id.toString()}>
-                          {driver.first_name} {driver.last_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="truck">Truck</Label>
-                  <Select
-                    value={formData.truck_id}
-                    onValueChange={(value) => setFormData({ ...formData, truck_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select truck" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">None</SelectItem>
-                      {trucks?.map((truck) => (
-                        <SelectItem key={truck.id} value={truck.id.toString()}>
-                          {truck.truck_number}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  {editingFuel ? 'Update' : 'Create'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <h1 className="text-3xl font-bold">Fuel Summary by Week</h1>
       </div>
 
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Location</TableHead>
+              <TableHead className="w-32">Week</TableHead>
               <TableHead>Driver</TableHead>
               <TableHead>Truck</TableHead>
-              <TableHead className="text-right">Gallons</TableHead>
-              <TableHead className="text-right">Price/Gal</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead>Odometer</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-right w-24">Gallons</TableHead>
+              <TableHead className="text-right w-24">Price/Gal</TableHead>
+              <TableHead className="text-right w-24">DEF Gallons</TableHead>
+              <TableHead className="text-right w-24">DEF Price</TableHead>
+              <TableHead className="text-right w-28">Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {fuelEntries && fuelEntries.length > 0 ? (
-              fuelEntries.map((fuel) => (
-                <TableRow key={fuel.id}>
-                  <TableCell>{format(new Date(fuel.date), 'MM/dd/yyyy')}</TableCell>
-                  <TableCell>{fuel.location || '-'}</TableCell>
-                  <TableCell>
-                    {fuel.driver ? `${fuel.driver.first_name} ${fuel.driver.last_name}` : '-'}
-                  </TableCell>
-                  <TableCell>{fuel.truck?.truck_number || '-'}</TableCell>
-                  <TableCell className="text-right">{fuel.gallons}</TableCell>
-                  <TableCell className="text-right">
-                    {fuel.price_per_gallon ? `$${fuel.price_per_gallon}` : '-'}
-                  </TableCell>
-                  <TableCell className="text-right">${fuel.total_amount}</TableCell>
-                  <TableCell>{fuel.odometer || '-'}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(fuel)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(fuel.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+            {/* Add new row */}
+            <TableRow className="bg-muted/50">
+              <TableCell>Current Week</TableCell>
+              <TableCell>
+                <select
+                  className="w-full border rounded px-2 py-1"
+                  value={newRow.driver_id || ''}
+                  onChange={(e) => setNewRow({ ...newRow, driver_id: parseInt(e.target.value) })}
+                >
+                  <option value="">Select Driver</option>
+                  {drivers.map((driver) => (
+                    <option key={driver.id} value={driver.id}>
+                      {driver.first_name} {driver.last_name}
+                    </option>
+                  ))}
+                </select>
+              </TableCell>
+              <TableCell>
+                <select
+                  className="w-full border rounded px-2 py-1"
+                  value={newRow.truck_id || ''}
+                  onChange={(e) => setNewRow({ ...newRow, truck_id: parseInt(e.target.value) })}
+                >
+                  <option value="">Select Truck</option>
+                  {trucks.map((truck) => (
+                    <option key={truck.id} value={truck.id}>
+                      {truck.truck_number}
+                    </option>
+                  ))}
+                </select>
+              </TableCell>
+              <TableCell className="text-right">
+                <Input
+                  type="number"
+                  step="0.01"
+                  className="w-20 text-right"
+                  value={newRow.gallons || ''}
+                  onChange={(e) => setNewRow({ ...newRow, gallons: parseFloat(e.target.value) || 0 })}
+                />
+              </TableCell>
+              <TableCell className="text-right">
+                <Input
+                  type="number"
+                  step="0.001"
+                  className="w-20 text-right"
+                  value={newRow.pricePerGallon || ''}
+                  onChange={(e) => setNewRow({ ...newRow, pricePerGallon: parseFloat(e.target.value) || 0 })}
+                />
+              </TableCell>
+              <TableCell className="text-right">
+                <Input
+                  type="number"
+                  step="0.01"
+                  className="w-20 text-right"
+                  value={newRow.defGallons || ''}
+                  onChange={(e) => setNewRow({ ...newRow, defGallons: parseFloat(e.target.value) || 0 })}
+                  disabled
+                  placeholder="0"
+                />
+              </TableCell>
+              <TableCell className="text-right">
+                <Input
+                  type="number"
+                  step="0.01"
+                  className="w-20 text-right"
+                  value={newRow.defPrice || ''}
+                  onChange={(e) => setNewRow({ ...newRow, defPrice: parseFloat(e.target.value) || 0 })}
+                  disabled
+                  placeholder="0"
+                />
+              </TableCell>
+              <TableCell className="text-right font-semibold">
+                ${((newRow.gallons || 0) * (newRow.pricePerGallon || 0)).toFixed(2)}
+              </TableCell>
+              <TableCell>
+                <button
+                  onClick={handleAddRow}
+                  className="px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+                >
+                  Add
+                </button>
+              </TableCell>
+            </TableRow>
+
+            {/* Display grouped weekly data */}
+            {weeklyData.length > 0 ? (
+              weeklyData.map((row, index) => (
+                <TableRow key={index}>
+                  <TableCell>{row.week}</TableCell>
+                  <TableCell>{row.driverName}</TableCell>
+                  <TableCell>{row.truckNumber}</TableCell>
+                  <TableCell className="text-right">{row.gallons.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">${row.pricePerGallon.toFixed(3)}</TableCell>
+                  <TableCell className="text-right text-muted-foreground">-</TableCell>
+                  <TableCell className="text-right text-muted-foreground">-</TableCell>
+                  <TableCell className="text-right font-semibold">${row.total.toFixed(2)}</TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={9} className="text-center">
-                  No fuel entries found
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  No fuel data found
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="mt-4 text-sm text-muted-foreground">
+        <p>* DEF (Diesel Exhaust Fluid) tracking coming soon</p>
       </div>
     </div>
   )
