@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
+from decimal import Decimal
 from app.models.truck import TruckStatus, TruckType
 
 
@@ -16,6 +17,9 @@ class TruckBase(BaseModel):
     license_plate: Optional[str] = None
     status: TruckStatus = TruckStatus.AVAILABLE
     current_driver_id: Optional[int] = None
+    value: Optional[Decimal] = None
+    miles: Optional[int] = None
+    mpg: Optional[Decimal] = None
 
 
 class TruckCreate(TruckBase):
@@ -34,6 +38,9 @@ class TruckUpdate(BaseModel):
     license_plate: Optional[str] = None
     status: Optional[TruckStatus] = None
     current_driver_id: Optional[int] = None
+    value: Optional[Decimal] = None
+    miles: Optional[int] = None
+    mpg: Optional[Decimal] = None
 
 
 class TruckResponse(TruckBase):

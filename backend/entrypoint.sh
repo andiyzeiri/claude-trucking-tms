@@ -41,6 +41,10 @@ python3 fix_enum_types.py || echo "⚠️  fix_enum_types.py had errors, continu
 echo "🔧 Converting truck enum columns to varchar..."
 python3 scripts/fix_truck_enum_columns.py || echo "⚠️  fix_truck_enum_columns.py had errors, continuing..."
 
+# Fix trucks table (add value/miles/mpg columns, fix unique constraints)
+echo "🔧 Fixing trucks table..."
+python3 fix_trucks_table.py || echo "⚠️  fix_trucks_table.py had errors, continuing..."
+
 # Stamp Alembic version to match current state
 echo "📦 Stamping Alembic version..."
 python3 stamp_alembic.py || echo "⚠️  stamp_alembic.py had errors, continuing..."

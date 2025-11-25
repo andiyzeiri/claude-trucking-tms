@@ -110,7 +110,10 @@ export default function TrucksPage() {
       model: truckData.model,
       year: truckData.year,
       vin: truckData.vin,
-      status: truckData.status
+      status: truckData.status,
+      value: truckData.value || 0,
+      miles: truckData.miles || 0,
+      mpg: truckData.mpg || 0
     }
 
     if (modalMode === 'create') {

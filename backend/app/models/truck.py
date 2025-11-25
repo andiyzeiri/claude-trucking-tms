@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, Enum
+from sqlalchemy import Column, String, Integer, ForeignKey, Enum, Numeric
 from sqlalchemy.orm import relationship
 from geoalchemy2 import Geometry
 import enum
@@ -22,12 +22,15 @@ class Truck(Base):
 
     type = Column(String, default="truck", nullable=False)
     truck_number = Column(String, nullable=False)
-    vin = Column(String, unique=True)
+    vin = Column(String)
     make = Column(String)
     model = Column(String)
     year = Column(Integer)
     license_plate = Column(String)
     status = Column(String, default="available")
+    value = Column(Numeric(12, 2), default=0)
+    miles = Column(Integer, default=0)
+    mpg = Column(Numeric(5, 1), default=0)
 
     # Current location (PostGIS)
     current_location = Column(Geometry("POINT", srid=4326))
