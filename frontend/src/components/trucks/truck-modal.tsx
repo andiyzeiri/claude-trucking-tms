@@ -32,7 +32,8 @@ interface TruckModalProps {
   mode: 'create' | 'edit'
 }
 
-const makes = ['Freightliner', 'Peterbilt', 'Kenworth', 'Mack', 'International', 'Volvo']
+const truckMakes = ['Freightliner', 'Peterbilt', 'Kenworth', 'Mack', 'International', 'Volvo', 'Western Star']
+const trailerMakes = ['Great Dane', 'Utility', 'Wabash', 'Hyundai', 'Vanguard', 'Stoughton', 'Kentucky', 'Fontaine', 'MAC', 'Wilson', 'East', 'Trail King', 'Reitnouer', 'Manac', 'Polar', 'Heil']
 const drivers = ['John Smith', 'Jane Doe', 'Mike Johnson', 'Sarah Wilson', 'David Brown']
 
 export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalProps) {
@@ -112,7 +113,7 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalP
           <div className="space-y-2">
             <Label htmlFor="type">Type</Label>
             <Select value={formData.type} onValueChange={(value: 'truck' | 'trailer') =>
-              setFormData({ ...formData, type: value })}>
+              setFormData({ ...formData, type: value, make: '' })}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -155,7 +156,7 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalP
                 <SelectValue placeholder="Select make" />
               </SelectTrigger>
               <SelectContent>
-                {makes.map((make) => (
+                {(formData.type === 'trailer' ? trailerMakes : truckMakes).map((make) => (
                   <SelectItem key={make} value={make}>
                     {make}
                   </SelectItem>
