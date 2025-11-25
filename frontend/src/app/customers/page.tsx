@@ -14,7 +14,14 @@ import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer }
 export default function CustomersPage() {
   // Fetch customers from API
   const { data: customersData, isLoading } = useCustomers()
-  const customers = customersData?.items || []
+  const rawCustomers = customersData?.items || []
+
+  // Sort customers alphabetically by name
+  const customers = useMemo(() => {
+    return [...rawCustomers].sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '')
+    )
+  }, [rawCustomers])
   const createCustomer = useCreateCustomer()
   const updateCustomer = useUpdateCustomer()
   const deleteCustomer = useDeleteCustomer()

@@ -254,7 +254,14 @@ export default function LoadsPageInline() {
   const deleteLoad = useDeleteLoad()
 
   const { data: customersData } = useCustomers()
-  const customers = customersData?.items || []
+  const rawCustomers = customersData?.items || []
+
+  // Sort customers alphabetically by name for dropdown
+  const customers = useMemo(() => {
+    return [...rawCustomers].sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '')
+    )
+  }, [rawCustomers])
 
   const { data: driversData } = useDrivers()
   const drivers = driversData?.items || []
