@@ -2,12 +2,13 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
-import { ChevronRight, ChevronDown, Trash2 } from 'lucide-react'
+import { ChevronRight, ChevronDown, Trash2, Plus } from 'lucide-react'
 import { useFuel, useCreateFuel, useUpdateFuel, useDeleteFuel } from '@/hooks/use-fuel'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
 import { Fuel } from '@/types'
 import toast from 'react-hot-toast'
+import { formatCurrency } from '@/lib/utils'
 
 interface EditableFuel extends Fuel {
   isNew?: boolean
@@ -220,24 +221,222 @@ export default function FuelPage() {
     return <Layout><div className="p-8">Loading...</div></Layout>
   }
 
+  // Render a fuel entry row
+  const renderFuelRow = (weekNum: number, driver: any, mainEntry: Fuel | undefined, rowIndex: number) => {
+    const isEvenRow = rowIndex % 2 === 0
+    const defaultBgColor = isEvenRow ? 'var(--cell-background-base)' : 'rgba(0, 0, 0, 0.02)'
+
+    const isEditingField = (field: string) =>
+      editingCell?.weekNumber === weekNum &&
+      editingCell?.driverId === driver.id &&
+      editingCell?.field === field
+
+    return (
+      <tr
+        key={`${weekNum}-${driver.id}`}
+        className="border-b transition-colors"
+        style={{
+          borderColor: 'var(--cell-borderColor)',
+          backgroundColor: defaultBgColor
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--row-background-cursor)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = defaultBgColor
+        }}
+      >
+        {/* Empty cell for indent */}
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)', width: '20px' }}></td>
+
+        {/* Driver */}
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)' }}>
+          <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)' }}>
+            {driver.first_name} {driver.last_name}
+          </div>
+        </td>
+
+        {/* Truck */}
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)' }}>
+          {isEditingField('truck_id') ? (
+            <select
+              className="w-full px-2 py-1 border rounded text-sm"
+              value={editValues.truck_id || ''}
+              onChange={(e) => handleCellChange('truck_id', parseInt(e.target.value))}
+              onBlur={handleCellBlur}
+              autoFocus
+            >
+              <option value="">Select</option>
+              {trucks.map((truck) => (
+                <option key={truck.id} value={truck.id}>
+                  {truck.truck_number}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div
+              onClick={() => handleCellClick(weekNum, driver.id, 'truck_id', mainEntry)}
+              className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5"
+              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)' }}
+            >
+              {mainEntry?.truck?.truck_number || '-'}
+            </div>
+          )}
+        </td>
+
+        {/* Gallons */}
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)' }}>
+          {isEditingField('gallons') ? (
+            <input
+              type="number"
+              step="0.01"
+              className="w-full px-2 py-1 border rounded text-right text-sm"
+              value={editValues.gallons || ''}
+              onChange={(e) => handleCellChange('gallons', parseFloat(e.target.value) || 0)}
+              onBlur={handleCellBlur}
+              onKeyDown={handleKeyDown}
+              autoFocus
+            />
+          ) : (
+            <div
+              onClick={() => handleCellClick(weekNum, driver.id, 'gallons', mainEntry)}
+              className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5"
+              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)' }}
+            >
+              {mainEntry?.gallons?.toFixed(1) || '-'}
+            </div>
+          )}
+        </td>
+
+        {/* Price/Gal */}
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)' }}>
+          {isEditingField('price_per_gallon') ? (
+            <input
+              type="number"
+              step="0.001"
+              className="w-full px-2 py-1 border rounded text-right text-sm"
+              value={editValues.price_per_gallon || ''}
+              onChange={(e) => handleCellChange('price_per_gallon', parseFloat(e.target.value) || 0)}
+              onBlur={handleCellBlur}
+              onKeyDown={handleKeyDown}
+              autoFocus
+            />
+          ) : (
+            <div
+              onClick={() => handleCellClick(weekNum, driver.id, 'price_per_gallon', mainEntry)}
+              className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5"
+              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)' }}
+            >
+              {mainEntry?.price_per_gallon ? `$${Number(mainEntry.price_per_gallon).toFixed(3)}` : '-'}
+            </div>
+          )}
+        </td>
+
+        {/* DEF Gallons */}
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)' }}>
+          {isEditingField('def_gallons') ? (
+            <input
+              type="number"
+              step="0.01"
+              className="w-full px-2 py-1 border rounded text-right text-sm"
+              value={editValues.def_gallons || ''}
+              onChange={(e) => handleCellChange('def_gallons', parseFloat(e.target.value) || 0)}
+              onBlur={handleCellBlur}
+              onKeyDown={handleKeyDown}
+              autoFocus
+            />
+          ) : (
+            <div
+              onClick={() => handleCellClick(weekNum, driver.id, 'def_gallons', mainEntry)}
+              className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5"
+              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)' }}
+            >
+              {mainEntry?.def_gallons ? Number(mainEntry.def_gallons).toFixed(1) : '-'}
+            </div>
+          )}
+        </td>
+
+        {/* DEF Price */}
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)' }}>
+          {isEditingField('def_price') ? (
+            <input
+              type="number"
+              step="0.01"
+              className="w-full px-2 py-1 border rounded text-right text-sm"
+              value={editValues.def_price || ''}
+              onChange={(e) => handleCellChange('def_price', parseFloat(e.target.value) || 0)}
+              onBlur={handleCellBlur}
+              onKeyDown={handleKeyDown}
+              autoFocus
+            />
+          ) : (
+            <div
+              onClick={() => handleCellClick(weekNum, driver.id, 'def_price', mainEntry)}
+              className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5"
+              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)' }}
+            >
+              {mainEntry?.def_price ? `$${Number(mainEntry.def_price).toFixed(2)}` : '-'}
+            </div>
+          )}
+        </td>
+
+        {/* Total */}
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)' }}>
+          {isEditingField('total_amount') ? (
+            <input
+              type="number"
+              step="0.01"
+              className="w-full px-2 py-1 border rounded text-right text-sm"
+              value={editValues.total_amount || ''}
+              onChange={(e) => handleCellChange('total_amount', parseFloat(e.target.value) || 0)}
+              onBlur={handleCellBlur}
+              onKeyDown={handleKeyDown}
+              autoFocus
+            />
+          ) : (
+            <div
+              onClick={() => handleCellClick(weekNum, driver.id, 'total_amount', mainEntry)}
+              className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5"
+              style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: '#16a34a' }}
+            >
+              {mainEntry?.total_amount ? formatCurrency(Number(mainEntry.total_amount)) : '-'}
+            </div>
+          )}
+        </td>
+
+        {/* Actions */}
+        <td className="px-3 py-2.5" style={{ borderColor: 'var(--cell-borderColor)' }}>
+          {mainEntry && (
+            <button
+              onClick={() => handleDeleteRow(mainEntry)}
+              className="p-1 hover:bg-red-100 rounded"
+            >
+              <Trash2 className="h-4 w-4 text-red-600" />
+            </button>
+          )}
+        </td>
+      </tr>
+    )
+  }
+
   return (
     <Layout>
       <div className="p-4">
-        <h1 className="text-3xl font-bold mb-6">Fuel</h1>
+        <h1 className="text-2xl font-semibold mb-4" style={{ color: 'var(--colors-foreground-default)' }}>Fuel</h1>
 
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
+          <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
-              <tr className="bg-gray-100 border-b">
-                <th className="p-2 text-left w-40">Week</th>
-                <th className="p-2 text-left w-48">Driver</th>
-                <th className="p-2 text-left w-32">Truck</th>
-                <th className="p-2 text-right w-28">Gallons</th>
-                <th className="p-2 text-right w-28">Price/Gal</th>
-                <th className="p-2 text-right w-28">DEF Gal</th>
-                <th className="p-2 text-right w-28">DEF Price</th>
-                <th className="p-2 text-right w-32">Total</th>
-                <th className="p-2 w-10"></th>
+              <tr style={{ backgroundColor: 'var(--cell-background-header)' }}>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)', width: '20px' }}></th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Driver</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Truck</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Gallons</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Price/Gal</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>DEF Gal</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>DEF Price</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Total</th>
+                <th className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)', width: '50px' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -252,198 +451,79 @@ export default function FuelPage() {
                   <React.Fragment key={weekNum}>
                     {/* Week Header */}
                     <tr
-                      className="bg-cyan-50 border-b border-gray-200 cursor-pointer hover:bg-cyan-100"
+                      className="bg-cyan-50 border-b cursor-pointer"
+                      style={{ borderColor: 'var(--cell-borderColor)' }}
                       onClick={() => toggleWeek(weekNum)}
                     >
-                      <td colSpan={2} className="px-2 py-2 text-sm font-medium text-gray-700">
+                      <td colSpan={2} className="px-2 py-2" style={{ paddingLeft: '8px' }}>
                         <div className="flex items-center gap-2">
                           {isCollapsed ? (
                             <ChevronRight className="h-4 w-4 flex-shrink-0" />
                           ) : (
                             <ChevronDown className="h-4 w-4 flex-shrink-0" />
                           )}
-                          <span className="whitespace-nowrap">Week {weekNum} {getWeekDateRange(weekNum, currentYear)}</span>
-                          <span className="text-gray-500 whitespace-nowrap">
+                          <span className="whitespace-nowrap" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--colors-foreground-default)' }}>
+                            Week {weekNum} {getWeekDateRange(weekNum, currentYear)}
+                          </span>
+                          <span style={{ fontSize: '13px', color: 'var(--colors-foreground-muted)' }}>
                             ({allWeekFuel.length} entries)
                           </span>
                         </div>
                       </td>
-                      <td className="px-2 py-2 text-sm" colSpan={3}></td>
-                      <td className="px-2 py-2 text-sm text-right font-semibold">
-                        {weekGallons.toFixed(1)} gal
-                      </td>
-                      <td className="px-2 py-2 text-sm text-right font-semibold text-green-700">
-                        ${weekTotal.toFixed(2)}
+                      <td className="px-2 py-2" colSpan={5}></td>
+                      <td className="px-2 py-2">
+                        <div className="mb-0.5">
+                          <div style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: '#16a34a' }}>
+                            {formatCurrency(weekTotal)}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: '#2563eb' }}>
+                          {weekGallons.toFixed(1)} gal
+                        </div>
                       </td>
                       <td className="px-2 py-2"></td>
                     </tr>
 
                     {/* Driver Rows */}
-                    {!isCollapsed && drivers.map(driver => {
+                    {!isCollapsed && drivers.map((driver, driverIndex) => {
                       const driverFuelEntries = weekDrivers[driver.id] || []
-                      const mainEntry = driverFuelEntries[0] // Show first entry for this driver in this week
-
-                      const isEditing = (field: string) =>
-                        editingCell?.weekNumber === weekNum &&
-                        editingCell?.driverId === driver.id &&
-                        editingCell?.field === field
-
-                      const cellValue = (field: string) => {
-                        if (isEditing(field)) {
-                          return editValues[field]
-                        }
-                        return mainEntry?.[field as keyof Fuel]
-                      }
-
-                      return (
-                        <tr key={`${weekNum}-${driver.id}`} className="border-b hover:bg-gray-50">
-                          <td className="p-2"></td>
-                          <td className="p-2 text-sm">
-                            {driver.first_name} {driver.last_name}
-                          </td>
-                          <td className="p-2">
-                            {isEditing('truck_id') ? (
-                              <select
-                                className="w-full px-2 py-1 border rounded text-sm"
-                                value={editValues.truck_id || ''}
-                                onChange={(e) => handleCellChange('truck_id', parseInt(e.target.value))}
-                                onBlur={handleCellBlur}
-                                autoFocus
-                              >
-                                <option value="">Select</option>
-                                {trucks.map((truck) => (
-                                  <option key={truck.id} value={truck.id}>
-                                    {truck.truck_number}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              <div
-                                onClick={() => handleCellClick(weekNum, driver.id, 'truck_id', mainEntry)}
-                                className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                              >
-                                {mainEntry?.truck?.truck_number || '-'}
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-2 text-right">
-                            {isEditing('gallons') ? (
-                              <input
-                                type="number"
-                                step="0.01"
-                                className="w-full px-2 py-1 border rounded text-right text-sm"
-                                value={editValues.gallons || ''}
-                                onChange={(e) => handleCellChange('gallons', parseFloat(e.target.value) || 0)}
-                                onBlur={handleCellBlur}
-                                onKeyDown={handleKeyDown}
-                                autoFocus
-                              />
-                            ) : (
-                              <div
-                                onClick={() => handleCellClick(weekNum, driver.id, 'gallons', mainEntry)}
-                                className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                              >
-                                {mainEntry?.gallons?.toFixed(1) || '-'}
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-2 text-right">
-                            {isEditing('price_per_gallon') ? (
-                              <input
-                                type="number"
-                                step="0.001"
-                                className="w-full px-2 py-1 border rounded text-right text-sm"
-                                value={editValues.price_per_gallon || ''}
-                                onChange={(e) => handleCellChange('price_per_gallon', parseFloat(e.target.value) || 0)}
-                                onBlur={handleCellBlur}
-                                onKeyDown={handleKeyDown}
-                                autoFocus
-                              />
-                            ) : (
-                              <div
-                                onClick={() => handleCellClick(weekNum, driver.id, 'price_per_gallon', mainEntry)}
-                                className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                              >
-                                {mainEntry?.price_per_gallon ? `$${mainEntry.price_per_gallon.toFixed(3)}` : '-'}
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-2 text-right">
-                            {isEditing('def_gallons') ? (
-                              <input
-                                type="number"
-                                step="0.01"
-                                className="w-full px-2 py-1 border rounded text-right text-sm"
-                                value={editValues.def_gallons || ''}
-                                onChange={(e) => handleCellChange('def_gallons', parseFloat(e.target.value) || 0)}
-                                onBlur={handleCellBlur}
-                                onKeyDown={handleKeyDown}
-                                autoFocus
-                              />
-                            ) : (
-                              <div
-                                onClick={() => handleCellClick(weekNum, driver.id, 'def_gallons', mainEntry)}
-                                className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                              >
-                                {mainEntry?.def_gallons?.toFixed(1) || '-'}
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-2 text-right">
-                            {isEditing('def_price') ? (
-                              <input
-                                type="number"
-                                step="0.01"
-                                className="w-full px-2 py-1 border rounded text-right text-sm"
-                                value={editValues.def_price || ''}
-                                onChange={(e) => handleCellChange('def_price', parseFloat(e.target.value) || 0)}
-                                onBlur={handleCellBlur}
-                                onKeyDown={handleKeyDown}
-                                autoFocus
-                              />
-                            ) : (
-                              <div
-                                onClick={() => handleCellClick(weekNum, driver.id, 'def_price', mainEntry)}
-                                className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                              >
-                                {mainEntry?.def_price ? `$${mainEntry.def_price.toFixed(2)}` : '-'}
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-2 text-right">
-                            {isEditing('total_amount') ? (
-                              <input
-                                type="number"
-                                step="0.01"
-                                className="w-full px-2 py-1 border rounded text-right text-sm font-semibold"
-                                value={editValues.total_amount || ''}
-                                onChange={(e) => handleCellChange('total_amount', parseFloat(e.target.value) || 0)}
-                                onBlur={handleCellBlur}
-                                onKeyDown={handleKeyDown}
-                                autoFocus
-                              />
-                            ) : (
-                              <div
-                                onClick={() => handleCellClick(weekNum, driver.id, 'total_amount', mainEntry)}
-                                className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded font-semibold"
-                              >
-                                {mainEntry?.total_amount ? `$${mainEntry.total_amount.toFixed(2)}` : '-'}
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-2">
-                            {mainEntry && (
-                              <button
-                                onClick={() => handleDeleteRow(mainEntry)}
-                                className="p-1 hover:bg-red-100 rounded"
-                              >
-                                <Trash2 className="h-4 w-4 text-red-600" />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      )
+                      const mainEntry = driverFuelEntries[0]
+                      return renderFuelRow(weekNum, driver, mainEntry, driverIndex)
                     })}
+
+                    {/* Add fuel entry button */}
+                    {!isCollapsed && (
+                      <tr className="border-b" style={{ borderColor: 'var(--cell-borderColor)' }}>
+                        <td colSpan={9} className="px-2 py-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              // Create a new fuel entry for this week
+                              const weekDate = getDateFromWeekNumber(weekNum, currentYear)
+                              if (drivers.length > 0 && trucks.length > 0) {
+                                createFuel.mutate({
+                                  date: weekDate.toISOString().split('T')[0],
+                                  driver_id: drivers[0].id,
+                                  truck_id: trucks[0].id,
+                                  gallons: 0,
+                                  price_per_gallon: 0,
+                                  def_gallons: 0,
+                                  def_price: 0,
+                                  total_amount: 0,
+                                })
+                              } else {
+                                toast.error('Please add drivers and trucks first')
+                              }
+                            }}
+                            className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                            style={{ marginLeft: '20px' }}
+                          >
+                            <Plus className="h-4 w-4" />
+                            <span>Add fuel entry to Week {weekNum}</span>
+                          </button>
+                        </td>
+                      </tr>
+                    )}
                   </React.Fragment>
                 )
               })}
