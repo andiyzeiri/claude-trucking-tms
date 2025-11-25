@@ -12,6 +12,21 @@ import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
 import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
 
+// Fuel data storage key (same as fuel page)
+const FUEL_STORAGE_KEY = 'tms-fuel-data'
+
+interface FuelEntry {
+  id: string
+  weekNumber: number
+  driverId: number
+  truckId: number | null
+  gallons: number
+  pricePerGallon: number
+  defGallons: number
+  defPrice: number
+  totalAmount: number
+}
+
 // Generate 52 weeks starting from Monday, December 30, 2024
 function generateWeeks() {
   const weeks = []
@@ -76,6 +91,34 @@ export default function PayrollPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, weekNumber: number, driverId: number} | null>(null)
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
+  const [fuelEntries, setFuelEntries] = useState<FuelEntry[]>([])
+
+  // Load fuel data from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(FUEL_STORAGE_KEY)
+    if (stored) {
+      try {
+        setFuelEntries(JSON.parse(stored))
+      } catch (e) {
+        console.error('Failed to load fuel data:', e)
+      }
+    }
+  }, [])
+
+  // Create a map of fuel totals by week and driver
+  const fuelByWeekAndDriver = useMemo(() => {
+    const map: Record<number, Record<number, number>> = {}
+    fuelEntries.forEach(entry => {
+      if (!map[entry.weekNumber]) {
+        map[entry.weekNumber] = {}
+      }
+      if (!map[entry.weekNumber][entry.driverId]) {
+        map[entry.weekNumber][entry.driverId] = 0
+      }
+      map[entry.weekNumber][entry.driverId] += entry.totalAmount || 0
+    })
+    return map
+  }, [fuelEntries])
 
   const isLoading = driversLoading || payrollLoading
 
@@ -121,24 +164,63 @@ export default function PayrollPage() {
 
         const driverData = driverMap.get(entry.driver_id)
         if (driverData) {
+          // Get fuel amount for this driver/week from localStorage
+          const fuelAmount = fuelByWeekAndDriver[entry.week_number]?.[entry.driver_id] || 0
+
+          // Calculate check amount with fuel deduction
+          const gross = Number(entry.gross) || 0
+          const extra = Number(entry.extra) || 0
+          const dispatch_fee = Number(entry.dispatch_fee) || 0
+          const insurance = Number(entry.insurance) || 0
+          const parking = Number(entry.parking) || 0
+          const trailer = Number(entry.trailer) || 0
+          const misc = Number(entry.misc) || 0
+
+          // Check amount = gross + extra - deductions (dispatch_fee, insurance, fuel, parking, trailer, misc)
+          const check_amount = gross + extra - dispatch_fee - insurance - fuelAmount - parking - trailer - misc
+
           driverData.weeks[entry.week_number] = {
-            gross: Number(entry.gross) || 0,
-            extra: Number(entry.extra) || 0,
-            dispatch_fee: Number(entry.dispatch_fee) || 0,
-            insurance: Number(entry.insurance) || 0,
-            fuel: 0, // Not used yet
-            parking: Number(entry.parking) || 0,
-            trailer: Number(entry.trailer) || 0,
-            misc: Number(entry.misc) || 0,
+            gross,
+            extra,
+            dispatch_fee,
+            insurance,
+            fuel: fuelAmount,
+            parking,
+            trailer,
+            misc,
             miles: Number(entry.miles) || 0,
-            check_amount: Number(entry.check_amount) || 0
+            check_amount
           }
         }
       })
     }
 
+    // Also add fuel data for weeks/drivers that don't have payroll entries yet
+    Object.entries(fuelByWeekAndDriver).forEach(([weekNumStr, driverFuels]) => {
+      const weekNumber = parseInt(weekNumStr)
+      Object.entries(driverFuels).forEach(([driverIdStr, fuelAmount]) => {
+        const driverId = parseInt(driverIdStr)
+        const driverData = driverMap.get(driverId)
+        if (driverData && !driverData.weeks[weekNumber]) {
+          // Create a week entry with just fuel data
+          driverData.weeks[weekNumber] = {
+            gross: 0,
+            extra: 0,
+            dispatch_fee: 0,
+            insurance: 0,
+            fuel: fuelAmount,
+            parking: 0,
+            trailer: 0,
+            misc: 0,
+            miles: 0,
+            check_amount: -fuelAmount // Negative because it's only deductions
+          }
+        }
+      })
+    })
+
     return Array.from(driverMap.values())
-  }, [drivers, calculatedPayroll])
+  }, [drivers, calculatedPayroll, fuelByWeekAndDriver])
 
   const toggleWeek = (weekNumber: number) => {
     const newExpanded = new Set(expandedWeeks)
