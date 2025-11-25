@@ -29,15 +29,34 @@ type EditingCell = {
   field: string
 } | null
 
-// Get week date range
-function getWeekDateRange(weekNumber: number, year?: number): string {
+// Helper to get a date from a week number (ISO 8601) - matches loads page
+function getDateFromWeekNumber(weekNumber: number, year?: number): Date {
   const currentYear = year || new Date().getFullYear()
+
+  // January 4th is always in week 1
   const jan4 = new Date(Date.UTC(currentYear, 0, 4))
+
+  // Get the Monday of week 1
   const dayNum = jan4.getUTCDay() || 7
   const week1Monday = new Date(jan4)
   week1Monday.setUTCDate(jan4.getUTCDate() - dayNum + 1)
-  const monday = new Date(week1Monday)
-  monday.setUTCDate(week1Monday.getUTCDate() + (weekNumber - 1) * 7)
+
+  // Add weeks
+  const targetDate = new Date(week1Monday)
+  targetDate.setUTCDate(week1Monday.getUTCDate() + (weekNumber - 1) * 7)
+
+  // Convert to local date
+  return new Date(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate())
+}
+
+// Get week date range - matches loads page approach
+function getWeekDateRange(weekNumber: number, year?: number): string {
+  const date = getDateFromWeekNumber(weekNumber, year)
+
+  const dayOfWeek = date.getDay()
+  const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek
+  const monday = new Date(date)
+  monday.setDate(date.getDate() + diffToMonday)
 
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
