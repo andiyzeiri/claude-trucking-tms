@@ -1,13 +1,12 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { DataTable, Column } from '@/components/ui/data-table'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
 import { TruckModal, TruckData } from '@/components/trucks/truck-modal'
-import { Plus, Truck, Edit, Trash2, FileText } from 'lucide-react'
+import { Plus, Truck as TruckIcon, Edit, Trash2, FileText } from 'lucide-react'
 import { useTrucks, useCreateTruck, useUpdateTruck } from '@/hooks/use-trucks'
 
 // Helper functions for localStorage
@@ -32,7 +31,7 @@ export default function TrucksPage() {
   const updateTruck = useUpdateTruck()
 
   // Merge truck data with localStorage types
-  const [trucks, setTrucks] = useState([])
+  const [trucks, setTrucks] = useState<any[]>([])
 
   useEffect(() => {
     if (rawTrucks.length > 0) {
@@ -44,6 +43,14 @@ export default function TrucksPage() {
       setTrucks(mergedTrucks)
     }
   }, [rawTrucks.length])
+
+  // Separate trucks and trailers
+  const { trucksOnly, trailersOnly } = useMemo(() => {
+    return {
+      trucksOnly: trucks.filter(t => t.type === 'truck'),
+      trailersOnly: trucks.filter(t => t.type === 'trailer')
+    }
+  }, [trucks])
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -153,110 +160,81 @@ export default function TrucksPage() {
   }
 
 
-  const columns: Column<typeof trucks[0]>[] = [
-    {
-      key: 'type',
-      label: 'Type',
-      width: '100px',
-      filterable: true,
-      groupable: true,
-      render: (value) => <span className="text-gray-900 capitalize">{value || 'N/A'}</span>
-    },
-    {
-      key: 'truck_number',
-      label: 'Unit #',
-      width: '120px',
-      render: (value) => <span className="font-medium text-blue-600">{value}</span>
-    },
-    {
-      key: 'year',
-      label: 'Year',
-      width: '100px',
-      render: (value) => <span className="text-gray-900">{value || 'N/A'}</span>
-    },
-    {
-      key: 'make',
-      label: 'Make',
-      width: '130px',
-      filterable: true,
-      groupable: true,
-      render: (value) => <span className="text-gray-900">{value || 'N/A'}</span>
-    },
-    {
-      key: 'model',
-      label: 'Model',
-      width: '130px',
-      filterable: true,
-      render: (value) => <span className="text-gray-900">{value || 'N/A'}</span>
-    },
-    {
-      key: 'vin',
-      label: 'VIN',
-      width: '160px',
-      render: (value) => <span className="text-xs font-mono text-gray-700">{value || 'N/A'}</span>
-    },
-    {
-      key: 'value',
-      label: 'Value',
-      width: '120px',
-      render: (value) => <span className="text-gray-900">${value ? Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</span>
-    },
-    {
-      key: 'miles',
-      label: 'Miles',
-      width: '100px',
-      render: (value) => <span className="text-gray-900">{value ? Number(value).toLocaleString() : '0'}</span>
-    },
-    {
-      key: 'mpg',
-      label: 'MPG',
-      width: '100px',
-      render: (value) => <span className="text-gray-900">{value ? Number(value).toFixed(1) : '0.0'}</span>
-    },
-    {
-      key: 'registration',
-      label: 'Registration',
-      width: '130px',
-      render: (value) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 px-2 hover:bg-blue-50"
-          onClick={(e) => {
-            e.stopPropagation()
-            // TODO: Open PDF viewer
-            alert('Registration PDF viewer coming soon')
-          }}
-        >
-          <FileText className="h-4 w-4 mr-1 text-red-600" />
-          <span className="text-xs">View PDF</span>
-        </Button>
-      )
-    },
-    {
-      key: 'inspection',
-      label: 'Inspection',
-      width: '130px',
-      render: (value) => value ? new Date(value).toLocaleDateString() : 'N/A'
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      width: '120px',
-      filterable: true,
-      groupable: true,
-      render: (value) => (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-          value === 'available' ? 'bg-green-100 text-green-800' :
-          value === 'in_use' ? 'bg-blue-100 text-blue-800' :
-          value === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-          'bg-red-100 text-red-800'
-        }`}>
-          {value}
-        </span>
-      )
-    }
-  ]
+  const renderEquipmentRow = (item: any, index: number) => {
+    const isEvenRow = index % 2 === 0
+    const defaultBgColor = isEvenRow ? 'var(--cell-background-base)' : 'rgba(0, 0, 0, 0.02)'
+
+    return (
+      <tr
+        key={item.id}
+        className="border-b transition-colors cursor-pointer"
+        style={{
+          borderColor: 'var(--cell-borderColor)',
+          backgroundColor: defaultBgColor
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--row-background-cursor)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = defaultBgColor
+        }}
+        onClick={() => handleEditTruck(item)}
+        onContextMenu={(e) => handleRowRightClick(item, e)}
+      >
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)' }}>
+          <span className="font-medium text-blue-600" style={{ fontSize: '13px' }}>{item.truck_number}</span>
+        </td>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '13px' }}>
+          {item.year || 'N/A'}
+        </td>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '13px' }}>
+          {item.make || 'N/A'}
+        </td>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '13px' }}>
+          {item.model || 'N/A'}
+        </td>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)' }}>
+          <span className="text-xs font-mono text-gray-700">{item.vin || 'N/A'}</span>
+        </td>
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '13px' }}>
+          ${item.value ? Number(item.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+        </td>
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '13px' }}>
+          {item.miles ? Number(item.miles).toLocaleString() : '0'}
+        </td>
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '13px' }}>
+          {item.mpg ? Number(item.mpg).toFixed(1) : '0.0'}
+        </td>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)' }}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 hover:bg-blue-50"
+            onClick={(e) => {
+              e.stopPropagation()
+              alert('Registration PDF viewer coming soon')
+            }}
+          >
+            <FileText className="h-4 w-4 mr-1 text-red-600" />
+            <span className="text-xs">View PDF</span>
+          </Button>
+        </td>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '13px' }}>
+          {item.inspection ? new Date(item.inspection).toLocaleDateString() : 'N/A'}
+        </td>
+        <td className="px-3 py-2.5" style={{ borderColor: 'var(--cell-borderColor)' }}>
+          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+            item.status === 'available' ? 'bg-green-100 text-green-800' :
+            item.status === 'in_use' ? 'bg-blue-100 text-blue-800' :
+            item.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
+            'bg-red-100 text-red-800'
+          }`}>
+            {item.status}
+          </span>
+        </td>
+      </tr>
+    )
+  }
 
   return (
     <Layout>
@@ -272,12 +250,68 @@ export default function TrucksPage() {
           </Button>
         </div>
 
-        <DataTable
-          data={trucks}
-          columns={columns}
-          onRowRightClick={handleRowRightClick}
-          tableId="trucks-table"
-        />
+        <div className="overflow-x-auto border border-gray-200 rounded-lg bg-white">
+          <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+            <thead>
+              <tr style={{ backgroundColor: 'var(--cell-background-header)' }}>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Unit #</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Year</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Make</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Model</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>VIN</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Value</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Miles</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>MPG</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Registration</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Inspection</th>
+                <th className="px-3 py-2.5 text-left border-b" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Trucks Section Header */}
+              <tr className="bg-gray-200">
+                <td colSpan={11} className="px-3 py-2 font-semibold text-gray-700" style={{ fontSize: '14px' }}>
+                  <div className="flex items-center gap-2">
+                    <TruckIcon className="h-4 w-4" />
+                    Trucks ({trucksOnly.length})
+                  </div>
+                </td>
+              </tr>
+
+              {/* Truck Rows */}
+              {trucksOnly.map((truck, index) => renderEquipmentRow(truck, index))}
+
+              {trucksOnly.length === 0 && (
+                <tr>
+                  <td colSpan={11} className="px-3 py-4 text-center text-gray-500" style={{ fontSize: '13px' }}>
+                    No trucks added yet
+                  </td>
+                </tr>
+              )}
+
+              {/* Trailers Section Header */}
+              <tr className="bg-gray-200">
+                <td colSpan={11} className="px-3 py-2 font-semibold text-gray-700" style={{ fontSize: '14px' }}>
+                  <div className="flex items-center gap-2">
+                    <TruckIcon className="h-4 w-4" />
+                    Trailers ({trailersOnly.length})
+                  </div>
+                </td>
+              </tr>
+
+              {/* Trailer Rows */}
+              {trailersOnly.map((trailer, index) => renderEquipmentRow(trailer, index))}
+
+              {trailersOnly.length === 0 && (
+                <tr>
+                  <td colSpan={11} className="px-3 py-4 text-center text-gray-500" style={{ fontSize: '13px' }}>
+                    No trailers added yet
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
 
         <TruckModal
