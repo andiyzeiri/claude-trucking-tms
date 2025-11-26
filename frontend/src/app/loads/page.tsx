@@ -2362,9 +2362,9 @@ export default function LoadsPageInline() {
         <div className="border rounded-lg bg-white overflow-hidden shadow-sm" style={{borderColor: 'var(--monday-border-light)'}} onContextMenu={handleGeneralContextMenu}>
           <div className="overflow-x-auto">
             <table className="w-full table-auto" style={{borderCollapse: 'separate', borderSpacing: 0}}>
-              <thead style={{backgroundColor: 'var(--monday-bg-secondary)'}}>
+              <thead>
                 <tr>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px`}} onClick={() => handleSort('weekNumber')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer select-none relative group" style={{backgroundColor: '#e9edc9', color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px`}} onClick={() => handleSort('weekNumber')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.week}
                       onAdjust={(delta) => adjustWidth('week', delta)}
@@ -2376,7 +2376,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.date}px`, minWidth: `${columnWidths.date}px`}} onClick={() => handleSort('pickup_date')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer select-none relative group" style={{backgroundColor: '#d4a373', color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.date}px`, minWidth: `${columnWidths.date}px`}} onClick={() => handleSort('pickup_date')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.date}
                       onAdjust={(delta) => adjustWidth('date', delta)}
@@ -2388,7 +2388,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.load_number}px`, minWidth: `${columnWidths.load_number}px`}} onClick={() => handleSort('load_number')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer select-none relative group" style={{backgroundColor: '#e9edc9', color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.load_number}px`, minWidth: `${columnWidths.load_number}px`}} onClick={() => handleSort('load_number')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.load_number}
                       onAdjust={(delta) => adjustWidth('load_number', delta)}
@@ -2400,7 +2400,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.customer}px`, minWidth: `${columnWidths.customer}px`}} onClick={() => handleSort('customer_id')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer select-none relative group" style={{backgroundColor: '#d4a373', color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.customer}px`, minWidth: `${columnWidths.customer}px`}} onClick={() => handleSort('customer_id')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.customer}
                       onAdjust={(delta) => adjustWidth('customer', delta)}
@@ -2412,7 +2412,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px`}} onClick={() => handleSort('driver_id')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer select-none relative group" style={{backgroundColor: '#e9edc9', color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px`}} onClick={() => handleSort('driver_id')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.driver}
                       onAdjust={(delta) => adjustWidth('driver', delta)}
@@ -2424,7 +2424,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.pickup}px`, minWidth: `${columnWidths.pickup}px`}} onClick={() => handleSort('pickup_location')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer select-none relative group" style={{backgroundColor: '#d4a373', color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.pickup}px`, minWidth: `${columnWidths.pickup}px`}} onClick={() => handleSort('pickup_location')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.pickup}
                       onAdjust={(delta) => adjustWidth('pickup', delta)}
@@ -2436,7 +2436,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.delivery}px`, minWidth: `${columnWidths.delivery}px`}} onClick={() => handleSort('delivery_location')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer select-none relative group" style={{backgroundColor: '#e9edc9', color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.delivery}px`, minWidth: `${columnWidths.delivery}px`}} onClick={() => handleSort('delivery_location')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.delivery}
                       onAdjust={(delta) => adjustWidth('delivery', delta)}
@@ -2448,14 +2448,14 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.notes}px`, minWidth: `${columnWidths.notes}px`}}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{backgroundColor: '#d4a373', color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.notes}px`, minWidth: `${columnWidths.notes}px`}}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.notes}
                       onAdjust={(delta) => adjustWidth('notes', delta)}
                     />
                     Notes
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.rate}px`, minWidth: `${columnWidths.rate}px`}} onClick={() => handleSort('rate')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer select-none relative group" style={{backgroundColor: '#e9edc9', color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.rate}px`, minWidth: `${columnWidths.rate}px`}} onClick={() => handleSort('rate')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.rate}
                       onAdjust={(delta) => adjustWidth('rate', delta)}
@@ -2467,21 +2467,21 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.pod}px`, minWidth: `${columnWidths.pod}px`}}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{backgroundColor: '#d4a373', color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.pod}px`, minWidth: `${columnWidths.pod}px`}}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.pod}
                       onAdjust={(delta) => adjustWidth('pod', delta)}
                     />
                     POD
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.ratecon}px`, minWidth: `${columnWidths.ratecon}px`}}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{backgroundColor: '#e9edc9', color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.ratecon}px`, minWidth: `${columnWidths.ratecon}px`}}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.ratecon}
                       onAdjust={(delta) => adjustWidth('ratecon', delta)}
                     />
                     Ratecon
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.status}px`, minWidth: `${columnWidths.status}px`}} onClick={() => handleSort('status')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer select-none relative group" style={{backgroundColor: '#d4a373', color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.status}px`, minWidth: `${columnWidths.status}px`}} onClick={() => handleSort('status')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.status}
                       onAdjust={(delta) => adjustWidth('status', delta)}
