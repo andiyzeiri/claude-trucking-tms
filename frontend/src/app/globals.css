@@ -2,80 +2,77 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import Poppins and Figtree fonts (Monday.com fonts) */
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+
 @import '../styles/page-themes.css';
 
 @layer base {
   :root {
-    /* Airtable Font System */
-    --font-family-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    /* Monday.com Font System */
+    --font-family-body: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --font-family-heading: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 
-    /* Airtable Color Palette */
-    --palette-blue-blue: rgb(22, 110, 225);
-    --palette-blue-blueDark1: rgb(13, 82, 172);
-    --palette-blue-blueLight1: rgb(160, 198, 255);
-    --palette-blue-blueLight2: rgb(209, 226, 255);
-    --palette-blue-blueLight3: rgb(241, 245, 255);
+    /* Monday.com Brand Colors */
+    --monday-mirage: #181B34;
+    --monday-cornflower: #6161FF;
+    --monday-white: #FFFFFF;
 
-    --palette-green-green: rgb(4, 138, 14);
-    --palette-green-greenDark1: rgb(0, 100, 0);
-    --palette-green-greenLight1: rgb(154, 224, 149);
-    --palette-green-greenLight2: rgb(207, 245, 209);
-    --palette-green-greenLight3: rgb(230, 252, 232);
+    /* Monday.com Status Colors */
+    --monday-stuck: #E2445C;
+    --monday-working: #FDAB3D;
+    --monday-done: #00C875;
+    --monday-blue: #0086C0;
+    --monday-purple: #A25DDC;
+    --monday-gray: #C4C4C4;
 
-    --palette-orange-orange: rgb(213, 68, 1);
-    --palette-orange-orangeDark1: rgb(170, 45, 0);
-    --palette-orange-orangeLight1: rgb(255, 182, 142);
-    --palette-orange-orangeLight2: rgb(255, 224, 204);
-    --palette-orange-orangeLight3: rgb(255, 236, 227);
+    /* Monday.com UI Colors */
+    --monday-bg-primary: #FFFFFF;
+    --monday-bg-secondary: #F6F7FB;
+    --monday-bg-hover: #DCDFEC;
+    --monday-border: #C3C6D4;
+    --monday-border-light: #E6E9EF;
+    --monday-text-primary: #323338;
+    --monday-text-secondary: #676879;
+    --monday-text-muted: #9699A6;
 
-    --palette-purple-purple: rgb(124, 55, 239);
-    --palette-purple-purpleDark1: rgb(85, 37, 170);
-    --palette-purple-purpleLight1: rgb(195, 160, 255);
-    --palette-purple-purpleLight2: rgb(226, 213, 255);
-    --palette-purple-purpleLight3: rgb(245, 240, 255);
-
-    --palette-gray-gray1: rgb(51, 51, 51);
-    --palette-gray-gray2: rgb(102, 102, 102);
-    --palette-gray-gray3: rgb(153, 153, 153);
-    --palette-gray-gray4: rgb(204, 204, 204);
-    --palette-gray-gray5: rgb(242, 242, 242);
-
-    /* Airtable Cell Colors */
+    /* Cell Colors (Monday.com style) */
     --cell-background-base: #ffffff;
-    --cell-background-header: #f4f4f4;
-    --cell-background-selected: #f1f6ff;
-    --row-background-cursor: #f8f8f8;
-    --cell-background-row-number-hover: hsl(200, 18%, 95%);
-    --cell-borderColor: hsl(202, 10%, 88%);
-    --cell-borderColor-header: hsl(0, 0%, 82%);
+    --cell-background-header: #F6F7FB;
+    --cell-background-selected: #E6E9EF;
+    --cell-background-highlight: rgba(97, 97, 255, 0.08);
+    --row-background-cursor: #F0F0FF;
+    --cell-background-row-number-hover: #DCDFEC;
+    --cell-borderColor: #E6E9EF;
+    --cell-borderColor-header: #C3C6D4;
 
-    /* Airtable foreground colors */
-    --colors-foreground-default: #000000;
-    --colors-foreground-muted: rgb(102, 102, 102);
-    --colors-border-focus: rgb(22, 110, 225);
+    /* Foreground colors (Monday.com style) */
+    --colors-foreground-default: #323338;
+    --colors-foreground-muted: #676879;
+    --colors-border-focus: #6161FF;
     --colors-background-default: #ffffff;
 
     /* Original shadcn variables for compatibility */
     --background: 0 0% 100%;
-    --foreground: 0 0% 0%;
+    --foreground: 222 15% 20%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
+    --card-foreground: 222 15% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
-    --primary: 215 100% 48%;
+    --popover-foreground: 222 15% 20%;
+    --primary: 243 100% 69%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 0%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 40%;
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 0%;
-    --destructive: 0 84.2% 60.2%;
+    --secondary: 230 15% 97%;
+    --secondary-foreground: 222 15% 20%;
+    --muted: 230 15% 97%;
+    --muted-foreground: 230 10% 46%;
+    --accent: 230 15% 97%;
+    --accent-foreground: 222 15% 20%;
+    --destructive: 354 70% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 202 10% 88%;
-    --input: 202 10% 88%;
-    --ring: 215 100% 48%;
-    --radius: 0.375rem;
+    --border: 228 14% 89%;
+    --input: 228 14% 89%;
+    --ring: 243 100% 69%;
+    --radius: 0.5rem;
   }
 
   .dark {
@@ -110,42 +107,82 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-family-body);
-    font-size: 13px;
-    line-height: 18px;
+    font-size: 14px;
+    line-height: 22px;
     font-weight: 400;
     color: var(--colors-foreground-default);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.01em;
   }
 
-  /* Airtable-style table */
+  /* Monday.com style headings */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family-heading);
+    font-weight: 600;
+    color: var(--monday-text-primary);
+    letter-spacing: -0.02em;
+  }
+
+  h1 {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  h2 {
+    font-size: 20px;
+    line-height: 28px;
+  }
+
+  h3 {
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  /* Monday.com style table */
   table {
     border-collapse: separate;
     border-spacing: 0;
   }
 
-  /* Airtable-style scrollbars */
+  /* Monday.com style scrollbars */
   ::-webkit-scrollbar {
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
   }
 
   ::-webkit-scrollbar-track {
-    background: transparent;
+    background: #F6F7FB;
+    border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 6px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
+    background-color: #C3C6D4;
+    border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: #9699A6;
   }
 
   ::-webkit-scrollbar-corner {
-    background-color: transparent;
+    background-color: #F6F7FB;
+  }
+
+  /* Monday.com style buttons */
+  button {
+    font-family: var(--font-family-body);
+    font-weight: 500;
+  }
+
+  /* Monday.com style inputs */
+  input, select, textarea {
+    font-family: var(--font-family-body);
+    font-size: 14px;
+    color: var(--monday-text-primary);
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: var(--monday-text-muted);
   }
 }
