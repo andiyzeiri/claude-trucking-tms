@@ -1305,42 +1305,44 @@ export default function LoadsPageInline() {
       const groupTotalMiles = groupLoads.reduce((sum, l) => sum + (Number(l.miles) || 0), 0)
       const groupRPM = groupTotalMiles > 0 ? groupTotalRate / groupTotalMiles : 0
 
-      // Determine background color based on group type
-      let bgColor = 'bg-gray-100'
+      // Determine icon color based on group type
+      let iconColor = 'var(--monday-cornflower)'
       if (currentGroupType === 'week') {
-        bgColor = 'bg-cyan-50'
+        iconColor = 'var(--monday-blue)'
       } else if (currentGroupType === 'driver') {
-        bgColor = 'bg-orange-50'
+        iconColor = 'var(--monday-working)'
+      } else if (currentGroupType === 'customer') {
+        iconColor = 'var(--monday-stuck)'
       }
 
       // Group header row
       // Use parentKeys to create unique keys for nested groups
       const uniqueGroupKey = [...parentKeys, groupKey].join('-')
       elements.push(
-        <tr key={`group-${uniqueGroupKey}`} className={`${bgColor} border-b border-gray-200 cursor-pointer`} onClick={() => toggleGroup(groupKey)}>
-          <td colSpan={2} className="px-2 py-2 text-sm font-medium text-gray-700" style={{ paddingLeft: `${paddingLeft + 8}px` }}>
+        <tr key={`group-${uniqueGroupKey}`} className="border-b cursor-pointer" style={{ backgroundColor: 'var(--monday-bg-secondary)', borderColor: 'var(--monday-border-light)' }} onClick={() => toggleGroup(groupKey)}>
+          <td colSpan={2} className="px-2 py-2 text-sm font-medium" style={{ paddingLeft: `${paddingLeft + 8}px`, color: 'var(--monday-text-primary)' }}>
             <div className="flex items-center gap-2">
               {isCollapsed ? (
-                <ChevronRight className="h-4 w-4 flex-shrink-0" />
+                <ChevronRight className="h-4 w-4 flex-shrink-0" style={{ color: iconColor }} />
               ) : (
-                <ChevronDown className="h-4 w-4 flex-shrink-0" />
+                <ChevronDown className="h-4 w-4 flex-shrink-0" style={{ color: iconColor }} />
               )}
               <span className="whitespace-nowrap">{groupKey}</span>
-              <span className="text-gray-500 whitespace-nowrap">({groupLoads.length} loads)</span>
+              <span className="whitespace-nowrap" style={{ color: 'var(--monday-text-muted)' }}>({groupLoads.length} loads)</span>
             </div>
           </td>
           <td className="px-2 py-2 text-sm" colSpan={6}></td>
           <td className="px-2 py-2 text-sm">
             <div className="mb-0.5">
-              <div style={{fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: '#16a34a'}}>
+              <div style={{fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)'}}>
                 {formatCurrency(groupTotalRate)}
               </div>
             </div>
             <div className="flex gap-2">
-              <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: '#2563eb'}}>
+              <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: 'var(--monday-blue)'}}>
                 {groupTotalMiles.toLocaleString()} mi
               </div>
-              <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: '#9333ea'}}>
+              <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: 'var(--monday-purple)'}}>
                 ${groupRPM.toFixed(2)}/mi
               </div>
             </div>
@@ -1358,15 +1360,15 @@ export default function LoadsPageInline() {
         // Add load button for leaf groups
         if (Array.isArray(groupData)) {
           elements.push(
-            <tr key={`add-${uniqueGroupKey}`} className="border-b hover:bg-gray-50 transition-colors" style={{borderColor: 'var(--cell-borderColor)'}}>
+            <tr key={`add-${uniqueGroupKey}`} className="border-b transition-colors" style={{borderColor: 'var(--monday-border-light)'}}>
               <td colSpan={11} className="px-2 py-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     handleAddToGroup(groupKey, parentKeys)
                   }}
-                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
-                  style={{ marginLeft: `${paddingLeft + 20}px` }}
+                  className="flex items-center gap-2 text-sm font-medium"
+                  style={{ marginLeft: `${paddingLeft + 20}px`, color: 'var(--monday-cornflower)' }}
                 >
                   <Plus className="h-4 w-4" />
                   <span>Add load to {groupKey}</span>
@@ -1385,7 +1387,7 @@ export default function LoadsPageInline() {
     const loadKey = load.isNew ? 'new' : load.id
     const rpm = load.miles && load.miles > 0 ? (load.rate || 0) / load.miles : 0
     const isEvenRow = rowIndex % 2 === 0
-    const defaultBgColor = isEvenRow ? 'var(--cell-background-base)' : 'rgba(0, 0, 0, 0.02)'
+    const defaultBgColor = isEvenRow ? 'var(--monday-bg-primary)' : 'rgba(0, 0, 0, 0.02)'
 
     return (
       <tr
@@ -1393,12 +1395,12 @@ export default function LoadsPageInline() {
         data-load-row="true"
         className="border-b transition-colors"
         style={{
-          borderColor: 'var(--cell-borderColor)',
+          borderColor: 'var(--monday-border-light)',
           backgroundColor: defaultBgColor
         }}
         onMouseEnter={(e) => {
           const target = e.currentTarget
-          target.style.backgroundColor = 'var(--row-background-cursor)'
+          target.style.backgroundColor = 'var(--monday-bg-hover)'
         }}
         onMouseLeave={(e) => {
           const target = e.currentTarget
@@ -1411,15 +1413,15 @@ export default function LoadsPageInline() {
         }}
       >
         {/* Week */}
-        <td className="px-3 py-2.5 border-r" style={{ paddingLeft: `${paddingLeft + 12}px`, borderColor: 'var(--cell-borderColor)' }}>
+        <td className="px-3 py-2.5 border-r" style={{ paddingLeft: `${paddingLeft + 12}px`, borderColor: 'var(--monday-border-light)' }}>
           <div>
-            <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>{load.weekLabel}</div>
-            <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)'}}>{load.weekDateRange}</div>
+            <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)'}}>{load.weekLabel}</div>
+            <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--monday-text-secondary)'}}>{load.weekDateRange}</div>
           </div>
         </td>
 
         {/* Date */}
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'pickup_date')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)'}} onClick={() => startEdit(loadKey, 'pickup_date')}>
           {isEditing(loadKey, 'pickup_date') ? (
             <Input
               type="date"
@@ -1436,14 +1438,14 @@ export default function LoadsPageInline() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)'}}>
               {new Date(load.pickup_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
             </div>
           )}
         </td>
 
         {/* Load # */}
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'load_number')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)'}} onClick={() => startEdit(loadKey, 'load_number')}>
           {isEditing(loadKey, 'load_number') ? (
             <Input
               value={load.load_number || ''}
@@ -1477,13 +1479,13 @@ export default function LoadsPageInline() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="font-medium cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+            <div className="font-medium cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)'}}>
               {load.load_number}
             </div>
           )}
         </td>
 
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'customer_id')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)'}} onClick={() => startEdit(loadKey, 'customer_id')}>
           {isEditing(loadKey, 'customer_id') ? (
             <Select
               value={String(load.customer_id)}
@@ -1507,11 +1509,11 @@ export default function LoadsPageInline() {
             </Select>
           ) : (
             <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
-              <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+              <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)'}}>
                 {customers.find(c => c.id === load.customer_id)?.name || 'N/A'}
               </div>
               {customers.find(c => c.id === load.customer_id)?.mc && (
-                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)'}}>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--monday-text-secondary)'}}>
                   MC: {customers.find(c => c.id === load.customer_id)?.mc}
                 </div>
               )}
@@ -1519,7 +1521,7 @@ export default function LoadsPageInline() {
           )}
         </td>
 
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'driver_id')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)'}} onClick={() => startEdit(loadKey, 'driver_id')}>
           {isEditing(loadKey, 'driver_id') ? (
             <Select
               value={load.driver_id ? String(load.driver_id) : 'unassigned'}
@@ -1552,7 +1554,7 @@ export default function LoadsPageInline() {
         {/* Pickup Location */}
         <td
           className="px-3 py-2.5 border-r"
-          style={{borderColor: 'var(--cell-borderColor)', minWidth: '200px'}}
+          style={{borderColor: 'var(--monday-border-light)', minWidth: '200px'}}
           onClick={() => startLocationEdit(loadKey, 'pickup', load)}
         >
           {isEditing(loadKey, 'pickup_location') && editingLocation?.type === 'pickup' ? (
@@ -1694,19 +1696,19 @@ export default function LoadsPageInline() {
             <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
               {/* Top row: City, State, Zip */}
               <div className="flex gap-1 mb-0.5">
-                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)', flex: 1}}>
+                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', flex: 1}}>
                   {parseLocation(load.pickup_location).city || 'City'}
                 </div>
-                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)', width: '30px'}}>
+                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', width: '30px'}}>
                   {parseLocation(load.pickup_location).state || 'ST'}
                 </div>
-                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)', width: '50px'}}>
+                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', width: '50px'}}>
                   {parseLocation(load.pickup_location).zip || 'Zip'}
                 </div>
               </div>
               {/* Bottom row: Street, Date, Time */}
               <div className="flex gap-1">
-                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)', flex: 1}}>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--monday-text-secondary)', flex: 1}}>
                   {parseLocation(load.pickup_location).street || 'Street'}
                 </div>
                 <div style={{fontSize: '11px', lineHeight: '16px', color: '#22c55e', width: '60px'}}>
@@ -1723,7 +1725,7 @@ export default function LoadsPageInline() {
         {/* Delivery Location */}
         <td
           className="px-3 py-2.5 border-r"
-          style={{borderColor: 'var(--cell-borderColor)', minWidth: '200px'}}
+          style={{borderColor: 'var(--monday-border-light)', minWidth: '200px'}}
           onClick={() => startLocationEdit(loadKey, 'delivery', load)}
         >
           {isEditing(loadKey, 'delivery_location') && editingLocation?.type === 'delivery' ? (
@@ -1865,19 +1867,19 @@ export default function LoadsPageInline() {
             <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
               {/* Top row: City, State, Zip */}
               <div className="flex gap-1 mb-0.5">
-                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)', flex: 1}}>
+                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', flex: 1}}>
                   {parseLocation(load.delivery_location).city || 'City'}
                 </div>
-                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)', width: '30px'}}>
+                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', width: '30px'}}>
                   {parseLocation(load.delivery_location).state || 'ST'}
                 </div>
-                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)', width: '50px'}}>
+                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', width: '50px'}}>
                   {parseLocation(load.delivery_location).zip || 'Zip'}
                 </div>
               </div>
               {/* Bottom row: Street, Date, Time */}
               <div className="flex gap-1">
-                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)', flex: 1}}>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--monday-text-secondary)', flex: 1}}>
                   {parseLocation(load.delivery_location).street || 'Street'}
                 </div>
                 <div style={{fontSize: '11px', lineHeight: '16px', color: '#22c55e', width: '60px'}}>
@@ -1892,7 +1894,7 @@ export default function LoadsPageInline() {
         </td>
 
         {/* Notes */}
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)', minWidth: '150px'}} onClick={() => startEdit(loadKey, 'notes')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)', minWidth: '150px'}} onClick={() => startEdit(loadKey, 'notes')}>
           {isEditing(loadKey, 'notes') ? (
             <Textarea
               value={load.notes || ''}
@@ -1934,7 +1936,7 @@ export default function LoadsPageInline() {
           )}
         </td>
 
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)', minWidth: '120px'}}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)', minWidth: '120px'}}>
           {isEditing(loadKey, 'rate') || isEditing(loadKey, 'miles') ? (
             <div className="space-y-1">
               <Input
@@ -2009,16 +2011,16 @@ export default function LoadsPageInline() {
             <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1" onClick={() => startEdit(loadKey, 'rate')}>
               {/* Top row: Rate */}
               <div className="mb-0.5">
-                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)', fontWeight: 500}}>
+                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', fontWeight: 500}}>
                   {formatCurrency(load.rate)}
                 </div>
               </div>
               {/* Bottom row: Miles and RPM */}
               <div className="flex gap-2">
-                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)'}}>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--monday-text-secondary)'}}>
                   {load.miles?.toLocaleString() || 0} mi
                 </div>
-                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--colors-foreground-muted)'}}>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--monday-text-secondary)'}}>
                   ${rpm.toFixed(2)}/mi
                 </div>
               </div>
@@ -2027,7 +2029,7 @@ export default function LoadsPageInline() {
         </td>
 
         {/* POD */}
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)'}}>
           <div className="flex items-center gap-2">
             {load.pod_url ? (
               <>
@@ -2103,7 +2105,7 @@ export default function LoadsPageInline() {
         </td>
 
         {/* Ratecon */}
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)'}}>
           <div className="flex items-center gap-2">
             {load.ratecon_url ? (
               <>
@@ -2176,7 +2178,7 @@ export default function LoadsPageInline() {
           </div>
         </td>
 
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)'}} onClick={() => startEdit(loadKey, 'status')}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)'}} onClick={() => startEdit(loadKey, 'status')}>
           {isEditing(loadKey, 'status') ? (
             <Select
               value={load.status}
@@ -2357,12 +2359,12 @@ export default function LoadsPageInline() {
           </div>
         </div>
 
-        <div className="border rounded-lg bg-white overflow-hidden shadow-sm" style={{borderColor: 'var(--cell-borderColor)'}} onContextMenu={handleGeneralContextMenu}>
+        <div className="border rounded-lg bg-white overflow-hidden shadow-sm" style={{borderColor: 'var(--monday-border-light)'}} onContextMenu={handleGeneralContextMenu}>
           <div className="overflow-x-auto">
             <table className="w-full table-auto" style={{borderCollapse: 'separate', borderSpacing: 0}}>
-              <thead style={{backgroundColor: 'var(--cell-background-header)'}}>
+              <thead style={{backgroundColor: 'var(--monday-bg-secondary)'}}>
                 <tr>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px`}} onClick={() => handleSort('weekNumber')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px`}} onClick={() => handleSort('weekNumber')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.week}
                       onAdjust={(delta) => adjustWidth('week', delta)}
@@ -2374,7 +2376,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.date}px`, minWidth: `${columnWidths.date}px`}} onClick={() => handleSort('pickup_date')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.date}px`, minWidth: `${columnWidths.date}px`}} onClick={() => handleSort('pickup_date')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.date}
                       onAdjust={(delta) => adjustWidth('date', delta)}
@@ -2386,7 +2388,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.load_number}px`, minWidth: `${columnWidths.load_number}px`}} onClick={() => handleSort('load_number')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.load_number}px`, minWidth: `${columnWidths.load_number}px`}} onClick={() => handleSort('load_number')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.load_number}
                       onAdjust={(delta) => adjustWidth('load_number', delta)}
@@ -2398,7 +2400,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.customer}px`, minWidth: `${columnWidths.customer}px`}} onClick={() => handleSort('customer_id')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.customer}px`, minWidth: `${columnWidths.customer}px`}} onClick={() => handleSort('customer_id')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.customer}
                       onAdjust={(delta) => adjustWidth('customer', delta)}
@@ -2410,7 +2412,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px`}} onClick={() => handleSort('driver_id')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px`}} onClick={() => handleSort('driver_id')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.driver}
                       onAdjust={(delta) => adjustWidth('driver', delta)}
@@ -2422,7 +2424,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.pickup}px`, minWidth: `${columnWidths.pickup}px`}} onClick={() => handleSort('pickup_location')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.pickup}px`, minWidth: `${columnWidths.pickup}px`}} onClick={() => handleSort('pickup_location')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.pickup}
                       onAdjust={(delta) => adjustWidth('pickup', delta)}
@@ -2434,7 +2436,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.delivery}px`, minWidth: `${columnWidths.delivery}px`}} onClick={() => handleSort('delivery_location')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.delivery}px`, minWidth: `${columnWidths.delivery}px`}} onClick={() => handleSort('delivery_location')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.delivery}
                       onAdjust={(delta) => adjustWidth('delivery', delta)}
@@ -2446,14 +2448,14 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.notes}px`, minWidth: `${columnWidths.notes}px`}}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.notes}px`, minWidth: `${columnWidths.notes}px`}}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.notes}
                       onAdjust={(delta) => adjustWidth('notes', delta)}
                     />
                     Notes
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.rate}px`, minWidth: `${columnWidths.rate}px`}} onClick={() => handleSort('rate')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.rate}px`, minWidth: `${columnWidths.rate}px`}} onClick={() => handleSort('rate')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.rate}
                       onAdjust={(delta) => adjustWidth('rate', delta)}
@@ -2465,21 +2467,21 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.pod}px`, minWidth: `${columnWidths.pod}px`}}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.pod}px`, minWidth: `${columnWidths.pod}px`}}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.pod}
                       onAdjust={(delta) => adjustWidth('pod', delta)}
                     />
                     POD
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.ratecon}px`, minWidth: `${columnWidths.ratecon}px`}}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.ratecon}px`, minWidth: `${columnWidths.ratecon}px`}}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.ratecon}
                       onAdjust={(delta) => adjustWidth('ratecon', delta)}
                     />
                     Ratecon
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--colors-foreground-muted)', borderColor: 'var(--cell-borderColor-header)', fontWeight: 500, width: `${columnWidths.status}px`, minWidth: `${columnWidths.status}px`}} onClick={() => handleSort('status')}>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.status}px`, minWidth: `${columnWidths.status}px`}} onClick={() => handleSort('status')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.status}
                       onAdjust={(delta) => adjustWidth('status', delta)}
@@ -2493,33 +2495,33 @@ export default function LoadsPageInline() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white" style={{backgroundColor: 'var(--cell-background-base)'}}>
+              <tbody className="bg-white" style={{backgroundColor: 'var(--monday-bg-primary)'}}>
                 {activeGroupings.size === 0 ? (
                   filteredLoads.map((load, index) => renderLoadRow(load, 0, index))
                 ) : (
                   groupedLoads && renderNestedGroups(groupedLoads, 0, 0)
                 )}
               </tbody>
-              <tfoot className="sticky bottom-0 bg-white border-t-2 border-gray-300 shadow-lg">
-                <tr className="bg-gray-50">
+              <tfoot className="sticky bottom-0 shadow-lg" style={{ backgroundColor: 'var(--monday-bg-primary)', borderTop: '2px solid var(--monday-border)' }}>
+                <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
-                  <td className="px-2 py-2 text-sm font-medium">{totals.count} Loads</td>
+                  <td className="px-2 py-2 text-sm font-medium" style={{ color: 'var(--monday-text-primary)' }}>{totals.count} Loads</td>
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm">
                     <div className="mb-0.5">
-                      <div style={{fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: '#16a34a'}}>
+                      <div style={{fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)'}}>
                         {formatCurrency(totals.rate)}
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: '#2563eb'}}>
+                      <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: 'var(--monday-blue)'}}>
                         {totals.miles.toLocaleString()} mi
                       </div>
-                      <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: '#9333ea'}}>
+                      <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: 'var(--monday-purple)'}}>
                         ${totals.rpm.toFixed(2)}/mi
                       </div>
                     </div>
