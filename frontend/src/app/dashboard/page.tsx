@@ -104,70 +104,70 @@ export default function DashboardPage() {
 
   return (
     <Layout>
-      <div className="space-y-6 p-6">
+      <div className="space-y-6 p-6 page-dashboard">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
+          <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
             Welcome back, {user?.first_name ? user.first_name.charAt(0).toUpperCase() + user.first_name.slice(1).toLowerCase() : ''}!
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="mt-1" style={{ color: 'var(--monday-text-secondary)' }}>
             Here's what's happening with your company today
           </p>
         </div>
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/loads')}>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" style={{ borderColor: 'var(--monday-border-light)' }} onClick={() => router.push('/loads')}>
             <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Loads</CardTitle>
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Total Loads</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold" style={{ color: 'var(--monday-done)' }}>
                 {isLoading ? '...' : loads?.length || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>
                 Active shipments
               </p>
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/drivers')}>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" style={{ borderColor: 'var(--monday-border-light)' }} onClick={() => router.push('/drivers')}>
             <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Drivers</CardTitle>
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Active Drivers</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold" style={{ color: 'var(--monday-blue)' }}>
                 {isLoading ? '...' : drivers?.length || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>
                 Company & owner operators
               </p>
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/trucks')}>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" style={{ borderColor: 'var(--monday-border-light)' }} onClick={() => router.push('/trucks')}>
             <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Available Trucks</CardTitle>
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Available Trucks</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold" style={{ color: 'var(--monday-purple)' }}>
                 {isLoading ? '...' : trucks?.length || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>
                 Fleet vehicles
               </p>
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/customers')}>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" style={{ borderColor: 'var(--monday-border-light)' }} onClick={() => router.push('/customers')}>
             <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Active Customers</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold" style={{ color: 'var(--monday-stuck)' }}>
                 {isLoading ? '...' : customers?.length || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>
                 Business partners
               </p>
             </CardContent>
@@ -175,32 +175,32 @@ export default function DashboardPage() {
         </div>
 
         {/* Financial Summary */}
-        <Card>
+        <Card style={{ borderColor: 'var(--monday-border-light)' }}>
           <CardHeader>
-            <CardTitle>Revenue Summary</CardTitle>
+            <CardTitle style={{ color: 'var(--monday-text-primary)' }}>Revenue Summary</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <p className="text-sm text-gray-600">Today</p>
-                <p className="text-3xl font-bold text-green-600">
+                <p className="text-sm" style={{ color: 'var(--monday-text-secondary)' }}>Today</p>
+                <p className="text-3xl font-bold" style={{ color: 'var(--monday-done)' }}>
                   ${financialSummary.today.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
-                <p className="text-xs text-gray-500">{financialSummary.todayLoads} loads</p>
+                <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>{financialSummary.todayLoads} loads</p>
               </div>
               <div className="space-y-2">
-                <p className="text-sm text-gray-600">This Month</p>
-                <p className="text-3xl font-bold text-blue-600">
+                <p className="text-sm" style={{ color: 'var(--monday-text-secondary)' }}>This Month</p>
+                <p className="text-3xl font-bold" style={{ color: 'var(--monday-blue)' }}>
                   ${financialSummary.month.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
-                <p className="text-xs text-gray-500">{financialSummary.monthLoads} loads</p>
+                <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>{financialSummary.monthLoads} loads</p>
               </div>
               <div className="space-y-2">
-                <p className="text-sm text-gray-600">This Year</p>
-                <p className="text-3xl font-bold text-purple-600">
+                <p className="text-sm" style={{ color: 'var(--monday-text-secondary)' }}>This Year</p>
+                <p className="text-3xl font-bold" style={{ color: 'var(--monday-purple)' }}>
                   ${financialSummary.year.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
-                <p className="text-xs text-gray-500">{financialSummary.yearLoads} loads</p>
+                <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>{financialSummary.yearLoads} loads</p>
               </div>
             </div>
           </CardContent>
@@ -208,12 +208,12 @@ export default function DashboardPage() {
 
         {/* Getting Started Section */}
         {!isLoading && loads?.length === 0 && drivers?.length === 0 && (
-          <Card className="bg-blue-50 border-blue-200">
+          <Card style={{ backgroundColor: 'rgba(97, 97, 255, 0.08)', borderColor: 'var(--monday-cornflower)' }}>
             <CardHeader>
-              <CardTitle>🚀 Getting Started</CardTitle>
+              <CardTitle style={{ color: 'var(--monday-text-primary)' }}>Getting Started</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-gray-700">
+              <p style={{ color: 'var(--monday-text-secondary)' }}>
                 Welcome to your TMS! Get started by adding your first data:
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -221,32 +221,36 @@ export default function DashboardPage() {
                   onClick={() => router.push('/loads')}
                   variant="outline"
                   className="justify-start"
+                  style={{ borderColor: 'var(--monday-border)', color: 'var(--monday-text-primary)' }}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" style={{ color: 'var(--monday-cornflower)' }} />
                   Add Your First Load
                 </Button>
                 <Button
                   onClick={() => router.push('/drivers')}
                   variant="outline"
                   className="justify-start"
+                  style={{ borderColor: 'var(--monday-border)', color: 'var(--monday-text-primary)' }}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" style={{ color: 'var(--monday-cornflower)' }} />
                   Add Your First Driver
                 </Button>
                 <Button
                   onClick={() => router.push('/trucks')}
                   variant="outline"
                   className="justify-start"
+                  style={{ borderColor: 'var(--monday-border)', color: 'var(--monday-text-primary)' }}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" style={{ color: 'var(--monday-cornflower)' }} />
                   Add Your First Truck
                 </Button>
                 <Button
                   onClick={() => router.push('/customers')}
                   variant="outline"
                   className="justify-start"
+                  style={{ borderColor: 'var(--monday-border)', color: 'var(--monday-text-primary)' }}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" style={{ color: 'var(--monday-cornflower)' }} />
                   Add Your First Customer
                 </Button>
               </div>

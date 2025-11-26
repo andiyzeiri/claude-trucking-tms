@@ -164,74 +164,76 @@ export default function TrucksPage() {
 
 
   const renderEquipmentRow = (item: any, index: number) => {
-    const isEvenRow = index % 2 === 0
-    const defaultBgColor = isEvenRow ? 'var(--cell-background-base)' : 'rgba(0, 0, 0, 0.02)'
-
     return (
       <tr
         key={item.id}
         className="border-b transition-colors cursor-pointer"
         style={{
-          borderColor: 'var(--cell-borderColor)',
-          backgroundColor: defaultBgColor
+          borderColor: 'var(--monday-border-light)',
+          backgroundColor: 'var(--monday-bg-primary)'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'var(--row-background-cursor)'
+          e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)'
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = defaultBgColor
+          e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)'
         }}
         onClick={() => handleEditTruck(item)}
         onContextMenu={(e) => handleRowRightClick(item, e)}
       >
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)' }}>
-          <span className="font-medium text-blue-600" style={{ fontSize: '13px' }}>{item.truck_number}</span>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
+          <span className="font-medium" style={{ fontSize: '13px', color: 'var(--monday-cornflower)' }}>{item.truck_number}</span>
         </td>
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '13px' }}>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
           {item.year || 'N/A'}
         </td>
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '13px' }}>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
           {item.make || 'N/A'}
         </td>
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '13px' }}>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
           {item.model || 'N/A'}
         </td>
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)' }}>
-          <span className="text-xs font-mono text-gray-700">{item.vin || 'N/A'}</span>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
+          <span className="text-xs font-mono" style={{ color: 'var(--monday-text-secondary)' }}>{item.vin || 'N/A'}</span>
         </td>
-        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '13px' }}>
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
           ${item.value ? Number(item.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
         </td>
-        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '13px' }}>
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
           {item.miles ? Number(item.miles).toLocaleString() : '0'}
         </td>
-        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '13px' }}>
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
           {item.mpg ? Number(item.mpg).toFixed(1) : '0.0'}
         </td>
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)' }}>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 px-2 hover:bg-blue-50"
+            className="h-7 px-2"
+            style={{ color: 'var(--monday-stuck)' }}
             onClick={(e) => {
               e.stopPropagation()
               alert('Registration PDF viewer coming soon')
             }}
           >
-            <FileText className="h-4 w-4 mr-1 text-red-600" />
+            <FileText className="h-4 w-4 mr-1" />
             <span className="text-xs">View PDF</span>
           </Button>
         </td>
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '13px' }}>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
           {item.inspection ? new Date(item.inspection).toLocaleDateString() : 'N/A'}
         </td>
-        <td className="px-3 py-2.5" style={{ borderColor: 'var(--cell-borderColor)' }}>
-          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-            item.status === 'available' ? 'bg-green-100 text-green-800' :
-            item.status === 'in_use' ? 'bg-blue-100 text-blue-800' :
-            item.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-            'bg-red-100 text-red-800'
-          }`}>
+        <td className="px-3 py-2.5" style={{ borderColor: 'var(--monday-border-light)' }}>
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style={{
+            backgroundColor: item.status === 'available' ? 'rgba(0, 200, 117, 0.15)' :
+              item.status === 'in_use' ? 'rgba(97, 97, 255, 0.15)' :
+              item.status === 'maintenance' ? 'rgba(253, 171, 61, 0.15)' :
+              'rgba(226, 68, 92, 0.15)',
+            color: item.status === 'available' ? 'var(--monday-done)' :
+              item.status === 'in_use' ? 'var(--monday-cornflower)' :
+              item.status === 'maintenance' ? 'var(--monday-working)' :
+              'var(--monday-stuck)'
+          }}>
             {item.status}
           </span>
         </td>
@@ -244,38 +246,38 @@ export default function TrucksPage() {
       <div className="page-trucks space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Equipment</h1>
-            <p className="text-gray-600">Manage your fleet equipment and vehicles</p>
+            <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>Equipment</h1>
+            <p style={{ color: 'var(--monday-text-secondary)' }}>Manage your fleet equipment and vehicles</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCreateTruck}>
+          <Button className="hover:opacity-90" style={{ backgroundColor: 'var(--monday-cornflower)', color: 'white' }} onClick={handleCreateTruck}>
             <Plus className="mr-2 h-4 w-4" />
             Add Equipment
           </Button>
         </div>
 
-        <div className="overflow-x-auto border border-gray-200 rounded-lg bg-white">
+        <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
           <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
-              <tr style={{ backgroundColor: 'var(--cell-background-header)' }}>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Unit #</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Year</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Make</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Model</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>VIN</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Value</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Miles</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>MPG</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Registration</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Inspection</th>
-                <th className="px-3 py-2.5 text-left border-b" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Status</th>
+              <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Unit #</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Year</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Make</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Model</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>VIN</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Value</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Miles</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>MPG</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Registration</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Inspection</th>
+                <th className="px-3 py-2.5 text-left border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Status</th>
               </tr>
             </thead>
             <tbody>
               {/* Trucks Section Header */}
-              <tr className="bg-gray-200">
-                <td colSpan={11} className="px-3 py-2 font-semibold text-gray-700" style={{ fontSize: '14px' }}>
+              <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                <td colSpan={11} className="px-3 py-2 font-semibold" style={{ fontSize: '14px', color: 'var(--monday-text-primary)', borderBottom: '1px solid var(--monday-border-light)' }}>
                   <div className="flex items-center gap-2">
-                    <TruckIcon className="h-4 w-4" />
+                    <TruckIcon className="h-4 w-4" style={{ color: 'var(--monday-cornflower)' }} />
                     Trucks ({trucksOnly.length})
                   </div>
                 </td>
@@ -286,17 +288,17 @@ export default function TrucksPage() {
 
               {trucksOnly.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-3 py-4 text-center text-gray-500" style={{ fontSize: '13px' }}>
+                  <td colSpan={11} className="px-3 py-4 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
                     No trucks added yet
                   </td>
                 </tr>
               )}
 
               {/* Trailers Section Header */}
-              <tr className="bg-gray-200">
-                <td colSpan={11} className="px-3 py-2 font-semibold text-gray-700" style={{ fontSize: '14px' }}>
+              <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                <td colSpan={11} className="px-3 py-2 font-semibold" style={{ fontSize: '14px', color: 'var(--monday-text-primary)', borderBottom: '1px solid var(--monday-border-light)' }}>
                   <div className="flex items-center gap-2">
-                    <TruckIcon className="h-4 w-4" />
+                    <TruckIcon className="h-4 w-4" style={{ color: 'var(--monday-purple)' }} />
                     Trailers ({trailersOnly.length})
                   </div>
                 </td>
@@ -307,7 +309,7 @@ export default function TrucksPage() {
 
               {trailersOnly.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-3 py-4 text-center text-gray-500" style={{ fontSize: '13px' }}>
+                  <td colSpan={11} className="px-3 py-4 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
                     No trailers added yet
                   </td>
                 </tr>

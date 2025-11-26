@@ -207,7 +207,7 @@ export function DataTable<T>({
 
         return (
           <React.Fragment key={groupKey}>
-            <tr className="bg-gray-100 border-b border-gray-200">
+            <tr className="border-b" style={{ backgroundColor: 'var(--monday-bg-secondary)', borderColor: 'var(--monday-border-light)' }}>
               {columns.map((column, colIndex) => {
                 const currentWidth = columnWidths[String(column.key)] || defaultWidths[String(column.key)]
                 if (colIndex === 0) {
@@ -215,11 +215,12 @@ export function DataTable<T>({
                   return (
                     <td
                       key={String(column.key)}
-                      className="px-3 py-3 text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors"
+                      className="px-3 py-3 text-sm font-medium cursor-pointer transition-colors"
                       style={{
                         paddingLeft: `${paddingLeft + 12}px`,
                         width: `${currentWidth}px`,
-                        minWidth: `${currentWidth}px`
+                        minWidth: `${currentWidth}px`,
+                        color: 'var(--monday-text-primary)'
                       }}
                       onClick={() => toggleGroup(groupKey)}
                     >
@@ -229,9 +230,10 @@ export function DataTable<T>({
                             "h-4 w-4 transition-transform",
                             !isCollapsed && "rotate-90"
                           )}
+                          style={{ color: 'var(--monday-cornflower)' }}
                         />
                         <span>{item.groupValue}</span>
-                        <span className="text-gray-500">({allRowsInGroup.length})</span>
+                        <span style={{ color: 'var(--monday-text-secondary)' }}>({allRowsInGroup.length})</span>
                       </div>
                     </td>
                   )
@@ -242,10 +244,11 @@ export function DataTable<T>({
                 return (
                   <td
                     key={String(column.key)}
-                    className="px-3 py-3 text-sm font-medium text-gray-600"
+                    className="px-3 py-3 text-sm font-medium"
                     style={{
                       width: `${currentWidth}px`,
-                      minWidth: `${currentWidth}px`
+                      minWidth: `${currentWidth}px`,
+                      color: 'var(--monday-text-secondary)'
                     }}
                   >
                     {showTotal || ''}
@@ -261,9 +264,12 @@ export function DataTable<T>({
                     <tr
                       key={`${groupKey}-row-${rowIndex}`}
                       className={cn(
-                        "group border-b border-gray-100 hover:bg-gray-50 transition-colors",
+                        "group border-b transition-colors",
                         (onRowClick || onRowRightClick) && "cursor-pointer"
                       )}
+                      style={{ borderColor: 'var(--monday-border-light)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       onClick={() => onRowClick?.(row)}
                       onContextMenu={(e) => {
                         e.preventDefault()
@@ -276,7 +282,7 @@ export function DataTable<T>({
                           <td
                             key={String(column.key)}
                             className={cn(
-                              "px-3 text-sm border-r border-gray-100 last:border-r-0",
+                              "px-3 text-sm border-r last:border-r-0",
                               column.className
                             )}
                             style={{
@@ -284,7 +290,9 @@ export function DataTable<T>({
                               minWidth: `${currentWidth}px`,
                               paddingTop: '6px',
                               paddingBottom: '6px',
-                              paddingLeft: String(column.key) === String(columns[0].key) ? `${paddingLeft + 32}px` : undefined
+                              paddingLeft: String(column.key) === String(columns[0].key) ? `${paddingLeft + 32}px` : undefined,
+                              borderColor: 'var(--monday-border-light)',
+                              color: 'var(--monday-text-primary)'
                             }}
                           >
                             {column.render ? (
@@ -311,32 +319,33 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn("border border-gray-200 rounded-lg bg-white", className)} style={{ minWidth: '1400px', width: '100%' }}>
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
+    <div className={cn("border rounded-lg bg-white shadow-sm", className)} style={{ minWidth: '1400px', width: '100%', borderColor: 'var(--monday-border-light)' }}>
+      <div className="p-4 border-b" style={{ backgroundColor: 'var(--monday-bg-secondary)', borderColor: 'var(--monday-border-light)' }}>
         <div className="flex items-center gap-4">
           {searchable && (
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--monday-text-muted)' }} />
               <Input
                 placeholder="Search all columns..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white"
+                className="pl-10 bg-white border focus:ring-2 focus:ring-offset-0"
+                style={{ borderColor: 'var(--monday-border)', color: 'var(--monday-text-primary)' }}
               />
             </div>
           )}
           {groupableColumns.length > 0 && (
             <div className="flex items-center gap-2">
-              <Group className="h-4 w-4 text-gray-500" />
+              <Group className="h-4 w-4" style={{ color: 'var(--monday-text-secondary)' }} />
               <div className="flex flex-wrap items-center gap-2">
                 {groupBy.map((group, index) => {
                   const column = columns.find(c => c.key === group)
                   return (
-                    <div key={String(group)} className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs">
+                    <div key={String(group)} className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: 'rgba(97, 97, 255, 0.1)', color: 'var(--monday-cornflower)' }}>
                       <span>{index + 1}. {column?.label}</span>
                       <button
                         onClick={() => removeGroupLevel(group)}
-                        className="hover:bg-blue-200 rounded p-0.5"
+                        className="hover:opacity-70 rounded p-0.5"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -346,14 +355,15 @@ export function DataTable<T>({
                 {groupBy.length > 0 && (
                   <button
                     onClick={clearGrouping}
-                    className="text-xs text-gray-500 hover:text-gray-700"
+                    className="text-xs hover:opacity-70"
+                    style={{ color: 'var(--monday-text-secondary)' }}
                   >
                     Clear all
                   </button>
                 )}
                 {groupableColumns.filter(column => !groupBy.includes(column.key)).length > 0 && (
                   <Select value={undefined} onValueChange={(value) => addGroupLevel(value as keyof T)}>
-                    <SelectTrigger className="w-40 bg-white">
+                    <SelectTrigger className="w-40 bg-white" style={{ borderColor: 'var(--monday-border)' }}>
                       <SelectValue placeholder={groupBy.length === 0 ? "Group by..." : "Add group..."} />
                     </SelectTrigger>
                     <SelectContent>
@@ -379,7 +389,7 @@ export function DataTable<T>({
 
       <div>
         <table className="w-full table-auto">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="border-b" style={{ backgroundColor: 'var(--monday-bg-secondary)', borderColor: 'var(--monday-border-light)' }}>
             <tr>
               {columns.map((column) => {
                 const currentWidth = columnWidths[String(column.key)] || defaultWidths[String(column.key)]
@@ -387,10 +397,15 @@ export function DataTable<T>({
                   <th
                     key={String(column.key)}
                     className={cn(
-                      "px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 last:border-r-0 relative group",
+                      "px-3 py-3 text-left text-xs font-medium uppercase tracking-wider border-r last:border-r-0 relative group",
                       column.className
                     )}
-                    style={{ width: `${currentWidth}px`, minWidth: `${currentWidth}px` }}
+                    style={{
+                      width: `${currentWidth}px`,
+                      minWidth: `${currentWidth}px`,
+                      color: 'var(--monday-text-secondary)',
+                      borderColor: 'var(--monday-border-light)'
+                    }}
                   >
                     <ColumnWidthControl
                       currentWidth={currentWidth}
@@ -403,7 +418,8 @@ export function DataTable<T>({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-5 w-5 p-0 hover:bg-gray-200 flex-shrink-0"
+                            className="h-5 w-5 p-0 flex-shrink-0"
+                            style={{ color: 'var(--monday-text-secondary)' }}
                             onClick={() => handleSort(column.key)}
                           >
                             {sortColumn === column.key ? (
@@ -421,7 +437,7 @@ export function DataTable<T>({
                           </Button>
                         )}
                         {column.filterable && (
-                          <Filter className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                          <Filter className="h-3 w-3 flex-shrink-0" style={{ color: 'var(--monday-text-muted)' }} />
                         )}
                       </div>
                     </div>
@@ -435,6 +451,7 @@ export function DataTable<T>({
                             [String(column.key)]: e.target.value
                           }))}
                           className="h-6 text-xs"
+                          style={{ borderColor: 'var(--monday-border-light)' }}
                         />
                       </div>
                     )}
@@ -443,7 +460,7 @@ export function DataTable<T>({
               })}
             </tr>
           </thead>
-          <tbody className="bg-white">
+          <tbody style={{ backgroundColor: 'var(--monday-bg-primary)' }}>
             {groupBy.length > 0 ? (
               // Grouped view
               renderNestedGroups(processedData as any[])
@@ -453,9 +470,12 @@ export function DataTable<T>({
                 <tr
                   key={index}
                   className={cn(
-                    "group border-b border-gray-100 hover:bg-gray-50 transition-colors",
+                    "group border-b transition-colors",
                     (onRowClick || onRowRightClick) && "cursor-pointer"
                   )}
+                  style={{ borderColor: 'var(--monday-border-light)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   onClick={() => onRowClick?.(row)}
                   onContextMenu={(e) => {
                     e.preventDefault()
@@ -468,14 +488,16 @@ export function DataTable<T>({
                       <td
                         key={String(column.key)}
                         className={cn(
-                          "px-3 text-sm border-r border-gray-100 last:border-r-0",
+                          "px-3 text-sm border-r last:border-r-0",
                           column.className
                         )}
                         style={{
                           width: `${currentWidth}px`,
                           minWidth: `${currentWidth}px`,
                           paddingTop: '6px',
-                          paddingBottom: '6px'
+                          paddingBottom: '6px',
+                          borderColor: 'var(--monday-border-light)',
+                          color: 'var(--monday-text-primary)'
                         }}
                       >
                         {column.render ? (
@@ -494,7 +516,7 @@ export function DataTable<T>({
       </div>
 
       {(groupBy.length > 0 ? (processedData as any[]).length === 0 : (processedData as T[]).length === 0) && (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8" style={{ color: 'var(--monday-text-muted)' }}>
           No data found
         </div>
       )}

@@ -233,8 +233,6 @@ export default function FuelPage() {
 
   const renderFuelRow = (weekNum: number, driver: any, rowIndex: number) => {
     const entry = fuelByWeekAndDriver[weekNum]?.[driver.id]
-    const isEvenRow = rowIndex % 2 === 0
-    const defaultBgColor = isEvenRow ? 'var(--cell-background-base)' : 'rgba(0, 0, 0, 0.02)'
 
     const isEditingField = (field: string) =>
       editingCell?.weekNumber === weekNum &&
@@ -253,31 +251,32 @@ export default function FuelPage() {
         key={`${weekNum}-${driver.id}`}
         className="border-b transition-colors"
         style={{
-          borderColor: 'var(--cell-borderColor)',
-          backgroundColor: defaultBgColor
+          borderColor: 'var(--monday-border-light)',
+          backgroundColor: 'var(--monday-bg-primary)'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'var(--row-background-cursor)'
+          e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)'
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = defaultBgColor
+          e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)'
         }}
       >
         {/* Empty cell for indent */}
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)', width: '20px' }}></td>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', width: '20px' }}></td>
 
         {/* Driver */}
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)' }}>
-          <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)' }}>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
+          <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
             {driver.first_name} {driver.last_name}
           </div>
         </td>
 
         {/* Truck */}
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--cell-borderColor)' }}>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
           {isEditingField('truckId') ? (
             <select
               className="w-full px-2 py-1 border rounded text-sm"
+              style={{ borderColor: 'var(--monday-border)' }}
               value={editValues.truckId || ''}
               onChange={(e) => handleCellChange('truckId', parseInt(e.target.value) || null)}
               onBlur={handleCellBlur}
@@ -293,8 +292,8 @@ export default function FuelPage() {
           ) : (
             <div
               onClick={() => handleCellClick(weekNum, driver.id, 'truckId')}
-              className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5"
-              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)' }}
+              className="cursor-pointer rounded px-1.5 py-0.5"
+              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
               {trucks.find(t => t.id === entry?.truckId)?.truck_number || '-'}
             </div>
@@ -302,12 +301,13 @@ export default function FuelPage() {
         </td>
 
         {/* Gallons */}
-        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)' }}>
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
           {isEditingField('gallons') ? (
             <input
               type="number"
               step="0.01"
               className="w-full px-2 py-1 border rounded text-right text-sm"
+              style={{ borderColor: 'var(--monday-border)' }}
               value={editValues.gallons || ''}
               onChange={(e) => handleCellChange('gallons', parseFloat(e.target.value) || 0)}
               onBlur={handleCellBlur}
@@ -317,8 +317,8 @@ export default function FuelPage() {
           ) : (
             <div
               onClick={() => handleCellClick(weekNum, driver.id, 'gallons')}
-              className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5"
-              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)' }}
+              className="cursor-pointer rounded px-1.5 py-0.5"
+              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
               {entry?.gallons ? entry.gallons.toFixed(1) : '-'}
             </div>
@@ -326,12 +326,13 @@ export default function FuelPage() {
         </td>
 
         {/* Price/Gal */}
-        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)' }}>
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
           {isEditingField('pricePerGallon') ? (
             <input
               type="number"
               step="0.001"
               className="w-full px-2 py-1 border rounded text-right text-sm"
+              style={{ borderColor: 'var(--monday-border)' }}
               value={editValues.pricePerGallon || ''}
               onChange={(e) => handleCellChange('pricePerGallon', parseFloat(e.target.value) || 0)}
               onBlur={handleCellBlur}
@@ -341,8 +342,8 @@ export default function FuelPage() {
           ) : (
             <div
               onClick={() => handleCellClick(weekNum, driver.id, 'pricePerGallon')}
-              className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5"
-              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)' }}
+              className="cursor-pointer rounded px-1.5 py-0.5"
+              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
               {entry?.pricePerGallon ? `$${entry.pricePerGallon.toFixed(3)}` : '-'}
             </div>
@@ -350,12 +351,13 @@ export default function FuelPage() {
         </td>
 
         {/* DEF Gallons */}
-        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)' }}>
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
           {isEditingField('defGallons') ? (
             <input
               type="number"
               step="0.01"
               className="w-full px-2 py-1 border rounded text-right text-sm"
+              style={{ borderColor: 'var(--monday-border)' }}
               value={editValues.defGallons || ''}
               onChange={(e) => handleCellChange('defGallons', parseFloat(e.target.value) || 0)}
               onBlur={handleCellBlur}
@@ -365,8 +367,8 @@ export default function FuelPage() {
           ) : (
             <div
               onClick={() => handleCellClick(weekNum, driver.id, 'defGallons')}
-              className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5"
-              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)' }}
+              className="cursor-pointer rounded px-1.5 py-0.5"
+              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
               {entry?.defGallons ? entry.defGallons.toFixed(1) : '-'}
             </div>
@@ -374,12 +376,13 @@ export default function FuelPage() {
         </td>
 
         {/* DEF Price */}
-        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)' }}>
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
           {isEditingField('defPrice') ? (
             <input
               type="number"
               step="0.01"
               className="w-full px-2 py-1 border rounded text-right text-sm"
+              style={{ borderColor: 'var(--monday-border)' }}
               value={editValues.defPrice || ''}
               onChange={(e) => handleCellChange('defPrice', parseFloat(e.target.value) || 0)}
               onBlur={handleCellBlur}
@@ -389,8 +392,8 @@ export default function FuelPage() {
           ) : (
             <div
               onClick={() => handleCellClick(weekNum, driver.id, 'defPrice')}
-              className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5"
-              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)' }}
+              className="cursor-pointer rounded px-1.5 py-0.5"
+              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
               {entry?.defPrice ? `$${entry.defPrice.toFixed(2)}` : '-'}
             </div>
@@ -398,12 +401,13 @@ export default function FuelPage() {
         </td>
 
         {/* Total */}
-        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--cell-borderColor)' }}>
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
           {isEditingField('totalAmount') ? (
             <input
               type="number"
               step="0.01"
               className="w-full px-2 py-1 border rounded text-right text-sm"
+              style={{ borderColor: 'var(--monday-border)' }}
               value={editValues.totalAmount || ''}
               onChange={(e) => handleCellChange('totalAmount', parseFloat(e.target.value) || 0)}
               onBlur={handleCellBlur}
@@ -413,8 +417,8 @@ export default function FuelPage() {
           ) : (
             <div
               onClick={() => handleCellClick(weekNum, driver.id, 'totalAmount')}
-              className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5"
-              style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: '#16a34a' }}
+              className="cursor-pointer rounded px-1.5 py-0.5"
+              style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)' }}
             >
               {entry?.totalAmount ? formatCurrency(entry.totalAmount) : '-'}
             </div>
@@ -422,13 +426,14 @@ export default function FuelPage() {
         </td>
 
         {/* Actions */}
-        <td className="px-3 py-2.5" style={{ borderColor: 'var(--cell-borderColor)' }}>
+        <td className="px-3 py-2.5" style={{ borderColor: 'var(--monday-border-light)' }}>
           {entry && (
             <button
               onClick={() => handleDeleteRow(weekNum, driver.id)}
-              className="p-1 hover:bg-red-100 rounded"
+              className="p-1 rounded"
+              style={{ color: 'var(--monday-stuck)' }}
             >
-              <Trash2 className="h-4 w-4 text-red-600" />
+              <Trash2 className="h-4 w-4" />
             </button>
           )}
         </td>
@@ -438,22 +443,22 @@ export default function FuelPage() {
 
   return (
     <Layout>
-      <div className="p-4">
-        <h1 className="text-2xl font-semibold mb-4" style={{ color: 'var(--colors-foreground-default)' }}>Fuel</h1>
+      <div className="p-4 page-fuel">
+        <h1 className="text-2xl font-semibold mb-4" style={{ color: 'var(--monday-text-primary)' }}>Fuel</h1>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
           <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
-              <tr style={{ backgroundColor: 'var(--cell-background-header)' }}>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)', width: '20px' }}></th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Driver</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Truck</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Gallons</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Price/Gal</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>DEF Gal</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>DEF Price</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)' }}>Total</th>
-                <th className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--cell-borderColor)', fontSize: '12px', fontWeight: 500, color: 'var(--colors-foreground-muted)', width: '50px' }}></th>
+              <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: '20px' }}></th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Driver</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Truck</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Gallons</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Price/Gal</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>DEF Gal</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>DEF Price</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Total</th>
+                <th className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: '50px' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -467,21 +472,21 @@ export default function FuelPage() {
                   <React.Fragment key={weekNum}>
                     {/* Week Header */}
                     <tr
-                      className="bg-cyan-50 border-b cursor-pointer"
-                      style={{ borderColor: 'var(--cell-borderColor)' }}
+                      className="border-b cursor-pointer"
+                      style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-secondary)' }}
                       onClick={() => toggleWeek(weekNum)}
                     >
                       <td colSpan={2} className="px-2 py-2" style={{ paddingLeft: '8px' }}>
                         <div className="flex items-center gap-2">
                           {isCollapsed ? (
-                            <ChevronRight className="h-4 w-4 flex-shrink-0" />
+                            <ChevronRight className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--monday-blue)' }} />
                           ) : (
-                            <ChevronDown className="h-4 w-4 flex-shrink-0" />
+                            <ChevronDown className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--monday-blue)' }} />
                           )}
-                          <span className="whitespace-nowrap" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--colors-foreground-default)' }}>
+                          <span className="whitespace-nowrap" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>
                             Week {weekNum} {getWeekDateRange(weekNum, currentYear)}
                           </span>
-                          <span style={{ fontSize: '13px', color: 'var(--colors-foreground-muted)' }}>
+                          <span style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
                             ({weekEntries.length} entries)
                           </span>
                         </div>
@@ -489,11 +494,11 @@ export default function FuelPage() {
                       <td className="px-2 py-2" colSpan={5}></td>
                       <td className="px-2 py-2">
                         <div className="mb-0.5">
-                          <div style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: '#16a34a' }}>
+                          <div style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)' }}>
                             {formatCurrency(weekTotal)}
                           </div>
                         </div>
-                        <div style={{ fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: '#2563eb' }}>
+                        <div style={{ fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: 'var(--monday-blue)' }}>
                           {weekGallons.toFixed(1)} gal
                         </div>
                       </td>

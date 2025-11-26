@@ -50,12 +50,12 @@ export default function Sidebar() {
   }
 
   return (
-    <div className="sidebar flex h-full w-60 flex-col bg-white border-r border-gray-200">
+    <div className="sidebar flex h-full w-60 flex-col" style={{ backgroundColor: 'var(--monday-bg-primary)', borderRight: '1px solid var(--monday-border-light)' }}>
       {/* Logo/Brand */}
-      <div className="flex h-16 items-center justify-start px-4 border-b border-gray-200">
+      <div className="flex h-16 items-center justify-start px-4" style={{ borderBottom: '1px solid var(--monday-border-light)' }}>
         <div className="text-left">
-          <div className="text-xl font-semibold text-gray-900">ABSOLUTE</div>
-          <div className="text-xs text-gray-500">Transportation Management System</div>
+          <div className="text-xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>ABSOLUTE</div>
+          <div className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>Transportation Management System</div>
         </div>
       </div>
 
@@ -75,15 +75,17 @@ export default function Sidebar() {
                 href={item.href}
                 className={cn(
                   'group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors nav-item',
-                  isActive
-                    ? 'active'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  isActive ? 'active' : ''
                 )}
+                style={isActive ? {
+                  backgroundColor: 'rgba(97, 97, 255, 0.1)',
+                  color: 'var(--monday-cornflower)',
+                  borderLeft: '3px solid var(--monday-cornflower)'
+                } : {
+                  color: 'var(--monday-text-secondary)'
+                }}
               >
-                <Icon className={cn(
-                  'mr-3 h-5 w-5 flex-shrink-0',
-                  isActive ? 'text-current' : 'text-gray-400'
-                )} />
+                <Icon className="mr-3 h-5 w-5 flex-shrink-0" style={{ color: isActive ? 'var(--monday-cornflower)' : 'var(--monday-text-muted)' }} />
                 {item.name}
               </Link>
             </ConditionalRender>
@@ -92,28 +94,29 @@ export default function Sidebar() {
       </nav>
 
       {/* User & Logout */}
-      <div className="flex-shrink-0 border-t border-gray-200 p-4">
+      <div className="flex-shrink-0 p-4" style={{ borderTop: '1px solid var(--monday-border-light)' }}>
         {user && (
           <div className="flex items-center space-x-3 mb-3">
             <div className="flex-shrink-0">
-              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-sm font-medium text-blue-600">
+              <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(97, 97, 255, 0.1)' }}>
+                <span className="text-sm font-medium" style={{ color: 'var(--monday-cornflower)' }}>
                   {user.first_name?.[0]?.toUpperCase() || ''}{user.last_name?.[0]?.toUpperCase() || ''}
                 </span>
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium" style={{ color: 'var(--monday-text-primary)' }}>
                 {user.first_name ? user.first_name.charAt(0).toUpperCase() + user.first_name.slice(1).toLowerCase() : ''} {user.last_name ? user.last_name.charAt(0).toUpperCase() + user.last_name.slice(1).toLowerCase() : ''}
               </p>
-              <p className="text-xs text-gray-500">{user.email || ''}</p>
-              <p className="text-xs text-blue-600 capitalize">{user.role?.replace('_', ' ') || ''}</p>
+              <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>{user.email || ''}</p>
+              <p className="text-xs capitalize" style={{ color: 'var(--monday-cornflower)' }}>{user.role?.replace('_', ' ') || ''}</p>
             </div>
           </div>
         )}
         <button
           onClick={handleLogout}
-          className="flex w-full items-center px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-colors"
+          className="flex w-full items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+          style={{ color: 'var(--monday-text-secondary)' }}
         >
           <LogOut className="mr-3 h-4 w-4" />
           Sign out

@@ -2211,8 +2211,8 @@ export default function LoadsPageInline() {
       <div className="page-loads space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Loads</h1>
-            <p className="text-gray-600">Manage your shipments and deliveries</p>
+            <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>Loads</h1>
+            <p style={{ color: 'var(--monday-text-secondary)' }}>Manage your shipments and deliveries</p>
           </div>
           <div className="flex gap-2">
             <div className="relative" ref={groupMenuRef}>
@@ -2274,7 +2274,8 @@ export default function LoadsPageInline() {
               )}
             </div>
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
+              className="hover:opacity-90"
+              style={{ backgroundColor: 'var(--monday-cornflower)', color: 'white' }}
               onClick={handleAddNew}
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -2286,7 +2287,11 @@ export default function LoadsPageInline() {
         {/* Upcoming Load Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div
-            className={`cursor-pointer transition-all ${upcomingFilter ? 'bg-blue-50 border-blue-500 border-2' : 'bg-white border border-gray-200'} rounded-lg p-4 hover:shadow-md`}
+            className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
+            style={{
+              backgroundColor: upcomingFilter ? 'rgba(97, 97, 255, 0.1)' : 'var(--monday-bg-primary)',
+              border: upcomingFilter ? '2px solid var(--monday-cornflower)' : '1px solid var(--monday-border-light)'
+            }}
             onClick={() => {
               const newUpcomingFilter = !upcomingFilter
               setUpcomingFilter(newUpcomingFilter)
@@ -2304,38 +2309,50 @@ export default function LoadsPageInline() {
             }}
           >
             <div>
-              <p className="text-sm font-medium text-gray-600">Upcoming Loads</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{upcomingStats.total}</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Upcoming Loads</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: 'var(--monday-text-primary)' }}>{upcomingStats.total}</p>
             </div>
           </div>
 
           <div
-            className={`cursor-pointer transition-all ${statusFilter === 'available' ? 'bg-green-50 border-green-500 border-2' : 'bg-white border border-gray-200'} rounded-lg p-4 hover:shadow-md`}
+            className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
+            style={{
+              backgroundColor: statusFilter === 'available' ? 'rgba(0, 200, 117, 0.1)' : 'var(--monday-bg-primary)',
+              border: statusFilter === 'available' ? '2px solid var(--monday-done)' : '1px solid var(--monday-border-light)'
+            }}
             onClick={() => setStatusFilter(statusFilter === 'available' ? null : 'available')}
           >
             <div>
-              <p className="text-sm font-medium text-gray-600">Available</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{upcomingStats.available}</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Available</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: 'var(--monday-done)' }}>{upcomingStats.available}</p>
             </div>
           </div>
 
           <div
-            className={`cursor-pointer transition-all ${statusFilter === 'dispatched' ? 'bg-orange-50 border-orange-500 border-2' : 'bg-white border border-gray-200'} rounded-lg p-4 hover:shadow-md`}
+            className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
+            style={{
+              backgroundColor: statusFilter === 'dispatched' ? 'rgba(253, 171, 61, 0.1)' : 'var(--monday-bg-primary)',
+              border: statusFilter === 'dispatched' ? '2px solid var(--monday-working)' : '1px solid var(--monday-border-light)'
+            }}
             onClick={() => setStatusFilter(statusFilter === 'dispatched' ? null : 'dispatched')}
           >
             <div>
-              <p className="text-sm font-medium text-gray-600">Dispatched</p>
-              <p className="text-2xl font-bold text-orange-600 mt-1">{upcomingStats.dispatched}</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Dispatched</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: 'var(--monday-working)' }}>{upcomingStats.dispatched}</p>
             </div>
           </div>
 
           <div
-            className={`cursor-pointer transition-all ${statusFilter === 'invoiced' ? 'bg-purple-50 border-purple-500 border-2' : 'bg-white border border-gray-200'} rounded-lg p-4 hover:shadow-md`}
+            className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
+            style={{
+              backgroundColor: statusFilter === 'invoiced' ? 'rgba(162, 93, 220, 0.1)' : 'var(--monday-bg-primary)',
+              border: statusFilter === 'invoiced' ? '2px solid var(--monday-purple)' : '1px solid var(--monday-border-light)'
+            }}
             onClick={() => setStatusFilter(statusFilter === 'invoiced' ? null : 'invoiced')}
           >
             <div>
-              <p className="text-sm font-medium text-gray-600">Invoiced</p>
-              <p className="text-2xl font-bold text-purple-600 mt-1">{upcomingStats.invoiced}</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Invoiced</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: 'var(--monday-purple)' }}>{upcomingStats.invoiced}</p>
             </div>
           </div>
         </div>

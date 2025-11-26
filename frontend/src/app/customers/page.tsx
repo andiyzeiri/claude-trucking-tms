@@ -98,28 +98,28 @@ export default function CustomersPage() {
       width: '160px',
       filterable: true,
       groupable: true,
-      render: (value) => <span className="font-medium text-gray-900">{value}</span>
+      render: (value) => <span className="font-medium" style={{ color: 'var(--monday-text-primary)' }}>{value}</span>
     },
     {
       key: 'mc',
       label: 'MC Number',
       width: '120px',
       filterable: true,
-      render: (value) => value || 'N/A'
+      render: (value) => <span style={{ color: value ? 'var(--monday-text-primary)' : 'var(--monday-text-muted)' }}>{value || 'N/A'}</span>
     },
     {
       key: 'contact_person',
       label: 'Contact Person',
       width: '140px',
       filterable: true,
-      render: (value) => value || 'N/A'
+      render: (value) => <span style={{ color: value ? 'var(--monday-text-primary)' : 'var(--monday-text-muted)' }}>{value || 'N/A'}</span>
     },
     {
       key: 'phone',
       label: 'Phone',
       width: '140px',
       render: (value) => (
-        <div className="flex items-center text-sm text-gray-600">
+        <div className="flex items-center text-sm" style={{ color: 'var(--monday-text-secondary)' }}>
           <Phone className="mr-1 h-3 w-3" />
           {value}
         </div>
@@ -130,7 +130,7 @@ export default function CustomersPage() {
       label: 'Email',
       width: '180px',
       render: (value) => (
-        <div className="flex items-center text-sm text-gray-600">
+        <div className="flex items-center text-sm" style={{ color: 'var(--monday-text-secondary)' }}>
           <Mail className="mr-1 h-3 w-3" />
           {value}
         </div>
@@ -142,7 +142,7 @@ export default function CustomersPage() {
       width: '140px',
       filterable: true,
       render: (value, row) => (
-        <div className="flex items-center text-sm text-gray-600">
+        <div className="flex items-center text-sm" style={{ color: 'var(--monday-text-secondary)' }}>
           <MapPin className="mr-1 h-3 w-3" />
           {[value, row.state].filter(Boolean).join(', ')}
         </div>
@@ -155,13 +155,13 @@ export default function CustomersPage() {
       <div className="page-customers space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-              <Building2 className="mr-3 h-8 w-8" />
+            <h1 className="text-3xl font-bold flex items-center" style={{ color: 'var(--monday-text-primary)' }}>
+              <Building2 className="mr-3 h-8 w-8" style={{ color: 'var(--monday-stuck)' }} />
               Customers
             </h1>
-            <p className="text-gray-600">Manage your customer relationships</p>
+            <p style={{ color: 'var(--monday-text-secondary)' }}>Manage your customer relationships</p>
           </div>
-          <Button onClick={handleCreateCustomer}>
+          <Button className="hover:opacity-90" style={{ backgroundColor: 'var(--monday-cornflower)', color: 'white' }} onClick={handleCreateCustomer}>
             <Plus className="mr-2 h-4 w-4" />
             Add Customer
           </Button>
@@ -169,17 +169,17 @@ export default function CustomersPage() {
 
         <DataTable data={customers} columns={columns} onRowRightClick={handleRowRightClick} calculateGroupTotals={calculateGroupTotals} />
 
-        <div className="sticky bottom-0 bg-white border-t-2 border-gray-300 shadow-lg mt-4">
+        <div className="sticky bottom-0 shadow-lg mt-4" style={{ backgroundColor: 'var(--monday-bg-primary)', borderTop: '2px solid var(--monday-border)' }}>
           <div style={{ minWidth: '1080px', width: '100%' }}>
             <table className="w-full table-auto">
-              <tbody><tr className="bg-gray-50">
-                <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '160px' }}>
-                  <span className="font-medium text-gray-900">{totals.total} Customer{totals.total !== 1 ? 's' : ''}</span>
+              <tbody><tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                <td className="px-3 py-2 text-sm border-r" style={{ width: '160px', borderColor: 'var(--monday-border-light)' }}>
+                  <span className="font-medium" style={{ color: 'var(--monday-text-primary)' }}>{totals.total} Customer{totals.total !== 1 ? 's' : ''}</span>
                 </td>
-                <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px' }}></td>
-                <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '140px' }}></td>
-                <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '140px' }}></td>
-                <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '180px' }}></td>
+                <td className="px-3 py-2 text-sm border-r" style={{ width: '120px', borderColor: 'var(--monday-border-light)' }}></td>
+                <td className="px-3 py-2 text-sm border-r" style={{ width: '140px', borderColor: 'var(--monday-border-light)' }}></td>
+                <td className="px-3 py-2 text-sm border-r" style={{ width: '140px', borderColor: 'var(--monday-border-light)' }}></td>
+                <td className="px-3 py-2 text-sm border-r" style={{ width: '180px', borderColor: 'var(--monday-border-light)' }}></td>
                 <td className="px-3 py-2 text-sm" style={{ width: '140px' }}></td>
               </tr></tbody>
             </table>

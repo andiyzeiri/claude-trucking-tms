@@ -11,7 +11,7 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   return (
     <ProtectedRoute requireAuth={true}>
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen" style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           <Header />

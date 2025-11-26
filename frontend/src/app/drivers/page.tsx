@@ -127,21 +127,21 @@ export default function DriversPage() {
       render: (value, row) => {
         const firstName = row.first_name.charAt(0).toUpperCase() + row.first_name.slice(1).toLowerCase()
         const lastName = row.last_name.charAt(0).toUpperCase() + row.last_name.slice(1).toLowerCase()
-        return <span className="font-medium text-gray-900">{firstName} {lastName}</span>
+        return <span className="font-medium" style={{ color: 'var(--monday-text-primary)' }}>{firstName} {lastName}</span>
       }
     },
     {
       key: 'license_number',
       label: 'License Number',
       width: '150px',
-      render: (value) => <span className="font-mono text-xs text-gray-700">{value || 'N/A'}</span>
+      render: (value) => <span className="font-mono text-xs" style={{ color: 'var(--monday-text-secondary)' }}>{value || 'N/A'}</span>
     },
     {
       key: 'phone',
       label: 'Phone',
       width: '150px',
       render: (value) => (
-        <div className="flex items-center text-sm text-gray-600">
+        <div className="flex items-center text-sm" style={{ color: 'var(--monday-text-secondary)' }}>
           <Phone className="mr-1 h-3 w-3" />
           {value || 'N/A'}
         </div>
@@ -152,7 +152,7 @@ export default function DriversPage() {
       label: 'Email',
       width: '200px',
       render: (value) => (
-        <div className="flex items-center text-sm text-gray-600">
+        <div className="flex items-center text-sm" style={{ color: 'var(--monday-text-secondary)' }}>
           <Mail className="mr-1 h-3 w-3" />
           {value || 'N/A'}
         </div>
@@ -165,11 +165,14 @@ export default function DriversPage() {
       filterable: true,
       groupable: true,
       render: (value) => (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-          value === 'available' ? 'bg-green-100 text-green-800' :
-          value === 'on_trip' ? 'bg-blue-100 text-blue-800' :
-          'bg-gray-100 text-gray-800'
-        }`}>
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style={{
+          backgroundColor: value === 'available' ? 'rgba(0, 200, 117, 0.15)' :
+            value === 'on_trip' ? 'rgba(97, 97, 255, 0.15)' :
+            'rgba(196, 196, 196, 0.15)',
+          color: value === 'available' ? 'var(--monday-done)' :
+            value === 'on_trip' ? 'var(--monday-cornflower)' :
+            'var(--monday-gray)'
+        }}>
           {value}
         </span>
       )
@@ -178,20 +181,20 @@ export default function DriversPage() {
       key: 'date_hired',
       label: 'Date Hired',
       width: '120px',
-      render: (value) => value ? new Date(value).toLocaleDateString() : 'N/A'
+      render: (value) => <span style={{ color: 'var(--monday-text-primary)' }}>{value ? new Date(value).toLocaleDateString() : 'N/A'}</span>
     },
     {
       key: 'date_of_birth',
       label: 'Date of Birth',
       width: '120px',
-      render: (value) => value ? new Date(value).toLocaleDateString() : 'N/A'
+      render: (value) => <span style={{ color: 'var(--monday-text-primary)' }}>{value ? new Date(value).toLocaleDateString() : 'N/A'}</span>
     },
     {
       key: 'date_of_birth',
       label: 'Age',
       width: '80px',
       render: (value) => {
-        if (!value) return 'N/A'
+        if (!value) return <span style={{ color: 'var(--monday-text-muted)' }}>N/A</span>
         const birthDate = new Date(value)
         const today = new Date()
         let age = today.getFullYear() - birthDate.getFullYear()
@@ -199,26 +202,26 @@ export default function DriversPage() {
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
           age--
         }
-        return age.toString()
+        return <span style={{ color: 'var(--monday-text-primary)' }}>{age.toString()}</span>
       }
     },
     {
       key: 'experience',
       label: 'Experience',
       width: '120px',
-      render: (value) => value || 'N/A'
+      render: (value) => <span style={{ color: value ? 'var(--monday-text-primary)' : 'var(--monday-text-muted)' }}>{value || 'N/A'}</span>
     },
     {
       key: 'mvr_expiry',
       label: 'MVR',
       width: '120px',
       render: (value) => {
-        if (!value) return 'N/A'
+        if (!value) return <span style={{ color: 'var(--monday-text-muted)' }}>N/A</span>
         const expiryDate = new Date(value)
         const today = new Date()
         const isExpired = expiryDate < today
         return (
-          <span className={isExpired ? 'text-red-600 font-semibold' : 'text-gray-700'}>
+          <span className={isExpired ? 'font-semibold' : ''} style={{ color: isExpired ? 'var(--monday-stuck)' : 'var(--monday-text-primary)' }}>
             {expiryDate.toLocaleDateString()}
           </span>
         )
@@ -229,12 +232,12 @@ export default function DriversPage() {
       label: 'Medical Card',
       width: '120px',
       render: (value) => {
-        if (!value) return 'N/A'
+        if (!value) return <span style={{ color: 'var(--monday-text-muted)' }}>N/A</span>
         const expiryDate = new Date(value)
         const today = new Date()
         const isExpired = expiryDate < today
         return (
-          <span className={isExpired ? 'text-red-600 font-semibold' : 'text-gray-700'}>
+          <span className={isExpired ? 'font-semibold' : ''} style={{ color: isExpired ? 'var(--monday-stuck)' : 'var(--monday-text-primary)' }}>
             {expiryDate.toLocaleDateString()}
           </span>
         )
@@ -247,13 +250,13 @@ export default function DriversPage() {
       <div className="page-drivers space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-              <Users className="mr-3 h-8 w-8" />
+            <h1 className="text-3xl font-bold flex items-center" style={{ color: 'var(--monday-text-primary)' }}>
+              <Users className="mr-3 h-8 w-8" style={{ color: 'var(--monday-blue)' }} />
               Drivers
             </h1>
-            <p className="text-gray-600">Manage your driver roster</p>
+            <p style={{ color: 'var(--monday-text-secondary)' }}>Manage your driver roster</p>
           </div>
-          <Button onClick={handleCreateDriver}>
+          <Button className="hover:opacity-90" style={{ backgroundColor: 'var(--monday-cornflower)', color: 'white' }} onClick={handleCreateDriver}>
             <Plus className="mr-2 h-4 w-4" />
             Add Driver
           </Button>
