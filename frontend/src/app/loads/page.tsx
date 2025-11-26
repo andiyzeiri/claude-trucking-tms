@@ -1310,10 +1310,10 @@ export default function LoadsPageInline() {
       let bgColor = 'var(--monday-bg-secondary)'
       if (currentGroupType === 'week') {
         iconColor = 'var(--monday-blue)'
-        bgColor = '#d8e2dc'
+        bgColor = '#dfe7fd'
       } else if (currentGroupType === 'driver') {
         iconColor = 'var(--monday-working)'
-        bgColor = '#ede0d4'
+        bgColor = '#e2ece9'
       } else if (currentGroupType === 'customer') {
         iconColor = 'var(--monday-stuck)'
       }
@@ -1419,7 +1419,7 @@ export default function LoadsPageInline() {
         <td className="px-3 py-2.5 border-r" style={{ paddingLeft: `${paddingLeft + 12}px`, borderColor: 'var(--monday-border-light)' }}>
           <div>
             <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)'}}>{load.weekLabel}</div>
-            <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--monday-text-secondary)'}}>{load.weekDateRange}</div>
+            <div style={{fontSize: '11px', lineHeight: '16px', color: '#fca311'}}>{load.weekDateRange}</div>
           </div>
         </td>
 
@@ -1441,7 +1441,7 @@ export default function LoadsPageInline() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: '#887caf'}}>
+            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: '#273469'}}>
               {new Date(load.pickup_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
             </div>
           )}
