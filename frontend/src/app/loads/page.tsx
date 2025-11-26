@@ -1444,7 +1444,7 @@ export default function LoadsPageInline() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: '#273469'}}>
+            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: '#3a86ff'}}>
               {new Date(load.pickup_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
             </div>
           )}
@@ -1717,10 +1717,10 @@ export default function LoadsPageInline() {
                 <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--monday-text-secondary)', flex: 1}}>
                   {parseLocation(load.pickup_location).street || 'Street'}
                 </div>
-                <div style={{fontSize: '11px', lineHeight: '16px', color: '#22c55e', width: '60px'}}>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: '#fb5607', width: '60px'}}>
                   {formatDateShort(load.pickup_date)}
                 </div>
-                <div style={{fontSize: '11px', lineHeight: '16px', color: '#22c55e', width: '65px'}}>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: '#fb5607', width: '65px'}}>
                   {formatTimeShort(load.pickup_date)}
                 </div>
               </div>
@@ -1888,10 +1888,10 @@ export default function LoadsPageInline() {
                 <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--monday-text-secondary)', flex: 1}}>
                   {parseLocation(load.delivery_location).street || 'Street'}
                 </div>
-                <div style={{fontSize: '11px', lineHeight: '16px', color: '#22c55e', width: '60px'}}>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: '#fb5607', width: '60px'}}>
                   {formatDateShort(load.delivery_date)}
                 </div>
-                <div style={{fontSize: '11px', lineHeight: '16px', color: '#22c55e', width: '65px'}}>
+                <div style={{fontSize: '11px', lineHeight: '16px', color: '#fb5607', width: '65px'}}>
                   {formatTimeShort(load.delivery_date)}
                 </div>
               </div>
