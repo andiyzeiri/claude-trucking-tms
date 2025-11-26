@@ -1312,11 +1312,11 @@ export default function LoadsPageInline() {
       if (currentGroupType === 'week') {
         iconColor = 'var(--monday-blue)'
         bgColor = '#dfe7fd'
-        borderColor = '#b8c9e8'
+        borderColor = '#e8e8e8'
       } else if (currentGroupType === 'driver') {
         iconColor = 'var(--monday-working)'
         bgColor = '#e2ece9'
-        borderColor = '#c5d5cf'
+        borderColor = '#e8e8e8'
       } else if (currentGroupType === 'customer') {
         iconColor = 'var(--monday-stuck)'
       }
