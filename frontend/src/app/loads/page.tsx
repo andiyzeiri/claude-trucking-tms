@@ -1305,12 +1305,15 @@ export default function LoadsPageInline() {
       const groupTotalMiles = groupLoads.reduce((sum, l) => sum + (Number(l.miles) || 0), 0)
       const groupRPM = groupTotalMiles > 0 ? groupTotalRate / groupTotalMiles : 0
 
-      // Determine icon color based on group type
+      // Determine icon color and background color based on group type
       let iconColor = 'var(--monday-cornflower)'
+      let bgColor = 'var(--monday-bg-secondary)'
       if (currentGroupType === 'week') {
         iconColor = 'var(--monday-blue)'
+        bgColor = '#8bc28c'
       } else if (currentGroupType === 'driver') {
         iconColor = 'var(--monday-working)'
+        bgColor = '#feae6c'
       } else if (currentGroupType === 'customer') {
         iconColor = 'var(--monday-stuck)'
       }
@@ -1319,7 +1322,7 @@ export default function LoadsPageInline() {
       // Use parentKeys to create unique keys for nested groups
       const uniqueGroupKey = [...parentKeys, groupKey].join('-')
       elements.push(
-        <tr key={`group-${uniqueGroupKey}`} className="border-b cursor-pointer" style={{ backgroundColor: 'var(--monday-bg-secondary)', borderColor: 'var(--monday-border-light)' }} onClick={() => toggleGroup(groupKey)}>
+        <tr key={`group-${uniqueGroupKey}`} className="border-b cursor-pointer" style={{ backgroundColor: bgColor, borderColor: 'var(--monday-border-light)' }} onClick={() => toggleGroup(groupKey)}>
           <td colSpan={2} className="px-2 py-2 text-sm font-medium" style={{ paddingLeft: `${paddingLeft + 8}px`, color: 'var(--monday-text-primary)' }}>
             <div className="flex items-center gap-2">
               {isCollapsed ? (
