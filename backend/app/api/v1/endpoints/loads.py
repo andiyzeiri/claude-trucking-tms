@@ -5,9 +5,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.models.load import Load
+from app.models.driver import Driver
 from app.schemas.load import LoadCreate, LoadUpdate, LoadResponse
 from app.core.security import get_current_active_user
-from app.models.user import User
+from app.models.user import User, UserRole
 
 router = APIRouter()
 
@@ -28,9 +29,22 @@ async def get_loads(
             selectinload(Load.customer)
         )
         .where(Load.company_id == current_user.company_id)
-        .offset(skip)
-        .limit(limit)
     )
+
+    # If user is a driver, only show their assigned loads
+    if current_user.role == UserRole.DRIVER.value or current_user.role == "driver":
+        # Find the driver profile linked to this user
+        driver_query = select(Driver).where(Driver.user_id == current_user.id)
+        driver_result = await db.execute(driver_query)
+        driver = driver_result.scalar_one_or_none()
+
+        if driver:
+            query = query.where(Load.driver_id == driver.id)
+        else:
+            # Driver user has no linked driver profile - return empty
+            return []
+
+    query = query.offset(skip).limit(limit)
     result = await db.execute(query)
     loads = result.scalars().all()
     return loads

@@ -35,6 +35,10 @@ class Driver(Base):
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
     company = relationship("Company", back_populates="drivers")
 
+    # Link to user account (for driver login)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, unique=True)
+    user = relationship("User", back_populates="driver_profile")
+
     # Relationships
     current_truck = relationship("Truck", back_populates="current_driver", uselist=False)
     loads = relationship("Load", back_populates="driver")

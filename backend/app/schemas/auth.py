@@ -118,6 +118,7 @@ class UserResponse(BaseModel):
     company_id: Optional[Union[int, UUID]] = None  # Make company_id optional and support both types
     page_permissions: Optional[dict] = None
     allowed_pages: Optional[list[str]] = None
+    permissions: Optional[dict] = None  # User permissions based on role
 
     class Config:
         from_attributes = True

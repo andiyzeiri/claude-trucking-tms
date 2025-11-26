@@ -38,6 +38,9 @@ class User(Base):
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
     company = relationship("Company", back_populates="users")
 
+    # Link to driver profile (if user is a driver)
+    driver_profile = relationship("Driver", back_populates="user", uselist=False)
+
     @property
     def full_name(self) -> str:
         return f"{self.first_name} {self.last_name}"

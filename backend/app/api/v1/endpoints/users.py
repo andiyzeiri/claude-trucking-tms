@@ -29,7 +29,8 @@ def build_user_response(user: User) -> UserResponse:
         role=user.role if isinstance(user.role, str) else user.role.value,
         company_id=user.company_id,
         page_permissions=user.page_permissions,
-        allowed_pages=user.allowed_pages
+        allowed_pages=user.allowed_pages,
+        permissions=user.permissions
     )
 
 

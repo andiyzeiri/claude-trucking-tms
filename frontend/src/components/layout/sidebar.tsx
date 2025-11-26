@@ -19,7 +19,8 @@ import {
   Calculator,
   Receipt,
   Warehouse,
-  Fuel as FuelIcon
+  Fuel as FuelIcon,
+  Shield
 } from 'lucide-react'
 
 const navigation = [
@@ -37,6 +38,7 @@ const navigation = [
   { name: 'Invoices', href: '/invoices', icon: FileText, permissions: ['can_view_invoices'] },
   { name: 'Ratecons', href: '/ratecons', icon: Receipt, permissions: [] },
   { name: 'Reports', href: '/reports', icon: DollarSign, permissions: ['can_view_reports'] },
+  { name: 'Users', href: '/users', icon: Shield, permissions: ['can_manage_users'] },
   { name: 'Settings', href: '/settings', icon: Settings, permissions: [] },
 ]
 

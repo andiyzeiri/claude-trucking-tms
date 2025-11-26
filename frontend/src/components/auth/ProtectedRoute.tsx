@@ -68,6 +68,11 @@ export const ConditionalRender = ({
     return <>{fallback}</>
   }
 
+  // Super admins and company admins have all permissions
+  if (user.role === 'super_admin' || user.role === 'company_admin') {
+    return <>{children}</>
+  }
+
   // Check roles if specified
   if (roles.length > 0) {
     const hasAllowedRole = roles.includes(user.role)
@@ -76,7 +81,33 @@ export const ConditionalRender = ({
     }
   }
 
-  // For now, render children (permission checking can be enhanced later)
-  // TODO: Implement proper permission checking when backend provides user permissions
+  // Check permissions if specified
+  if (permissions.length > 0 && user.permissions) {
+    const hasPermission = permissions.some(
+      (permission) => user.permissions[permission] === true
+    )
+    if (!hasPermission) {
+      return <>{fallback}</>
+    }
+  }
+
+  // Check allowed_pages for page access
+  if (permissions.length > 0 && !user.permissions) {
+    // Fallback to role-based check if permissions not loaded
+    // Admins already handled above
+    const rolePermissions: Record<string, string[]> = {
+      'dispatcher': ['can_view_loads', 'can_create_loads', 'can_edit_loads', 'can_delete_loads', 'can_view_drivers', 'can_manage_drivers', 'can_view_trucks', 'can_manage_trucks', 'can_view_customers', 'can_view_invoices', 'can_view_reports'],
+      'driver': ['can_view_loads'],
+      'customer': ['can_view_loads', 'can_view_invoices'],
+      'viewer': ['can_view_loads', 'can_view_drivers', 'can_view_trucks', 'can_view_customers', 'can_view_invoices', 'can_view_reports'],
+    }
+
+    const userRolePermissions = rolePermissions[user.role] || []
+    const hasPermission = permissions.some(p => userRolePermissions.includes(p))
+    if (!hasPermission) {
+      return <>{fallback}</>
+    }
+  }
+
   return <>{children}</>
 }

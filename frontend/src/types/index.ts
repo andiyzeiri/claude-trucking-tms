@@ -1,3 +1,21 @@
+export interface UserPermissions {
+  can_view_loads: boolean
+  can_create_loads: boolean
+  can_edit_loads: boolean
+  can_delete_loads: boolean
+  can_view_drivers: boolean
+  can_manage_drivers: boolean
+  can_view_trucks: boolean
+  can_manage_trucks: boolean
+  can_view_customers: boolean
+  can_manage_customers: boolean
+  can_view_invoices: boolean
+  can_manage_invoices: boolean
+  can_view_reports: boolean
+  can_manage_users: boolean
+  can_manage_company: boolean
+}
+
 export interface User {
   id: number
   username: string
@@ -13,6 +31,7 @@ export interface User {
   company_id: number
   page_permissions?: { pages: string[] }
   allowed_pages?: string[]
+  permissions?: UserPermissions
   created_at?: string
   updated_at?: string
 }
