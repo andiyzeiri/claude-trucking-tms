@@ -1325,7 +1325,7 @@ export default function LoadsPageInline() {
       // Use parentKeys to create unique keys for nested groups
       const uniqueGroupKey = [...parentKeys, groupKey].join('-')
       elements.push(
-        <tr key={`group-${uniqueGroupKey}`} className="cursor-pointer" style={{ backgroundColor: bgColor, border: `1px solid ${borderColor}` }} onClick={() => toggleGroup(groupKey)}>
+        <tr key={`group-${uniqueGroupKey}`} className="cursor-pointer" style={{ backgroundColor: bgColor, outline: isCollapsed ? `2px solid ${borderColor}` : 'none', outlineOffset: '-1px' }} onClick={() => toggleGroup(groupKey)}>
           <td colSpan={2} className="px-2 py-2 text-sm font-medium" style={{ paddingLeft: `${paddingLeft + 8}px`, color: 'var(--monday-text-primary)' }}>
             <div className="flex items-center gap-2">
               {isCollapsed ? (
