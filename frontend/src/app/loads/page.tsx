@@ -1310,10 +1310,10 @@ export default function LoadsPageInline() {
       let bgColor = 'var(--monday-bg-secondary)'
       if (currentGroupType === 'week') {
         iconColor = 'var(--monday-blue)'
-        bgColor = '#8bc28c'
+        bgColor = '#d8e2dc'
       } else if (currentGroupType === 'driver') {
         iconColor = 'var(--monday-working)'
-        bgColor = '#feae6c'
+        bgColor = '#ede0d4'
       } else if (currentGroupType === 'customer') {
         iconColor = 'var(--monday-stuck)'
       }
@@ -1441,7 +1441,7 @@ export default function LoadsPageInline() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)'}}>
+            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: '#887caf'}}>
               {new Date(load.pickup_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
             </div>
           )}
