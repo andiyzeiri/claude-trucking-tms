@@ -70,8 +70,9 @@ class UserCreate(BaseModel):
     email: EmailStr
     first_name: str = Field(..., min_length=1, max_length=50)
     last_name: str = Field(..., min_length=1, max_length=50)
-    role: str = Field(..., description="User role: dispatcher, driver, customer, viewer")
-    send_invitation: bool = Field(True, description="Send invitation email with credentials")
+    password: str = Field(..., min_length=8, max_length=100, description="User password")
+    role: str = Field(..., description="User role: company_admin, dispatcher, driver, customer, viewer, custom")
+    send_invitation: bool = Field(False, description="Send invitation email with credentials")
 
     @validator('username')
     def username_alphanumeric(cls, v):
@@ -79,9 +80,21 @@ class UserCreate(BaseModel):
             raise ValueError('Username must be alphanumeric (can include _ and -)')
         return v
 
+    @validator('password')
+    def password_strength(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        if not any(c.isupper() for c in v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not any(c.islower() for c in v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Password must contain at least one digit')
+        return v
+
     @validator('role')
     def validate_role(cls, v):
-        valid_roles = ['dispatcher', 'driver', 'customer', 'viewer']
+        valid_roles = ['company_admin', 'dispatcher', 'driver', 'customer', 'viewer', 'custom']
         if v.lower() not in valid_roles:
             raise ValueError(f'Role must be one of: {", ".join(valid_roles)}')
         return v.lower()

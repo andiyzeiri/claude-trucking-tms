@@ -88,23 +88,22 @@ async def create_user(
             detail="Email already exists"
         )
 
-    # Generate temporary password
-    temporary_password = generate_temporary_password()
-
     # Map role string to UserRole enum
     role_mapping = {
+        'company_admin': UserRole.COMPANY_ADMIN,
         'dispatcher': UserRole.DISPATCHER,
         'driver': UserRole.DRIVER,
         'customer': UserRole.CUSTOMER,
-        'viewer': UserRole.VIEWER
+        'viewer': UserRole.VIEWER,
+        'custom': UserRole.CUSTOM
     }
     user_role = role_mapping.get(user_data.role.lower(), UserRole.VIEWER)
 
-    # Create new user
+    # Create new user with provided password
     new_user = User(
         username=user_data.username,
         email=user_data.email,
-        hashed_password=get_password_hash(temporary_password),
+        hashed_password=get_password_hash(user_data.password),
         first_name=user_data.first_name,
         last_name=user_data.last_name,
         role=user_role,
@@ -124,7 +123,7 @@ async def create_user(
             to_email=new_user.email,
             invited_by=current_user.full_name,
             company_name=current_user.company.name,
-            temporary_password=temporary_password,
+            temporary_password=user_data.password,  # Send the provided password
             username=new_user.username
         )
 
@@ -133,8 +132,8 @@ async def create_user(
         user_id=new_user.id,
         username=new_user.username,
         email=new_user.email,
-        temporary_password=temporary_password if not user_data.send_invitation else None,
-        role=new_user.role.value
+        temporary_password=None,  # Don't return password in response
+        role=new_user.role.value if isinstance(new_user.role, UserRole) else new_user.role
     )
 
 

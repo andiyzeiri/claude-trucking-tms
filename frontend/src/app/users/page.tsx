@@ -7,12 +7,27 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
+import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/hooks/use-auth'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { Plus, Users, Edit, Trash2, Shield, UserCheck, UserX } from 'lucide-react'
+import { Plus, Users, Edit, Trash2, Shield, UserCheck, UserX, Key, Eye, EyeOff, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
+import {
+  Home,
+  Package,
+  Route,
+  Truck,
+  Building2,
+  FileText,
+  DollarSign,
+  Settings,
+  Calculator,
+  Receipt,
+  Warehouse,
+  Fuel
+} from 'lucide-react'
 
 interface User {
   id: number
@@ -25,6 +40,7 @@ interface User {
   role: string
   company_id: number
   allowed_pages?: string[]
+  page_permissions?: { pages: string[] }
 }
 
 interface CreateUserData {
@@ -32,6 +48,7 @@ interface CreateUserData {
   email: string
   first_name: string
   last_name: string
+  password: string
   role: string
   send_invitation: boolean
 }
@@ -52,7 +69,56 @@ const ROLES = [
   { value: 'driver', label: 'Driver', description: 'View assigned loads only' },
   { value: 'customer', label: 'Customer', description: 'View own loads and invoices' },
   { value: 'viewer', label: 'Viewer', description: 'Read-only access' },
+  { value: 'custom', label: 'Custom', description: 'Custom page permissions' },
 ]
+
+// All available pages in the system
+const ALL_PAGES = [
+  { id: 'dashboard', name: 'Dashboard', icon: Home, description: 'Main dashboard overview' },
+  { id: 'loads', name: 'Loads', icon: Package, description: 'Load management & tracking' },
+  { id: 'lanes', name: 'Lanes', icon: Route, description: 'Freight lane management' },
+  { id: 'trucks', name: 'Equipment', icon: Truck, description: 'Trucks and trailers' },
+  { id: 'drivers', name: 'Drivers', icon: Users, description: 'Driver roster management' },
+  { id: 'customers', name: 'Customers', icon: Building2, description: 'Customer relationships' },
+  { id: 'shippers', name: 'Shippers', icon: Warehouse, description: 'Shipper locations' },
+  { id: 'receivers', name: 'Receivers', icon: Warehouse, description: 'Receiver locations' },
+  { id: 'expenses', name: 'Expenses', icon: Receipt, description: 'Operating expenses' },
+  { id: 'fuel', name: 'Fuel', icon: Fuel, description: 'Fuel expense tracking' },
+  { id: 'payroll', name: 'Payroll', icon: Calculator, description: 'Driver payroll management' },
+  { id: 'invoices', name: 'Invoices', icon: FileText, description: 'Invoice generation' },
+  { id: 'ratecons', name: 'Ratecons', icon: Receipt, description: 'Rate confirmations' },
+  { id: 'reports', name: 'Reports', icon: DollarSign, description: 'Analytics & reporting' },
+  { id: 'users', name: 'Users', icon: Shield, description: 'User management' },
+  { id: 'settings', name: 'Settings', icon: Settings, description: 'System settings' },
+]
+
+// Default pages for each role
+const ROLE_PAGES: Record<string, string[]> = {
+  company_admin: ALL_PAGES.map(p => p.id),
+  super_admin: ALL_PAGES.map(p => p.id),
+  dispatcher: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'invoices', 'reports'],
+  driver: ['dashboard', 'loads'],
+  customer: ['dashboard', 'loads', 'invoices'],
+  viewer: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'invoices', 'reports'],
+  custom: [],
+}
+
+// Password generator function
+const generatePassword = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
+  let password = ''
+  // Ensure at least one of each required type
+  password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)]
+  password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)]
+  password += '0123456789'[Math.floor(Math.random() * 10)]
+  password += '!@#$%^&*'[Math.floor(Math.random() * 8)]
+  // Fill remaining characters
+  for (let i = 0; i < 8; i++) {
+    password += chars[Math.floor(Math.random() * chars.length)]
+  }
+  // Shuffle
+  return password.split('').sort(() => Math.random() - 0.5).join('')
+}
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth()
@@ -124,7 +190,11 @@ export default function UsersPage() {
   // Modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [permissionsUser, setPermissionsUser] = useState<User | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [enabledPages, setEnabledPages] = useState<string[]>([])
 
   // Create form state
   const [createForm, setCreateForm] = useState<CreateUserData>({
@@ -132,8 +202,9 @@ export default function UsersPage() {
     email: '',
     first_name: '',
     last_name: '',
+    password: '',
     role: 'viewer',
-    send_invitation: true,
+    send_invitation: false,
   })
 
   // Edit form state
@@ -145,9 +216,11 @@ export default function UsersPage() {
       email: '',
       first_name: '',
       last_name: '',
+      password: '',
       role: 'viewer',
-      send_invitation: true,
+      send_invitation: false,
     })
+    setShowPassword(false)
   }
 
   const handleCreateUser = () => {
@@ -155,7 +228,57 @@ export default function UsersPage() {
       toast.error('Please fill in all required fields')
       return
     }
+    if (!createForm.password || createForm.password.length < 8) {
+      toast.error('Password must be at least 8 characters')
+      return
+    }
+    // Validate password strength
+    if (!/[A-Z]/.test(createForm.password)) {
+      toast.error('Password must contain at least one uppercase letter')
+      return
+    }
+    if (!/[a-z]/.test(createForm.password)) {
+      toast.error('Password must contain at least one lowercase letter')
+      return
+    }
+    if (!/[0-9]/.test(createForm.password)) {
+      toast.error('Password must contain at least one number')
+      return
+    }
     createUser.mutate(createForm)
+  }
+
+  // Open permissions modal
+  const handleOpenPermissions = (user: User) => {
+    setPermissionsUser(user)
+    const isCustomRole = user.role === 'custom'
+    if (isCustomRole && user.page_permissions?.pages) {
+      setEnabledPages(user.page_permissions.pages)
+    } else {
+      // Get default pages for the role
+      const roleLower = user.role?.toLowerCase() || 'viewer'
+      setEnabledPages(ROLE_PAGES[roleLower] || ROLE_PAGES.viewer)
+    }
+    setIsPermissionsModalOpen(true)
+  }
+
+  // Toggle a page permission
+  const togglePage = (pageId: string) => {
+    setEnabledPages(prev =>
+      prev.includes(pageId)
+        ? prev.filter(p => p !== pageId)
+        : [...prev, pageId]
+    )
+  }
+
+  // Save permissions
+  const handleSavePermissions = () => {
+    if (!permissionsUser) return
+    updateUser.mutate({
+      id: permissionsUser.id,
+      data: { page_permissions: { pages: enabledPages } }
+    })
+    setIsPermissionsModalOpen(false)
   }
 
   const handleEditUser = (user: User) => {
@@ -392,6 +515,14 @@ export default function UsersPage() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => handleOpenPermissions(user)}
+                              title="Manage Permissions"
+                            >
+                              <Key className="h-4 w-4" style={{ color: 'var(--monday-purple)' }} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => handleToggleActive(user)}
                               disabled={user.id === currentUser?.id}
                               title={user.is_active ? 'Deactivate' : 'Activate'}
@@ -470,9 +601,46 @@ export default function UsersPage() {
                 <Input
                   id="username"
                   value={createForm.username}
-                  onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })}
+                  onChange={(e) => setCreateForm({ ...createForm, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') })}
                   placeholder="johndoe"
                 />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password *</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCreateForm({ ...createForm, password: generatePassword() })}
+                    className="h-7 text-xs"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Generate
+                  </Button>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={createForm.password}
+                    onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                    placeholder="Enter password"
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>
+                  Must be at least 8 characters with uppercase, lowercase, and number
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="role">Role *</Label>
@@ -611,6 +779,94 @@ export default function UsersPage() {
                 style={{ backgroundColor: 'var(--monday-cornflower)', color: 'white' }}
               >
                 {updateUser.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Permissions Modal */}
+        <Dialog open={isPermissionsModalOpen} onOpenChange={setIsPermissionsModalOpen}>
+          <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle>
+                Page Access for {permissionsUser?.first_name} {permissionsUser?.last_name}
+              </DialogTitle>
+              <DialogDescription>
+                {permissionsUser?.role === 'custom'
+                  ? 'Configure which pages this user can access.'
+                  : `This user has the "${getRoleLabel(permissionsUser?.role || '')}" role. To customize permissions, change their role to "Custom" first.`
+                }
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto py-4">
+              {permissionsUser?.role === 'custom' && (
+                <div className="flex gap-2 mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEnabledPages(ALL_PAGES.map(p => p.id))}
+                  >
+                    Select All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEnabledPages(['dashboard'])}
+                  >
+                    Select None
+                  </Button>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {ALL_PAGES.map((page) => {
+                  const Icon = page.icon
+                  const isEnabled = enabledPages.includes(page.id)
+                  const isDashboard = page.id === 'dashboard'
+                  const isCustomRole = permissionsUser?.role === 'custom'
+
+                  return (
+                    <div
+                      key={page.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                        isEnabled
+                          ? 'border-blue-200 bg-blue-50'
+                          : 'border-gray-200 bg-white'
+                      } ${!isCustomRole ? 'opacity-75' : ''}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-md ${
+                          isEnabled ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <Label className="font-medium cursor-pointer">{page.name}</Label>
+                          <p className="text-xs text-gray-500">{page.description}</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={isEnabled}
+                        onCheckedChange={() => togglePage(page.id)}
+                        disabled={!isCustomRole || isDashboard}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <DialogFooter className="border-t pt-4">
+              <Button variant="outline" onClick={() => setIsPermissionsModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSavePermissions}
+                disabled={permissionsUser?.role !== 'custom'}
+                style={{ backgroundColor: 'var(--monday-cornflower)', color: 'white' }}
+              >
+                {permissionsUser?.role === 'custom' ? 'Save Permissions' : 'Close'}
               </Button>
             </DialogFooter>
           </DialogContent>
