@@ -14,6 +14,25 @@ import string
 router = APIRouter()
 
 
+def get_role_value(role) -> str:
+    """Get string value of role whether it's an enum or string"""
+    if isinstance(role, UserRole):
+        return role.value
+    return str(role).lower() if role else ""
+
+
+def is_admin_or_dispatcher(role) -> bool:
+    """Check if user has admin or dispatcher role"""
+    role_value = get_role_value(role)
+    return role_value in ['company_admin', 'super_admin', 'dispatcher']
+
+
+def is_admin(role) -> bool:
+    """Check if user has admin role"""
+    role_value = get_role_value(role)
+    return role_value in ['company_admin', 'super_admin']
+
+
 def build_user_response(user: User) -> UserResponse:
     """Helper to build UserResponse with all fields"""
     return UserResponse(
@@ -64,7 +83,7 @@ async def create_user(
     """Create a new user (admin only)"""
 
     # Check if current user is admin
-    if current_user.role not in [UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN]:
+    if not is_admin(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only administrators can create users"
@@ -88,16 +107,9 @@ async def create_user(
             detail="Email already exists"
         )
 
-    # Map role string to UserRole enum
-    role_mapping = {
-        'company_admin': UserRole.COMPANY_ADMIN,
-        'dispatcher': UserRole.DISPATCHER,
-        'driver': UserRole.DRIVER,
-        'customer': UserRole.CUSTOMER,
-        'viewer': UserRole.VIEWER,
-        'custom': UserRole.CUSTOM
-    }
-    user_role = role_mapping.get(user_data.role.lower(), UserRole.VIEWER)
+    # Validate role string
+    valid_roles = ['company_admin', 'dispatcher', 'driver', 'customer', 'viewer', 'custom']
+    user_role = user_data.role.lower() if user_data.role.lower() in valid_roles else 'viewer'
 
     # Create new user with provided password
     new_user = User(
@@ -133,7 +145,7 @@ async def create_user(
         username=new_user.username,
         email=new_user.email,
         temporary_password=None,  # Don't return password in response
-        role=new_user.role.value if isinstance(new_user.role, UserRole) else new_user.role
+        role=get_role_value(new_user.role)
     )
 
 
@@ -145,7 +157,7 @@ async def get_company_users(
     """Get all users in the current user's company"""
 
     # Check permissions
-    if current_user.role not in [UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN, UserRole.DISPATCHER]:
+    if not is_admin_or_dispatcher(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Insufficient permissions to view company users"
@@ -167,7 +179,7 @@ async def get_user(
     """Get user by ID (admin only, must be same company)"""
 
     # Check if current user is admin
-    if current_user.role not in [UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN]:
+    if not is_admin(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only administrators can view user details"
@@ -217,7 +229,7 @@ async def update_user(
     """Update user (admin only)"""
 
     # Check if current user is admin
-    if current_user.role not in [UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN]:
+    if not is_admin(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only administrators can update users"
@@ -238,7 +250,8 @@ async def update_user(
         )
 
     # Prevent admins from modifying their own admin status
-    if user.id == current_user.id and user_data.role and user_data.role != user.role.value:
+    current_role_value = get_role_value(user.role)
+    if user.id == current_user.id and user_data.role and user_data.role.lower() != current_role_value:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You cannot change your own role"
@@ -276,22 +289,16 @@ async def update_user(
     if user_data.is_active is not None:
         user.is_active = user_data.is_active
 
-    # Update role
+    # Update role (store as string)
     if user_data.role:
-        role_mapping = {
-            'company_admin': UserRole.COMPANY_ADMIN,
-            'dispatcher': UserRole.DISPATCHER,
-            'driver': UserRole.DRIVER,
-            'customer': UserRole.CUSTOMER,
-            'viewer': UserRole.VIEWER,
-            'custom': UserRole.CUSTOM
-        }
-        if user_data.role.lower() in role_mapping:
-            user.role = role_mapping[user_data.role.lower()]
+        valid_roles = ['company_admin', 'dispatcher', 'driver', 'customer', 'viewer', 'custom']
+        if user_data.role.lower() in valid_roles:
+            user.role = user_data.role.lower()
 
     # Update page permissions (only for custom role)
     if user_data.page_permissions is not None:
-        if user.role == UserRole.CUSTOM:
+        user_role_value = get_role_value(user.role)
+        if user_role_value == 'custom':
             user.page_permissions = user_data.page_permissions
         else:
             # If changing to custom role, set permissions
@@ -316,7 +323,7 @@ async def delete_user(
     """Delete user (admin only)"""
 
     # Check if current user is admin
-    if current_user.role not in [UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN]:
+    if not is_admin(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only administrators can delete users"
