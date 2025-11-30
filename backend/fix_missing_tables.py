@@ -92,6 +92,15 @@ async def fix_schema():
         """)
         print("✓ Created receivers table")
 
+        print("\nAdding user_id column to drivers table...")
+        await conn.execute("""
+            ALTER TABLE drivers ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);
+        """)
+        await conn.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_drivers_user_id ON drivers(user_id) WHERE user_id IS NOT NULL;
+        """)
+        print("✓ Added user_id column to drivers")
+
         # Verify the changes
         print("\nVerifying schema...")
 
