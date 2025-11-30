@@ -53,23 +53,22 @@ const ROLE_PAGES: Record<string, string[]> = {
   custom: [],
 }
 
-// Get allowed pages for a user based on role and custom permissions
+// Get allowed pages for a user based on custom permissions or role defaults
 function getAllowedPages(user: any): string[] {
   if (!user) return []
 
-  const roleLower = user.role?.toLowerCase() || 'viewer'
-
-  // For custom role, use page_permissions if available
-  if (roleLower === 'custom' && user.page_permissions?.pages) {
+  // First priority: use page_permissions if set (works for any role)
+  if (user.page_permissions?.pages && user.page_permissions.pages.length > 0) {
     return user.page_permissions.pages
   }
 
-  // Use allowed_pages from backend if available
+  // Second priority: use allowed_pages from backend if available
   if (user.allowed_pages && user.allowed_pages.length > 0) {
     return user.allowed_pages
   }
 
   // Fallback to role-based defaults
+  const roleLower = user.role?.toLowerCase() || 'viewer'
   return ROLE_PAGES[roleLower] || ROLE_PAGES.viewer
 }
 

@@ -295,15 +295,9 @@ async def update_user(
         if user_data.role.lower() in valid_roles:
             user.role = user_data.role.lower()
 
-    # Update page permissions (only for custom role)
+    # Update page permissions (allow for any role to enable manual page control)
     if user_data.page_permissions is not None:
-        user_role_value = get_role_value(user.role)
-        if user_role_value == 'custom':
-            user.page_permissions = user_data.page_permissions
-        else:
-            # If changing to custom role, set permissions
-            if user_data.role and user_data.role.lower() == 'custom':
-                user.page_permissions = user_data.page_permissions
+        user.page_permissions = user_data.page_permissions
 
     await db.commit()
     await db.refresh(user)

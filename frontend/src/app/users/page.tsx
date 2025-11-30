@@ -61,6 +61,7 @@ interface UpdateUserData {
   role?: string
   is_active?: boolean
   password?: string
+  page_permissions?: { pages: string[] }
 }
 
 const ROLES = [
@@ -283,6 +284,14 @@ export default function UsersPage() {
 
   const handleEditUser = (user: User) => {
     setEditingUser(user)
+    // Get default pages for the user's role or their custom pages
+    let userPages: string[]
+    if (user.page_permissions?.pages && user.page_permissions.pages.length > 0) {
+      userPages = user.page_permissions.pages
+    } else {
+      const roleLower = user.role?.toLowerCase() || 'viewer'
+      userPages = ROLE_PAGES[roleLower] || ROLE_PAGES.viewer
+    }
     setEditForm({
       username: user.username,
       email: user.email,
@@ -290,6 +299,7 @@ export default function UsersPage() {
       last_name: user.last_name,
       role: user.role,
       is_active: user.is_active,
+      page_permissions: { pages: userPages },
     })
     setIsEditModalOpen(true)
   }
@@ -297,6 +307,32 @@ export default function UsersPage() {
   const handleUpdateUser = () => {
     if (!editingUser) return
     updateUser.mutate({ id: editingUser.id, data: editForm })
+  }
+
+  // Toggle a page in edit form
+  const toggleEditPage = (pageId: string) => {
+    const currentPages = editForm.page_permissions?.pages || []
+    const newPages = currentPages.includes(pageId)
+      ? currentPages.filter(p => p !== pageId)
+      : [...currentPages, pageId]
+    setEditForm({ ...editForm, page_permissions: { pages: newPages } })
+  }
+
+  // Select all pages in edit form
+  const selectAllEditPages = () => {
+    setEditForm({ ...editForm, page_permissions: { pages: ALL_PAGES.map(p => p.id) } })
+  }
+
+  // Select none (except dashboard) in edit form
+  const selectNoneEditPages = () => {
+    setEditForm({ ...editForm, page_permissions: { pages: ['dashboard'] } })
+  }
+
+  // Reset to role defaults in edit form
+  const resetToRoleDefaults = () => {
+    const roleLower = editForm.role?.toLowerCase() || 'viewer'
+    const defaultPages = ROLE_PAGES[roleLower] || ROLE_PAGES.viewer
+    setEditForm({ ...editForm, page_permissions: { pages: defaultPages } })
   }
 
   const handleDeleteUser = (user: User) => {
@@ -693,83 +729,165 @@ export default function UsersPage() {
 
         {/* Edit User Modal */}
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>Edit User</DialogTitle>
+              <DialogDescription>
+                Update user information and configure page access
+              </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit_first_name">First Name</Label>
-                  <Input
-                    id="edit_first_name"
-                    value={editForm.first_name || ''}
-                    onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
-                  />
+            <div className="flex-1 overflow-y-auto py-4 space-y-6">
+              {/* Basic Info Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">Basic Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_first_name">First Name</Label>
+                    <Input
+                      id="edit_first_name"
+                      value={editForm.first_name || ''}
+                      onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_last_name">Last Name</Label>
+                    <Input
+                      id="edit_last_name"
+                      value={editForm.last_name || ''}
+                      onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_last_name">Last Name</Label>
-                  <Input
-                    id="edit_last_name"
-                    value={editForm.last_name || ''}
-                    onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_email">Email</Label>
+                    <Input
+                      id="edit_email"
+                      type="email"
+                      value={editForm.email || ''}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_username">Username</Label>
+                    <Input
+                      id="edit_username"
+                      value={editForm.username || ''}
+                      onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_role">Role</Label>
+                    <Select
+                      value={editForm.role || ''}
+                      onValueChange={(value) => setEditForm({ ...editForm, role: value })}
+                      disabled={editingUser?.id === currentUser?.id}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ROLES.map((role) => (
+                          <SelectItem key={role.value} value={role.value}>
+                            <div>
+                              <div className="font-medium">{role.label}</div>
+                              <div className="text-xs text-gray-500">{role.description}</div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {editingUser?.id === currentUser?.id && (
+                      <p className="text-xs text-orange-600">You cannot change your own role</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_password">New Password (optional)</Label>
+                    <Input
+                      id="edit_password"
+                      type="password"
+                      value={editForm.password || ''}
+                      onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                      placeholder="Leave blank to keep current"
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_email">Email</Label>
-                <Input
-                  id="edit_email"
-                  type="email"
-                  value={editForm.email || ''}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_username">Username</Label>
-                <Input
-                  id="edit_username"
-                  value={editForm.username || ''}
-                  onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_role">Role</Label>
-                <Select
-                  value={editForm.role || ''}
-                  onValueChange={(value) => setEditForm({ ...editForm, role: value })}
-                  disabled={editingUser?.id === currentUser?.id}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLES.map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        <div>
-                          <div className="font-medium">{role.label}</div>
-                          <div className="text-xs text-gray-500">{role.description}</div>
+
+              {/* Page Access Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="text-sm font-semibold text-gray-700">Page Access</h3>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={selectAllEditPages}
+                      className="h-7 text-xs"
+                    >
+                      All
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={selectNoneEditPages}
+                      className="h-7 text-xs"
+                    >
+                      None
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={resetToRoleDefaults}
+                      className="h-7 text-xs"
+                    >
+                      Role Default
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {ALL_PAGES.map((page) => {
+                    const Icon = page.icon
+                    const isEnabled = editForm.page_permissions?.pages?.includes(page.id) || false
+                    const isDashboard = page.id === 'dashboard'
+
+                    return (
+                      <div
+                        key={page.id}
+                        className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${
+                          isEnabled
+                            ? 'border-blue-200 bg-blue-50'
+                            : 'border-gray-200 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`p-1.5 rounded-md ${
+                            isEnabled ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
+                          }`}>
+                            <Icon className="h-3.5 w-3.5" />
+                          </div>
+                          <span className="text-sm font-medium">{page.name}</span>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {editingUser?.id === currentUser?.id && (
-                  <p className="text-xs text-orange-600">You cannot change your own role</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_password">New Password (optional)</Label>
-                <Input
-                  id="edit_password"
-                  type="password"
-                  value={editForm.password || ''}
-                  onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
-                  placeholder="Leave blank to keep current password"
-                />
+                        <Switch
+                          checked={isEnabled}
+                          onCheckedChange={() => toggleEditPage(page.id)}
+                          disabled={isDashboard}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+                <p className="text-xs text-gray-500">
+                  Dashboard is always enabled. Toggle pages on/off to control what this user can see.
+                </p>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="border-t pt-4">
               <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
                 Cancel
               </Button>
