@@ -48,8 +48,9 @@ class User(Base):
     @property
     def allowed_pages(self) -> list[str]:
         """Return list of pages user can access"""
-        # If custom role, use custom permissions
-        if self.role == UserRole.CUSTOM and self.page_permissions:
+        # First priority: use page_permissions if set (works for any role)
+        # This allows admins to customize any user's page access
+        if self.page_permissions and self.page_permissions.get("pages"):
             return self.page_permissions.get("pages", [])
 
         # Default pages based on role - must match frontend sidebar.tsx and permissions-modal.tsx
