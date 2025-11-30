@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
-import { ConditionalRender } from '@/components/auth/ProtectedRoute'
 import {
   Home,
   Package,
@@ -23,24 +22,56 @@ import {
   Shield
 } from 'lucide-react'
 
+// Navigation items with page IDs that match the permissions system
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home, permissions: [] },
-  { name: 'Loads', href: '/loads', icon: Package, permissions: ['can_view_loads'] },
-  { name: 'Lanes', href: '/lanes', icon: Route, permissions: ['can_view_loads'] },
-  { name: 'Equipment', href: '/trucks', icon: Truck, permissions: ['can_view_trucks'] },
-  { name: 'Drivers', href: '/drivers', icon: Users, permissions: ['can_view_drivers'] },
-  { name: 'Customers', href: '/customers', icon: Building2, permissions: ['can_view_customers'] },
-  { name: 'Shippers', href: '/shippers', icon: Warehouse, permissions: [] },
-  { name: 'Receivers', href: '/receivers', icon: Warehouse, permissions: [] },
-  { name: 'Expenses', href: '/expenses', icon: Receipt, permissions: [] },
-  { name: 'Fuel', href: '/fuel', icon: FuelIcon, permissions: [] },
-  { name: 'Payroll', href: '/payroll', icon: Calculator, permissions: [] },
-  { name: 'Invoices', href: '/invoices', icon: FileText, permissions: ['can_view_invoices'] },
-  { name: 'Ratecons', href: '/ratecons', icon: Receipt, permissions: [] },
-  { name: 'Reports', href: '/reports', icon: DollarSign, permissions: ['can_view_reports'] },
-  { name: 'Users', href: '/users', icon: Shield, permissions: ['can_manage_users'] },
-  { name: 'Settings', href: '/settings', icon: Settings, permissions: [] },
+  { name: 'Dashboard', href: '/dashboard', icon: Home, pageId: 'dashboard' },
+  { name: 'Loads', href: '/loads', icon: Package, pageId: 'loads' },
+  { name: 'Lanes', href: '/lanes', icon: Route, pageId: 'lanes' },
+  { name: 'Equipment', href: '/trucks', icon: Truck, pageId: 'trucks' },
+  { name: 'Drivers', href: '/drivers', icon: Users, pageId: 'drivers' },
+  { name: 'Customers', href: '/customers', icon: Building2, pageId: 'customers' },
+  { name: 'Shippers', href: '/shippers', icon: Warehouse, pageId: 'shippers' },
+  { name: 'Receivers', href: '/receivers', icon: Warehouse, pageId: 'receivers' },
+  { name: 'Expenses', href: '/expenses', icon: Receipt, pageId: 'expenses' },
+  { name: 'Fuel', href: '/fuel', icon: FuelIcon, pageId: 'fuel' },
+  { name: 'Payroll', href: '/payroll', icon: Calculator, pageId: 'payroll' },
+  { name: 'Invoices', href: '/invoices', icon: FileText, pageId: 'invoices' },
+  { name: 'Ratecons', href: '/ratecons', icon: Receipt, pageId: 'ratecons' },
+  { name: 'Reports', href: '/reports', icon: DollarSign, pageId: 'reports' },
+  { name: 'Users', href: '/users', icon: Shield, pageId: 'users' },
+  { name: 'Settings', href: '/settings', icon: Settings, pageId: 'settings' },
 ]
+
+// Default pages for each role
+const ROLE_PAGES: Record<string, string[]> = {
+  company_admin: navigation.map(n => n.pageId),
+  super_admin: navigation.map(n => n.pageId),
+  dispatcher: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'invoices', 'reports'],
+  driver: ['dashboard', 'loads'],
+  customer: ['dashboard', 'loads', 'invoices'],
+  viewer: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'invoices', 'reports'],
+  custom: [],
+}
+
+// Get allowed pages for a user based on role and custom permissions
+function getAllowedPages(user: any): string[] {
+  if (!user) return []
+
+  const roleLower = user.role?.toLowerCase() || 'viewer'
+
+  // For custom role, use page_permissions if available
+  if (roleLower === 'custom' && user.page_permissions?.pages) {
+    return user.page_permissions.pages
+  }
+
+  // Use allowed_pages from backend if available
+  if (user.allowed_pages && user.allowed_pages.length > 0) {
+    return user.allowed_pages
+  }
+
+  // Fallback to role-based defaults
+  return ROLE_PAGES[roleLower] || ROLE_PAGES.viewer
+}
 
 export default function Sidebar() {
   const pathname = usePathname()
@@ -50,6 +81,12 @@ export default function Sidebar() {
     await logout()
     window.location.href = '/auth/login'
   }
+
+  // Get the list of pages this user can access
+  const allowedPages = getAllowedPages(user)
+
+  // Filter navigation items based on allowed pages
+  const filteredNavigation = navigation.filter(item => allowedPages.includes(item.pageId))
 
   return (
     <div className="sidebar flex h-full w-60 flex-col" style={{ backgroundColor: 'var(--monday-bg-primary)', borderRight: '1px solid var(--monday-border-light)' }}>
@@ -63,34 +100,29 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-0.5 px-3 py-4">
-        {navigation.map((item) => {
+        {filteredNavigation.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href
 
           return (
-            <ConditionalRender
+            <Link
               key={item.name}
-              user={user}
-              permissions={item.permissions}
+              href={item.href}
+              className={cn(
+                'group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors nav-item',
+                isActive ? 'active' : ''
+              )}
+              style={isActive ? {
+                backgroundColor: 'rgba(97, 97, 255, 0.1)',
+                color: 'var(--monday-cornflower)',
+                borderLeft: '3px solid var(--monday-cornflower)'
+              } : {
+                color: 'var(--monday-text-secondary)'
+              }}
             >
-              <Link
-                href={item.href}
-                className={cn(
-                  'group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors nav-item',
-                  isActive ? 'active' : ''
-                )}
-                style={isActive ? {
-                  backgroundColor: 'rgba(97, 97, 255, 0.1)',
-                  color: 'var(--monday-cornflower)',
-                  borderLeft: '3px solid var(--monday-cornflower)'
-                } : {
-                  color: 'var(--monday-text-secondary)'
-                }}
-              >
-                <Icon className="mr-3 h-5 w-5 flex-shrink-0" style={{ color: isActive ? 'var(--monday-cornflower)' : 'var(--monday-text-muted)' }} />
-                {item.name}
-              </Link>
-            </ConditionalRender>
+              <Icon className="mr-3 h-5 w-5 flex-shrink-0" style={{ color: isActive ? 'var(--monday-cornflower)' : 'var(--monday-text-muted)' }} />
+              {item.name}
+            </Link>
           )
         })}
       </nav>

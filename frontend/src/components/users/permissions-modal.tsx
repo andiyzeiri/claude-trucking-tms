@@ -43,7 +43,7 @@ const ALL_PAGES = [
   { id: 'settings', name: 'Settings', icon: Settings, description: 'System settings' },
 ]
 
-// Default pages for each role
+// Default pages for each role - must match sidebar.tsx and ProtectedRoute.tsx
 const ROLE_PAGES: Record<string, string[]> = {
   company_admin: ALL_PAGES.map(p => p.id),
   super_admin: ALL_PAGES.map(p => p.id),

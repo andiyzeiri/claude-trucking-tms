@@ -1,8 +1,70 @@
 'use client'
 
 import { useAuth } from '@/hooks/use-auth'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useEffect } from 'react'
+
+// Default pages for each role - must match sidebar.tsx
+const ROLE_PAGES: Record<string, string[]> = {
+  company_admin: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'payroll', 'invoices', 'ratecons', 'reports', 'users', 'settings'],
+  super_admin: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'payroll', 'invoices', 'ratecons', 'reports', 'users', 'settings'],
+  dispatcher: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'invoices', 'reports'],
+  driver: ['dashboard', 'loads'],
+  customer: ['dashboard', 'loads', 'invoices'],
+  viewer: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'invoices', 'reports'],
+  custom: [],
+}
+
+// Get allowed pages for a user based on role and custom permissions
+export function getAllowedPages(user: any): string[] {
+  if (!user) return []
+
+  const roleLower = user.role?.toLowerCase() || 'viewer'
+
+  // For custom role, use page_permissions if available
+  if (roleLower === 'custom' && user.page_permissions?.pages) {
+    return user.page_permissions.pages
+  }
+
+  // Use allowed_pages from backend if available
+  if (user.allowed_pages && user.allowed_pages.length > 0) {
+    return user.allowed_pages
+  }
+
+  // Fallback to role-based defaults
+  return ROLE_PAGES[roleLower] || ROLE_PAGES.viewer
+}
+
+// Map URL paths to page IDs
+function getPageIdFromPath(pathname: string): string | null {
+  // Remove leading slash and get first segment
+  const segments = pathname.split('/').filter(Boolean)
+  if (segments.length === 0) return 'dashboard'
+
+  const firstSegment = segments[0]
+
+  // Map common paths to page IDs
+  const pathMap: Record<string, string> = {
+    'dashboard': 'dashboard',
+    'loads': 'loads',
+    'lanes': 'lanes',
+    'trucks': 'trucks',
+    'drivers': 'drivers',
+    'customers': 'customers',
+    'shippers': 'shippers',
+    'receivers': 'receivers',
+    'expenses': 'expenses',
+    'fuel': 'fuel',
+    'payroll': 'payroll',
+    'invoices': 'invoices',
+    'ratecons': 'ratecons',
+    'reports': 'reports',
+    'users': 'users',
+    'settings': 'settings',
+  }
+
+  return pathMap[firstSegment] || null
+}
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -17,6 +79,7 @@ export const ProtectedRoute = ({
 }: ProtectedRouteProps) => {
   const { user, isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     if (!isLoading && requireAuth && !isAuthenticated) {
@@ -24,6 +87,21 @@ export const ProtectedRoute = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isLoading, requireAuth])
+
+  // Check page access after auth is confirmed
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user) {
+      const pageId = getPageIdFromPath(pathname)
+      if (pageId) {
+        const allowedPages = getAllowedPages(user)
+        if (!allowedPages.includes(pageId)) {
+          // Redirect to dashboard if user doesn't have access to this page
+          router.push('/dashboard')
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, isLoading, user, pathname])
 
   // Show loading state
   if (isLoading) {
@@ -37,6 +115,17 @@ export const ProtectedRoute = ({
   // Redirect to login if authentication required
   if (requireAuth && !isAuthenticated) {
     return null // Will redirect in useEffect
+  }
+
+  // Check page access
+  if (user) {
+    const pageId = getPageIdFromPath(pathname)
+    if (pageId) {
+      const allowedPages = getAllowedPages(user)
+      if (!allowedPages.includes(pageId)) {
+        return null // Will redirect in useEffect
+      }
+    }
   }
 
   return <>{children}</>
