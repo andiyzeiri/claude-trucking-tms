@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DatePicker } from '@/components/ui/date-picker'
 
 export interface DriverData {
   id?: number
@@ -203,22 +204,20 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="date_hired">Date Hired</Label>
-            <Input
-              id="date_hired"
-              type="date"
+            <Label>Date Hired</Label>
+            <DatePicker
               value={formData.date_hired || ''}
-              onChange={(e) => setFormData({ ...formData, date_hired: e.target.value })}
+              onChange={(date) => setFormData({ ...formData, date_hired: date })}
+              placeholder="Select hire date"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="date_terminated" className="text-red-600">Date Terminated</Label>
-            <Input
-              id="date_terminated"
-              type="date"
+            <Label className="text-red-600">Date Terminated</Label>
+            <DatePicker
               value={formData.date_terminated || ''}
-              onChange={(e) => setFormData({ ...formData, date_terminated: e.target.value })}
+              onChange={(date) => setFormData({ ...formData, date_terminated: date })}
+              placeholder="Select termination date"
               className={formData.date_terminated ? 'border-red-300 bg-red-50' : ''}
             />
             {formData.date_terminated && (
@@ -227,12 +226,11 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="date_of_birth">Date of Birth</Label>
-            <Input
-              id="date_of_birth"
-              type="date"
+            <Label>Date of Birth</Label>
+            <DatePicker
               value={formData.date_of_birth || ''}
-              onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+              onChange={(date) => setFormData({ ...formData, date_of_birth: date })}
+              placeholder="Select birth date"
             />
           </div>
 
@@ -247,22 +245,20 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="mvr_expiry">MVR Expiry</Label>
-            <Input
-              id="mvr_expiry"
-              type="date"
+            <Label>MVR Expiry</Label>
+            <DatePicker
               value={formData.mvr_expiry || ''}
-              onChange={(e) => setFormData({ ...formData, mvr_expiry: e.target.value })}
+              onChange={(date) => setFormData({ ...formData, mvr_expiry: date })}
+              placeholder="Select MVR expiry"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="medical_card_expiry">Medical Card Expiry</Label>
-            <Input
-              id="medical_card_expiry"
-              type="date"
+            <Label>Medical Card Expiry</Label>
+            <DatePicker
               value={formData.medical_card_expiry || ''}
-              onChange={(e) => setFormData({ ...formData, medical_card_expiry: e.target.value })}
+              onChange={(date) => setFormData({ ...formData, medical_card_expiry: date })}
+              placeholder="Select medical card expiry"
             />
           </div>
         </div>
