@@ -2368,7 +2368,7 @@ export default function LoadsPageInline() {
         <div className="border rounded-lg bg-white overflow-hidden shadow-sm" style={{borderColor: 'var(--monday-border-light)'}} onContextMenu={handleGeneralContextMenu}>
           <div className="overflow-x-auto">
             <table className="w-full table-auto" style={{borderCollapse: 'separate', borderSpacing: 0}}>
-              <thead style={{backgroundColor: 'var(--monday-bg-secondary)'}}>
+              <thead className="sticky top-0 z-10 shadow-sm" style={{backgroundColor: 'var(--monday-bg-secondary)'}}>
                 <tr>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px`}} onClick={() => handleSort('weekNumber')}>
                     <ColumnWidthControl
