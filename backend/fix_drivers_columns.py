@@ -23,6 +23,10 @@ def get_db_connection():
         print("ERROR: No database connection info found")
         sys.exit(1)
 
+    # Convert asyncpg URL to psycopg2 format
+    if "postgresql+asyncpg://" in database_url:
+        database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
+
     return psycopg2.connect(database_url)
 
 def fix_drivers_table():
