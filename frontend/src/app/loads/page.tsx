@@ -623,10 +623,16 @@ export default function LoadsPageInline() {
       return
     }
 
+    // Find "Absolute Trucking Inc" as default broker, fallback to first customer
+    const absoluteTrucking = customers.find(c =>
+      c.name?.toLowerCase().includes('absolute trucking')
+    )
+    const defaultCustomerId = absoluteTrucking?.id || customers[0].id
+
     // Create a new load immediately in the backend
     const backendData: any = {
       load_number: '',
-      customer_id: customers[0].id,
+      customer_id: defaultCustomerId,
       driver_id: null,
       truck_id: null,
       pickup_location: '',
