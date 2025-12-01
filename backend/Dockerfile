@@ -53,6 +53,7 @@ COPY fix_fuel_def_columns.py ./
 COPY stamp_alembic.py ./
 COPY fix_enum_types.py ./
 COPY fix_trucks_table.py ./
+COPY fix_drivers_columns.py ./
 COPY entrypoint.sh ./
 
 # Copy scripts directory

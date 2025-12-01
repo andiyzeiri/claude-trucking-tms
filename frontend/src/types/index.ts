@@ -60,6 +60,12 @@ export interface Driver {
   phone?: string
   email?: string
   status: 'available' | 'on_trip' | 'off_duty'
+  date_hired?: string
+  date_terminated?: string
+  date_of_birth?: string
+  experience?: string
+  mvr_expiry?: string
+  medical_card_expiry?: string
   created_at: string
   updated_at: string
 }

@@ -49,6 +49,7 @@ export default function DriversPage() {
       email: driver.email || '',
       status: driver.status,
       date_hired: driver.date_hired || '',
+      date_terminated: driver.date_terminated || '',
       date_of_birth: driver.date_of_birth || '',
       experience: driver.experience || '',
       mvr_expiry: driver.mvr_expiry || '',
@@ -74,6 +75,7 @@ export default function DriversPage() {
       email: driverData.email,
       status: driverData.status,
       date_hired: driverData.date_hired || null,
+      date_terminated: driverData.date_terminated || null,
       date_of_birth: driverData.date_of_birth || null,
       experience: driverData.experience || null,
       mvr_expiry: driverData.mvr_expiry || null,
@@ -182,6 +184,22 @@ export default function DriversPage() {
       label: 'Date Hired',
       width: '120px',
       render: (value) => <span style={{ color: 'var(--monday-text-primary)' }}>{value ? new Date(value).toLocaleDateString() : 'N/A'}</span>
+    },
+    {
+      key: 'date_terminated',
+      label: 'Date Terminated',
+      width: '130px',
+      filterable: true,
+      render: (value, row) => {
+        if (!value) {
+          return <span className="text-green-600 font-medium">Active</span>
+        }
+        return (
+          <span className="text-red-600 font-medium">
+            {new Date(value).toLocaleDateString()}
+          </span>
+        )
+      }
     },
     {
       key: 'date_of_birth',

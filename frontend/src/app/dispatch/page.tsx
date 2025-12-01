@@ -18,8 +18,13 @@ export default function DispatchBoardPage() {
   const { data: driversData } = useDrivers(1, 100)
   const { data: loadsData } = useLoads(1, 1000) // Get all loads
 
-  const drivers = driversData?.items || []
+  const allDrivers = driversData?.items || []
   const loads = loadsData?.items || []
+
+  // Filter out terminated drivers (those with date_terminated set)
+  const drivers = useMemo(() => {
+    return allDrivers.filter(driver => !driver.date_terminated)
+  }, [allDrivers])
 
   // Track which drivers are marked as off for which days
   const [daysOff, setDaysOff] = useState<DayOffDriver[]>([])

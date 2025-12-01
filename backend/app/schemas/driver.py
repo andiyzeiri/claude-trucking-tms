@@ -12,12 +12,14 @@ class DriverBase(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     status: DriverStatus = DriverStatus.OFF_DUTY
-    # TODO: Add these fields back when database migration is applied
-    # date_hired: Optional[date] = None
-    # date_of_birth: Optional[date] = None
-    # experience: Optional[str] = None
-    # mvr_expiry: Optional[date] = None
-    # medical_card_expiry: Optional[date] = None
+    # Employment dates
+    date_hired: Optional[date] = None
+    date_terminated: Optional[date] = None
+    # Additional info
+    date_of_birth: Optional[date] = None
+    experience: Optional[str] = None
+    mvr_expiry: Optional[date] = None
+    medical_card_expiry: Optional[date] = None
 
 
 class DriverCreate(DriverBase):
@@ -32,12 +34,14 @@ class DriverUpdate(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     status: Optional[DriverStatus] = None
-    # TODO: Add these fields back when database migration is applied
-    # date_hired: Optional[date] = None
-    # date_of_birth: Optional[date] = None
-    # experience: Optional[str] = None
-    # mvr_expiry: Optional[date] = None
-    # medical_card_expiry: Optional[date] = None
+    # Employment dates
+    date_hired: Optional[date] = None
+    date_terminated: Optional[date] = None
+    # Additional info
+    date_of_birth: Optional[date] = None
+    experience: Optional[str] = None
+    mvr_expiry: Optional[date] = None
+    medical_card_expiry: Optional[date] = None
 
 
 class DriverResponse(DriverBase):

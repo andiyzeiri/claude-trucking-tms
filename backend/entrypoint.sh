@@ -45,6 +45,10 @@ python3 scripts/fix_truck_enum_columns.py || echo "⚠️  fix_truck_enum_column
 echo "🔧 Fixing trucks table..."
 python3 fix_trucks_table.py || echo "⚠️  fix_trucks_table.py had errors, continuing..."
 
+# Fix drivers table (add employment date columns)
+echo "🔧 Fixing drivers table..."
+python3 fix_drivers_columns.py || echo "⚠️  fix_drivers_columns.py had errors, continuing..."
+
 # Stamp Alembic version to match current state
 echo "📦 Stamping Alembic version..."
 python3 stamp_alembic.py || echo "⚠️  stamp_alembic.py had errors, continuing..."

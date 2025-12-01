@@ -16,6 +16,7 @@ export interface DriverData {
   email: string
   status: 'available' | 'on_trip' | 'off_duty'
   date_hired?: string
+  date_terminated?: string
   date_of_birth?: string
   experience?: string
   mvr_expiry?: string
@@ -40,6 +41,7 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
     email: '',
     status: 'available',
     date_hired: '',
+    date_terminated: '',
     date_of_birth: '',
     experience: '',
     mvr_expiry: '',
@@ -60,6 +62,7 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
         email: '',
         status: 'available',
         date_hired: '',
+        date_terminated: '',
         date_of_birth: '',
         experience: '',
         mvr_expiry: '',
@@ -207,6 +210,20 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
               value={formData.date_hired || ''}
               onChange={(e) => setFormData({ ...formData, date_hired: e.target.value })}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date_terminated" className="text-red-600">Date Terminated</Label>
+            <Input
+              id="date_terminated"
+              type="date"
+              value={formData.date_terminated || ''}
+              onChange={(e) => setFormData({ ...formData, date_terminated: e.target.value })}
+              className={formData.date_terminated ? 'border-red-300 bg-red-50' : ''}
+            />
+            {formData.date_terminated && (
+              <p className="text-xs text-red-500">Driver will not appear on dispatch board</p>
+            )}
           </div>
 
           <div className="space-y-2">
