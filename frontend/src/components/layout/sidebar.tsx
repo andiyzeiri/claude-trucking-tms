@@ -19,12 +19,14 @@ import {
   Receipt,
   Warehouse,
   Fuel as FuelIcon,
-  Shield
+  Shield,
+  CalendarDays
 } from 'lucide-react'
 
 // Navigation items with page IDs that match the permissions system
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home, pageId: 'dashboard' },
+  { name: 'Dispatch Board', href: '/dispatch', icon: CalendarDays, pageId: 'dispatch' },
   { name: 'Loads', href: '/loads', icon: Package, pageId: 'loads' },
   { name: 'Lanes', href: '/lanes', icon: Route, pageId: 'lanes' },
   { name: 'Equipment', href: '/trucks', icon: Truck, pageId: 'trucks' },
@@ -46,10 +48,10 @@ const navigation = [
 const ROLE_PAGES: Record<string, string[]> = {
   company_admin: navigation.map(n => n.pageId),
   super_admin: navigation.map(n => n.pageId),
-  dispatcher: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'invoices', 'reports'],
+  dispatcher: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'invoices', 'reports'],
   driver: ['dashboard', 'loads'],
   customer: ['dashboard', 'loads', 'invoices'],
-  viewer: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'invoices', 'reports'],
+  viewer: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'invoices', 'reports'],
   custom: [],
 }
 

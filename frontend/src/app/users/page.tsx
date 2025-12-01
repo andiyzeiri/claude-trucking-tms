@@ -26,7 +26,8 @@ import {
   Calculator,
   Receipt,
   Warehouse,
-  Fuel
+  Fuel,
+  CalendarDays
 } from 'lucide-react'
 
 interface User {
@@ -76,6 +77,7 @@ const ROLES = [
 // All available pages in the system
 const ALL_PAGES = [
   { id: 'dashboard', name: 'Dashboard', icon: Home, description: 'Main dashboard overview' },
+  { id: 'dispatch', name: 'Dispatch Board', icon: CalendarDays, description: 'Weekly driver schedule' },
   { id: 'loads', name: 'Loads', icon: Package, description: 'Load management & tracking' },
   { id: 'lanes', name: 'Lanes', icon: Route, description: 'Freight lane management' },
   { id: 'trucks', name: 'Equipment', icon: Truck, description: 'Trucks and trailers' },
@@ -97,10 +99,10 @@ const ALL_PAGES = [
 const ROLE_PAGES: Record<string, string[]> = {
   company_admin: ALL_PAGES.map(p => p.id),
   super_admin: ALL_PAGES.map(p => p.id),
-  dispatcher: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'invoices', 'reports'],
+  dispatcher: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'invoices', 'reports'],
   driver: ['dashboard', 'loads'],
   customer: ['dashboard', 'loads', 'invoices'],
-  viewer: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'invoices', 'reports'],
+  viewer: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'invoices', 'reports'],
   custom: [],
 }
 

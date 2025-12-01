@@ -56,6 +56,7 @@ class User(Base):
         # Default pages based on role - must match frontend sidebar.tsx and permissions-modal.tsx
         all_pages = [
             "dashboard",
+            "dispatch",
             "loads",
             "lanes",
             "trucks",
@@ -80,7 +81,7 @@ class User(Base):
             return all_pages
 
         if self.role == UserRole.DISPATCHER:
-            return ["dashboard", "loads", "lanes", "trucks", "drivers", "customers", "shippers", "receivers", "invoices", "reports"]
+            return ["dashboard", "dispatch", "loads", "lanes", "trucks", "drivers", "customers", "shippers", "receivers", "invoices", "reports"]
 
         if self.role == UserRole.DRIVER:
             return ["dashboard", "loads"]
@@ -89,7 +90,7 @@ class User(Base):
             return ["dashboard", "loads", "invoices"]
 
         if self.role == UserRole.VIEWER:
-            return ["dashboard", "loads", "lanes", "trucks", "drivers", "customers", "invoices", "reports"]
+            return ["dashboard", "dispatch", "loads", "lanes", "trucks", "drivers", "customers", "invoices", "reports"]
 
         return ["dashboard"]
 
