@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X, Check, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X, Check, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react'
 import { useLoads, useCreateLoad, useUpdateLoad, useDeleteLoad } from '@/hooks/use-loads'
 import { useCustomers } from '@/hooks/use-customers'
 import { useDrivers } from '@/hooks/use-drivers'
@@ -280,6 +280,7 @@ export default function LoadsPageInline() {
   // Removed locationSuggestions - autocomplete disabled
   const [activeGroupings, setActiveGroupings] = useState<Set<'week' | 'day' | 'driver' | 'customer'>>(new Set(['week', 'driver']))
   const [groupMenuOpen, setGroupMenuOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [upcomingFilter, setUpcomingFilter] = useState<boolean>(false)
@@ -419,9 +420,31 @@ export default function LoadsPageInline() {
     }
   }
 
-  // Filter loads based on upcoming and status filters (MOVED BEFORE groupedLoads)
+  // Filter loads based on search, upcoming and status filters (MOVED BEFORE groupedLoads)
   const filteredLoads = useMemo(() => {
     let filtered = editableLoads
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filtered = filtered.filter(load => {
+        const customerName = customers.find(c => c.id === load.customer_id)?.name || ''
+        const driverName = load.driver ? `${load.driver.first_name} ${load.driver.last_name}` : ''
+        const searchableFields = [
+          load.load_number,
+          customerName,
+          driverName,
+          load.pickup_location,
+          load.delivery_location,
+          load.notes,
+          load.status,
+          String(load.rate || ''),
+          String(load.miles || '')
+        ].map(f => (f || '').toLowerCase())
+
+        return searchableFields.some(field => field.includes(query))
+      })
+    }
 
     // Apply upcoming filter (next 7 days)
     if (upcomingFilter) {
@@ -479,7 +502,7 @@ export default function LoadsPageInline() {
     })
 
     return filtered
-  }, [editableLoads, upcomingFilter, statusFilter, sortField, sortDirection, customers])
+  }, [editableLoads, searchQuery, upcomingFilter, statusFilter, sortField, sortDirection, customers])
 
   // Group loads - now supports multiple groupings
   const groupedLoads = useMemo(() => {
@@ -2228,7 +2251,26 @@ export default function LoadsPageInline() {
             <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>Loads</h1>
             <p style={{ color: 'var(--monday-text-secondary)' }}>Manage your shipments and deliveries</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search loads..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 w-64"
+                style={{ backgroundColor: 'var(--monday-bg-primary)', borderColor: 'var(--monday-border-light)' }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
             <div className="relative" ref={groupMenuRef}>
               <Button
                 variant="outline"
