@@ -221,7 +221,7 @@ export function ExpandablePayrollTable({
                                 {entry.type === 'company' ? 'Company' : 'Owner Op'}
                               </span>
                             </div>
-                            <div className={`col-span-1 font-medium ${isEmptyEntry ? 'text-gray-400' : 'text-green-600'}`}>
+                            <div className="col-span-1 font-medium" style={{color: isEmptyEntry ? '#9ca3af' : '#1a5f2a'}}>
                               {formatCurrency(entry.gross)}
                             </div>
                             <div className={`col-span-1 ${isEmptyEntry ? 'text-gray-400' : 'text-red-600'}`}>
@@ -230,7 +230,7 @@ export function ExpandablePayrollTable({
                             <div className={`col-span-1 font-medium ${isEmptyEntry ? 'text-gray-400' : 'text-gray-900'}`}>
                               {entry.miles.toLocaleString()}
                             </div>
-                            <div className={`col-span-2 font-medium ${isEmptyEntry ? 'text-gray-400' : 'text-green-700'}`}>
+                            <div className="col-span-2 font-medium" style={{color: isEmptyEntry ? '#9ca3af' : '#1a5f2a'}}>
                               {formatCurrency(entry.check)}
                             </div>
                             <div className={`col-span-1 font-medium ${isEmptyEntry ? 'text-gray-400' : 'text-blue-600'}`}>

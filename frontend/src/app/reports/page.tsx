@@ -300,7 +300,7 @@ export default function ReportsPage() {
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Revenue</div>
-            <div className="text-3xl font-bold text-green-600">{formatCurrency(grandTotals.rate)}</div>
+            <div className="text-3xl font-bold" style={{color: '#1a5f2a'}}>{formatCurrency(grandTotals.rate)}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Expenses</div>
@@ -308,7 +308,7 @@ export default function ReportsPage() {
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Profit</div>
-            <div className={`text-3xl font-bold ${grandTotals.profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+            <div className="text-3xl font-bold" style={{color: grandTotals.profit >= 0 ? '#1a5f2a' : '#b91c1c'}}>
               {formatCurrency(grandTotals.profit)}
             </div>
           </div>
@@ -374,7 +374,7 @@ export default function ReportsPage() {
                           <td className="px-4 py-3 text-sm font-semibold text-gray-600">
                             {driverGroup.weeks.length} weeks
                           </td>
-                          <td className="px-4 py-3 text-sm text-right font-bold text-green-600">
+                          <td className="px-4 py-3 text-sm text-right font-bold" style={{color: '#1a5f2a'}}>
                             {formatCurrency(driverGroup.totals.rate)}
                           </td>
                           <td className="px-4 py-3 text-sm text-right font-bold text-gray-900">
@@ -383,7 +383,7 @@ export default function ReportsPage() {
                           <td className="px-4 py-3 text-sm text-right font-bold text-red-600">
                             {formatCurrency(driverGroup.totals.expense)}
                           </td>
-                          <td className={`px-4 py-3 text-sm text-right font-bold bg-green-100 ${driverGroup.totals.profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                          <td className="px-4 py-3 text-sm text-right font-bold" style={{backgroundColor: 'rgba(26, 95, 42, 0.1)', color: driverGroup.totals.profit >= 0 ? '#1a5f2a' : '#b91c1c'}}>
                             {formatCurrency(driverGroup.totals.profit)}
                           </td>
                         </tr>
@@ -411,7 +411,7 @@ export default function ReportsPage() {
                                   </div>
                                 </td>
                                 <td className="px-4 py-2 text-sm text-gray-600"></td>
-                                <td className="px-4 py-2 text-sm text-right font-semibold text-green-600">
+                                <td className="px-4 py-2 text-sm text-right font-semibold" style={{color: '#1a5f2a'}}>
                                   {formatCurrency(weekGroup.totals.rate)}
                                 </td>
                                 <td className="px-4 py-2 text-sm text-right font-semibold text-gray-900">
@@ -420,7 +420,7 @@ export default function ReportsPage() {
                                 <td className="px-4 py-2 text-sm text-right font-semibold text-red-600">
                                   {formatCurrency(weekGroup.totals.expense)}
                                 </td>
-                                <td className={`px-4 py-2 text-sm text-right font-semibold bg-green-50 ${weekGroup.totals.profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                <td className="px-4 py-2 text-sm text-right font-semibold" style={{backgroundColor: 'rgba(26, 95, 42, 0.05)', color: weekGroup.totals.profit >= 0 ? '#1a5f2a' : '#b91c1c'}}>
                                   {formatCurrency(weekGroup.totals.profit)}
                                 </td>
                               </tr>
@@ -438,7 +438,7 @@ export default function ReportsPage() {
                                   <td className="px-4 py-2 text-sm text-gray-900">
                                     {load.truck}
                                   </td>
-                                  <td className="px-4 py-2 text-sm text-right text-green-600">
+                                  <td className="px-4 py-2 text-sm text-right" style={{color: '#1a5f2a'}}>
                                     {formatCurrency(load.rate)}
                                   </td>
                                   <td className="px-4 py-2 text-sm text-right text-gray-900">
@@ -447,7 +447,7 @@ export default function ReportsPage() {
                                   <td className="px-4 py-2 text-sm text-right text-red-600">
                                     {formatCurrency(load.expense)}
                                   </td>
-                                  <td className={`px-4 py-2 text-sm text-right font-semibold bg-green-50 ${load.profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                  <td className="px-4 py-2 text-sm text-right font-semibold" style={{backgroundColor: 'rgba(26, 95, 42, 0.05)', color: load.profit >= 0 ? '#1a5f2a' : '#b91c1c'}}>
                                     {formatCurrency(load.profit)}
                                   </td>
                                 </tr>

@@ -516,7 +516,7 @@ export default function PayrollPage() {
                     <td className="px-4 py-4 text-base font-bold text-right text-gray-900">
                       {grandTotals.miles.toLocaleString()}
                     </td>
-                    <td className="px-4 py-4 text-lg font-bold text-right text-green-700">
+                    <td className="px-4 py-4 text-lg font-bold text-right" style={{color: '#1a5f2a'}}>
                       {formatCurrency(grandTotals.check_amount)}
                     </td>
                   </tr>
@@ -753,7 +753,7 @@ export default function PayrollPage() {
                           <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'var(--colors-foreground-default)'}}>
                             {weekTotals.miles.toLocaleString()}
                           </td>
-                          <td className="px-3 py-2.5 text-right" style={{fontSize: '14px', fontWeight: 700, color: 'rgb(21, 128, 61)', backgroundColor: 'rgba(34, 197, 94, 0.1)'}}>
+                          <td className="px-3 py-2.5 text-right" style={{fontSize: '14px', fontWeight: 700, color: '#1a5f2a', backgroundColor: 'rgba(26, 95, 42, 0.1)'}}>
                             {formatCurrency(weekTotals.check_amount)}
                           </td>
                         </tr>
@@ -904,7 +904,7 @@ export default function PayrollPage() {
                                   <span>{weekData ? weekData.miles.toLocaleString() : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 text-right" style={{fontSize: '13px', fontWeight: 600, color: 'rgb(21, 128, 61)', backgroundColor: 'rgba(34, 197, 94, 0.05)'}}>
+                              <td className="px-3 py-2.5 text-right" style={{fontSize: '13px', fontWeight: 600, color: '#1a5f2a', backgroundColor: 'rgba(26, 95, 42, 0.05)'}}>
                                 {weekData ? formatCurrency(weekData.check_amount) : '-'}
                               </td>
                             </tr>
@@ -918,10 +918,10 @@ export default function PayrollPage() {
                   <tr className="bg-blue-100">
                     <td className="px-3 py-2.5 text-sm font-medium sticky left-0 bg-blue-100">52 Weeks</td>
                     <td className="px-3 py-2.5 text-sm font-medium">{payrollData.length} drivers</td>
-                    <td className="px-3 py-2.5 text-sm font-medium text-right text-green-700">
+                    <td className="px-3 py-2.5 text-sm font-medium text-right" style={{color: '#1a5f2a'}}>
                       {formatCurrency(grandTotals.gross)}
                     </td>
-                    <td className="px-3 py-2.5 text-sm font-medium text-right text-green-700">
+                    <td className="px-3 py-2.5 text-sm font-medium text-right" style={{color: '#1a5f2a'}}>
                       {formatCurrency(grandTotals.extra)}
                     </td>
                     <td className="px-3 py-2.5 text-sm font-medium text-right text-red-700">
@@ -945,7 +945,7 @@ export default function PayrollPage() {
                     <td className="px-3 py-2.5 text-sm font-medium text-right text-blue-700">
                       {grandTotals.miles.toLocaleString()} mi
                     </td>
-                    <td className="px-3 py-2.5 text-lg font-bold text-right" style={{color: 'rgb(21, 128, 61)'}}>
+                    <td className="px-3 py-2.5 text-lg font-bold text-right" style={{color: '#1a5f2a'}}>
                       {formatCurrency(grandTotals.check_amount)}
                     </td>
                   </tr>

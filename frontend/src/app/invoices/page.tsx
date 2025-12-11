@@ -90,7 +90,7 @@ export default function InvoicesPage() {
     const totalAmount = rows.reduce((sum, row) => sum + row.amount, 0)
     return {
       'invoice_number': <span className="text-sm font-medium text-gray-900">{rows.length} invoice{rows.length !== 1 ? 's' : ''}</span>,
-      'amount': <span className="text-sm font-medium text-green-700">${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+      'amount': <span className="text-sm font-medium" style={{color: '#1a5f2a'}}>${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
     }
   }
   const totals = useMemo(() => {
@@ -194,7 +194,7 @@ export default function InvoicesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Paid</p>
-                  <p className="text-2xl font-bold text-green-600">${totals.paidAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-2xl font-bold" style={{color: '#1a5f2a'}}>${totals.paidAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 <div className="p-3 rounded-full bg-green-100">
                   <CheckCircle className="h-6 w-6 text-green-600" />
@@ -231,7 +231,7 @@ export default function InvoicesPage() {
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px' }}></td>
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px' }}></td>
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px' }}>
-                  <span className="text-green-700">${totals.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span style={{color: '#1a5f2a'}}>${totals.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </td>
                 <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '120px' }}></td>
                 <td className="px-3 py-2 text-sm" style={{ width: '120px' }}></td>
