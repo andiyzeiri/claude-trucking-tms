@@ -8,10 +8,6 @@ const nextConfig = {
     // TODO: Fix all TypeScript errors in components
     ignoreBuildErrors: true,
   },
-  eslint: {
-    // Disable ESLint during builds - warnings don't block production
-    ignoreDuringBuilds: true,
-  },
   images: {
     unoptimized: true
   },
