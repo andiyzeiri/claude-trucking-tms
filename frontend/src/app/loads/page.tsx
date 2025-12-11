@@ -1321,7 +1321,7 @@ export default function LoadsPageInline() {
         borderColor = '#ffffff'
       } else if (currentGroupType === 'driver') {
         iconColor = 'var(--monday-working)'
-        bgColor = '#f3ffe1'
+        bgColor = '#d0e1f9'
         borderColor = '#ffffff'
       } else if (currentGroupType === 'customer') {
         iconColor = 'var(--monday-stuck)'
