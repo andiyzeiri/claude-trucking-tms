@@ -323,60 +323,39 @@ export default function LoadsPageInline() {
   } | null>(null)
 
   // Sync loads with editable state and add week info
-  // Use a ref to track if this is the initial load to avoid overwriting local edits on refetch
-  const isInitialLoadRef = useRef(true)
-
+  // Since we update React Query cache directly on create/update/delete,
+  // we can simply transform the loads data and use it
   React.useEffect(() => {
-    // Build a map of current loads from API for quick lookup
-    const apiLoadIds = new Set(loads.map(l => l.id))
+    const loadsWithWeeks = loads.map(load => {
+      const pickupDate = new Date(load.pickup_date)
 
-    // If we have existing editable loads, merge intelligently
-    if (!isInitialLoadRef.current && editableLoads.length > 0) {
-      // Keep existing editableLoads but:
-      // 1. Add any new loads from API that we don't have locally
-      // 2. Remove any loads that no longer exist in API (were deleted elsewhere)
-      // 3. Don't overwrite local data for loads we already have
+      // Check if we have local edits for this load that we should preserve
+      const existingLocal = editableLoads.find(el => el.id === load.id)
+      const isBeingEdited = editingCell?.loadId === load.id || editingLocation?.loadId === load.id
 
-      const existingIds = new Set(editableLoads.map(l => l.id))
-
-      // Find new loads from API that we don't have
-      const newLoadsFromApi = loads.filter(l => !existingIds.has(l.id)).map(load => {
-        const pickupDate = new Date(load.pickup_date)
+      // If this load is being edited, preserve local values
+      if (isBeingEdited && existingLocal) {
         return {
-          ...load,
-          weekNumber: getWeekNumber(pickupDate),
-          weekLabel: getWeekLabel(pickupDate),
-          weekDateRange: getWeekDateRange(pickupDate),
-          dayOfWeek: pickupDate.getDay(),
-          dayLabel: getDayLabel(pickupDate)
+          ...existingLocal,
+          // Always update week info based on current pickup_date
+          weekNumber: getWeekNumber(new Date(existingLocal.pickup_date || load.pickup_date)),
+          weekLabel: getWeekLabel(new Date(existingLocal.pickup_date || load.pickup_date)),
+          weekDateRange: getWeekDateRange(new Date(existingLocal.pickup_date || load.pickup_date)),
+          dayOfWeek: new Date(existingLocal.pickup_date || load.pickup_date).getDay(),
+          dayLabel: getDayLabel(new Date(existingLocal.pickup_date || load.pickup_date))
         }
-      })
-
-      // Keep existing loads that still exist in API, plus any new ones
-      const mergedLoads = [
-        ...editableLoads.filter(l => l.isNew || apiLoadIds.has(l.id)),
-        ...newLoadsFromApi
-      ]
-
-      if (newLoadsFromApi.length > 0 || editableLoads.some(l => !l.isNew && !apiLoadIds.has(l.id))) {
-        setEditableLoads(mergedLoads)
       }
-    } else {
-      // Initial load - populate from API
-      const loadsWithWeeks = loads.map(load => {
-        const pickupDate = new Date(load.pickup_date)
-        return {
-          ...load,
-          weekNumber: getWeekNumber(pickupDate),
-          weekLabel: getWeekLabel(pickupDate),
-          weekDateRange: getWeekDateRange(pickupDate),
-          dayOfWeek: pickupDate.getDay(),
-          dayLabel: getDayLabel(pickupDate)
-        }
-      })
-      setEditableLoads(loadsWithWeeks)
-      isInitialLoadRef.current = false
-    }
+
+      return {
+        ...load,
+        weekNumber: getWeekNumber(pickupDate),
+        weekLabel: getWeekLabel(pickupDate),
+        weekDateRange: getWeekDateRange(pickupDate),
+        dayOfWeek: pickupDate.getDay(),
+        dayLabel: getDayLabel(pickupDate)
+      }
+    })
+    setEditableLoads(loadsWithWeeks)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loads])
 
