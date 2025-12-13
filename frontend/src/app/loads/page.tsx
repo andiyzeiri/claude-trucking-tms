@@ -284,6 +284,7 @@ export default function LoadsPageInline() {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [upcomingFilter, setUpcomingFilter] = useState<boolean>(false)
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, loadId?: number, type: 'load' | 'general'} | null>(null)
   const [pdfModal, setPdfModal] = useState<{url: string, loadId: number, type: 'pod' | 'ratecon'} | null>(null)
   const [sortField, setSortField] = useState<keyof EditableLoad>('pickup_date')
@@ -417,9 +418,34 @@ export default function LoadsPageInline() {
     }
   }
 
-  // Filter loads based on search, upcoming and status filters (MOVED BEFORE groupedLoads)
+  // Get available years from loads data
+  const availableYears = useMemo(() => {
+    const years = new Set<number>()
+    const currentYear = new Date().getFullYear()
+    years.add(currentYear) // Always include current year
+
+    editableLoads.forEach(load => {
+      if (load.pickup_date) {
+        const year = new Date(load.pickup_date).getFullYear()
+        if (year >= 2020 && year <= currentYear + 1) { // Reasonable year range
+          years.add(year)
+        }
+      }
+    })
+
+    return Array.from(years).sort((a, b) => b - a) // Sort descending (newest first)
+  }, [editableLoads])
+
+  // Filter loads based on year, search, upcoming and status filters (MOVED BEFORE groupedLoads)
   const filteredLoads = useMemo(() => {
     let filtered = editableLoads
+
+    // Apply year filter
+    filtered = filtered.filter(load => {
+      if (!load.pickup_date) return false
+      const loadYear = new Date(load.pickup_date).getFullYear()
+      return loadYear === selectedYear
+    })
 
     // Apply search filter
     if (searchQuery.trim()) {
@@ -499,7 +525,7 @@ export default function LoadsPageInline() {
     })
 
     return filtered
-  }, [editableLoads, searchQuery, upcomingFilter, statusFilter, sortField, sortDirection, customers])
+  }, [editableLoads, searchQuery, upcomingFilter, statusFilter, sortField, sortDirection, customers, selectedYear])
 
   // Group loads - now supports multiple groupings
   const groupedLoads = useMemo(() => {
@@ -2363,6 +2389,27 @@ export default function LoadsPageInline() {
               New Load
             </Button>
           </div>
+        </div>
+
+        {/* Year Tabs */}
+        <div className="flex items-center gap-2 border-b" style={{ borderColor: 'var(--monday-border-light)' }}>
+          {availableYears.map(year => (
+            <button
+              key={year}
+              onClick={() => setSelectedYear(year)}
+              className="px-4 py-2 text-sm font-medium transition-all relative"
+              style={{
+                color: selectedYear === year ? 'var(--monday-cornflower)' : 'var(--monday-text-secondary)',
+                borderBottom: selectedYear === year ? '2px solid var(--monday-cornflower)' : '2px solid transparent',
+                marginBottom: '-1px'
+              }}
+            >
+              {year}
+              {year === new Date().getFullYear() && (
+                <span className="ml-1 text-xs opacity-60">(Current)</span>
+              )}
+            </button>
+          ))}
         </div>
 
         {/* Upcoming Load Statistics */}
