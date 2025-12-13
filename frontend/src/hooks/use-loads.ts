@@ -44,9 +44,18 @@ export function useCreateLoad() {
       const response = await api.post('/v1/loads', data)
       return response.data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['loads'] })
-      // toast.success('Load created successfully')
+    onSuccess: (newLoad) => {
+      // Add the new load directly to the cache to avoid race conditions
+      queryClient.setQueryData(['loads', 1, 1000], (oldData: any) => {
+        if (!oldData?.items) {
+          return { items: [newLoad], total: 1, page: 1, per_page: 1000, pages: 1 }
+        }
+        return {
+          ...oldData,
+          items: [newLoad, ...oldData.items],
+          total: oldData.total + 1
+        }
+      })
     },
     onError: (error: any) => {
       const detail = error.response?.data?.detail
