@@ -68,10 +68,20 @@ export function useUpdateLoad() {
       const response = await api.put(`/v1/loads/${id}`, data)
       return response.data
     },
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ['loads'] })
+    onSuccess: (updatedLoad, { id }) => {
+      // Update the cache directly instead of refetching to avoid race conditions
+      // The loads page already does optimistic updates, so we just need to ensure
+      // the cache is eventually consistent
+      queryClient.setQueryData(['loads', 1, 1000], (oldData: any) => {
+        if (!oldData?.items) return oldData
+        return {
+          ...oldData,
+          items: oldData.items.map((load: Load) =>
+            load.id === id ? { ...load, ...updatedLoad } : load
+          )
+        }
+      })
       queryClient.invalidateQueries({ queryKey: ['load', id] })
-      // toast.success('Load updated successfully')
     },
     onError: (error: any) => {
       const detail = error.response?.data?.detail
