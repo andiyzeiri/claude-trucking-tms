@@ -1,13 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import api from '@/lib/api'
 import { Fuel } from '@/types'
-import { toast } from 'sonner'
+import toast from 'react-hot-toast'
 
 interface FuelFormData {
   date: string
   location?: string
   gallons: number
   price_per_gallon?: number
+  def_gallons?: number
+  def_price?: number
   total_amount: number
   odometer?: number
   notes?: string

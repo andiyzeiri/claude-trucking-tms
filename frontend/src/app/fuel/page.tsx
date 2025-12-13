@@ -5,29 +5,26 @@ import Layout from '@/components/layout/layout'
 import { ChevronRight, ChevronDown, Trash2 } from 'lucide-react'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
+import { useFuel, useCreateFuel, useUpdateFuel, useDeleteFuel } from '@/hooks/use-fuel'
 import toast from 'react-hot-toast'
 import { formatCurrency } from '@/lib/utils'
-
-// Local storage key for fuel data
-const FUEL_STORAGE_KEY = 'tms-fuel-data'
-
-interface FuelEntry {
-  id: string
-  weekNumber: number
-  driverId: number
-  truckId: number | null
-  gallons: number
-  pricePerGallon: number
-  defGallons: number
-  defPrice: number
-  totalAmount: number
-}
+import { Fuel } from '@/types'
 
 type EditingCell = {
   weekNumber: number
   driverId: number
   field: string
 } | null
+
+// Helper to get week number from date (ISO 8601)
+function getWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  const weekNum = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+  return weekNum
+}
 
 // Helper to get a date from a week number (ISO 8601) - matches loads page
 function getDateFromWeekNumber(weekNumber: number, year?: number): Date {
@@ -69,15 +66,22 @@ function getWeekDateRange(weekNumber: number, year?: number): string {
   return `(${startMonth}/${startDay}-${endMonth}/${endDay})`
 }
 
+// Extended fuel entry with week info for local state
+interface FuelEntryWithWeek extends Fuel {
+  weekNumber: number
+}
+
 export default function FuelPage() {
   const { data: driversData, isLoading: driversLoading } = useDrivers()
   const { data: trucksData } = useTrucks()
+  const { data: fuelData, isLoading: fuelLoading } = useFuel()
+  const createFuel = useCreateFuel()
+  const updateFuel = useUpdateFuel()
+  const deleteFuel = useDeleteFuel()
 
   const drivers = driversData?.items || []
   const trucks = trucksData?.items || []
 
-  // Load fuel data from localStorage
-  const [fuelEntries, setFuelEntries] = useState<FuelEntry[]>([])
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
   const [editValues, setEditValues] = useState<Record<string, any>>({})
   const [collapsedWeeks, setCollapsedWeeks] = useState<Set<number>>(new Set())
@@ -85,24 +89,14 @@ export default function FuelPage() {
 
   const currentYear = new Date().getFullYear()
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem(FUEL_STORAGE_KEY)
-    if (stored) {
-      try {
-        setFuelEntries(JSON.parse(stored))
-      } catch (e) {
-        console.error('Failed to load fuel data:', e)
-      }
-    }
-  }, [])
-
-  // Save to localStorage when entries change
-  useEffect(() => {
-    if (fuelEntries.length > 0) {
-      localStorage.setItem(FUEL_STORAGE_KEY, JSON.stringify(fuelEntries))
-    }
-  }, [fuelEntries])
+  // Convert API fuel entries to include week numbers
+  const fuelEntries: FuelEntryWithWeek[] = useMemo(() => {
+    if (!fuelData) return []
+    return fuelData.map(entry => ({
+      ...entry,
+      weekNumber: getWeekNumber(new Date(entry.date))
+    }))
+  }, [fuelData])
 
   // Generate all 52 weeks
   const allWeeks = useMemo(() => {
@@ -115,7 +109,7 @@ export default function FuelPage() {
 
   // Group fuel entries by week and driver
   const fuelByWeekAndDriver = useMemo(() => {
-    const grouped: Record<number, Record<number, FuelEntry | null>> = {}
+    const grouped: Record<number, Record<number, FuelEntryWithWeek | null>> = {}
 
     allWeeks.forEach(weekNum => {
       grouped[weekNum] = {}
@@ -125,8 +119,8 @@ export default function FuelPage() {
     })
 
     fuelEntries.forEach(entry => {
-      if (grouped[entry.weekNumber] && entry.driverId) {
-        grouped[entry.weekNumber][entry.driverId] = entry
+      if (grouped[entry.weekNumber] && entry.driver_id) {
+        grouped[entry.weekNumber][entry.driver_id] = entry
       }
     })
 
@@ -155,7 +149,17 @@ export default function FuelPage() {
     const existing = fuelByWeekAndDriver[weekNumber]?.[driverId]
     setEditingCell({ weekNumber, driverId, field })
     if (existing) {
-      setEditValues({ ...existing })
+      setEditValues({
+        id: existing.id,
+        weekNumber,
+        driverId,
+        truckId: existing.truck_id || null,
+        gallons: existing.gallons || 0,
+        pricePerGallon: existing.price_per_gallon || 0,
+        defGallons: existing.def_gallons || 0,
+        defPrice: existing.def_price || 0,
+        totalAmount: existing.total_amount || 0,
+      })
     } else {
       setEditValues({
         weekNumber,
@@ -177,7 +181,7 @@ export default function FuelPage() {
     }))
   }
 
-  const handleCellBlur = () => {
+  const handleCellBlur = async () => {
     if (!editingCell) return
 
     const { weekNumber, driverId } = editingCell
@@ -187,35 +191,45 @@ export default function FuelPage() {
     const hasData = editValues.gallons > 0 || editValues.totalAmount > 0 || editValues.defGallons > 0
 
     if (hasData) {
-      if (existing) {
-        // Update existing
-        setFuelEntries(prev => prev.map(e =>
-          e.id === existing.id ? { ...e, ...editValues } : e
-        ))
-      } else {
-        // Create new
-        const newEntry: FuelEntry = {
-          id: `${weekNumber}-${driverId}-${Date.now()}`,
-          weekNumber,
-          driverId,
-          truckId: editValues.truckId || null,
-          gallons: editValues.gallons || 0,
-          pricePerGallon: editValues.pricePerGallon || 0,
-          defGallons: editValues.defGallons || 0,
-          defPrice: editValues.defPrice || 0,
-          totalAmount: editValues.totalAmount || 0,
+      // Convert week number to date (Monday of that week)
+      const weekDate = getDateFromWeekNumber(weekNumber, currentYear)
+      const dateStr = weekDate.toISOString().split('T')[0]
+
+      const fuelData = {
+        date: dateStr,
+        gallons: editValues.gallons || 0,
+        price_per_gallon: editValues.pricePerGallon || undefined,
+        def_gallons: editValues.defGallons || undefined,
+        def_price: editValues.defPrice || undefined,
+        total_amount: editValues.totalAmount || 0,
+        driver_id: driverId,
+        truck_id: editValues.truckId || undefined,
+      }
+
+      try {
+        if (existing) {
+          // Update existing
+          await updateFuel.mutateAsync({ id: existing.id, data: fuelData })
+        } else {
+          // Create new
+          await createFuel.mutateAsync(fuelData)
         }
-        setFuelEntries(prev => [...prev, newEntry])
+      } catch (error) {
+        console.error('Failed to save fuel entry:', error)
       }
     }
 
     setEditingCell(null)
   }
 
-  const handleDeleteRow = (weekNumber: number, driverId: number) => {
+  const handleDeleteRow = async (weekNumber: number, driverId: number) => {
     const entry = fuelByWeekAndDriver[weekNumber]?.[driverId]
     if (entry && confirm('Delete this fuel entry?')) {
-      setFuelEntries(prev => prev.filter(e => e.id !== entry.id))
+      try {
+        await deleteFuel.mutateAsync(entry.id)
+      } catch (error) {
+        console.error('Failed to delete fuel entry:', error)
+      }
     }
   }
 
@@ -227,7 +241,7 @@ export default function FuelPage() {
     }
   }
 
-  if (driversLoading) {
+  if (driversLoading || fuelLoading) {
     return <Layout><div className="p-8">Loading...</div></Layout>
   }
 
@@ -238,13 +252,6 @@ export default function FuelPage() {
       editingCell?.weekNumber === weekNum &&
       editingCell?.driverId === driver.id &&
       editingCell?.field === field
-
-    const getValue = (field: string) => {
-      if (isEditingField(field)) {
-        return editValues[field]
-      }
-      return entry?.[field as keyof FuelEntry]
-    }
 
     return (
       <tr
@@ -295,7 +302,7 @@ export default function FuelPage() {
               className="cursor-pointer rounded px-1.5 py-0.5"
               style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
-              {trucks.find(t => t.id === entry?.truckId)?.truck_number || '-'}
+              {trucks.find(t => t.id === entry?.truck_id)?.truck_number || '-'}
             </div>
           )}
         </td>
@@ -320,7 +327,7 @@ export default function FuelPage() {
               className="cursor-pointer rounded px-1.5 py-0.5"
               style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
-              {entry?.gallons ? entry.gallons.toFixed(1) : '-'}
+              {entry?.gallons ? Number(entry.gallons).toFixed(1) : '-'}
             </div>
           )}
         </td>
@@ -345,7 +352,7 @@ export default function FuelPage() {
               className="cursor-pointer rounded px-1.5 py-0.5"
               style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
-              {entry?.pricePerGallon ? `$${entry.pricePerGallon.toFixed(3)}` : '-'}
+              {entry?.price_per_gallon ? `$${Number(entry.price_per_gallon).toFixed(3)}` : '-'}
             </div>
           )}
         </td>
@@ -370,7 +377,7 @@ export default function FuelPage() {
               className="cursor-pointer rounded px-1.5 py-0.5"
               style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
-              {entry?.defGallons ? entry.defGallons.toFixed(1) : '-'}
+              {entry?.def_gallons ? Number(entry.def_gallons).toFixed(1) : '-'}
             </div>
           )}
         </td>
@@ -395,7 +402,7 @@ export default function FuelPage() {
               className="cursor-pointer rounded px-1.5 py-0.5"
               style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
-              {entry?.defPrice ? `$${entry.defPrice.toFixed(2)}` : '-'}
+              {entry?.def_price ? `$${Number(entry.def_price).toFixed(2)}` : '-'}
             </div>
           )}
         </td>
@@ -420,7 +427,7 @@ export default function FuelPage() {
               className="cursor-pointer rounded px-1.5 py-0.5"
               style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)' }}
             >
-              {entry?.totalAmount ? formatCurrency(entry.totalAmount) : '-'}
+              {entry?.total_amount ? formatCurrency(Number(entry.total_amount)) : '-'}
             </div>
           )}
         </td>
@@ -465,8 +472,8 @@ export default function FuelPage() {
               {allWeeks.map((weekNum) => {
                 const isCollapsed = collapsedWeeks.has(weekNum)
                 const weekEntries = fuelEntries.filter(e => e.weekNumber === weekNum)
-                const weekTotal = weekEntries.reduce((sum, e) => sum + (e.totalAmount || 0), 0)
-                const weekGallons = weekEntries.reduce((sum, e) => sum + (e.gallons || 0), 0)
+                const weekTotal = weekEntries.reduce((sum, e) => sum + (Number(e.total_amount) || 0), 0)
+                const weekGallons = weekEntries.reduce((sum, e) => sum + (Number(e.gallons) || 0), 0)
 
                 return (
                   <React.Fragment key={weekNum}>
