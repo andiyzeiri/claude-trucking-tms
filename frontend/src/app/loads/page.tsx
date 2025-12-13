@@ -323,44 +323,62 @@ export default function LoadsPageInline() {
   } | null>(null)
 
   // Sync loads with editable state and add week info
+  // Use a ref to track if this is the initial load to avoid overwriting local edits on refetch
+  const isInitialLoadRef = useRef(true)
+
   React.useEffect(() => {
-    const loadsWithWeeks = loads.map(load => {
-      const pickupDate = new Date(load.pickup_date)
-      // Preserve the currently editing load to avoid losing user input
-      const existingEditableLoad = editableLoads.find(el => el.id === load.id)
-      const isCurrentlyEditingLocation = editingLocation &&
-        ((editingLocation.loadId === load.id) || (editingLocation.loadId === 'new' && load.isNew))
+    // Build a map of current loads from API for quick lookup
+    const apiLoadIds = new Set(loads.map(l => l.id))
 
-      // Check if any field is currently being edited for this load
-      const isEditingAnyField = editingCell &&
-        ((editingCell.loadId === load.id) || (editingCell.loadId === 'new' && load.isNew))
+    // If we have existing editable loads, merge intelligently
+    if (!isInitialLoadRef.current && editableLoads.length > 0) {
+      // Keep existing editableLoads but:
+      // 1. Add any new loads from API that we don't have locally
+      // 2. Remove any loads that no longer exist in API (were deleted elsewhere)
+      // 3. Don't overwrite local data for loads we already have
 
-      return {
-        ...load,
-        // Preserve location data if location is being edited
-        ...(isCurrentlyEditingLocation && existingEditableLoad ? {
-          pickup_location: existingEditableLoad.pickup_location,
-          delivery_location: existingEditableLoad.delivery_location,
-          pickup_date: existingEditableLoad.pickup_date,
-          delivery_date: existingEditableLoad.delivery_date
-        } : {}),
-        // Preserve field being edited to avoid losing user input during typing
-        ...(isEditingAnyField && existingEditableLoad ? {
-          load_number: existingEditableLoad.load_number,
-          notes: existingEditableLoad.notes,
-          rate: existingEditableLoad.rate,
-          miles: existingEditableLoad.miles
-        } : {}),
-        weekNumber: getWeekNumber(pickupDate),
-        weekLabel: getWeekLabel(pickupDate),
-        weekDateRange: getWeekDateRange(pickupDate),
-        dayOfWeek: pickupDate.getDay(),
-        dayLabel: getDayLabel(pickupDate)
+      const existingIds = new Set(editableLoads.map(l => l.id))
+
+      // Find new loads from API that we don't have
+      const newLoadsFromApi = loads.filter(l => !existingIds.has(l.id)).map(load => {
+        const pickupDate = new Date(load.pickup_date)
+        return {
+          ...load,
+          weekNumber: getWeekNumber(pickupDate),
+          weekLabel: getWeekLabel(pickupDate),
+          weekDateRange: getWeekDateRange(pickupDate),
+          dayOfWeek: pickupDate.getDay(),
+          dayLabel: getDayLabel(pickupDate)
+        }
+      })
+
+      // Keep existing loads that still exist in API, plus any new ones
+      const mergedLoads = [
+        ...editableLoads.filter(l => l.isNew || apiLoadIds.has(l.id)),
+        ...newLoadsFromApi
+      ]
+
+      if (newLoadsFromApi.length > 0 || editableLoads.some(l => !l.isNew && !apiLoadIds.has(l.id))) {
+        setEditableLoads(mergedLoads)
       }
-    })
-    setEditableLoads(loadsWithWeeks)
+    } else {
+      // Initial load - populate from API
+      const loadsWithWeeks = loads.map(load => {
+        const pickupDate = new Date(load.pickup_date)
+        return {
+          ...load,
+          weekNumber: getWeekNumber(pickupDate),
+          weekLabel: getWeekLabel(pickupDate),
+          weekDateRange: getWeekDateRange(pickupDate),
+          dayOfWeek: pickupDate.getDay(),
+          dayLabel: getDayLabel(pickupDate)
+        }
+      })
+      setEditableLoads(loadsWithWeeks)
+      isInitialLoadRef.current = false
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loads, editingLocation, editingCell])
+  }, [loads])
 
   // Close group menu when clicking outside
   useEffect(() => {
@@ -856,8 +874,36 @@ export default function LoadsPageInline() {
       return
     }
 
-    // For existing loads, update backend directly
-    // React Query will automatically refetch via query invalidation in the mutation's onSuccess
+    // For existing loads, update local state first (optimistic), then backend
+    const previousLoads = [...editableLoads]
+
+    // Optimistically update local state
+    const updatedLoads = editableLoads.map(l => {
+      if (l.id === id) {
+        const updated = { ...l, [field]: value }
+
+        // Update nested objects when IDs change
+        if (field === 'driver_id') {
+          updated.driver = value ? drivers.find(d => d.id === value) : undefined
+        }
+
+        // Recalculate week info when pickup_date changes
+        if (field === 'pickup_date' && value) {
+          const pickupDate = new Date(value)
+          updated.weekNumber = getWeekNumber(pickupDate)
+          updated.weekLabel = getWeekLabel(pickupDate)
+          updated.weekDateRange = getWeekDateRange(pickupDate)
+          updated.dayOfWeek = pickupDate.getDay()
+          updated.dayLabel = getDayLabel(pickupDate)
+        }
+
+        return updated
+      }
+      return l
+    })
+    setEditableLoads(updatedLoads)
+
+    // Then update backend
     try {
       const backendData: any = {
         load_number: load.load_number,
@@ -878,8 +924,8 @@ export default function LoadsPageInline() {
       }
       await updateLoad.mutateAsync({ id: load.id, data: backendData })
     } catch (error) {
-      // Error is already handled by the mutation hook's onError
-      // But we need to rethrow to let callers know it failed
+      // Revert to previous state on error
+      setEditableLoads(previousLoads)
       throw error
     }
   }
