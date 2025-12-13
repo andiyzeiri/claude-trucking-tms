@@ -247,7 +247,7 @@ function parseTimeInput(timeInput: string, existingDateTime: string): string {
 }
 
 export default function LoadsPageInline() {
-  const { data: loadsData, isLoading, refetch } = useLoads(1, 1000)
+  const { data: loadsData, isLoading, refetch } = useLoads(1, 10000)
   const loads = loadsData?.items || []
   const createLoad = useCreateLoad()
   const updateLoad = useUpdateLoad()

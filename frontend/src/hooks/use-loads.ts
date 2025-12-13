@@ -45,8 +45,8 @@ export function useCreateLoad() {
       return response.data
     },
     onSuccess: (newLoad) => {
-      // Add the new load directly to the cache to avoid race conditions
-      queryClient.setQueryData(['loads', 1, 1000], (oldData: any) => {
+      // Add the new load directly to the cache for immediate UI update
+      queryClient.setQueryData(['loads', 1, 10000], (oldData: any) => {
         if (!oldData?.items) {
           return { items: [newLoad], total: 1, page: 1, per_page: 1000, pages: 1 }
         }
@@ -56,6 +56,8 @@ export function useCreateLoad() {
           total: oldData.total + 1
         }
       })
+      // Also invalidate to ensure fresh data on next fetch (e.g., after logout/login)
+      queryClient.invalidateQueries({ queryKey: ['loads'] })
     },
     onError: (error: any) => {
       const detail = error.response?.data?.detail
@@ -81,7 +83,7 @@ export function useUpdateLoad() {
       // Update the cache directly instead of refetching to avoid race conditions
       // The loads page already does optimistic updates, so we just need to ensure
       // the cache is eventually consistent
-      queryClient.setQueryData(['loads', 1, 1000], (oldData: any) => {
+      queryClient.setQueryData(['loads', 1, 10000], (oldData: any) => {
         if (!oldData?.items) return oldData
         return {
           ...oldData,
