@@ -6,7 +6,7 @@ import api from '@/lib/api'
 import { Customer, PaginatedResponse } from '@/types'
 import { CustomerFormData } from '@/lib/schemas'
 
-export function useCustomers(page = 1, limit = 100) {
+export function useCustomers(page = 1, limit = 10000) {
   return useQuery({
     queryKey: ['customers', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Customer>> => {
