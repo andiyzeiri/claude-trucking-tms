@@ -1,10 +1,14 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from app.config import settings
 from app.api.v1.api import api_router
 from app.health import router as health_router
+from app.services.dedicated_lane_scheduler import generate_loads_from_dedicated_lanes
 
 # Set up logging
 logging.basicConfig(
@@ -13,6 +17,34 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Global scheduler instance
+scheduler = AsyncIOScheduler()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan handler for startup/shutdown events."""
+    # Startup
+    logger.info("Starting dedicated lane scheduler...")
+
+    # Schedule load generation every Monday at midnight (00:00)
+    scheduler.add_job(
+        generate_loads_from_dedicated_lanes,
+        CronTrigger(day_of_week='mon', hour=0, minute=0),
+        id='generate_dedicated_loads',
+        name='Generate loads from dedicated lanes',
+        replace_existing=True
+    )
+    scheduler.start()
+    logger.info("Dedicated lane scheduler started - will run every Monday at 00:00")
+
+    yield
+
+    # Shutdown
+    logger.info("Shutting down dedicated lane scheduler...")
+    scheduler.shutdown()
+    logger.info("Scheduler shut down")
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -20,6 +52,7 @@ app = FastAPI(
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
     redirect_slashes=False,  # Disable automatic slash redirects
+    lifespan=lifespan,
 )
 
 # CORS middleware - use configured origins

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { formatCurrency } from '@/lib/utils'
 import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X, Check, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react'
 import { useLoads, useCreateLoad, useUpdateLoad, useDeleteLoad } from '@/hooks/use-loads'
+import { useDedicatedLanes } from '@/hooks/use-dedicated-lanes'
 import { useCustomers } from '@/hooks/use-customers'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
@@ -20,6 +21,7 @@ import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
 import { PdfViewer } from '@/components/loads/pdf-viewer'
 import { AddressAutocomplete, AddressData } from '@/components/ui/address-autocomplete'
+import { DedicatedLanesPanel } from '@/components/dedicated-lanes/dedicated-lanes-panel'
 import api from '@/lib/api'
 
 interface EditableLoad extends Load {
@@ -275,6 +277,10 @@ export default function LoadsPageInline() {
   const { data: receiversData } = useReceivers()
   const receivers = receiversData?.items || []
 
+  // Dedicated lanes for recurring loads
+  const { data: dedicatedLanesData } = useDedicatedLanes()
+  const dedicatedLanes = dedicatedLanesData?.items || []
+
   const [editableLoads, setEditableLoads] = useState<EditableLoad[]>([])
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
   // Removed locationSuggestions - autocomplete disabled
@@ -284,6 +290,7 @@ export default function LoadsPageInline() {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [upcomingFilter, setUpcomingFilter] = useState<boolean>(false)
+  const [showDedicatedPanel, setShowDedicatedPanel] = useState<boolean>(false)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, loadId?: number, type: 'load' | 'general'} | null>(null)
   const [pdfModal, setPdfModal] = useState<{url: string, loadId: number, type: 'pod' | 'ratecon'} | null>(null)
@@ -2413,7 +2420,7 @@ export default function LoadsPageInline() {
         </div>
 
         {/* Upcoming Load Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div
             className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
             style={{
@@ -2483,7 +2490,27 @@ export default function LoadsPageInline() {
               <p className="text-2xl font-bold mt-1" style={{ color: 'var(--monday-purple)' }}>{upcomingStats.invoiced}</p>
             </div>
           </div>
+
+          {/* Dedicated Lanes Card */}
+          <div
+            className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
+            style={{
+              backgroundColor: showDedicatedPanel ? 'rgba(0, 134, 192, 0.1)' : 'var(--monday-bg-primary)',
+              border: showDedicatedPanel ? '2px solid #0086c0' : '1px solid var(--monday-border-light)'
+            }}
+            onClick={() => setShowDedicatedPanel(!showDedicatedPanel)}
+          >
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Dedicated</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: '#0086c0' }}>{dedicatedLanes.length}</p>
+            </div>
+          </div>
         </div>
+
+        {/* Dedicated Lanes Panel - shown when card is clicked */}
+        {showDedicatedPanel && (
+          <DedicatedLanesPanel onClose={() => setShowDedicatedPanel(false)} />
+        )}
 
         <div className="border rounded-lg bg-white overflow-hidden shadow-sm" style={{borderColor: 'var(--monday-border-light)'}} onContextMenu={handleGeneralContextMenu}>
           <div className="overflow-x-auto">

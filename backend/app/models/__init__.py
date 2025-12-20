@@ -12,6 +12,7 @@ from .payroll import Payroll
 from .lane import Lane
 from .expense import Expense
 from .fuel import Fuel
+from .dedicated_lane import DedicatedLane
 
 __all__ = [
     "Base",
@@ -27,5 +28,6 @@ __all__ = [
     "Payroll",
     "Lane",
     "Expense",
-    "Fuel"
+    "Fuel",
+    "DedicatedLane"
 ]

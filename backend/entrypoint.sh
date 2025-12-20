@@ -49,6 +49,10 @@ python3 fix_trucks_table.py || echo "⚠️  fix_trucks_table.py had errors, con
 echo "🔧 Fixing drivers table..."
 python3 fix_drivers_columns.py || echo "⚠️  fix_drivers_columns.py had errors, continuing..."
 
+# Create dedicated_lanes table for recurring lane templates
+echo "🔧 Creating dedicated_lanes table..."
+python3 create_dedicated_lanes_table.py || echo "⚠️  create_dedicated_lanes_table.py had errors, continuing..."
+
 # Stamp Alembic version to match current state
 echo "📦 Stamping Alembic version..."
 python3 stamp_alembic.py || echo "⚠️  stamp_alembic.py had errors, continuing..."
