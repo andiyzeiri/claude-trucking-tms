@@ -54,6 +54,7 @@ COPY stamp_alembic.py ./
 COPY fix_enum_types.py ./
 COPY fix_trucks_table.py ./
 COPY fix_drivers_columns.py ./
+COPY create_dedicated_lanes_table.py ./
 COPY entrypoint.sh ./
 
 # Copy scripts directory
