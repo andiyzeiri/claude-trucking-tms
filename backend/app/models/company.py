@@ -27,3 +27,4 @@ class Company(Base):
     shippers = relationship("Shipper", back_populates="company")
     receivers = relationship("Receiver", back_populates="company")
     ratecons = relationship("Ratecon", back_populates="company")
+    ifta_entries = relationship("IFTA", back_populates="company")

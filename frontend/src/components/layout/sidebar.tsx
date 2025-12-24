@@ -19,6 +19,7 @@ import {
   Receipt,
   Warehouse,
   Fuel as FuelIcon,
+  FileSpreadsheet,
   Shield,
   CalendarDays
 } from 'lucide-react'
@@ -36,6 +37,7 @@ const navigation = [
   { name: 'Receivers', href: '/receivers', icon: Warehouse, pageId: 'receivers' },
   { name: 'Expenses', href: '/expenses', icon: Receipt, pageId: 'expenses' },
   { name: 'Fuel', href: '/fuel', icon: FuelIcon, pageId: 'fuel' },
+  { name: 'IFTA', href: '/ifta', icon: FileSpreadsheet, pageId: 'ifta' },
   { name: 'Payroll', href: '/payroll', icon: Calculator, pageId: 'payroll' },
   { name: 'Invoices', href: '/invoices', icon: FileText, pageId: 'invoices' },
   { name: 'Ratecons', href: '/ratecons', icon: Receipt, pageId: 'ratecons' },
@@ -48,7 +50,7 @@ const navigation = [
 const ROLE_PAGES: Record<string, string[]> = {
   company_admin: navigation.map(n => n.pageId),
   super_admin: navigation.map(n => n.pageId),
-  dispatcher: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'invoices', 'reports'],
+  dispatcher: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'invoices', 'reports', 'ifta'],
   driver: ['dashboard', 'loads'],
   customer: ['dashboard', 'loads', 'invoices'],
   viewer: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'invoices', 'reports'],

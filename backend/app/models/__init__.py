@@ -13,6 +13,7 @@ from .lane import Lane
 from .expense import Expense
 from .fuel import Fuel
 from .dedicated_lane import DedicatedLane
+from .ifta import IFTA
 
 __all__ = [
     "Base",
@@ -29,5 +30,6 @@ __all__ = [
     "Lane",
     "Expense",
     "Fuel",
-    "DedicatedLane"
+    "DedicatedLane",
+    "IFTA"
 ]

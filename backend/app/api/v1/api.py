@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, users, companies, customers, trucks, drivers, loads, stops, invoices, payroll, lanes, expenses, uploads, shippers, receivers, notifications, ratecons, fuel, migrate, driver_payroll_settings, maps, dedicated_lanes
+from app.api.v1.endpoints import auth, users, companies, customers, trucks, drivers, loads, stops, invoices, payroll, lanes, expenses, uploads, shippers, receivers, notifications, ratecons, fuel, ifta, migrate, driver_payroll_settings, maps, dedicated_lanes
 
 api_router = APIRouter()
 
@@ -18,6 +18,7 @@ api_router.include_router(lanes.router, prefix="/lanes", tags=["lanes"])
 api_router.include_router(dedicated_lanes.router, prefix="/dedicated-lanes", tags=["dedicated-lanes"])
 api_router.include_router(expenses.router, prefix="/expenses", tags=["expenses"])
 api_router.include_router(fuel.router, prefix="/fuel", tags=["fuel"])
+api_router.include_router(ifta.router, prefix="/ifta", tags=["ifta"])
 api_router.include_router(uploads.router, prefix="/uploads", tags=["uploads"])
 api_router.include_router(shippers.router, prefix="/shippers", tags=["shippers"])
 api_router.include_router(receivers.router, prefix="/receivers", tags=["receivers"])
