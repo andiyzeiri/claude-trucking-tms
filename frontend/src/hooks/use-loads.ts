@@ -80,18 +80,8 @@ export function useUpdateLoad() {
       return response.data
     },
     onSuccess: (updatedLoad, { id }) => {
-      // Update the cache directly instead of refetching to avoid race conditions
-      // The loads page already does optimistic updates, so we just need to ensure
-      // the cache is eventually consistent
-      queryClient.setQueryData(['loads', 1, 10000], (oldData: any) => {
-        if (!oldData?.items) return oldData
-        return {
-          ...oldData,
-          items: oldData.items.map((load: Load) =>
-            load.id === id ? { ...load, ...updatedLoad } : load
-          )
-        }
-      })
+      // Invalidate all loads queries to ensure dispatch board and loads page stay in sync
+      queryClient.invalidateQueries({ queryKey: ['loads'] })
       queryClient.invalidateQueries({ queryKey: ['load', id] })
     },
     onError: (error: any) => {
