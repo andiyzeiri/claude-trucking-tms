@@ -26,7 +26,7 @@ interface DayOffDriver {
   date: string // ISO date string
 }
 
-// Draggable Trip Card Component
+// Draggable Trip Card Component (for unassigned column)
 function DraggableTripCard({ load, formatDateTime, getShortLocation }: {
   load: Load
   formatDateTime: (dateStr: string | undefined) => string
@@ -73,6 +73,67 @@ function DraggableTripCard({ load, formatDateTime, getShortLocation }: {
   )
 }
 
+// Draggable Assigned Load Component (for driver cells)
+function DraggableAssignedLoad({ load, day, formatTime, getShortLocation }: {
+  load: Load
+  day: Date
+  formatTime: (dateStr: string | undefined) => string
+  getShortLocation: (location: string) => string
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `load-${load.id}`,
+    data: { load },
+  })
+
+  const pickupDate = load.pickup_date ? parseISO(load.pickup_date) : null
+  const deliveryDate = load.delivery_date ? parseISO(load.delivery_date) : null
+  const isPickupDay = pickupDate && isSameDay(pickupDate, day)
+  const isDeliveryDay = deliveryDate && isSameDay(deliveryDate, day)
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-lg p-2 bg-blue-50 border border-blue-200 text-xs cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${isDragging ? 'opacity-50' : ''}`}
+      {...listeners}
+      {...attributes}
+    >
+      <div className="flex items-center gap-1 mb-1">
+        <GripVertical className="h-3 w-3 text-gray-400 flex-shrink-0" />
+        <span className="font-semibold text-blue-700">#{load.load_number}</span>
+      </div>
+      {isPickupDay && (
+        <div className="flex items-center gap-1 text-green-700">
+          <MapPin className="h-3 w-3 flex-shrink-0" />
+          <span className="truncate">P: {getShortLocation(load.pickup_location)}</span>
+          {load.pickup_date && (
+            <span className="ml-auto flex items-center gap-0.5 text-xs whitespace-nowrap">
+              <Clock className="h-2.5 w-2.5" />
+              {formatTime(load.pickup_date)}
+            </span>
+          )}
+        </div>
+      )}
+      {isDeliveryDay && (
+        <div className="flex items-center gap-1 text-red-700">
+          <MapPin className="h-3 w-3 flex-shrink-0" />
+          <span className="truncate">D: {getShortLocation(load.delivery_location)}</span>
+          {load.delivery_date && (
+            <span className="ml-auto flex items-center gap-0.5 text-xs whitespace-nowrap">
+              <Clock className="h-2.5 w-2.5" />
+              {formatTime(load.delivery_date)}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Overlay card shown while dragging
 function DragOverlayCard({ load, formatDateTime, getShortLocation }: {
   load: Load
@@ -101,6 +162,18 @@ function DragOverlayCard({ load, formatDateTime, getShortLocation }: {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+// Droppable Unassigned Column
+function DroppableUnassignedColumn({ children, isOver }: { children: React.ReactNode, isOver: boolean }) {
+  return (
+    <div
+      className={`p-2 space-y-2 overflow-y-auto flex-1 transition-colors ${isOver ? 'bg-orange-50' : ''}`}
+      style={{ minHeight: '200px' }}
+    >
+      {children}
     </div>
   )
 }
@@ -136,6 +209,12 @@ export default function DispatchBoardPage() {
     return allDrivers.filter(driver => !driver.date_terminated)
   }, [allDrivers])
 
+  // Track which drivers are marked as off for which days
+  const [daysOff, setDaysOff] = useState<DayOffDriver[]>([])
+
+  // Current week start date (Monday)
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+
   // Get unassigned loads (no driver assigned) for the current week, sorted by pickup date
   const unassignedLoads = useMemo(() => {
     const weekEnd = addDays(weekStart, 6)
@@ -160,12 +239,6 @@ export default function DispatchBoardPage() {
         return dateA - dateB
       })
   }, [loads, weekStart])
-
-  // Track which drivers are marked as off for which days
-  const [daysOff, setDaysOff] = useState<DayOffDriver[]>([])
-
-  // Current week start date (Monday)
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
 
   // Drag state for overlay
   const [activeLoad, setActiveLoad] = useState<Load | null>(null)
@@ -269,7 +342,13 @@ export default function DispatchBoardPage() {
     }
   }
 
-  // Handle drag end - assign driver to load
+  // Droppable for unassigned column
+  const { isOver: isOverUnassigned, setNodeRef: setUnassignedRef } = useDroppable({
+    id: 'unassigned',
+    data: { unassigned: true },
+  })
+
+  // Handle drag end - assign or unassign driver
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     setActiveLoad(null)
@@ -277,10 +356,32 @@ export default function DispatchBoardPage() {
     if (!over) return
 
     const load = active.data.current?.load as Load
-    const driverId = over.data.current?.driverId as number
+    const driverId = over.data.current?.driverId as number | undefined
+    const isUnassigned = over.data.current?.unassigned as boolean | undefined
 
-    if (load && driverId) {
-      // Update the load with the new driver
+    if (!load) return
+
+    // Dropping on unassigned column - remove driver
+    if (isUnassigned) {
+      if (load.driver_id) {
+        updateLoad.mutate(
+          { id: load.id, data: { driver_id: null as any } },
+          {
+            onSuccess: () => {
+              toast.success(`Load #${load.load_number} unassigned`)
+              refetchLoads()
+            },
+            onError: () => {
+              toast.error('Failed to unassign load')
+            },
+          }
+        )
+      }
+      return
+    }
+
+    // Dropping on a driver row - assign driver
+    if (driverId && driverId !== load.driver_id) {
       updateLoad.mutate(
         { id: load.id, data: { driver_id: driverId } },
         {
@@ -332,7 +433,7 @@ export default function DispatchBoardPage() {
 
           {/* Main Layout with Trips Sidebar and Dispatch Table */}
           <div className="flex gap-4">
-            {/* Trips Column - Unassigned Loads */}
+            {/* Trips Column - Unassigned Loads (Droppable) */}
             <div
               className="w-56 flex-shrink-0 border rounded-lg bg-white overflow-hidden flex flex-col"
               style={{ borderColor: 'var(--cell-borderColor)', maxHeight: 'calc(100vh - 200px)' }}
@@ -354,20 +455,31 @@ export default function DispatchBoardPage() {
                   {unassignedLoads.length} {unassignedLoads.length === 1 ? 'load' : 'loads'} to assign
                 </div>
               </div>
-              <div className="p-2 space-y-2 overflow-y-auto flex-1">
-                {unassignedLoads.length === 0 ? (
+              <div
+                ref={setUnassignedRef}
+                className={`p-2 space-y-2 overflow-y-auto flex-1 transition-colors ${isOverUnassigned ? 'bg-orange-50 border-2 border-dashed border-orange-300' : ''}`}
+                style={{ minHeight: '200px' }}
+              >
+                {unassignedLoads.length === 0 && !isOverUnassigned ? (
                   <div className="text-center py-8 text-sm" style={{ color: 'var(--monday-text-muted)' }}>
                     No unassigned loads
                   </div>
                 ) : (
-                  unassignedLoads.map((load) => (
-                    <DraggableTripCard
-                      key={load.id}
-                      load={load}
-                      formatDateTime={formatDateTime}
-                      getShortLocation={getShortLocation}
-                    />
-                  ))
+                  <>
+                    {unassignedLoads.map((load) => (
+                      <DraggableTripCard
+                        key={load.id}
+                        load={load}
+                        formatDateTime={formatDateTime}
+                        getShortLocation={getShortLocation}
+                      />
+                    ))}
+                    {isOverUnassigned && unassignedLoads.length === 0 && (
+                      <div className="text-center py-4 text-sm text-orange-600">
+                        Drop here to unassign
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -497,47 +609,15 @@ export default function DispatchBoardPage() {
                                       </div>
                                     ) : (
                                       <div className="space-y-1">
-                                        {driverLoads.map((load) => {
-                                          const pickupDate = load.pickup_date ? parseISO(load.pickup_date) : null
-                                          const deliveryDate = load.delivery_date ? parseISO(load.delivery_date) : null
-                                          const isPickupDay = pickupDate && isSameDay(pickupDate, day)
-                                          const isDeliveryDay = deliveryDate && isSameDay(deliveryDate, day)
-
-                                          return (
-                                            <div
-                                              key={load.id}
-                                              className="rounded-lg p-2 bg-blue-50 border border-blue-200 text-xs"
-                                            >
-                                              <div className="font-semibold text-blue-700 mb-1">
-                                                #{load.load_number}
-                                              </div>
-                                              {isPickupDay && (
-                                                <div className="flex items-center gap-1 text-green-700">
-                                                  <MapPin className="h-3 w-3 flex-shrink-0" />
-                                                  <span className="truncate">P: {getShortLocation(load.pickup_location)}</span>
-                                                  {load.pickup_date && (
-                                                    <span className="ml-auto flex items-center gap-0.5 text-xs whitespace-nowrap">
-                                                      <Clock className="h-2.5 w-2.5" />
-                                                      {formatTime(load.pickup_date)}
-                                                    </span>
-                                                  )}
-                                                </div>
-                                              )}
-                                              {isDeliveryDay && (
-                                                <div className="flex items-center gap-1 text-red-700">
-                                                  <MapPin className="h-3 w-3 flex-shrink-0" />
-                                                  <span className="truncate">D: {getShortLocation(load.delivery_location)}</span>
-                                                  {load.delivery_date && (
-                                                    <span className="ml-auto flex items-center gap-0.5 text-xs whitespace-nowrap">
-                                                      <Clock className="h-2.5 w-2.5" />
-                                                      {formatTime(load.delivery_date)}
-                                                    </span>
-                                                  )}
-                                                </div>
-                                              )}
-                                            </div>
-                                          )
-                                        })}
+                                        {driverLoads.map((load) => (
+                                          <DraggableAssignedLoad
+                                            key={load.id}
+                                            load={load}
+                                            day={day}
+                                            formatTime={formatTime}
+                                            getShortLocation={getShortLocation}
+                                          />
+                                        ))}
                                         {/* Add day off toggle button for cells with loads */}
                                         <button
                                           onClick={() => toggleDriverDayOff(driver.id, day)}
@@ -578,7 +658,7 @@ export default function DispatchBoardPage() {
             </div>
             <div className="flex items-center gap-2">
               <GripVertical className="h-4 w-4 text-gray-400" />
-              <span style={{ color: 'var(--monday-text-secondary)' }}>Drag trips to assign</span>
+              <span style={{ color: 'var(--monday-text-secondary)' }}>Drag to assign/reassign</span>
             </div>
           </div>
         </div>
