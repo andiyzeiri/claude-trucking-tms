@@ -268,7 +268,7 @@ export default function DispatchBoardPage() {
     if (load && driverId) {
       // Update the load with the new driver
       updateLoad.mutate(
-        { id: load.id, data: { driver_id: driverId, status: 'assigned' } },
+        { id: load.id, data: { driver_id: driverId } },
         {
           onSuccess: () => {
             toast.success(`Load #${load.load_number} assigned to driver`)
