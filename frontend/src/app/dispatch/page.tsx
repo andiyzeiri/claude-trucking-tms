@@ -552,23 +552,15 @@ export default function DispatchBoardPage() {
                                 backgroundColor: rowBgColor
                               }}
                             >
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
-                                  style={{ backgroundColor: '#3b82f6' }}
-                                >
-                                  {driver.first_name?.charAt(0)}{driver.last_name?.charAt(0)}
+                              <div>
+                                <div className="font-medium text-sm" style={{ color: 'var(--colors-foreground-default)' }}>
+                                  {driver.first_name} {driver.last_name}
                                 </div>
-                                <div>
-                                  <div className="font-medium text-sm" style={{ color: 'var(--colors-foreground-default)' }}>
-                                    {driver.first_name} {driver.last_name}
+                                {driver.truck && (
+                                  <div className="text-xs" style={{ color: 'var(--colors-foreground-muted)' }}>
+                                    Truck #{driver.truck.truck_number}
                                   </div>
-                                  {driver.truck && (
-                                    <div className="text-xs" style={{ color: 'var(--colors-foreground-muted)' }}>
-                                      Truck #{driver.truck.truck_number}
-                                    </div>
-                                  )}
-                                </div>
+                                )}
                               </div>
                             </td>
 
