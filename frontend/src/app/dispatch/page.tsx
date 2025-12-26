@@ -223,7 +223,6 @@ export default function DispatchBoardPage() {
     return loads
       .filter(load => {
         if (load.driver_id) return false
-        if (load.status === 'cancelled' || load.status === 'delivered') return false
 
         // Check if pickup or delivery falls within the current week
         const pickupDate = load.pickup_date ? startOfDay(parseISO(load.pickup_date)) : null
