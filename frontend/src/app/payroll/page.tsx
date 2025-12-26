@@ -225,15 +225,24 @@ export default function PayrollPage() {
           const fuelFromStorage = fuelByWeekAndDriver[weekNumber]?.[driverId] || 0
 
           // Apply overrides if they exist, otherwise use calculated values
-          const gross = getOverride(weekNumber, driverId, 'gross') ?? (Number(entry.gross) || 0)
-          const extra = getOverride(weekNumber, driverId, 'extra') ?? (Number(entry.extra) || 0)
-          const dispatch_fee = getOverride(weekNumber, driverId, 'dispatch_fee') ?? (Number(entry.dispatch_fee) || 0)
-          const insurance = getOverride(weekNumber, driverId, 'insurance') ?? (Number(entry.insurance) || 0)
-          const fuel = getOverride(weekNumber, driverId, 'fuel') ?? fuelFromStorage
-          const parking = getOverride(weekNumber, driverId, 'parking') ?? (Number(entry.parking) || 0)
-          const trailer = getOverride(weekNumber, driverId, 'trailer') ?? (Number(entry.trailer) || 0)
-          const misc = getOverride(weekNumber, driverId, 'misc') ?? (Number(entry.misc) || 0)
-          const miles = getOverride(weekNumber, driverId, 'miles') ?? (Number(entry.miles) || 0)
+          const grossOverride = getOverride(weekNumber, driverId, 'gross')
+          const gross = grossOverride !== undefined ? grossOverride : (Number(entry.gross) || 0)
+          const extraOverride = getOverride(weekNumber, driverId, 'extra')
+          const extra = extraOverride !== undefined ? extraOverride : (Number(entry.extra) || 0)
+          const dispatchFeeOverride = getOverride(weekNumber, driverId, 'dispatch_fee')
+          const dispatch_fee = dispatchFeeOverride !== undefined ? dispatchFeeOverride : (Number(entry.dispatch_fee) || 0)
+          const insuranceOverride = getOverride(weekNumber, driverId, 'insurance')
+          const insurance = insuranceOverride !== undefined ? insuranceOverride : (Number(entry.insurance) || 0)
+          const fuelOverride = getOverride(weekNumber, driverId, 'fuel')
+          const fuel = fuelOverride !== undefined ? fuelOverride : fuelFromStorage
+          const parkingOverride = getOverride(weekNumber, driverId, 'parking')
+          const parking = parkingOverride !== undefined ? parkingOverride : (Number(entry.parking) || 0)
+          const trailerOverride = getOverride(weekNumber, driverId, 'trailer')
+          const trailer = trailerOverride !== undefined ? trailerOverride : (Number(entry.trailer) || 0)
+          const miscOverride = getOverride(weekNumber, driverId, 'misc')
+          const misc = miscOverride !== undefined ? miscOverride : (Number(entry.misc) || 0)
+          const milesOverride = getOverride(weekNumber, driverId, 'miles')
+          const miles = milesOverride !== undefined ? milesOverride : (Number(entry.miles) || 0)
 
           // Check amount = gross + extra - deductions (dispatch_fee, insurance, fuel, parking, trailer, misc)
           const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
