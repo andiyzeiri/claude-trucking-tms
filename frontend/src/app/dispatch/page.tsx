@@ -2,11 +2,10 @@
 
 import React, { useState, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useLoads } from '@/hooks/use-loads'
-import { ChevronLeft, ChevronRight, X, MapPin, Clock, User, Calendar } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, Clock, User, X } from 'lucide-react'
 import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns'
 
 interface DayOffDriver {
@@ -96,12 +95,12 @@ export default function DispatchBoardPage() {
     if (parts.length >= 2) {
       return `${parts[parts.length - 2].trim()}, ${parts[parts.length - 1].trim().substring(0, 2)}`
     }
-    return location.length > 20 ? location.substring(0, 20) + '...' : location
+    return location.length > 15 ? location.substring(0, 15) + '...' : location
   }
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -122,148 +121,203 @@ export default function DispatchBoardPage() {
             <Button variant="outline" size="sm" onClick={goToNextWeek}>
               <ChevronRight className="h-4 w-4" />
             </Button>
+            <span className="ml-4 text-lg font-medium" style={{ color: 'var(--monday-text-primary)' }}>
+              {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
+            </span>
           </div>
         </div>
 
-        {/* Week Range Display */}
-        <div className="text-center">
-          <h2 className="text-lg font-medium" style={{ color: 'var(--monday-text-primary)' }}>
-            {format(weekStart, 'MMMM d')} - {format(addDays(weekStart, 6), 'MMMM d, yyyy')}
-          </h2>
-        </div>
-
-        {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-4">
-          {weekDays.map((day) => {
-            const isToday = isSameDay(day, new Date())
-            const dayName = format(day, 'EEE')
-            const dayNumber = format(day, 'd')
-
-            return (
-              <Card
-                key={day.toISOString()}
-                className="min-h-[500px]"
-                style={{
-                  borderColor: isToday ? 'var(--monday-cornflower)' : 'var(--monday-border-light)',
-                  borderWidth: isToday ? '2px' : '1px'
-                }}
-              >
-                {/* Day Header */}
-                <div
-                  className="p-3 text-center border-b"
-                  style={{
-                    backgroundColor: isToday ? 'rgba(97, 97, 255, 0.1)' : 'var(--monday-bg-secondary)',
-                    borderColor: 'var(--monday-border-light)'
-                  }}
-                >
-                  <div className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>
-                    {dayName}
-                  </div>
-                  <div
-                    className={`text-2xl font-bold ${isToday ? 'text-white bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center mx-auto' : ''}`}
-                    style={{ color: isToday ? undefined : 'var(--monday-text-primary)' }}
+        {/* Dispatch Table */}
+        <div className="border rounded-lg bg-white overflow-hidden" style={{ borderColor: 'var(--cell-borderColor)' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+              <thead>
+                <tr style={{ backgroundColor: 'var(--cell-background-header)' }}>
+                  <th
+                    className="px-4 py-3 text-left text-sm font-semibold border-b border-r sticky left-0 z-10"
+                    style={{
+                      color: 'var(--colors-foreground-default)',
+                      borderColor: 'var(--cell-borderColor)',
+                      backgroundColor: 'var(--cell-background-header)',
+                      minWidth: '180px'
+                    }}
                   >
-                    {dayNumber}
-                  </div>
-                </div>
-
-                {/* Driver Assignments */}
-                <CardContent className="p-2 space-y-2 overflow-y-auto max-h-[430px]">
-                  {drivers.length === 0 ? (
-                    <div className="text-center py-4 text-sm" style={{ color: 'var(--monday-text-muted)' }}>
-                      No drivers
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Driver
                     </div>
-                  ) : (
-                    drivers.map((driver) => {
-                      const isOff = isDriverOff(driver.id, day)
-                      const driverLoads = getLoadsForDriverOnDay(driver.id, day)
-
-                      return (
-                        <div
-                          key={driver.id}
-                          className={`rounded-lg p-2 text-xs transition-all ${
-                            isOff
-                              ? 'bg-gray-100 opacity-50'
-                              : driverLoads.length > 0
-                                ? 'bg-blue-50 border border-blue-200'
-                                : 'bg-green-50 border border-green-200'
-                          }`}
-                        >
-                          {/* Driver Header */}
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-1">
-                              <User className="h-3 w-3" style={{ color: 'var(--monday-cornflower)' }} />
-                              <span className="font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
-                                {driver.first_name} {driver.last_name?.charAt(0)}.
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => toggleDriverDayOff(driver.id, day)}
-                              className="p-0.5 rounded hover:bg-gray-200 transition-colors"
-                              title={isOff ? 'Mark as working' : 'Mark as day off'}
-                            >
-                              <X className={`h-3 w-3 ${isOff ? 'text-green-600' : 'text-red-500'}`} />
-                            </button>
-                          </div>
-
-                          {isOff ? (
-                            <div className="text-center py-1 text-gray-500 italic">
-                              Day Off
-                            </div>
-                          ) : driverLoads.length === 0 ? (
-                            <div className="text-center py-1 text-green-600">
-                              Available
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              {driverLoads.map((load) => {
-                                const pickupDate = load.pickup_date ? parseISO(load.pickup_date) : null
-                                const deliveryDate = load.delivery_date ? parseISO(load.delivery_date) : null
-                                const isPickupDay = pickupDate && isSameDay(pickupDate, day)
-                                const isDeliveryDay = deliveryDate && isSameDay(deliveryDate, day)
-
-                                return (
-                                  <div key={load.id} className="bg-white rounded p-1.5 border border-gray-200">
-                                    <div className="font-medium text-blue-600 mb-1">
-                                      #{load.load_number}
-                                    </div>
-                                    {isPickupDay && (
-                                      <div className="flex items-center gap-1 text-green-700">
-                                        <MapPin className="h-2.5 w-2.5" />
-                                        <span>P: {getShortLocation(load.pickup_location)}</span>
-                                        {load.pickup_date && (
-                                          <span className="ml-auto flex items-center gap-0.5">
-                                            <Clock className="h-2.5 w-2.5" />
-                                            {formatTime(load.pickup_date)}
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                    {isDeliveryDay && (
-                                      <div className="flex items-center gap-1 text-red-700">
-                                        <MapPin className="h-2.5 w-2.5" />
-                                        <span>D: {getShortLocation(load.delivery_location)}</span>
-                                        {load.delivery_date && (
-                                          <span className="ml-auto flex items-center gap-0.5">
-                                            <Clock className="h-2.5 w-2.5" />
-                                            {formatTime(load.delivery_date)}
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
+                  </th>
+                  {weekDays.map((day) => {
+                    const isToday = isSameDay(day, new Date())
+                    return (
+                      <th
+                        key={day.toISOString()}
+                        className="px-3 py-3 text-center text-sm font-semibold border-b border-r"
+                        style={{
+                          color: isToday ? '#2563eb' : 'var(--colors-foreground-default)',
+                          borderColor: 'var(--cell-borderColor)',
+                          backgroundColor: isToday ? 'rgba(37, 99, 235, 0.08)' : 'var(--cell-background-header)',
+                          minWidth: '140px'
+                        }}
+                      >
+                        <div className="flex flex-col items-center">
+                          <span className="text-xs uppercase tracking-wide" style={{ color: 'var(--colors-foreground-muted)' }}>
+                            {format(day, 'EEE')}
+                          </span>
+                          <span className={`text-lg ${isToday ? 'bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center' : ''}`}>
+                            {format(day, 'd')}
+                          </span>
                         </div>
-                      )
-                    })
-                  )}
-                </CardContent>
-              </Card>
-            )
-          })}
+                      </th>
+                    )
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {drivers.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-12 text-center" style={{ color: 'var(--monday-text-muted)' }}>
+                      No active drivers found
+                    </td>
+                  </tr>
+                ) : (
+                  drivers.map((driver, driverIndex) => {
+                    const isEvenRow = driverIndex % 2 === 0
+                    const rowBgColor = isEvenRow ? 'var(--cell-background-base)' : 'rgba(0, 0, 0, 0.02)'
+
+                    return (
+                      <tr
+                        key={driver.id}
+                        className="transition-colors hover:bg-blue-50"
+                        style={{ backgroundColor: rowBgColor }}
+                      >
+                        {/* Driver Name Column */}
+                        <td
+                          className="px-4 py-3 border-b border-r sticky left-0 z-10"
+                          style={{
+                            borderColor: 'var(--cell-borderColor)',
+                            backgroundColor: rowBgColor
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                              style={{ backgroundColor: '#3b82f6' }}
+                            >
+                              {driver.first_name?.charAt(0)}{driver.last_name?.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="font-medium text-sm" style={{ color: 'var(--colors-foreground-default)' }}>
+                                {driver.first_name} {driver.last_name}
+                              </div>
+                              {driver.truck && (
+                                <div className="text-xs" style={{ color: 'var(--colors-foreground-muted)' }}>
+                                  Truck #{driver.truck.truck_number}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Day Cells */}
+                        {weekDays.map((day) => {
+                          const isToday = isSameDay(day, new Date())
+                          const isOff = isDriverOff(driver.id, day)
+                          const driverLoads = getLoadsForDriverOnDay(driver.id, day)
+
+                          return (
+                            <td
+                              key={day.toISOString()}
+                              className="px-2 py-2 border-b border-r align-top"
+                              style={{
+                                borderColor: 'var(--cell-borderColor)',
+                                backgroundColor: isToday ? 'rgba(37, 99, 235, 0.04)' : undefined,
+                                minHeight: '80px'
+                              }}
+                            >
+                              <div className="min-h-[70px]">
+                                {isOff ? (
+                                  <div
+                                    className="h-full flex items-center justify-center rounded-lg bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+                                    style={{ minHeight: '70px' }}
+                                    onClick={() => toggleDriverDayOff(driver.id, day)}
+                                    title="Click to mark as working"
+                                  >
+                                    <span className="text-sm text-gray-500 italic">Day Off</span>
+                                  </div>
+                                ) : driverLoads.length === 0 ? (
+                                  <div
+                                    className="h-full flex items-center justify-center rounded-lg bg-green-50 border border-green-200 cursor-pointer hover:bg-green-100 transition-colors"
+                                    style={{ minHeight: '70px' }}
+                                    onClick={() => toggleDriverDayOff(driver.id, day)}
+                                    title="Click to mark as day off"
+                                  >
+                                    <span className="text-sm text-green-600 font-medium">Available</span>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-1">
+                                    {driverLoads.map((load) => {
+                                      const pickupDate = load.pickup_date ? parseISO(load.pickup_date) : null
+                                      const deliveryDate = load.delivery_date ? parseISO(load.delivery_date) : null
+                                      const isPickupDay = pickupDate && isSameDay(pickupDate, day)
+                                      const isDeliveryDay = deliveryDate && isSameDay(deliveryDate, day)
+
+                                      return (
+                                        <div
+                                          key={load.id}
+                                          className="rounded-lg p-2 bg-blue-50 border border-blue-200 text-xs"
+                                        >
+                                          <div className="font-semibold text-blue-700 mb-1">
+                                            #{load.load_number}
+                                          </div>
+                                          {isPickupDay && (
+                                            <div className="flex items-center gap-1 text-green-700">
+                                              <MapPin className="h-3 w-3 flex-shrink-0" />
+                                              <span className="truncate">P: {getShortLocation(load.pickup_location)}</span>
+                                              {load.pickup_date && (
+                                                <span className="ml-auto flex items-center gap-0.5 text-xs whitespace-nowrap">
+                                                  <Clock className="h-2.5 w-2.5" />
+                                                  {formatTime(load.pickup_date)}
+                                                </span>
+                                              )}
+                                            </div>
+                                          )}
+                                          {isDeliveryDay && (
+                                            <div className="flex items-center gap-1 text-red-700">
+                                              <MapPin className="h-3 w-3 flex-shrink-0" />
+                                              <span className="truncate">D: {getShortLocation(load.delivery_location)}</span>
+                                              {load.delivery_date && (
+                                                <span className="ml-auto flex items-center gap-0.5 text-xs whitespace-nowrap">
+                                                  <Clock className="h-2.5 w-2.5" />
+                                                  {formatTime(load.delivery_date)}
+                                                </span>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )
+                                    })}
+                                    {/* Add day off toggle button for cells with loads */}
+                                    <button
+                                      onClick={() => toggleDriverDayOff(driver.id, day)}
+                                      className="w-full text-xs text-gray-400 hover:text-red-500 py-1 transition-colors"
+                                      title="Mark as day off"
+                                    >
+                                      <X className="h-3 w-3 mx-auto" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Legend */}
