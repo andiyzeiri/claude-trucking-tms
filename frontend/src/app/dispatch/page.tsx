@@ -198,7 +198,7 @@ function DroppableDriverRow({ driverId, children }: { driverId: number, children
 
 export default function DispatchBoardPage() {
   const { data: driversData } = useDrivers(1, 100)
-  const { data: loadsData, refetch: refetchLoads } = useLoads(1, 1000) // Get all loads
+  const { data: loadsData, refetch: refetchLoads } = useLoads(1, 10000) // Get all loads
   const updateLoad = useUpdateLoad()
 
   const allDrivers = driversData?.items || []
