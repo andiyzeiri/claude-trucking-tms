@@ -225,15 +225,15 @@ export default function PayrollPage() {
           const fuelFromStorage = fuelByWeekAndDriver[weekNumber]?.[driverId] || 0
 
           // Apply overrides if they exist, otherwise use calculated values
-          const gross = getOverride(weekNumber, driverId, 'gross') ?? Number(entry.gross) || 0
-          const extra = getOverride(weekNumber, driverId, 'extra') ?? Number(entry.extra) || 0
-          const dispatch_fee = getOverride(weekNumber, driverId, 'dispatch_fee') ?? Number(entry.dispatch_fee) || 0
-          const insurance = getOverride(weekNumber, driverId, 'insurance') ?? Number(entry.insurance) || 0
+          const gross = getOverride(weekNumber, driverId, 'gross') ?? (Number(entry.gross) || 0)
+          const extra = getOverride(weekNumber, driverId, 'extra') ?? (Number(entry.extra) || 0)
+          const dispatch_fee = getOverride(weekNumber, driverId, 'dispatch_fee') ?? (Number(entry.dispatch_fee) || 0)
+          const insurance = getOverride(weekNumber, driverId, 'insurance') ?? (Number(entry.insurance) || 0)
           const fuel = getOverride(weekNumber, driverId, 'fuel') ?? fuelFromStorage
-          const parking = getOverride(weekNumber, driverId, 'parking') ?? Number(entry.parking) || 0
-          const trailer = getOverride(weekNumber, driverId, 'trailer') ?? Number(entry.trailer) || 0
-          const misc = getOverride(weekNumber, driverId, 'misc') ?? Number(entry.misc) || 0
-          const miles = getOverride(weekNumber, driverId, 'miles') ?? Number(entry.miles) || 0
+          const parking = getOverride(weekNumber, driverId, 'parking') ?? (Number(entry.parking) || 0)
+          const trailer = getOverride(weekNumber, driverId, 'trailer') ?? (Number(entry.trailer) || 0)
+          const misc = getOverride(weekNumber, driverId, 'misc') ?? (Number(entry.misc) || 0)
+          const miles = getOverride(weekNumber, driverId, 'miles') ?? (Number(entry.miles) || 0)
 
           // Check amount = gross + extra - deductions (dispatch_fee, insurance, fuel, parking, trailer, misc)
           const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
