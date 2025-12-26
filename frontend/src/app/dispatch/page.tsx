@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useLoads, useUpdateLoad } from '@/hooks/use-loads'
 import { ChevronLeft, ChevronRight, MapPin, Clock, User, X, Truck, GripVertical } from 'lucide-react'
-import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns'
+import { format, startOfWeek, addDays, isSameDay, parseISO, startOfDay, endOfDay } from 'date-fns'
 import {
   DndContext,
   DragEndEvent,
@@ -217,7 +217,8 @@ export default function DispatchBoardPage() {
 
   // Get unassigned loads (no driver assigned) for the current week, sorted by pickup date
   const unassignedLoads = useMemo(() => {
-    const weekEnd = addDays(weekStart, 6)
+    const weekStartDay = startOfDay(weekStart)
+    const weekEndDay = endOfDay(addDays(weekStart, 6))
 
     return loads
       .filter(load => {
@@ -225,11 +226,11 @@ export default function DispatchBoardPage() {
         if (load.status === 'cancelled' || load.status === 'delivered') return false
 
         // Check if pickup or delivery falls within the current week
-        const pickupDate = load.pickup_date ? parseISO(load.pickup_date) : null
-        const deliveryDate = load.delivery_date ? parseISO(load.delivery_date) : null
+        const pickupDate = load.pickup_date ? startOfDay(parseISO(load.pickup_date)) : null
+        const deliveryDate = load.delivery_date ? startOfDay(parseISO(load.delivery_date)) : null
 
-        const isPickupInWeek = pickupDate && pickupDate >= weekStart && pickupDate <= weekEnd
-        const isDeliveryInWeek = deliveryDate && deliveryDate >= weekStart && deliveryDate <= weekEnd
+        const isPickupInWeek = pickupDate && pickupDate >= weekStartDay && pickupDate <= weekEndDay
+        const isDeliveryInWeek = deliveryDate && deliveryDate >= weekStartDay && deliveryDate <= weekEndDay
 
         return isPickupInWeek || isDeliveryInWeek
       })
