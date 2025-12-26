@@ -304,6 +304,7 @@ export default function LoadsPageInline() {
   const { columnWidths, adjustWidth } = useColumnWidths('loads-table', {
     week: 120,
     date: 100,
+    invoiced: 36,
     load_number: 120,
     customer: 180,
     driver: 140,
@@ -314,8 +315,7 @@ export default function LoadsPageInline() {
     miles: 100,
     rpm: 80,
     pod: 100,
-    ratecon: 100,
-    status: 120
+    ratecon: 100
   })
 
   // Local state for editing location fields
@@ -1480,7 +1480,9 @@ export default function LoadsPageInline() {
     const loadKey = load.isNew ? 'new' : load.id
     const rpm = load.miles && load.miles > 0 ? (load.rate || 0) / load.miles : 0
     const isEvenRow = rowIndex % 2 === 0
-    const defaultBgColor = isEvenRow ? 'var(--monday-bg-primary)' : 'rgba(0, 0, 0, 0.02)'
+    const isInvoiced = load.status === 'invoiced'
+    const defaultBgColor = isInvoiced ? 'rgba(0, 200, 117, 0.08)' : (isEvenRow ? 'var(--monday-bg-primary)' : 'rgba(0, 0, 0, 0.02)')
+    const hoverBgColor = isInvoiced ? 'rgba(0, 200, 117, 0.15)' : 'var(--monday-bg-hover)'
 
     return (
       <tr
@@ -1493,7 +1495,7 @@ export default function LoadsPageInline() {
         }}
         onMouseEnter={(e) => {
           const target = e.currentTarget
-          target.style.backgroundColor = 'var(--monday-bg-hover)'
+          target.style.backgroundColor = hoverBgColor
         }}
         onMouseLeave={(e) => {
           const target = e.currentTarget
@@ -1535,6 +1537,30 @@ export default function LoadsPageInline() {
               {new Date(load.pickup_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
             </div>
           )}
+        </td>
+
+        {/* Invoiced Checkbox */}
+        <td className="px-1 py-2.5 border-r text-center" style={{borderColor: 'var(--monday-border-light)', width: '36px', minWidth: '36px'}}>
+          <div
+            className="flex items-center justify-center cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation()
+              const newStatus = load.status === 'invoiced' ? 'dispatched' : 'invoiced'
+              updateField(loadKey, 'status', newStatus)
+            }}
+          >
+            <div
+              className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
+              style={{
+                borderColor: load.status === 'invoiced' ? 'var(--monday-done)' : 'var(--monday-border)',
+                backgroundColor: load.status === 'invoiced' ? 'var(--monday-done)' : 'transparent'
+              }}
+            >
+              {load.status === 'invoiced' && (
+                <Check className="h-3 w-3 text-white" />
+              )}
+            </div>
+          </div>
         </td>
 
         {/* Load # */}
@@ -2271,32 +2297,6 @@ export default function LoadsPageInline() {
           </div>
         </td>
 
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)'}} onClick={() => startEdit(loadKey, 'status')}>
-          {isEditing(loadKey, 'status') ? (
-            <Select
-              value={load.status}
-              onValueChange={(value) => {
-                updateField(loadKey, 'status', value)
-                stopEdit()
-              }}
-              open={true}
-              onOpenChange={(open) => !open && stopEdit()}
-            >
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="available">Available</SelectItem>
-                <SelectItem value="dispatched">Dispatched</SelectItem>
-                <SelectItem value="invoiced">Invoiced</SelectItem>
-              </SelectContent>
-            </Select>
-          ) : (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer ${getStatusColor(load.status)}`}>
-              {load.status.replace('_', ' ')}
-            </span>
-          )}
-        </td>
       </tr>
     )
   }
@@ -2541,6 +2541,9 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
+                  <th className="px-1 py-2.5 text-center text-xs font-medium border-b" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: '36px', minWidth: '36px'}}>
+                    <Check className="h-3 w-3 mx-auto" style={{color: 'var(--monday-text-secondary)'}} />
+                  </th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.load_number}px`, minWidth: `${columnWidths.load_number}px`}} onClick={() => handleSort('load_number')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.load_number}
@@ -2634,18 +2637,6 @@ export default function LoadsPageInline() {
                     />
                     Ratecon
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.status}px`, minWidth: `${columnWidths.status}px`}} onClick={() => handleSort('status')}>
-                    <ColumnWidthControl
-                      currentWidth={columnWidths.status}
-                      onAdjust={(delta) => adjustWidth('status', delta)}
-                    />
-                    <div className="flex items-center gap-1">
-                      Status
-                      {sortField === 'status' ? (
-                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                      ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
-                    </div>
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white" style={{backgroundColor: 'var(--monday-bg-primary)'}}>
@@ -2659,7 +2650,9 @@ export default function LoadsPageInline() {
                 <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
+                  <td className="px-1 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm font-medium" style={{ color: 'var(--monday-text-primary)' }}>{totals.count} Loads</td>
+                  <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
@@ -2679,7 +2672,6 @@ export default function LoadsPageInline() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
                   <td className="px-2 py-2 text-sm"></td>
                 </tr>
