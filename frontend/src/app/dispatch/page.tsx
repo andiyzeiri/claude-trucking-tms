@@ -136,22 +136,36 @@ export default function DispatchBoardPage() {
     return allDrivers.filter(driver => !driver.date_terminated)
   }, [allDrivers])
 
-  // Get unassigned loads (no driver assigned), sorted by pickup date
+  // Get unassigned loads (no driver assigned) for the current week, sorted by pickup date
   const unassignedLoads = useMemo(() => {
+    const weekEnd = addDays(weekStart, 6)
+
     return loads
-      .filter(load => !load.driver_id && load.status !== 'cancelled' && load.status !== 'delivered')
+      .filter(load => {
+        if (load.driver_id) return false
+        if (load.status === 'cancelled' || load.status === 'delivered') return false
+
+        // Check if pickup or delivery falls within the current week
+        const pickupDate = load.pickup_date ? parseISO(load.pickup_date) : null
+        const deliveryDate = load.delivery_date ? parseISO(load.delivery_date) : null
+
+        const isPickupInWeek = pickupDate && pickupDate >= weekStart && pickupDate <= weekEnd
+        const isDeliveryInWeek = deliveryDate && deliveryDate >= weekStart && deliveryDate <= weekEnd
+
+        return isPickupInWeek || isDeliveryInWeek
+      })
       .sort((a, b) => {
         const dateA = a.pickup_date ? new Date(a.pickup_date).getTime() : 0
         const dateB = b.pickup_date ? new Date(b.pickup_date).getTime() : 0
         return dateA - dateB
       })
-  }, [loads])
+  }, [loads, weekStart])
 
   // Track which drivers are marked as off for which days
   const [daysOff, setDaysOff] = useState<DayOffDriver[]>([])
 
-  // Current week start date
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 0 }))
+  // Current week start date (Monday)
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
 
   // Drag state for overlay
   const [activeLoad, setActiveLoad] = useState<Load | null>(null)
@@ -173,7 +187,7 @@ export default function DispatchBoardPage() {
   // Navigate weeks
   const goToPreviousWeek = () => setWeekStart(addDays(weekStart, -7))
   const goToNextWeek = () => setWeekStart(addDays(weekStart, 7))
-  const goToCurrentWeek = () => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }))
+  const goToCurrentWeek = () => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))
 
   // Check if a driver is off on a specific day
   const isDriverOff = (driverId: number, date: Date) => {
