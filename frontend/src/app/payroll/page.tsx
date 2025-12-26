@@ -14,6 +14,24 @@ import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
 
 // Fuel data storage key (same as fuel page)
 const FUEL_STORAGE_KEY = 'tms-fuel-data'
+// Payroll overrides storage key
+const PAYROLL_OVERRIDES_KEY = 'tms-payroll-overrides'
+
+// Type for payroll field overrides
+interface PayrollOverride {
+  gross?: number
+  extra?: number
+  dispatch_fee?: number
+  insurance?: number
+  fuel?: number
+  parking?: number
+  trailer?: number
+  misc?: number
+  miles?: number
+}
+
+// Map key is "weekNumber-driverId"
+type PayrollOverrides = Record<string, PayrollOverride>
 
 interface FuelEntry {
   id: string
@@ -92,6 +110,8 @@ export default function PayrollPage() {
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, weekNumber: number, driverId: number} | null>(null)
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [fuelEntries, setFuelEntries] = useState<FuelEntry[]>([])
+  const [payrollOverrides, setPayrollOverrides] = useState<PayrollOverrides>({})
+  const [editValue, setEditValue] = useState<string>('')
 
   // Load fuel data from localStorage
   useEffect(() => {
@@ -104,6 +124,40 @@ export default function PayrollPage() {
       }
     }
   }, [])
+
+  // Load payroll overrides from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(PAYROLL_OVERRIDES_KEY)
+    if (stored) {
+      try {
+        setPayrollOverrides(JSON.parse(stored))
+      } catch (e) {
+        console.error('Failed to load payroll overrides:', e)
+      }
+    }
+  }, [])
+
+  // Save payroll overrides to localStorage
+  const saveOverride = (weekNumber: number, driverId: number, field: string, value: number) => {
+    const key = `${weekNumber}-${driverId}`
+    setPayrollOverrides(prev => {
+      const newOverrides = {
+        ...prev,
+        [key]: {
+          ...prev[key],
+          [field]: value
+        }
+      }
+      localStorage.setItem(PAYROLL_OVERRIDES_KEY, JSON.stringify(newOverrides))
+      return newOverrides
+    })
+  }
+
+  // Get override value for a specific field
+  const getOverride = (weekNumber: number, driverId: number, field: keyof PayrollOverride): number | undefined => {
+    const key = `${weekNumber}-${driverId}`
+    return payrollOverrides[key]?.[field]
+  }
 
   // Create a map of fuel totals by week and driver
   const fuelByWeekAndDriver = useMemo(() => {
@@ -164,31 +218,36 @@ export default function PayrollPage() {
 
         const driverData = driverMap.get(entry.driver_id)
         if (driverData) {
-          // Get fuel amount for this driver/week from localStorage
-          const fuelAmount = fuelByWeekAndDriver[entry.week_number]?.[entry.driver_id] || 0
+          const weekNumber = entry.week_number
+          const driverId = entry.driver_id
 
-          // Calculate check amount with fuel deduction
-          const gross = Number(entry.gross) || 0
-          const extra = Number(entry.extra) || 0
-          const dispatch_fee = Number(entry.dispatch_fee) || 0
-          const insurance = Number(entry.insurance) || 0
-          const parking = Number(entry.parking) || 0
-          const trailer = Number(entry.trailer) || 0
-          const misc = Number(entry.misc) || 0
+          // Get fuel amount for this driver/week from localStorage
+          const fuelFromStorage = fuelByWeekAndDriver[weekNumber]?.[driverId] || 0
+
+          // Apply overrides if they exist, otherwise use calculated values
+          const gross = getOverride(weekNumber, driverId, 'gross') ?? Number(entry.gross) || 0
+          const extra = getOverride(weekNumber, driverId, 'extra') ?? Number(entry.extra) || 0
+          const dispatch_fee = getOverride(weekNumber, driverId, 'dispatch_fee') ?? Number(entry.dispatch_fee) || 0
+          const insurance = getOverride(weekNumber, driverId, 'insurance') ?? Number(entry.insurance) || 0
+          const fuel = getOverride(weekNumber, driverId, 'fuel') ?? fuelFromStorage
+          const parking = getOverride(weekNumber, driverId, 'parking') ?? Number(entry.parking) || 0
+          const trailer = getOverride(weekNumber, driverId, 'trailer') ?? Number(entry.trailer) || 0
+          const misc = getOverride(weekNumber, driverId, 'misc') ?? Number(entry.misc) || 0
+          const miles = getOverride(weekNumber, driverId, 'miles') ?? Number(entry.miles) || 0
 
           // Check amount = gross + extra - deductions (dispatch_fee, insurance, fuel, parking, trailer, misc)
-          const check_amount = gross + extra - dispatch_fee - insurance - fuelAmount - parking - trailer - misc
+          const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
 
-          driverData.weeks[entry.week_number] = {
+          driverData.weeks[weekNumber] = {
             gross,
             extra,
             dispatch_fee,
             insurance,
-            fuel: fuelAmount,
+            fuel,
             parking,
             trailer,
             misc,
-            miles: Number(entry.miles) || 0,
+            miles,
             check_amount
           }
         }
@@ -202,25 +261,72 @@ export default function PayrollPage() {
         const driverId = parseInt(driverIdStr)
         const driverData = driverMap.get(driverId)
         if (driverData && !driverData.weeks[weekNumber]) {
-          // Create a week entry with just fuel data
+          // Apply overrides if they exist
+          const gross = getOverride(weekNumber, driverId, 'gross') ?? 0
+          const extra = getOverride(weekNumber, driverId, 'extra') ?? 0
+          const dispatch_fee = getOverride(weekNumber, driverId, 'dispatch_fee') ?? 0
+          const insurance = getOverride(weekNumber, driverId, 'insurance') ?? 0
+          const fuel = getOverride(weekNumber, driverId, 'fuel') ?? fuelAmount
+          const parking = getOverride(weekNumber, driverId, 'parking') ?? 0
+          const trailer = getOverride(weekNumber, driverId, 'trailer') ?? 0
+          const misc = getOverride(weekNumber, driverId, 'misc') ?? 0
+          const miles = getOverride(weekNumber, driverId, 'miles') ?? 0
+
+          const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
+
           driverData.weeks[weekNumber] = {
-            gross: 0,
-            extra: 0,
-            dispatch_fee: 0,
-            insurance: 0,
-            fuel: fuelAmount,
-            parking: 0,
-            trailer: 0,
-            misc: 0,
-            miles: 0,
-            check_amount: -fuelAmount // Negative because it's only deductions
+            gross,
+            extra,
+            dispatch_fee,
+            insurance,
+            fuel,
+            parking,
+            trailer,
+            misc,
+            miles,
+            check_amount
           }
         }
       })
     })
 
+    // Also create entries for weeks with overrides but no calculated data
+    Object.entries(payrollOverrides).forEach(([key, overrides]) => {
+      const [weekNumStr, driverIdStr] = key.split('-')
+      const weekNumber = parseInt(weekNumStr)
+      const driverId = parseInt(driverIdStr)
+      const driverData = driverMap.get(driverId)
+
+      if (driverData && !driverData.weeks[weekNumber]) {
+        const gross = overrides.gross ?? 0
+        const extra = overrides.extra ?? 0
+        const dispatch_fee = overrides.dispatch_fee ?? 0
+        const insurance = overrides.insurance ?? 0
+        const fuel = overrides.fuel ?? 0
+        const parking = overrides.parking ?? 0
+        const trailer = overrides.trailer ?? 0
+        const misc = overrides.misc ?? 0
+        const miles = overrides.miles ?? 0
+
+        const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
+
+        driverData.weeks[weekNumber] = {
+          gross,
+          extra,
+          dispatch_fee,
+          insurance,
+          fuel,
+          parking,
+          trailer,
+          misc,
+          miles,
+          check_amount
+        }
+      }
+    })
+
     return Array.from(driverMap.values())
-  }, [drivers, calculatedPayroll, fuelByWeekAndDriver])
+  }, [drivers, calculatedPayroll, fuelByWeekAndDriver, payrollOverrides])
 
   const toggleWeek = (weekNumber: number) => {
     const newExpanded = new Set(expandedWeeks)
@@ -398,12 +504,27 @@ export default function PayrollPage() {
     return editingCell?.weekNumber === weekNumber && editingCell?.driverId === driverId && editingCell?.field === field
   }
 
-  const startEdit = (weekNumber: number, driverId: number, field: string) => {
+  const startEdit = (weekNumber: number, driverId: number, field: string, currentValue: number) => {
     setEditingCell({ weekNumber, driverId, field })
+    setEditValue(currentValue.toString())
   }
 
   const stopEdit = () => {
+    if (editingCell) {
+      const value = parseFloat(editValue) || 0
+      saveOverride(editingCell.weekNumber, editingCell.driverId, editingCell.field, value)
+    }
     setEditingCell(null)
+    setEditValue('')
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      stopEdit()
+    } else if (e.key === 'Escape') {
+      setEditingCell(null)
+      setEditValue('')
+    }
   }
 
   return (
@@ -787,12 +908,15 @@ export default function PayrollPage() {
                               <td className="px-3 py-2.5 border-r pl-8" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 500, color: 'rgb(37, 99, 235)'}}>
                                 {driverData.driver_name}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'var(--colors-foreground-default)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'gross')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'var(--colors-foreground-default)'}} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'gross') && startEdit(week.weekNumber, driverData.driver_id, 'gross', weekData?.gross || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'gross') ? (
                                   <Input
                                     type="number"
-                                    value={weekData?.gross || 0}
+                                    step="0.01"
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
                                     onBlur={stopEdit}
+                                    onKeyDown={handleKeyDown}
                                     autoFocus
                                     className="h-8 text-sm text-right"
                                   />
@@ -800,12 +924,15 @@ export default function PayrollPage() {
                                   <span>{weekData ? formatCurrency(weekData.gross) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'var(--colors-foreground-default)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'extra')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'var(--colors-foreground-default)'}} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'extra') && startEdit(week.weekNumber, driverData.driver_id, 'extra', weekData?.extra || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'extra') ? (
                                   <Input
                                     type="number"
-                                    value={weekData?.extra || 0}
+                                    step="0.01"
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
                                     onBlur={stopEdit}
+                                    onKeyDown={handleKeyDown}
                                     autoFocus
                                     className="h-8 text-sm text-right"
                                   />
@@ -813,12 +940,15 @@ export default function PayrollPage() {
                                   <span>{weekData ? formatCurrency(weekData.extra) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'dispatch_fee')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'dispatch_fee') && startEdit(week.weekNumber, driverData.driver_id, 'dispatch_fee', weekData?.dispatch_fee || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'dispatch_fee') ? (
                                   <Input
                                     type="number"
-                                    value={weekData?.dispatch_fee || 0}
+                                    step="0.01"
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
                                     onBlur={stopEdit}
+                                    onKeyDown={handleKeyDown}
                                     autoFocus
                                     className="h-8 text-sm text-right"
                                   />
@@ -826,12 +956,15 @@ export default function PayrollPage() {
                                   <span>{weekData ? formatCurrency(-weekData.dispatch_fee) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'insurance')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'insurance') && startEdit(week.weekNumber, driverData.driver_id, 'insurance', weekData?.insurance || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'insurance') ? (
                                   <Input
                                     type="number"
-                                    value={weekData?.insurance || 0}
+                                    step="0.01"
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
                                     onBlur={stopEdit}
+                                    onKeyDown={handleKeyDown}
                                     autoFocus
                                     className="h-8 text-sm text-right"
                                   />
@@ -839,12 +972,15 @@ export default function PayrollPage() {
                                   <span>{weekData ? formatCurrency(-weekData.insurance) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'fuel')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'fuel') && startEdit(week.weekNumber, driverData.driver_id, 'fuel', weekData?.fuel || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'fuel') ? (
                                   <Input
                                     type="number"
-                                    value={weekData?.fuel || 0}
+                                    step="0.01"
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
                                     onBlur={stopEdit}
+                                    onKeyDown={handleKeyDown}
                                     autoFocus
                                     className="h-8 text-sm text-right"
                                   />
@@ -852,12 +988,15 @@ export default function PayrollPage() {
                                   <span>{weekData ? formatCurrency(-weekData.fuel) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'parking')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'parking') && startEdit(week.weekNumber, driverData.driver_id, 'parking', weekData?.parking || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'parking') ? (
                                   <Input
                                     type="number"
-                                    value={weekData?.parking || 0}
+                                    step="0.01"
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
                                     onBlur={stopEdit}
+                                    onKeyDown={handleKeyDown}
                                     autoFocus
                                     className="h-8 text-sm text-right"
                                   />
@@ -865,12 +1004,15 @@ export default function PayrollPage() {
                                   <span>{weekData ? formatCurrency(-weekData.parking) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'trailer')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'trailer') && startEdit(week.weekNumber, driverData.driver_id, 'trailer', weekData?.trailer || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'trailer') ? (
                                   <Input
                                     type="number"
-                                    value={weekData?.trailer || 0}
+                                    step="0.01"
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
                                     onBlur={stopEdit}
+                                    onKeyDown={handleKeyDown}
                                     autoFocus
                                     className="h-8 text-sm text-right"
                                   />
@@ -878,12 +1020,15 @@ export default function PayrollPage() {
                                   <span>{weekData ? formatCurrency(-weekData.trailer) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'misc')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'rgb(220, 38, 38)'}} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'misc') && startEdit(week.weekNumber, driverData.driver_id, 'misc', weekData?.misc || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'misc') ? (
                                   <Input
                                     type="number"
-                                    value={weekData?.misc || 0}
+                                    step="0.01"
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
                                     onBlur={stopEdit}
+                                    onKeyDown={handleKeyDown}
                                     autoFocus
                                     className="h-8 text-sm text-right"
                                   />
@@ -891,12 +1036,14 @@ export default function PayrollPage() {
                                   <span>{weekData ? formatCurrency(-weekData.misc) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'var(--colors-foreground-default)'}} onClick={() => startEdit(week.weekNumber, driverData.driver_id, 'miles')}>
+                              <td className="px-3 py-2.5 border-r text-right cursor-pointer hover:bg-blue-50 rounded" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', color: 'var(--colors-foreground-default)'}} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'miles') && startEdit(week.weekNumber, driverData.driver_id, 'miles', weekData?.miles || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'miles') ? (
                                   <Input
                                     type="number"
-                                    value={weekData?.miles || 0}
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
                                     onBlur={stopEdit}
+                                    onKeyDown={handleKeyDown}
                                     autoFocus
                                     className="h-8 text-sm text-right"
                                   />
