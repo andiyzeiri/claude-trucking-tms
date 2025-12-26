@@ -287,7 +287,8 @@ export default function LoadsPageInline() {
   const [activeGroupings, setActiveGroupings] = useState<Set<'week' | 'day' | 'driver' | 'customer'>>(new Set(['week', 'driver']))
   const [groupMenuOpen, setGroupMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  // Use expandedGroups instead of collapsedGroups - everything collapsed by default
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [upcomingFilter, setUpcomingFilter] = useState<boolean>(false)
   const [showDedicatedPanel, setShowDedicatedPanel] = useState<boolean>(false)
@@ -298,7 +299,6 @@ export default function LoadsPageInline() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const groupMenuRef = useRef<HTMLDivElement>(null)
   const locationEditRef = useRef<HTMLDivElement>(null)
-  const hasInitiallyCollapsed = useRef<boolean>(false)
 
   // Column width management
   const { columnWidths, adjustWidth } = useColumnWidths('loads-table', {
@@ -608,44 +608,19 @@ export default function LoadsPageInline() {
     return createNestedGroups(filteredLoads, 0)
   }, [filteredLoads, activeGroupings, customers])
 
-  // Collapse all groups by default on initial load
+  // Reset expanded groups when groupings change
   useEffect(() => {
-    if (!groupedLoads) return
-
-    const getAllGroupKeys = (data: any): string[] => {
-      if (Array.isArray(data)) return []
-      const keys: string[] = []
-      Object.keys(data).forEach(key => {
-        keys.push(key)
-        const nestedKeys = getAllGroupKeys(data[key])
-        keys.push(...nestedKeys)
-      })
-      return keys
-    }
-
-    // Only set collapsed groups if we haven't manually interacted with them yet
-    // Or if this is the first load
-    if (!hasInitiallyCollapsed.current) {
-      const allGroupKeys = getAllGroupKeys(groupedLoads)
-      setCollapsedGroups(new Set(allGroupKeys))
-      hasInitiallyCollapsed.current = true
-    }
-  }, [groupedLoads])
-
-  // Reset the hasInitiallyCollapsed flag when activeGroupings changes
-  // This ensures groups are collapsed when switching grouping modes
-  useEffect(() => {
-    hasInitiallyCollapsed.current = false
+    setExpandedGroups(new Set())
   }, [activeGroupings])
 
   const toggleGroup = (groupKey: string) => {
-    const newCollapsed = new Set(collapsedGroups)
-    if (newCollapsed.has(groupKey)) {
-      newCollapsed.delete(groupKey)
+    const newExpanded = new Set(expandedGroups)
+    if (newExpanded.has(groupKey)) {
+      newExpanded.delete(groupKey)
     } else {
-      newCollapsed.add(groupKey)
+      newExpanded.add(groupKey)
     }
-    setCollapsedGroups(newCollapsed)
+    setExpandedGroups(newExpanded)
   }
 
   // Calculate upcoming loads statistics (next 7 days)
@@ -1380,7 +1355,7 @@ export default function LoadsPageInline() {
     const currentGroupType = groupingOrder[level]
 
     Object.entries(data).forEach(([groupKey, groupData]) => {
-      const isCollapsed = collapsedGroups.has(groupKey)
+      const isCollapsed = !expandedGroups.has(groupKey)
 
       // Calculate totals for this group
       const getAllLoads = (d: any): EditableLoad[] => {
