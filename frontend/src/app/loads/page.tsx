@@ -58,6 +58,15 @@ function getWeekNumber(date: Date): number {
   return weekNum
 }
 
+// Helper to get ISO week year (the year the week belongs to)
+// e.g., Dec 30, 2024 is in Week 1 of 2025, so ISO week year is 2025
+function getISOWeekYear(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  return d.getUTCFullYear()
+}
+
 // Helper to get week label with date range
 function getWeekLabel(date: Date): string {
   const weekNum = getWeekNumber(date)
@@ -444,7 +453,7 @@ export default function LoadsPageInline() {
     }
   }
 
-  // Get available years from loads data
+  // Get available years from loads data (using ISO week year for consistency)
   const availableYears = useMemo(() => {
     const years = new Set<number>()
     const currentYear = new Date().getFullYear()
@@ -452,7 +461,7 @@ export default function LoadsPageInline() {
 
     editableLoads.forEach(load => {
       if (load.pickup_date) {
-        const year = new Date(load.pickup_date).getFullYear()
+        const year = getISOWeekYear(new Date(load.pickup_date))
         if (year >= 2020 && year <= currentYear + 1) { // Reasonable year range
           years.add(year)
         }
@@ -466,10 +475,10 @@ export default function LoadsPageInline() {
   const filteredLoads = useMemo(() => {
     let filtered = editableLoads
 
-    // Apply year filter
+    // Apply year filter using ISO week year (so Dec 30, 2024 shows in 2025 if it's Week 1 of 2025)
     filtered = filtered.filter(load => {
       if (!load.pickup_date) return false
-      const loadYear = new Date(load.pickup_date).getFullYear()
+      const loadYear = getISOWeekYear(new Date(load.pickup_date))
       return loadYear === selectedYear
     })
 
