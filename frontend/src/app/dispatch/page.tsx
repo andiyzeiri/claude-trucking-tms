@@ -5,6 +5,7 @@ import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useLoads, useUpdateLoad } from '@/hooks/use-loads'
+import { useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, MapPin, Clock, User, X, Truck, GripVertical } from 'lucide-react'
 import { format, startOfWeek, addDays, isSameDay, parseISO, startOfDay, endOfDay } from 'date-fns'
 import {
@@ -211,9 +212,23 @@ function DroppableDriverRow({ driverId, children }: { driverId: number, children
 }
 
 export default function DispatchBoardPage() {
+  const queryClient = useQueryClient()
   const { data: driversData } = useDrivers(1, 100)
-  const { data: loadsData, refetch: refetchLoads } = useLoads(1, 10000) // Get all loads
+  const { data: loadsData } = useLoads(1, 10000) // Get all loads
   const updateLoad = useUpdateLoad()
+
+  // Optimistic update helper - instantly updates the cache
+  const optimisticUpdateLoad = (loadId: number, newDriverId: number | null) => {
+    queryClient.setQueryData(['loads', 1, 10000], (oldData: any) => {
+      if (!oldData?.items) return oldData
+      return {
+        ...oldData,
+        items: oldData.items.map((load: Load) =>
+          load.id === loadId ? { ...load, driver_id: newDriverId } : load
+        )
+      }
+    })
+  }
 
   const allDrivers = driversData?.items || []
   const loads = loadsData?.items || []
@@ -403,14 +418,19 @@ export default function DispatchBoardPage() {
     // Dropping on unassigned column - remove driver
     if (isUnassigned) {
       if (load.driver_id) {
+        const previousDriverId = load.driver_id
+        // Optimistic update - instant UI feedback
+        optimisticUpdateLoad(load.id, null)
+
         updateLoad.mutate(
           { id: load.id, data: { driver_id: null as any } },
           {
             onSuccess: () => {
               toast.success(`Load #${load.load_number} unassigned`)
-              refetchLoads()
             },
             onError: () => {
+              // Revert on error
+              optimisticUpdateLoad(load.id, previousDriverId)
               toast.error('Failed to unassign load')
             },
           }
@@ -421,14 +441,19 @@ export default function DispatchBoardPage() {
 
     // Dropping on a driver row - assign driver
     if (driverId && driverId !== load.driver_id) {
+      const previousDriverId = load.driver_id
+      // Optimistic update - instant UI feedback
+      optimisticUpdateLoad(load.id, driverId)
+
       updateLoad.mutate(
         { id: load.id, data: { driver_id: driverId } },
         {
           onSuccess: () => {
             toast.success(`Load #${load.load_number} assigned to driver`)
-            refetchLoads()
           },
           onError: () => {
+            // Revert on error
+            optimisticUpdateLoad(load.id, previousDriverId ?? null)
             toast.error('Failed to assign load to driver')
           },
         }
@@ -441,14 +466,19 @@ export default function DispatchBoardPage() {
     const load = loads.find(l => l.id === loadId)
     if (!load) return
 
+    const previousDriverId = load.driver_id
+    // Optimistic update - instant UI feedback
+    optimisticUpdateLoad(loadId, null)
+
     updateLoad.mutate(
       { id: loadId, data: { driver_id: null as any } },
       {
         onSuccess: () => {
           toast.success(`Load #${load.load_number} unassigned`)
-          refetchLoads()
         },
         onError: () => {
+          // Revert on error
+          optimisticUpdateLoad(loadId, previousDriverId ?? null)
           toast.error('Failed to unassign load')
         },
       }
