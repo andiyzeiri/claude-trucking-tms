@@ -41,7 +41,7 @@ export function useCreateLoad() {
 
   return useMutation({
     mutationFn: async (data: LoadFormData): Promise<Load> => {
-      const response = await api.post('/v1/loads', data)
+      const response = await api.post('/v1/loads/', data)
       return response.data
     },
     onSuccess: (newLoad) => {
