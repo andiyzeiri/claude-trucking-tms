@@ -238,152 +238,147 @@ export default function LanesPage() {
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-lg border">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '40%' }}>
-                    Route
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '60%' }}>
-                    Customers & Loads
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {laneGroups.map((group) => (
-                  <React.Fragment key={group.route}>
-                    <tr
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => toggleLaneExpansion(group.route)}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center">
-                          {group.isExpanded ? (
-                            <ChevronDown className="h-4 w-4 mr-2 text-gray-500" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 mr-2 text-gray-500" />
-                          )}
-                          <span className="font-medium text-gray-900">{group.route}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-4">
-                          {group.customers.size > 0 ? (
-                            <span className="text-sm text-blue-600 font-medium">
-                              {group.customers.size} customer{group.customers.size !== 1 ? 's' : ''}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-gray-400 italic">
-                              No customers
-                            </span>
-                          )}
-                          {group.loads.length > 0 && (
-                            <span className="text-sm text-green-600 font-medium">
-                              {group.loads.length} load{group.loads.length !== 1 ? 's' : ''}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                    {group.isExpanded && (
-                      <>
-                        {/* Customers section */}
-                        {group.customers.size > 0 && (
-                          <>
-                            <tr className="bg-blue-50">
-                              <td colSpan={2} className="px-4 py-2 pl-8">
-                                <div className="text-xs font-semibold text-blue-700 uppercase">Customers</div>
-                              </td>
-                            </tr>
-                            {Array.from(group.customers).map((customerName, index) => (
-                              <tr
-                                key={index}
-                                className="bg-gray-50 hover:bg-gray-100"
-                              >
-                                <td className="px-4 py-2 pl-12">
-                                  <div className="text-sm">
-                                    <div className="font-medium text-gray-900">{customerName}</div>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-2"></td>
-                              </tr>
-                            ))}
-                          </>
-                        )}
+          <div className="space-y-3">
+            {laneGroups.map((group) => (
+              <div key={group.route} className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                {/* Route Header */}
+                <div
+                  className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => toggleLaneExpansion(group.route)}
+                >
+                  <div className="flex items-center gap-3">
+                    {group.isExpanded ? (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-gray-500" />
+                    )}
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-blue-500" />
+                      <span className="font-semibold text-gray-900">{group.route}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {group.customers.size > 0 && (
+                      <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                        {group.customers.size} customer{group.customers.size !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {group.loads.length > 0 && (
+                      <span className="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        {group.loads.length} load{group.loads.length !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-                        {/* Loads section */}
-                        {group.loads.length > 0 && (
-                          <>
-                            <tr className="bg-green-50">
-                              <td colSpan={2} className="px-4 py-2 pl-8">
-                                <div className="text-xs font-semibold text-green-700 uppercase">Recent Loads</div>
-                              </td>
-                            </tr>
+                {/* Expanded Content */}
+                {group.isExpanded && (
+                  <div className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Customers Box */}
+                      <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <h4 className="text-sm font-semibold text-blue-800 uppercase tracking-wide">Customers</h4>
+                        </div>
+                        {group.customers.size > 0 ? (
+                          <div className="space-y-2">
+                            {Array.from(group.customers).map((customerName, index) => (
+                              <div
+                                key={index}
+                                className="bg-white rounded-md px-3 py-2 text-sm font-medium text-gray-800 border border-blue-100"
+                              >
+                                {customerName}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-blue-600 italic">No customers yet</p>
+                        )}
+                      </div>
+
+                      {/* Loads Box */}
+                      <div className="bg-green-50 rounded-lg border border-green-200 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <h4 className="text-sm font-semibold text-green-800 uppercase tracking-wide">Recent Loads</h4>
+                        </div>
+                        {group.loads.length > 0 ? (
+                          <div className="space-y-2">
                             {group.loads.slice(0, 5).map((load) => (
-                              <tr key={load.id} className="bg-gray-50 hover:bg-gray-100" style={{ fontSize: '9px' }}>
-                                <td className="px-2 py-1 pl-12">
-                                  <div>
-                                    <div className="font-medium text-gray-900">
-                                      {load.load_number}
-                                    </div>
-                                    <div className="text-gray-500" style={{ fontSize: '8px' }}>
-                                      {new Date(load.pickup_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                    </div>
+                              <div
+                                key={load.id}
+                                className="bg-white rounded-md px-3 py-2 border border-green-100 flex justify-between items-center"
+                              >
+                                <div>
+                                  <div className="text-sm font-medium text-gray-800">{load.load_number}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {new Date(load.pickup_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                   </div>
-                                </td>
-                                <td className="px-2 py-1">
-                                  <div className="text-gray-600">
-                                    ${load.rate.toLocaleString()} • {load.miles} mi
-                                  </div>
-                                </td>
-                              </tr>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-semibold text-green-700">${load.rate?.toLocaleString() || '0'}</div>
+                                  <div className="text-xs text-gray-500">{load.miles || 0} mi</div>
+                                </div>
+                              </div>
                             ))}
                             {group.loads.length > 5 && (
-                              <tr className="bg-gray-50">
-                                <td colSpan={2} className="px-4 py-2 pl-12">
-                                  <div className="text-xs text-gray-500">
-                                    + {group.loads.length - 5} more load{group.loads.length - 5 !== 1 ? 's' : ''}
-                                  </div>
-                                </td>
-                              </tr>
+                              <div className="text-xs text-green-600 font-medium pt-1">
+                                + {group.loads.length - 5} more load{group.loads.length - 5 !== 1 ? 's' : ''}
+                              </div>
                             )}
-                          </>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-green-600 italic">No loads yet</p>
                         )}
-                      </>
-                    )}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Floating Totals Row */}
+        {/* Summary Cards */}
         {laneGroups.length > 0 && (
-          <div className="sticky bottom-0 bg-white border-t-2 border-gray-300 shadow-lg mt-4">
-            <div style={{ minWidth: '1400px', width: '100%' }}>
-              <table className="w-full table-auto">
-                <tbody>
-                  <tr className="bg-gray-50">
-                    <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '40%' }}>
-                      <span className="font-medium text-gray-900">
-                        {totals.totalLanes} Route{totals.totalLanes !== 1 ? 's' : ''}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-sm" style={{ width: '60%' }}>
-                      <div className="flex items-center gap-4">
-                        <span className="font-medium text-blue-700">
-                          {totals.totalCustomers} Customer{totals.totalCustomers !== 1 ? 's' : ''}
-                        </span>
-                        <span className="font-medium text-green-700">
-                          {totals.totalLoads} Load{totals.totalLoads !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+          <div className="grid grid-cols-3 gap-4 mt-4">
+            <div className="bg-white rounded-lg border shadow-sm p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <MapPin className="h-5 w-5 text-gray-600" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-900">{totals.totalLanes}</div>
+                  <div className="text-sm text-gray-500">Route{totals.totalLanes !== 1 ? 's' : ''}</div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg border shadow-sm p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-blue-700">{totals.totalCustomers}</div>
+                  <div className="text-sm text-gray-500">Customer{totals.totalCustomers !== 1 ? 's' : ''}</div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg border shadow-sm p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-green-700">{totals.totalLoads}</div>
+                  <div className="text-sm text-gray-500">Load{totals.totalLoads !== 1 ? 's' : ''}</div>
+                </div>
+              </div>
             </div>
           </div>
         )}
