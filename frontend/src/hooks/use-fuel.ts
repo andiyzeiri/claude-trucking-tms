@@ -22,7 +22,7 @@ export function useFuel() {
   return useQuery<Fuel[]>({
     queryKey: ['fuel'],
     queryFn: async () => {
-      const response = await api.get('/v1/fuel')
+      const response = await api.get('/v1/fuel/')
       return response.data
     }
   })
@@ -44,7 +44,7 @@ export function useCreateFuel() {
 
   return useMutation({
     mutationFn: async (data: FuelFormData) => {
-      const response = await api.post('/v1/fuel', data)
+      const response = await api.post('/v1/fuel/', data)
       return response.data
     },
     onSuccess: () => {
