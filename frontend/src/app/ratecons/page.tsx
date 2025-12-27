@@ -276,14 +276,20 @@ export default function RateconsPage() {
     }
   }
 
-  // Filter loads by time period based on pickup_date
+  // Filter loads by time period based on pickup_date and sort by pickup_date descending
   const filteredLoads = useMemo(() => {
     const cutoff = getDateCutoff(timePeriod)
-    return loads.filter(load => {
-      if (!load.pickup_date) return false
-      const pickupDate = new Date(load.pickup_date)
-      return pickupDate >= cutoff
-    })
+    return loads
+      .filter(load => {
+        if (!load.pickup_date) return false
+        const pickupDate = new Date(load.pickup_date)
+        return pickupDate >= cutoff
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.pickup_date).getTime()
+        const dateB = new Date(b.pickup_date).getTime()
+        return dateB - dateA // Most recent first
+      })
   }, [loads, timePeriod])
 
   const printRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
