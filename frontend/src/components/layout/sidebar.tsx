@@ -50,10 +50,10 @@ const navigation = [
 const ROLE_PAGES: Record<string, string[]> = {
   company_admin: navigation.map(n => n.pageId),
   super_admin: navigation.map(n => n.pageId),
-  dispatcher: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'invoices', 'reports', 'ifta'],
+  dispatcher: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'ifta', 'payroll', 'invoices', 'reports'],
   driver: ['dashboard', 'loads'],
   customer: ['dashboard', 'loads', 'invoices'],
-  viewer: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'invoices', 'reports'],
+  viewer: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'fuel', 'ifta', 'invoices', 'reports'],
   custom: [],
 }
 
