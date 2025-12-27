@@ -130,7 +130,7 @@ export function useUpdateDedicatedLane() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<DedicatedLaneCreate> }): Promise<DedicatedLane> => {
-      const response = await api.put(`/v1/dedicated-lanes/${id}/`, data)
+      const response = await api.put(`/v1/dedicated-lanes/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -150,7 +150,7 @@ export function useDeleteDedicatedLane() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/dedicated-lanes/${id}/`)
+      await api.delete(`/v1/dedicated-lanes/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dedicated-lanes'] })

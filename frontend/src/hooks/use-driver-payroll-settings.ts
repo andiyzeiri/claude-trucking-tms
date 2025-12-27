@@ -85,7 +85,7 @@ export function useUpdateDriverPayrollSettings() {
       driverId: number
       data: Partial<DriverPayrollSettingsInput>
     }): Promise<DriverPayrollSettings> => {
-      const response = await api.put(`/v1/driver-payroll-settings/${driverId}/`, data)
+      const response = await api.put(`/v1/driver-payroll-settings/${driverId}`, data)
       return response.data
     },
     onSuccess: (_, { driverId }) => {

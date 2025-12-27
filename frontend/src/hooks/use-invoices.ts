@@ -75,7 +75,7 @@ export function useUpdateInvoice() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Invoice> }): Promise<Invoice> => {
-      const response = await api.put(`/v1/invoices/${id}/`, data)
+      const response = await api.put(`/v1/invoices/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -95,7 +95,7 @@ export function useDeleteInvoice() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/invoices/${id}/`)
+      await api.delete(`/v1/invoices/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] })

@@ -76,7 +76,7 @@ export function useUpdateLoad() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<LoadFormData> }): Promise<Load> => {
-      const response = await api.put(`/v1/loads/${id}/`, data)
+      const response = await api.put(`/v1/loads/${id}`, data)
       return response.data
     },
     onSuccess: (updatedLoad, { id }) => {
@@ -101,7 +101,7 @@ export function useDeleteLoad() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/loads/${id}/`)
+      await api.delete(`/v1/loads/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loads'] })
@@ -129,7 +129,7 @@ export function useUpdateLoadDocuments() {
       pod_url?: string
       ratecon_url?: string
     }): Promise<Load> => {
-      const response = await api.put(`/v1/loads/${id}/`, {
+      const response = await api.put(`/v1/loads/${id}`, {
         pod_url,
         ratecon_url
       })

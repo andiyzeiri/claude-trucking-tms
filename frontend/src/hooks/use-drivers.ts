@@ -66,7 +66,7 @@ export function useUpdateDriver() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: DriverFormData }): Promise<Driver> => {
-      const response = await api.put(`/v1/drivers/${id}/`, data)
+      const response = await api.put(`/v1/drivers/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -92,7 +92,7 @@ export function useDeleteDriver() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/drivers/${id}/`)
+      await api.delete(`/v1/drivers/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['drivers'] })

@@ -112,7 +112,7 @@ export function useUpdateIfta() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<IFTAFormData> }) => {
-      const response = await api.put(`/v1/ifta/${id}/`, data)
+      const response = await api.put(`/v1/ifta/${id}`, data)
       return response.data
     },
     onSuccess: () => {
@@ -131,7 +131,7 @@ export function useDeleteIfta() {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      await api.delete(`/v1/ifta/${id}/`)
+      await api.delete(`/v1/ifta/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ifta'] })

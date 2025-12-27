@@ -57,7 +57,7 @@ export function useUpdateRatecon() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Ratecon> }): Promise<Ratecon> => {
-      const response = await api.put(`/v1/ratecons/${id}/`, data)
+      const response = await api.put(`/v1/ratecons/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -76,7 +76,7 @@ export function useDeleteRatecon() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/ratecons/${id}/`)
+      await api.delete(`/v1/ratecons/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ratecons'] })

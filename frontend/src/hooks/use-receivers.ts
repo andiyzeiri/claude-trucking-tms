@@ -70,7 +70,7 @@ export function useUpdateReceiver() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Receiver> }): Promise<Receiver> => {
-      const response = await api.put(`/v1/receivers/${id}/`, data)
+      const response = await api.put(`/v1/receivers/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -89,7 +89,7 @@ export function useDeleteReceiver() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/receivers/${id}/`)
+      await api.delete(`/v1/receivers/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['receivers'] })

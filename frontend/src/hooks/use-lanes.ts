@@ -77,7 +77,7 @@ export function useUpdateLane() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Lane> }): Promise<Lane> => {
-      const response = await api.put(`/v1/lanes/${id}/`, data)
+      const response = await api.put(`/v1/lanes/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -97,7 +97,7 @@ export function useDeleteLane() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/lanes/${id}/`)
+      await api.delete(`/v1/lanes/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lanes'] })

@@ -75,7 +75,7 @@ export function useUpdateExpense() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<ExpenseFormData> }): Promise<Expense> => {
-      const response = await api.put(`/v1/expenses/${id}/`, data)
+      const response = await api.put(`/v1/expenses/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -99,7 +99,7 @@ export function useDeleteExpense() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/expenses/${id}/`)
+      await api.delete(`/v1/expenses/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] })

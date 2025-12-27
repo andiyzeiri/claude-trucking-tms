@@ -87,7 +87,7 @@ export function useUpdateUser() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: UpdateUserData }): Promise<{ message: string; user: User }> => {
-      const response = await api.put(`/v1/users/${id}/`, data)
+      const response = await api.put(`/v1/users/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -113,7 +113,7 @@ export function useDeleteUser() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/users/${id}/`)
+      await api.delete(`/v1/users/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
