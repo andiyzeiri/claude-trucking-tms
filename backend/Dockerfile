@@ -56,6 +56,7 @@ COPY fix_trucks_table.py ./
 COPY fix_drivers_columns.py ./
 COPY create_dedicated_lanes_table.py ./
 COPY create_ifta_table.py ./
+COPY add_ifta_permission.py ./
 COPY entrypoint.sh ./
 
 # Copy scripts directory

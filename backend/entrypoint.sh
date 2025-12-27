@@ -57,6 +57,10 @@ python3 create_dedicated_lanes_table.py || echo "⚠️  create_dedicated_lanes_
 echo "🔧 Creating ifta table..."
 python3 create_ifta_table.py || echo "⚠️  create_ifta_table.py had errors, continuing..."
 
+# Add IFTA to existing user permissions
+echo "🔧 Adding IFTA to user permissions..."
+python3 add_ifta_permission.py || echo "⚠️  add_ifta_permission.py had errors, continuing..."
+
 # Stamp Alembic version to match current state
 echo "📦 Stamping Alembic version..."
 python3 stamp_alembic.py || echo "⚠️  stamp_alembic.py had errors, continuing..."
