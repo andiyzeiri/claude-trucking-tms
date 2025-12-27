@@ -70,7 +70,7 @@ export function useIftaSummary(year: number, quarter: number) {
   return useQuery<IFTASummary>({
     queryKey: ['ifta-summary', year, quarter],
     queryFn: async () => {
-      const response = await api.get(`/v1/ifta/summary/?year=${year}&quarter=${quarter}`)
+      const response = await api.get(`/v1/ifta/summary?year=${year}&quarter=${quarter}`)
       return response.data
     },
     enabled: !!year && !!quarter
