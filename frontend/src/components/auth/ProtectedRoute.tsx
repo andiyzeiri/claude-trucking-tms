@@ -6,12 +6,12 @@ import { useEffect } from 'react'
 
 // Default pages for each role - must match sidebar.tsx
 const ROLE_PAGES: Record<string, string[]> = {
-  company_admin: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'payroll', 'invoices', 'ratecons', 'reports', 'users', 'settings'],
-  super_admin: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'payroll', 'invoices', 'ratecons', 'reports', 'users', 'settings'],
-  dispatcher: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'invoices', 'reports'],
+  company_admin: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'ifta', 'payroll', 'invoices', 'ratecons', 'reports', 'users', 'settings'],
+  super_admin: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'ifta', 'payroll', 'invoices', 'ratecons', 'reports', 'users', 'settings'],
+  dispatcher: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'ifta', 'payroll', 'invoices', 'reports'],
   driver: ['dashboard', 'loads'],
   customer: ['dashboard', 'loads', 'invoices'],
-  viewer: ['dashboard', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'invoices', 'reports'],
+  viewer: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'fuel', 'ifta', 'invoices', 'reports'],
   custom: [],
 }
 
@@ -45,6 +45,7 @@ function getPageIdFromPath(pathname: string): string | null {
   // Map common paths to page IDs
   const pathMap: Record<string, string> = {
     'dashboard': 'dashboard',
+    'dispatch': 'dispatch',
     'loads': 'loads',
     'lanes': 'lanes',
     'trucks': 'trucks',
@@ -54,6 +55,7 @@ function getPageIdFromPath(pathname: string): string | null {
     'receivers': 'receivers',
     'expenses': 'expenses',
     'fuel': 'fuel',
+    'ifta': 'ifta',
     'payroll': 'payroll',
     'invoices': 'invoices',
     'ratecons': 'ratecons',

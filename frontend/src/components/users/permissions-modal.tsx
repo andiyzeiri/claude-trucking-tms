@@ -20,6 +20,7 @@ import {
   Receipt,
   Warehouse,
   Fuel,
+  FileSpreadsheet,
   Shield,
   CalendarDays
 } from 'lucide-react'
@@ -37,6 +38,7 @@ const ALL_PAGES = [
   { id: 'receivers', name: 'Receivers', icon: Warehouse, description: 'Receiver locations' },
   { id: 'expenses', name: 'Expenses', icon: Receipt, description: 'Operating expenses' },
   { id: 'fuel', name: 'Fuel', icon: Fuel, description: 'Fuel expense tracking' },
+  { id: 'ifta', name: 'IFTA', icon: FileSpreadsheet, description: 'IFTA fuel tax reporting' },
   { id: 'payroll', name: 'Payroll', icon: Calculator, description: 'Driver payroll management' },
   { id: 'invoices', name: 'Invoices', icon: FileText, description: 'Invoice generation' },
   { id: 'ratecons', name: 'Ratecons', icon: Receipt, description: 'Rate confirmations' },
@@ -49,10 +51,10 @@ const ALL_PAGES = [
 const ROLE_PAGES: Record<string, string[]> = {
   company_admin: ALL_PAGES.map(p => p.id),
   super_admin: ALL_PAGES.map(p => p.id),
-  dispatcher: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'invoices', 'reports'],
+  dispatcher: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'ifta', 'payroll', 'invoices', 'reports'],
   driver: ['dashboard', 'loads'],
   customer: ['dashboard', 'loads', 'invoices'],
-  viewer: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'invoices', 'reports'],
+  viewer: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'fuel', 'ifta', 'invoices', 'reports'],
   custom: [],
 }
 
