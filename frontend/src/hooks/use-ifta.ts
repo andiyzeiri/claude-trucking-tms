@@ -59,7 +59,8 @@ export function useIfta(filters?: IFTAFilters) {
       if (filters?.year) params.append('year', filters.year.toString())
       if (filters?.quarter) params.append('quarter', filters.quarter.toString())
       if (filters?.truck_id) params.append('truck_id', filters.truck_id.toString())
-      const response = await api.get(`/v1/ifta?${params.toString()}`)
+      const queryString = params.toString()
+      const response = await api.get(`/v1/ifta/${queryString ? '?' + queryString : ''}`)
       return response.data
     }
   })
@@ -69,7 +70,7 @@ export function useIftaSummary(year: number, quarter: number) {
   return useQuery<IFTASummary>({
     queryKey: ['ifta-summary', year, quarter],
     queryFn: async () => {
-      const response = await api.get(`/v1/ifta/summary?year=${year}&quarter=${quarter}`)
+      const response = await api.get(`/v1/ifta/summary/?year=${year}&quarter=${quarter}`)
       return response.data
     },
     enabled: !!year && !!quarter
@@ -92,7 +93,7 @@ export function useCreateIfta() {
 
   return useMutation({
     mutationFn: async (data: IFTAFormData) => {
-      const response = await api.post('/v1/ifta', data)
+      const response = await api.post('/v1/ifta/', data)
       return response.data
     },
     onSuccess: () => {
