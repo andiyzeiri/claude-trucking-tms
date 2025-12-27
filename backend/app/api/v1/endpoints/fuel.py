@@ -42,7 +42,15 @@ async def create_fuel_entry(
     db.add(db_fuel)
     await db.commit()
     await db.refresh(db_fuel)
-    return db_fuel
+
+    # Re-query with eager loading for relationships
+    query = (
+        select(Fuel)
+        .options(selectinload(Fuel.driver), selectinload(Fuel.truck))
+        .where(Fuel.id == db_fuel.id)
+    )
+    result = await db.execute(query)
+    return result.scalar_one()
 
 
 @router.get("/{fuel_id}", response_model=FuelResponse)
@@ -91,8 +99,15 @@ async def update_fuel_entry(
         setattr(fuel, field, value)
 
     await db.commit()
-    await db.refresh(fuel)
-    return fuel
+
+    # Re-query with eager loading for relationships
+    query = (
+        select(Fuel)
+        .options(selectinload(Fuel.driver), selectinload(Fuel.truck))
+        .where(Fuel.id == fuel_id)
+    )
+    result = await db.execute(query)
+    return result.scalar_one()
 
 
 @router.delete("/{fuel_id}")
