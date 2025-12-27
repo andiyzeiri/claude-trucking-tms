@@ -976,14 +976,16 @@ export default function LoadsPageInline() {
     setEditingCell({ loadId, field: type === 'pickup' ? 'pickup_location' : 'delivery_location' })
   }
 
-  const stopLocationEdit = async (overrideValues?: { street?: string; city?: string; state?: string; zip?: string }) => {
+  const stopLocationEdit = async (overrideValues?: { street?: string; city?: string; state?: string; zip?: string; date?: string; time?: string }) => {
     if (editingLocation) {
-      const { loadId, type, street: stateStreet, city: stateCity, state: stateState, zip: stateZip, date, time } = editingLocation
+      const { loadId, type, street: stateStreet, city: stateCity, state: stateState, zip: stateZip, date: stateDate, time: stateTime } = editingLocation
       // Use override values if provided, otherwise use state values
       const street = overrideValues?.street ?? stateStreet
       const city = overrideValues?.city ?? stateCity
       const state = overrideValues?.state ?? stateState
       const zip = overrideValues?.zip ?? stateZip
+      const date = overrideValues?.date ?? stateDate
+      const time = overrideValues?.time ?? stateTime
 
       try {
         // Combine location components
@@ -1766,7 +1768,7 @@ export default function LoadsPageInline() {
                   timeValue={editingLocation.time}
                   onDateChange={(date) => updateLocationField('date', date)}
                   onTimeChange={(time) => updateLocationField('time', time)}
-                  onSave={() => stopLocationEdit()}
+                  onSave={(values) => stopLocationEdit(values)}
                 />
               </div>
             </div>
@@ -1918,7 +1920,7 @@ export default function LoadsPageInline() {
                   timeValue={editingLocation.time}
                   onDateChange={(date) => updateLocationField('date', date)}
                   onTimeChange={(time) => updateLocationField('time', time)}
-                  onSave={() => stopLocationEdit()}
+                  onSave={(values) => stopLocationEdit(values)}
                 />
               </div>
             </div>
