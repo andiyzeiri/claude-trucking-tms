@@ -51,7 +51,6 @@ app = FastAPI(
     description="Multi-tenant Transportation Management System API",
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
-    redirect_slashes=False,  # Disable automatic slash redirects
     lifespan=lifespan,
 )
 
