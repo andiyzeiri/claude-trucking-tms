@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useLoads, useUpdateLoad } from '@/hooks/use-loads'
 import { useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, MapPin, Clock, User, X, Truck, GripVertical } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, Clock, User, X, Truck } from 'lucide-react'
 import { format, startOfWeek, addDays, isSameDay, parseISO, startOfDay, endOfDay } from 'date-fns'
 import {
   DndContext,
@@ -50,11 +50,8 @@ function DraggableTripCard({ load, formatDateTime, getShortLocation }: {
       {...listeners}
       {...attributes}
     >
-      <div className="flex items-center gap-1 mb-1">
-        <GripVertical className="h-3 w-3 text-gray-400 flex-shrink-0" />
-        <span className="font-semibold text-blue-700">{load.load_number}</span>
-      </div>
-      <div className="space-y-1 ml-4">
+      <div className="font-semibold text-blue-700 mb-1">{load.load_number}</div>
+      <div className="space-y-1">
         <div className="flex items-start gap-1 text-green-700">
           <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />
           <div>
@@ -75,12 +72,13 @@ function DraggableTripCard({ load, formatDateTime, getShortLocation }: {
 }
 
 // Draggable Assigned Load Component (for driver cells)
-function DraggableAssignedLoad({ load, day, formatTime, getShortLocation, onUnassign }: {
+function DraggableAssignedLoad({ load, day, formatTime, getShortLocation, onUnassign, fillCell }: {
   load: Load
   day: Date
   formatTime: (dateStr: string | undefined) => string
   getShortLocation: (location: string) => string
   onUnassign: (loadId: number) => void
+  fillCell?: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `load-${load.id}`,
@@ -99,8 +97,11 @@ function DraggableAssignedLoad({ load, day, formatTime, getShortLocation, onUnas
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      className={`relative rounded-lg p-2 bg-blue-50 border border-blue-200 text-xs cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group ${isDragging ? 'opacity-50' : ''}`}
+      style={{
+        ...style,
+        ...(fillCell ? { minHeight: '70px', height: '100%' } : {})
+      }}
+      className={`relative rounded-lg p-2 bg-blue-50 border border-blue-200 text-xs cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group flex flex-col justify-center ${isDragging ? 'opacity-50' : ''}`}
       {...listeners}
       {...attributes}
     >
@@ -117,10 +118,7 @@ function DraggableAssignedLoad({ load, day, formatTime, getShortLocation, onUnas
       >
         <X className="h-2.5 w-2.5" />
       </button>
-      <div className="flex items-center gap-1 mb-1">
-        <GripVertical className="h-3 w-3 text-gray-400 flex-shrink-0" />
-        <span className="font-semibold text-blue-700">{load.load_number}</span>
-      </div>
+      <div className="font-semibold text-blue-700 mb-1">{load.load_number}</div>
       {isPickupDay && (
         <div className="flex items-center gap-1 text-green-700">
           <MapPin className="h-3 w-3 flex-shrink-0" />
@@ -157,11 +155,8 @@ function DragOverlayCard({ load, formatDateTime, getShortLocation }: {
 }) {
   return (
     <div className="rounded-lg p-2 bg-white border-2 border-blue-400 text-xs shadow-lg w-48">
-      <div className="flex items-center gap-1 mb-1">
-        <GripVertical className="h-3 w-3 text-gray-400 flex-shrink-0" />
-        <span className="font-semibold text-blue-700">{load.load_number}</span>
-      </div>
-      <div className="space-y-1 ml-4">
+      <div className="font-semibold text-blue-700 mb-1">{load.load_number}</div>
+      <div className="space-y-1">
         <div className="flex items-start gap-1 text-green-700">
           <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />
           <div>
@@ -709,7 +704,7 @@ export default function DispatchBoardPage() {
                                         <span className="text-sm text-green-600 font-medium">Available</span>
                                       </div>
                                     ) : (
-                                      <div className="space-y-1">
+                                      <div className={driverLoads.length === 1 ? 'h-full' : 'space-y-1'}>
                                         {driverLoads.map((load) => (
                                           <DraggableAssignedLoad
                                             key={load.id}
@@ -718,6 +713,7 @@ export default function DispatchBoardPage() {
                                             formatTime={formatTime}
                                             getShortLocation={getShortLocation}
                                             onUnassign={handleUnassign}
+                                            fillCell={driverLoads.length === 1}
                                           />
                                         ))}
                                       </div>
@@ -751,8 +747,7 @@ export default function DispatchBoardPage() {
               <span style={{ color: 'var(--monday-text-secondary)' }}>OFF</span>
             </div>
             <div className="flex items-center gap-2">
-              <GripVertical className="h-4 w-4 text-gray-400" />
-              <span style={{ color: 'var(--monday-text-secondary)' }}>Drag to assign/reassign</span>
+              <span style={{ color: 'var(--monday-text-secondary)' }}>Drag cards to assign/reassign</span>
             </div>
           </div>
         </div>
