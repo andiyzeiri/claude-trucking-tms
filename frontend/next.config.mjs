@@ -16,6 +16,14 @@ const nextConfig = {
   },
   basePath: process.env.NODE_ENV === 'production' ? '' : '',
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'https://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com/api/:path*',
+      },
+    ];
+  },
   async headers() {
     return [
       {
