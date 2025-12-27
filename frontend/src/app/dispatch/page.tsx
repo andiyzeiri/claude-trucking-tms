@@ -52,7 +52,7 @@ function DraggableTripCard({ load, formatDateTime, getShortLocation }: {
     >
       <div className="flex items-center gap-1 mb-1">
         <GripVertical className="h-3 w-3 text-gray-400 flex-shrink-0" />
-        <span className="font-semibold text-blue-700">#{load.load_number}</span>
+        <span className="font-semibold text-blue-700">{load.load_number}</span>
       </div>
       <div className="space-y-1 ml-4">
         <div className="flex items-start gap-1 text-green-700">
@@ -119,7 +119,7 @@ function DraggableAssignedLoad({ load, day, formatTime, getShortLocation, onUnas
       </button>
       <div className="flex items-center gap-1 mb-1">
         <GripVertical className="h-3 w-3 text-gray-400 flex-shrink-0" />
-        <span className="font-semibold text-blue-700">#{load.load_number}</span>
+        <span className="font-semibold text-blue-700">{load.load_number}</span>
       </div>
       {isPickupDay && (
         <div className="flex items-center gap-1 text-green-700">
@@ -159,7 +159,7 @@ function DragOverlayCard({ load, formatDateTime, getShortLocation }: {
     <div className="rounded-lg p-2 bg-white border-2 border-blue-400 text-xs shadow-lg w-48">
       <div className="flex items-center gap-1 mb-1">
         <GripVertical className="h-3 w-3 text-gray-400 flex-shrink-0" />
-        <span className="font-semibold text-blue-700">#{load.load_number}</span>
+        <span className="font-semibold text-blue-700">{load.load_number}</span>
       </div>
       <div className="space-y-1 ml-4">
         <div className="flex items-start gap-1 text-green-700">
