@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 from app.schemas.driver import DriverResponse
@@ -57,8 +57,8 @@ class FuelResponse(BaseModel):
     truck: Optional[TruckResponse] = None
     load_id: Optional[int] = None
     company_id: int
-    created_at: date
-    updated_at: Optional[date] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

@@ -66,6 +66,7 @@ class User(Base):
             "receivers",
             "expenses",
             "fuel",
+            "ifta",
             "payroll",
             "invoices",
             "ratecons",
@@ -81,7 +82,7 @@ class User(Base):
             return all_pages
 
         if self.role == UserRole.DISPATCHER:
-            return ["dashboard", "dispatch", "loads", "lanes", "trucks", "drivers", "customers", "shippers", "receivers", "invoices", "reports"]
+            return ["dashboard", "dispatch", "loads", "lanes", "trucks", "drivers", "customers", "shippers", "receivers", "expenses", "fuel", "ifta", "payroll", "invoices", "reports"]
 
         if self.role == UserRole.DRIVER:
             return ["dashboard", "loads"]
@@ -90,7 +91,7 @@ class User(Base):
             return ["dashboard", "loads", "invoices"]
 
         if self.role == UserRole.VIEWER:
-            return ["dashboard", "dispatch", "loads", "lanes", "trucks", "drivers", "customers", "invoices", "reports"]
+            return ["dashboard", "dispatch", "loads", "lanes", "trucks", "drivers", "customers", "fuel", "ifta", "invoices", "reports"]
 
         return ["dashboard"]
 
