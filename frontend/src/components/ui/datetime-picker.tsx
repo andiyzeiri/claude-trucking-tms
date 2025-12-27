@@ -263,6 +263,33 @@ export function InlineDateTimePicker({
 
   const currentTimeValue = getCurrentTimeValue()
 
+  // Get display label for the current time (converts "13:30" to "1:30 PM")
+  const getTimeDisplayLabel = (): string => {
+    const timeVal = currentTimeValue || timeValue
+    if (!timeVal) return ""
+
+    // Find matching option by value
+    const option = TIME_OPTIONS.find(t => t.value === timeVal)
+    if (option) return option.label
+
+    // If timeValue is already in 12-hour format, return as-is
+    if (timeVal.includes('AM') || timeVal.includes('PM') || timeVal.includes('am') || timeVal.includes('pm')) {
+      return timeVal
+    }
+
+    // Convert HH:mm to display format
+    try {
+      const [hours, minutes] = timeVal.split(':').map(Number)
+      const date = new Date()
+      date.setHours(hours, minutes, 0, 0)
+      return format(date, "h:mm a")
+    } catch {
+      return timeVal
+    }
+  }
+
+  const timeDisplayLabel = getTimeDisplayLabel()
+
   const handleDateSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
       const newDate = format(selectedDate, "MM/dd/yy")
@@ -276,11 +303,12 @@ export function InlineDateTimePicker({
   }
 
   const handleTimeSelect = (option: { value: string; label: string }) => {
-    onTimeChange(option.label)
+    // Pass 24-hour format value for reliable parsing (e.g., "13:30" instead of "1:30 PM")
+    onTimeChange(option.value)
     setTimeOpen(false)
     // Trigger save immediately with the new value
     if (onSave) {
-      onSave({ time: option.label })
+      onSave({ time: option.value })
     }
   }
 
@@ -319,13 +347,13 @@ export function InlineDateTimePicker({
             type="button"
             className={cn(
               "h-6 px-1.5 text-xs border rounded bg-white hover:bg-gray-50 flex items-center gap-1",
-              !timeValue && "text-gray-400"
+              !timeDisplayLabel && "text-gray-400"
             )}
             disabled={disabled}
             style={{ width: "75px", fontSize: "11px" }}
           >
             <Clock className="h-3 w-3 flex-shrink-0 text-gray-400" />
-            <span>{timeValue || "Time"}</span>
+            <span>{timeDisplayLabel || "Time"}</span>
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start" side="bottom">
