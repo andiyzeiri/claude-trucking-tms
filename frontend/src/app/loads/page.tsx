@@ -182,9 +182,10 @@ function combineLocation(street: string, city: string, state: string, zip: strin
 function formatDateShort(dateString: string): string {
   if (!dateString) return ''
   const date = new Date(dateString)
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const year = String(date.getFullYear()).slice(-2)
+  // Use UTC methods to avoid timezone conversion (we store wall-clock time as UTC)
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  const year = String(date.getUTCFullYear()).slice(-2)
   return `${month}/${day}/${year}`
 }
 
@@ -192,8 +193,9 @@ function formatDateShort(dateString: string): string {
 function formatTimeShort(dateString: string): string {
   if (!dateString) return ''
   const date = new Date(dateString)
-  let hours = date.getHours()
-  const minutes = String(date.getMinutes()).padStart(2, '0')
+  // Use UTC methods to avoid timezone conversion (we store wall-clock time as UTC)
+  let hours = date.getUTCHours()
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0')
   const ampm = hours >= 12 ? 'PM' : 'AM'
   hours = hours % 12 || 12
   return `${hours}:${minutes} ${ampm}`
@@ -207,7 +209,7 @@ function parseDateInput(dateInput: string, existingDateTime: string): string {
   const parts = dateInput.split('/')
   if (parts.length !== 3) return existingDateTime
 
-  const month = parseInt(parts[0]) - 1
+  const month = parseInt(parts[0])
   const day = parseInt(parts[1])
   let year = parseInt(parts[2])
 
@@ -216,11 +218,18 @@ function parseDateInput(dateInput: string, existingDateTime: string): string {
     year += year < 50 ? 2000 : 1900
   }
 
-  // Get existing time or use midnight
+  // Get existing time from the datetime string (use UTC to avoid timezone issues)
   const existingDate = existingDateTime ? new Date(existingDateTime) : new Date()
-  const newDate = new Date(year, month, day, existingDate.getHours(), existingDate.getMinutes())
+  const hours = existingDate.getUTCHours()
+  const minutes = existingDate.getUTCMinutes()
 
-  return newDate.toISOString()
+  // Build ISO string manually to avoid timezone conversion
+  const monthStr = String(month).padStart(2, '0')
+  const dayStr = String(day).padStart(2, '0')
+  const hoursStr = String(hours).padStart(2, '0')
+  const minutesStr = String(minutes).padStart(2, '0')
+
+  return `${year}-${monthStr}-${dayStr}T${hoursStr}:${minutesStr}:00.000Z`
 }
 
 // Helper to parse time input (HH:MM AM/PM) and combine with existing date
@@ -242,11 +251,18 @@ function parseTimeInput(timeInput: string, existingDateTime: string): string {
     hours = 0
   }
 
-  // Get existing date or use today
+  // Get existing date - use UTC methods to avoid timezone issues
   const existingDate = existingDateTime ? new Date(existingDateTime) : new Date()
-  const newDate = new Date(existingDate.getFullYear(), existingDate.getMonth(), existingDate.getDate(), hours, minutes)
 
-  return newDate.toISOString()
+  // Build ISO string manually to avoid timezone conversion
+  // We store wall-clock time as UTC
+  const year = existingDate.getUTCFullYear()
+  const month = String(existingDate.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(existingDate.getUTCDate()).padStart(2, '0')
+  const hoursStr = String(hours).padStart(2, '0')
+  const minutesStr = String(minutes).padStart(2, '0')
+
+  return `${year}-${month}-${day}T${hoursStr}:${minutesStr}:00.000Z`
 }
 
 export default function LoadsPageInline() {
