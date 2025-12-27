@@ -9,7 +9,7 @@ export function useRatecons(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['ratecons', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Ratecon>> => {
-      const response = await api.get(`/v1/ratecons?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/v1/ratecons/?skip=${(page - 1) * limit}&limit=${limit}`)
       const ratecons = Array.isArray(response.data) ? response.data : []
       return {
         items: ratecons,
@@ -39,7 +39,7 @@ export function useCreateRatecon() {
 
   return useMutation({
     mutationFn: async (data: Partial<Ratecon>): Promise<Ratecon> => {
-      const response = await api.post('/v1/ratecons', data)
+      const response = await api.post('/v1/ratecons/', data)
       return response.data
     },
     onSuccess: () => {

@@ -10,7 +10,7 @@ export function useDrivers(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['drivers', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Driver>> => {
-      const response = await api.get(`/v1/drivers?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/v1/drivers/?skip=${(page - 1) * limit}&limit=${limit}`)
       console.log('useDrivers - fetched drivers:', JSON.stringify(response.data, null, 2))
       // Backend returns array, convert to paginated format
       const drivers = Array.isArray(response.data) ? response.data : []
@@ -41,7 +41,7 @@ export function useCreateDriver() {
 
   return useMutation({
     mutationFn: async (data: DriverFormData): Promise<Driver> => {
-      const response = await api.post('/v1/drivers', data)
+      const response = await api.post('/v1/drivers/', data)
       return response.data
     },
     onSuccess: () => {

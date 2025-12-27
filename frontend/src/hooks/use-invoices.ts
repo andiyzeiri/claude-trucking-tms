@@ -27,7 +27,7 @@ export function useInvoices(page = 1, limit = 10) {
   return useQuery({
     queryKey: ['invoices', page, limit],
     queryFn: async (): Promise<PaginatedInvoices> => {
-      const response = await api.get(`/v1/invoices?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/v1/invoices/?skip=${(page - 1) * limit}&limit=${limit}`)
       const invoices = Array.isArray(response.data) ? response.data : []
       return {
         items: invoices,
@@ -56,7 +56,7 @@ export function useCreateInvoice() {
 
   return useMutation({
     mutationFn: async (data: Partial<Invoice>): Promise<Invoice> => {
-      const response = await api.post('/v1/invoices', data)
+      const response = await api.post('/v1/invoices/', data)
       return response.data
     },
     onSuccess: () => {

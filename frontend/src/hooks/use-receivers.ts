@@ -9,7 +9,7 @@ export function useReceivers(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['receivers', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Receiver>> => {
-      const response = await api.get(`/v1/receivers?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/v1/receivers/?skip=${(page - 1) * limit}&limit=${limit}`)
       const receivers = Array.isArray(response.data) ? response.data : []
       return {
         items: receivers,
@@ -52,7 +52,7 @@ export function useCreateReceiver() {
 
   return useMutation({
     mutationFn: async (data: Partial<Receiver>): Promise<Receiver> => {
-      const response = await api.post('/v1/receivers', data)
+      const response = await api.post('/v1/receivers/', data)
       return response.data
     },
     onSuccess: () => {

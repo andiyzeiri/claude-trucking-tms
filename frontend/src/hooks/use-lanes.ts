@@ -29,7 +29,7 @@ export function useLanes(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['lanes', page, limit],
     queryFn: async (): Promise<PaginatedLanes> => {
-      const response = await api.get(`/v1/lanes?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/v1/lanes/?skip=${(page - 1) * limit}&limit=${limit}`)
       const lanes = Array.isArray(response.data) ? response.data : []
       return {
         items: lanes,
@@ -58,7 +58,7 @@ export function useCreateLane() {
 
   return useMutation({
     mutationFn: async (data: Partial<Lane>): Promise<Lane> => {
-      const response = await api.post('/v1/lanes', data)
+      const response = await api.post('/v1/lanes/', data)
       return response.data
     },
     onSuccess: () => {

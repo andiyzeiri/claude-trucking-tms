@@ -10,7 +10,7 @@ export function useLoads(page = 1, limit = 10) {
   return useQuery({
     queryKey: ['loads', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Load>> => {
-      const response = await api.get(`/v1/loads?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/v1/loads/?skip=${(page - 1) * limit}&limit=${limit}`)
       // Backend returns array, convert to paginated format
       const loads = Array.isArray(response.data) ? response.data : []
       return {

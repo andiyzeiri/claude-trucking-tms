@@ -9,7 +9,7 @@ export function useShippers(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['shippers', page, limit],
     queryFn: async (): Promise<PaginatedResponse<Shipper>> => {
-      const response = await api.get(`/v1/shippers?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/v1/shippers/?skip=${(page - 1) * limit}&limit=${limit}`)
       const shippers = Array.isArray(response.data) ? response.data : []
       return {
         items: shippers,
@@ -52,7 +52,7 @@ export function useCreateShipper() {
 
   return useMutation({
     mutationFn: async (data: Partial<Shipper>): Promise<Shipper> => {
-      const response = await api.post('/v1/shippers', data)
+      const response = await api.post('/v1/shippers/', data)
       return response.data
     },
     onSuccess: () => {

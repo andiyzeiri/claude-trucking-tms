@@ -39,7 +39,7 @@ export function usePayroll(page = 1, limit = 100) {
   return useQuery({
     queryKey: ['payroll', page, limit],
     queryFn: async (): Promise<PaginatedPayroll> => {
-      const response = await api.get(`/v1/payroll?skip=${(page - 1) * limit}&limit=${limit}`)
+      const response = await api.get(`/v1/payroll/?skip=${(page - 1) * limit}&limit=${limit}`)
       const payroll = Array.isArray(response.data) ? response.data : []
       return {
         items: payroll,
@@ -68,7 +68,7 @@ export function useCreatePayroll() {
 
   return useMutation({
     mutationFn: async (data: Partial<Payroll>): Promise<Payroll> => {
-      const response = await api.post('/v1/payroll', data)
+      const response = await api.post('/v1/payroll/', data)
       return response.data
     },
     onSuccess: () => {

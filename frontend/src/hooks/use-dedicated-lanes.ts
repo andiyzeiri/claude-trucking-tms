@@ -82,7 +82,7 @@ export function useDedicatedLanes(page = 1, limit = 100, activeOnly = true) {
   return useQuery({
     queryKey: ['dedicated-lanes', page, limit, activeOnly],
     queryFn: async (): Promise<PaginatedDedicatedLanes> => {
-      const response = await api.get(`/v1/dedicated-lanes?skip=${(page - 1) * limit}&limit=${limit}&active_only=${activeOnly}`)
+      const response = await api.get(`/v1/dedicated-lanes/?skip=${(page - 1) * limit}&limit=${limit}&active_only=${activeOnly}`)
       const lanes = Array.isArray(response.data) ? response.data : []
       return {
         items: lanes,
@@ -111,7 +111,7 @@ export function useCreateDedicatedLane() {
 
   return useMutation({
     mutationFn: async (data: DedicatedLaneCreate): Promise<DedicatedLane> => {
-      const response = await api.post('/v1/dedicated-lanes', data)
+      const response = await api.post('/v1/dedicated-lanes/', data)
       return response.data
     },
     onSuccess: () => {
