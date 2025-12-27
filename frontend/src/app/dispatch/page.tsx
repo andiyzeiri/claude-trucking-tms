@@ -74,11 +74,12 @@ function DraggableTripCard({ load, formatDateTime, getShortLocation }: {
 }
 
 // Draggable Assigned Load Component (for driver cells)
-function DraggableAssignedLoad({ load, day, formatTime, getShortLocation }: {
+function DraggableAssignedLoad({ load, day, formatTime, getShortLocation, onUnassign }: {
   load: Load
   day: Date
   formatTime: (dateStr: string | undefined) => string
   getShortLocation: (location: string) => string
+  onUnassign: (loadId: number) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `load-${load.id}`,
@@ -98,10 +99,23 @@ function DraggableAssignedLoad({ load, day, formatTime, getShortLocation }: {
     <div
       ref={setNodeRef}
       style={style}
-      className={`rounded-lg p-2 bg-blue-50 border border-blue-200 text-xs cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${isDragging ? 'opacity-50' : ''}`}
+      className={`relative rounded-lg p-2 bg-blue-50 border border-blue-200 text-xs cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group ${isDragging ? 'opacity-50' : ''}`}
       {...listeners}
       {...attributes}
     >
+      {/* Unassign X button */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+          onUnassign(load.id)
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Unassign load"
+      >
+        <X className="h-2.5 w-2.5" />
+      </button>
       <div className="flex items-center gap-1 mb-1">
         <GripVertical className="h-3 w-3 text-gray-400 flex-shrink-0" />
         <span className="font-semibold text-blue-700">#{load.load_number}</span>
@@ -281,6 +295,31 @@ export default function DispatchBoardPage() {
     })
   }
 
+  // Toggle entire week off for a driver
+  const toggleDriverWeekOff = (driverId: number) => {
+    const weekDates = weekDays.map(day => format(day, 'yyyy-MM-dd'))
+    setDaysOff(prev => {
+      // Check if all days of the week are already off
+      const allDaysOff = weekDates.every(dateStr =>
+        prev.some(d => d.driverId === driverId && d.date === dateStr)
+      )
+
+      if (allDaysOff) {
+        // Remove all days of this week for this driver
+        return prev.filter(d => !(d.driverId === driverId && weekDates.includes(d.date)))
+      } else {
+        // Add all days of this week for this driver (that aren't already off)
+        const newDaysOff = [...prev]
+        weekDates.forEach(dateStr => {
+          if (!newDaysOff.some(d => d.driverId === driverId && d.date === dateStr)) {
+            newDaysOff.push({ driverId, date: dateStr })
+          }
+        })
+        return newDaysOff
+      }
+    })
+  }
+
   // Get loads for a specific driver on a specific day
   const getLoadsForDriverOnDay = (driverId: number, date: Date) => {
     return loads.filter(load => {
@@ -396,6 +435,37 @@ export default function DispatchBoardPage() {
       )
     }
   }
+
+  // Handle unassign load via X button
+  const handleUnassign = (loadId: number) => {
+    const load = loads.find(l => l.id === loadId)
+    if (!load) return
+
+    updateLoad.mutate(
+      { id: loadId, data: { driver_id: null as any } },
+      {
+        onSuccess: () => {
+          toast.success(`Load #${load.load_number} unassigned`)
+          refetchLoads()
+        },
+        onError: () => {
+          toast.error('Failed to unassign load')
+        },
+      }
+    )
+  }
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; driverId: number } | null>(null)
+
+  // Handle right-click on driver
+  const handleDriverContextMenu = (e: React.MouseEvent, driverId: number) => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY, driverId })
+  }
+
+  // Close context menu
+  const closeContextMenu = () => setContextMenu(null)
 
   return (
     <Layout>
@@ -546,21 +616,30 @@ export default function DispatchBoardPage() {
                           <DroppableDriverRow key={driver.id} driverId={driver.id}>
                             {/* Driver Name Column */}
                             <td
-                              className="px-4 py-3 border-b border-r sticky left-0 z-10"
+                              className="px-4 py-3 border-b border-r sticky left-0 z-10 cursor-context-menu"
                               style={{
                                 borderColor: 'var(--cell-borderColor)',
                                 backgroundColor: rowBgColor
                               }}
+                              onContextMenu={(e) => handleDriverContextMenu(e, driver.id)}
                             >
                               <div>
                                 <div className="font-medium text-sm" style={{ color: 'var(--colors-foreground-default)' }}>
                                   {driver.first_name} {driver.last_name}
                                 </div>
-                                {driver.truck && (
+                                {driver.phone && (
                                   <div className="text-xs" style={{ color: 'var(--colors-foreground-muted)' }}>
-                                    Truck #{driver.truck.truck_number}
+                                    {driver.phone}
                                   </div>
                                 )}
+                                <div className="flex gap-2 text-xs" style={{ color: 'var(--colors-foreground-muted)' }}>
+                                  {driver.truck && (
+                                    <span>T: {driver.truck.truck_number}</span>
+                                  )}
+                                  {driver.trailer && (
+                                    <span>TR: {driver.trailer.truck_number}</span>
+                                  )}
+                                </div>
                               </div>
                             </td>
 
@@ -588,14 +667,14 @@ export default function DispatchBoardPage() {
                                         onClick={() => toggleDriverDayOff(driver.id, day)}
                                         title="Click to mark as working"
                                       >
-                                        <span className="text-sm text-gray-500 italic">Day Off</span>
+                                        <span className="text-sm text-gray-500 font-medium">OFF</span>
                                       </div>
                                     ) : driverLoads.length === 0 ? (
                                       <div
                                         className="h-full flex items-center justify-center rounded-lg bg-green-50 border border-green-200 cursor-pointer hover:bg-green-100 transition-colors"
                                         style={{ minHeight: '70px' }}
                                         onClick={() => toggleDriverDayOff(driver.id, day)}
-                                        title="Click to mark as day off"
+                                        title="Click to mark as off"
                                       >
                                         <span className="text-sm text-green-600 font-medium">Available</span>
                                       </div>
@@ -608,16 +687,9 @@ export default function DispatchBoardPage() {
                                             day={day}
                                             formatTime={formatTime}
                                             getShortLocation={getShortLocation}
+                                            onUnassign={handleUnassign}
                                           />
                                         ))}
-                                        {/* Add day off toggle button for cells with loads */}
-                                        <button
-                                          onClick={() => toggleDriverDayOff(driver.id, day)}
-                                          className="w-full text-xs text-gray-400 hover:text-red-500 py-1 transition-colors"
-                                          title="Mark as day off"
-                                        >
-                                          <X className="h-3 w-3 mx-auto" />
-                                        </button>
                                       </div>
                                     )}
                                   </div>
@@ -646,7 +718,7 @@ export default function DispatchBoardPage() {
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-gray-100"></div>
-              <span style={{ color: 'var(--monday-text-secondary)' }}>Day Off</span>
+              <span style={{ color: 'var(--monday-text-secondary)' }}>OFF</span>
             </div>
             <div className="flex items-center gap-2">
               <GripVertical className="h-4 w-4 text-gray-400" />
@@ -665,6 +737,31 @@ export default function DispatchBoardPage() {
             />
           ) : null}
         </DragOverlay>
+
+        {/* Context Menu */}
+        {contextMenu && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={closeContextMenu}
+            />
+            <div
+              className="fixed z-50 bg-white rounded-lg shadow-lg border py-1 min-w-[160px]"
+              style={{ left: contextMenu.x, top: contextMenu.y }}
+            >
+              <button
+                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                onClick={() => {
+                  toggleDriverWeekOff(contextMenu.driverId)
+                  closeContextMenu()
+                }}
+              >
+                <X className="h-4 w-4" />
+                OFF Entire Week
+              </button>
+            </div>
+          </>
+        )}
       </DndContext>
     </Layout>
   )
