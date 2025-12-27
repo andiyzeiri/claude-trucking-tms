@@ -1,16 +1,18 @@
 'use client'
 
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { formatCurrency } from '@/lib/utils'
-import { FileDown, X } from 'lucide-react'
+import { FileDown, X, Calendar } from 'lucide-react'
 import { useLoads } from '@/hooks/use-loads'
 import { Load } from '@/types'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+
+type TimePeriod = '1month' | '3months' | '6months'
 
 interface RateconDialogData {
   carrierRate: string
@@ -257,20 +259,32 @@ export default function RateconsPage() {
     deliveryNotes: ''
   })
   const [currentDialogData, setCurrentDialogData] = useState<RateconDialogData | undefined>(undefined)
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('1month')
 
-  // Debug: Log all loads data
-  React.useEffect(() => {
-    console.log('Total loads fetched:', loads.length)
-    console.log('All customer names:', loads.map(l => l.customer?.name).filter(Boolean))
-    console.log('Sample load data:', loads[0])
-  }, [loads])
+  // Calculate date cutoff based on selected time period
+  const getDateCutoff = (period: TimePeriod): Date => {
+    const now = new Date()
+    switch (period) {
+      case '1month':
+        return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
+      case '3months':
+        return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate())
+      case '6months':
+        return new Date(now.getFullYear(), now.getMonth() - 6, now.getDate())
+      default:
+        return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
+    }
+  }
 
-  // Filter loads for Absolute Trucking customer (case-insensitive, partial match)
-  // TEMPORARY: Show ALL loads for debugging
-  const absoluteTruckingLoads = loads
-  // const absoluteTruckingLoads = loads.filter(
-  //   load => load.customer?.name?.toLowerCase().includes('absolute')
-  // )
+  // Filter loads by time period based on pickup_date
+  const filteredLoads = useMemo(() => {
+    const cutoff = getDateCutoff(timePeriod)
+    return loads.filter(load => {
+      if (!load.pickup_date) return false
+      const pickupDate = new Date(load.pickup_date)
+      return pickupDate >= cutoff
+    })
+  }, [loads, timePeriod])
 
   const printRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
   const dialogPrintRef = useRef<HTMLDivElement | null>(null)
@@ -356,14 +370,51 @@ export default function RateconsPage() {
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Rate Confirmations</h1>
             <p className="text-gray-600">
-              Generate rate confirmations for Absolute Trucking loads
+              Generate rate confirmations for loads
             </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-gray-500" />
+            <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: 'var(--monday-border)' }}>
+              <button
+                onClick={() => setTimePeriod('1month')}
+                className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                  timePeriod === '1month'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Last Month
+              </button>
+              <button
+                onClick={() => setTimePeriod('3months')}
+                className={`px-3 py-1.5 text-sm font-medium border-l transition-colors ${
+                  timePeriod === '3months'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+                style={{ borderColor: 'var(--monday-border)' }}
+              >
+                Last 3 Months
+              </button>
+              <button
+                onClick={() => setTimePeriod('6months')}
+                className={`px-3 py-1.5 text-sm font-medium border-l transition-colors ${
+                  timePeriod === '6months'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+                style={{ borderColor: 'var(--monday-border)' }}
+              >
+                Last 6 Months
+              </button>
+            </div>
           </div>
         </div>
 
-        {absoluteTruckingLoads.length === 0 ? (
+        {filteredLoads.length === 0 ? (
           <div className="border rounded-lg bg-white p-8 text-center" style={{borderColor: 'var(--cell-borderColor)'}}>
-            <p className="text-gray-600">No loads found for Absolute Trucking</p>
+            <p className="text-gray-600">No loads found for the selected time period</p>
           </div>
         ) : (
           <>
@@ -385,7 +436,7 @@ export default function RateconsPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white" style={{backgroundColor: 'var(--cell-background-base)'}}>
-                    {absoluteTruckingLoads.map((load, index) => {
+                    {filteredLoads.map((load, index) => {
                       const isEvenRow = index % 2 === 0
                       const defaultBgColor = isEvenRow ? 'var(--cell-background-base)' : 'rgba(0, 0, 0, 0.02)'
 
@@ -486,7 +537,7 @@ export default function RateconsPage() {
 
             {/* Off-screen printable components (must be visible for html2canvas) */}
             <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
-              {absoluteTruckingLoads.map(load => (
+              {filteredLoads.map(load => (
                 <PrintableRatecon
                   key={load.id}
                   load={load}
