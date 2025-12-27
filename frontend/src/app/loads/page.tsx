@@ -1766,6 +1766,7 @@ export default function LoadsPageInline() {
                   timeValue={editingLocation.time}
                   onDateChange={(date) => updateLocationField('date', date)}
                   onTimeChange={(time) => updateLocationField('time', time)}
+                  onSave={() => stopLocationEdit()}
                 />
               </div>
             </div>
@@ -1917,6 +1918,7 @@ export default function LoadsPageInline() {
                   timeValue={editingLocation.time}
                   onDateChange={(date) => updateLocationField('date', date)}
                   onTimeChange={(time) => updateLocationField('time', time)}
+                  onSave={() => stopLocationEdit()}
                 />
               </div>
             </div>

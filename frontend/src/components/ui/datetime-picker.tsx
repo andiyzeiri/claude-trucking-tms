@@ -206,6 +206,7 @@ interface InlineDateTimePickerProps {
   timeValue: string // h:mm a format
   onDateChange: (date: string) => void
   onTimeChange: (time: string) => void
+  onSave?: () => void // Called after date or time is selected to trigger save
   disabled?: boolean
 }
 
@@ -214,6 +215,7 @@ export function InlineDateTimePicker({
   timeValue,
   onDateChange,
   onTimeChange,
+  onSave,
   disabled,
 }: InlineDateTimePickerProps) {
   const [dateOpen, setDateOpen] = React.useState(false)
@@ -264,6 +266,10 @@ export function InlineDateTimePicker({
   const handleDateSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
       onDateChange(format(selectedDate, "MM/dd/yy"))
+      // Trigger save after a short delay to allow state to update
+      if (onSave) {
+        setTimeout(onSave, 50)
+      }
     }
     setDateOpen(false)
   }
@@ -271,6 +277,10 @@ export function InlineDateTimePicker({
   const handleTimeSelect = (option: { value: string; label: string }) => {
     onTimeChange(option.label)
     setTimeOpen(false)
+    // Trigger save after a short delay to allow state to update
+    if (onSave) {
+      setTimeout(onSave, 50)
+    }
   }
 
   return (
