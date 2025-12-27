@@ -87,7 +87,7 @@ export function useUpdatePayroll() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Payroll> }): Promise<Payroll> => {
-      const response = await api.put(`/v1/payroll/${id}`, data)
+      const response = await api.put(`/v1/payroll/${id}/`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -107,7 +107,7 @@ export function useDeletePayroll() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/payroll/${id}`)
+      await api.delete(`/v1/payroll/${id}/`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payroll'] })

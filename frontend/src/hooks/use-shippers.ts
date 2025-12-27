@@ -70,7 +70,7 @@ export function useUpdateShipper() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Shipper> }): Promise<Shipper> => {
-      const response = await api.put(`/v1/shippers/${id}`, data)
+      const response = await api.put(`/v1/shippers/${id}/`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -89,7 +89,7 @@ export function useDeleteShipper() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/shippers/${id}`)
+      await api.delete(`/v1/shippers/${id}/`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shippers'] })

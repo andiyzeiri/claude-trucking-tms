@@ -1176,7 +1176,22 @@ export default function LoadsPageInline() {
   }
 
   const expandAllGroups = () => {
-    setCollapsedGroups(new Set())
+    // Collect all group keys and add them to expandedGroups
+    const allGroupKeys = new Set<string>()
+    const collectGroupKeys = (loads: EditableLoad[], groupings: ('week' | 'day' | 'driver' | 'customer')[], parentKeys: string[] = []) => {
+      if (groupings.length === 0) return
+      const [currentGrouping, ...remainingGroupings] = groupings
+      const groups = groupByField(loads, currentGrouping)
+      Object.keys(groups).forEach(groupKey => {
+        const fullKey = [...parentKeys, groupKey].join('-')
+        allGroupKeys.add(fullKey)
+        if (remainingGroupings.length > 0) {
+          collectGroupKeys(groups[groupKey], remainingGroupings, [...parentKeys, groupKey])
+        }
+      })
+    }
+    collectGroupKeys(filteredLoads, Array.from(activeGroupings))
+    setExpandedGroups(allGroupKeys)
     setContextMenu(null)
   }
 
@@ -1208,27 +1223,8 @@ export default function LoadsPageInline() {
   }
 
   const collapseAllGroups = () => {
-    const allGroupKeys = new Set<string>()
-
-    // Collect all group keys based on active groupings
-    const collectGroupKeys = (loads: EditableLoad[], groupings: ('week' | 'day' | 'driver' | 'customer')[], parentKeys: string[] = []) => {
-      if (groupings.length === 0) return
-
-      const [currentGrouping, ...remainingGroupings] = groupings
-      const groups = groupByField(loads, currentGrouping)
-
-      Object.keys(groups).forEach(groupKey => {
-        const fullKey = [...parentKeys, groupKey].join('-')
-        allGroupKeys.add(fullKey)
-
-        if (remainingGroupings.length > 0) {
-          collectGroupKeys(groups[groupKey], remainingGroupings, [...parentKeys, groupKey])
-        }
-      })
-    }
-
-    collectGroupKeys(filteredLoads, Array.from(activeGroupings))
-    setCollapsedGroups(allGroupKeys)
+    // Clear expandedGroups to collapse all
+    setExpandedGroups(new Set())
     setContextMenu(null)
   }
 

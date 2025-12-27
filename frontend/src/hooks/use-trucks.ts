@@ -59,7 +59,7 @@ export function useUpdateTruck() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: TruckFormData }): Promise<Truck> => {
-      const response = await api.put(`/v1/trucks/${id}`, data)
+      const response = await api.put(`/v1/trucks/${id}/`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {

@@ -62,7 +62,7 @@ export function useUpdateFuel() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<FuelFormData> }) => {
-      const response = await api.put(`/v1/fuel/${id}`, data)
+      const response = await api.put(`/v1/fuel/${id}/`, data)
       return response.data
     },
     onSuccess: () => {
@@ -80,7 +80,7 @@ export function useDeleteFuel() {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      await api.delete(`/v1/fuel/${id}`)
+      await api.delete(`/v1/fuel/${id}/`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fuel'] })

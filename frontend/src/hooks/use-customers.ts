@@ -57,7 +57,7 @@ export function useUpdateCustomer() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: CustomerFormData }): Promise<Customer> => {
-      const response = await api.put(`/v1/customers/${id}`, data)
+      const response = await api.put(`/v1/customers/${id}/`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -76,7 +76,7 @@ export function useDeleteCustomer() {
 
   return useMutation({
     mutationFn: async (id: number): Promise<void> => {
-      await api.delete(`/v1/customers/${id}`)
+      await api.delete(`/v1/customers/${id}/`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
