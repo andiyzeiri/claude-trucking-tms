@@ -21,6 +21,7 @@ import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
 import { PdfViewer } from '@/components/loads/pdf-viewer'
 import { AddressAutocomplete, AddressData } from '@/components/ui/address-autocomplete'
+import { InlineDateTimePicker } from '@/components/ui/datetime-picker'
 import { DedicatedLanesPanel } from '@/components/dedicated-lanes/dedicated-lanes-panel'
 import api from '@/lib/api'
 
@@ -1758,31 +1759,11 @@ export default function LoadsPageInline() {
                   className="h-6 text-xs flex-1"
                   style={{ minWidth: '80px', fontSize: '11px' }}
                 />
-                <Input
-                  value={editingLocation.date}
-                  onChange={(e) => updateLocationField('date', e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      stopLocationEdit()
-                    }
-                  }}
-                  placeholder="MM/DD/YY"
-                  className="h-6 text-xs"
-                  style={{ width: '75px', fontSize: '11px' }}
-                />
-                <Input
-                  value={editingLocation.time}
-                  onChange={(e) => updateLocationField('time', e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      stopLocationEdit()
-                    }
-                  }}
-                  placeholder="HH:MM AM"
-                  className="h-6 text-xs"
-                  style={{ width: '75px', fontSize: '11px' }}
+                <InlineDateTimePicker
+                  dateValue={editingLocation.date}
+                  timeValue={editingLocation.time}
+                  onDateChange={(date) => updateLocationField('date', date)}
+                  onTimeChange={(time) => updateLocationField('time', time)}
                 />
               </div>
             </div>
@@ -1929,31 +1910,11 @@ export default function LoadsPageInline() {
                   className="h-6 text-xs flex-1"
                   style={{ minWidth: '80px', fontSize: '11px' }}
                 />
-                <Input
-                  value={editingLocation.date}
-                  onChange={(e) => updateLocationField('date', e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      stopLocationEdit()
-                    }
-                  }}
-                  placeholder="MM/DD/YY"
-                  className="h-6 text-xs"
-                  style={{ width: '75px', fontSize: '11px' }}
-                />
-                <Input
-                  value={editingLocation.time}
-                  onChange={(e) => updateLocationField('time', e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      stopLocationEdit()
-                    }
-                  }}
-                  placeholder="HH:MM AM"
-                  className="h-6 text-xs"
-                  style={{ width: '75px', fontSize: '11px' }}
+                <InlineDateTimePicker
+                  dateValue={editingLocation.date}
+                  timeValue={editingLocation.time}
+                  onDateChange={(date) => updateLocationField('date', date)}
+                  onTimeChange={(time) => updateLocationField('time', time)}
                 />
               </div>
             </div>
