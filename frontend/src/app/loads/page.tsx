@@ -388,10 +388,12 @@ export default function LoadsPageInline() {
       // Check if click is on Google Places autocomplete dropdown
       const target = event.target as HTMLElement
       const isGoogleAutocomplete = target.closest('.pac-container') !== null
+      // Check if click is on Radix popover content (calendar/time picker)
+      const isRadixPopover = target.closest('[data-radix-popper-content-wrapper]') !== null
 
       if (locationEditRef.current && !locationEditRef.current.contains(event.target as Node)) {
-        // Don't close if clicking on Google autocomplete dropdown
-        if (editingLocation && !isGoogleAutocomplete) {
+        // Don't close if clicking on Google autocomplete dropdown or Radix popover
+        if (editingLocation && !isGoogleAutocomplete && !isRadixPopover) {
           stopLocationEdit()
         }
       }
