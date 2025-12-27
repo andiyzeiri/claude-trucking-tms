@@ -71,7 +71,7 @@ A production Transportation Management System (TMS) deployed on AWS with:
 
 **Production URLs**:
 - Frontend: https://absolutetms.com (Netlify)
-- Backend: https://trucking-tms-backend-1713266903.us-east-1.elb.amazonaws.com
+- Backend: https://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com
 - Database: andi-tms-db-v2.csla6kaago6t.us-east-1.rds.amazonaws.com
 
 ## Common Commands
