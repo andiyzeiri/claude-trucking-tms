@@ -966,16 +966,25 @@ export default function LoadsPageInline() {
     return dateString.split('T')[0]
   }
 
+  // Calculate totals for weeks 1-52 of the selected year only
   const totals = useMemo(() => {
-    const totalRate = editableLoads.reduce((sum, load) => sum + (Number(load.rate) || 0), 0)
-    const totalMiles = editableLoads.reduce((sum, load) => sum + (Number(load.miles) || 0), 0)
+    const yearLoads = editableLoads.filter(load => {
+      if (!load.pickup_date || load.isNew) return false
+      const loadDate = new Date(load.pickup_date)
+      const loadISOYear = getISOWeekYear(loadDate)
+      const weekNum = getWeekNumber(loadDate)
+      // Only include loads from weeks 1-52 of the selected year
+      return loadISOYear === selectedYear && weekNum >= 1 && weekNum <= 52
+    })
+    const totalRate = yearLoads.reduce((sum, load) => sum + (Number(load.rate) || 0), 0)
+    const totalMiles = yearLoads.reduce((sum, load) => sum + (Number(load.miles) || 0), 0)
     return {
-      count: editableLoads.filter(l => !l.isNew).length,
+      count: yearLoads.length,
       rate: totalRate,
       miles: totalMiles,
       rpm: totalMiles > 0 ? totalRate / totalMiles : 0
     }
-  }, [editableLoads])
+  }, [editableLoads, selectedYear])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -2624,36 +2633,6 @@ export default function LoadsPageInline() {
                   groupedLoads && renderNestedGroups(groupedLoads, 0, 0)
                 )}
               </tbody>
-              <tfoot className="sticky bottom-0 shadow-lg" style={{ backgroundColor: 'var(--monday-bg-primary)', borderTop: '2px solid var(--monday-border)' }}>
-                <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
-                  <td className="px-2 py-2 text-sm"></td>
-                  <td className="px-2 py-2 text-sm"></td>
-                  <td className="px-1 py-2 text-sm"></td>
-                  <td className="px-2 py-2 text-sm font-medium" style={{ color: 'var(--monday-text-primary)' }}>{totals.count} Loads</td>
-                  <td className="px-2 py-2 text-sm"></td>
-                  <td className="px-2 py-2 text-sm"></td>
-                  <td className="px-2 py-2 text-sm"></td>
-                  <td className="px-2 py-2 text-sm"></td>
-                  <td className="px-2 py-2 text-sm"></td>
-                  <td className="px-2 py-2 text-sm">
-                    <div className="mb-0.5">
-                      <div style={{fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)'}}>
-                        {formatCurrency(totals.rate)}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: 'var(--monday-blue)'}}>
-                        {totals.miles.toLocaleString()} mi
-                      </div>
-                      <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: 'var(--monday-purple)'}}>
-                        ${totals.rpm.toFixed(2)}/mi
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-2 py-2 text-sm"></td>
-                  <td className="px-2 py-2 text-sm"></td>
-                </tr>
-              </tfoot>
             </table>
           </div>
         </div>
@@ -2771,6 +2750,38 @@ export default function LoadsPageInline() {
             </div>
           </div>
         )}
+
+        {/* Fixed Totals Footer */}
+        <div
+          className="fixed bottom-0 left-0 right-0 z-40 shadow-lg border-t"
+          style={{
+            backgroundColor: 'var(--monday-bg-secondary)',
+            borderColor: 'var(--monday-border)',
+            marginLeft: '240px' // Account for sidebar width
+          }}
+        >
+          <div className="flex items-center justify-between px-6 py-3">
+            <div className="flex items-center gap-6">
+              <div className="text-sm font-medium" style={{ color: 'var(--monday-text-primary)' }}>
+                {selectedYear} Totals (Weeks 1-52)
+              </div>
+              <div className="text-sm font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
+                {totals.count} Loads
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-done)' }}>
+                {formatCurrency(totals.rate)}
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-blue)' }}>
+                {totals.miles.toLocaleString()} mi
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-purple)' }}>
+                ${totals.rpm.toFixed(2)}/mi
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </Layout>
   )
