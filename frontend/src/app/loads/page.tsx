@@ -2763,13 +2763,13 @@ export default function LoadsPageInline() {
           <div className="flex items-center justify-between px-6 py-3">
             <div className="flex items-center gap-6">
               <div className="text-sm font-medium" style={{ color: 'var(--monday-text-primary)' }}>
-                {selectedYear} Totals (Weeks 1-52)
+                {selectedYear} Totals
               </div>
               <div className="text-sm font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
                 {totals.count} Loads
               </div>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6" style={{ marginRight: '100px' }}>
               <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-done)' }}>
                 {formatCurrency(totals.rate)}
               </div>
