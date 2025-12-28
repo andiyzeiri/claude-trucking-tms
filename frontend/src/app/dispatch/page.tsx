@@ -610,13 +610,25 @@ export default function DispatchBoardPage() {
     )
   }
 
-  // Context menu state
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; driverId: number } | null>(null)
+  // Context menu state - can be for driver row or day cell
+  const [contextMenu, setContextMenu] = useState<{
+    x: number
+    y: number
+    driverId: number
+    date?: Date  // If date is present, it's a day cell context menu
+  } | null>(null)
 
-  // Handle right-click on driver
+  // Handle right-click on driver name (for OFF entire week)
   const handleDriverContextMenu = (e: React.MouseEvent, driverId: number) => {
     e.preventDefault()
     setContextMenu({ x: e.clientX, y: e.clientY, driverId })
+  }
+
+  // Handle right-click on day cell (for Add Load)
+  const handleCellContextMenu = (e: React.MouseEvent, driverId: number, date: Date) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({ x: e.clientX, y: e.clientY, driverId, date })
   }
 
   // Close context menu
@@ -837,29 +849,19 @@ export default function DispatchBoardPage() {
                                       </div>
                                     ) : driverLoads.length === 0 ? (
                                       <div
-                                        className="h-full flex flex-col items-center justify-center rounded-lg bg-green-50 border border-green-200 hover:bg-green-100 transition-colors group relative"
+                                        className="h-full flex items-center justify-center rounded-lg bg-green-50 border border-green-200 cursor-pointer hover:bg-green-100 transition-colors"
                                         style={{ minHeight: '70px' }}
+                                        onClick={() => toggleDriverDayOff(driver.id, day)}
+                                        onContextMenu={(e) => handleCellContextMenu(e, driver.id, day)}
+                                        title="Click to mark as off, right-click for options"
                                       >
-                                        <span
-                                          className="text-sm text-green-600 font-medium cursor-pointer"
-                                          onClick={() => toggleDriverDayOff(driver.id, day)}
-                                          title="Click to mark as off"
-                                        >
-                                          Available
-                                        </span>
-                                        <button
-                                          className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-600"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            openNewLoadDialog(driver.id, day)
-                                          }}
-                                          title="Add new load"
-                                        >
-                                          <Plus className="h-4 w-4" />
-                                        </button>
+                                        <span className="text-sm text-green-600 font-medium">Available</span>
                                       </div>
                                     ) : (
-                                      <div className={`${driverLoads.length === 1 ? 'h-full' : 'space-y-1'} relative group`}>
+                                      <div
+                                        className={driverLoads.length === 1 ? 'h-full' : 'space-y-1'}
+                                        onContextMenu={(e) => handleCellContextMenu(e, driver.id, day)}
+                                      >
                                         {driverLoads.map((load) => (
                                           <DraggableAssignedLoad
                                             key={load.id}
@@ -871,16 +873,6 @@ export default function DispatchBoardPage() {
                                             fillCell={driverLoads.length === 1}
                                           />
                                         ))}
-                                        <button
-                                          className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-600 z-10"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            openNewLoadDialog(driver.id, day)
-                                          }}
-                                          title="Add new load"
-                                        >
-                                          <Plus className="h-4 w-4" />
-                                        </button>
                                       </div>
                                     )}
                                   </div>
@@ -940,19 +932,46 @@ export default function DispatchBoardPage() {
               onClick={closeContextMenu}
             />
             <div
-              className="fixed z-50 bg-white rounded-lg shadow-lg border py-1 min-w-[160px]"
+              className="fixed z-50 bg-white rounded-lg shadow-lg border py-1 min-w-[180px]"
               style={{ left: contextMenu.x, top: contextMenu.y }}
             >
-              <button
-                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                onClick={() => {
-                  toggleDriverWeekOff(contextMenu.driverId)
-                  closeContextMenu()
-                }}
-              >
-                <X className="h-4 w-4" />
-                OFF Entire Week
-              </button>
+              {contextMenu.date ? (
+                // Day cell context menu
+                <>
+                  <button
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                    onClick={() => {
+                      openNewLoadDialog(contextMenu.driverId, contextMenu.date!)
+                      closeContextMenu()
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Load
+                  </button>
+                  <button
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                    onClick={() => {
+                      toggleDriverDayOff(contextMenu.driverId, contextMenu.date!)
+                      closeContextMenu()
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                    Mark as OFF
+                  </button>
+                </>
+              ) : (
+                // Driver row context menu
+                <button
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                  onClick={() => {
+                    toggleDriverWeekOff(contextMenu.driverId)
+                    closeContextMenu()
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                  OFF Entire Week
+                </button>
+              )}
             </div>
           </>
         )}
