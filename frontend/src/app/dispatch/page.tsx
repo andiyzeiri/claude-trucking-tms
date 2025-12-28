@@ -3,11 +3,23 @@
 import React, { useState, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { useDrivers } from '@/hooks/use-drivers'
-import { useLoads, useUpdateLoad } from '@/hooks/use-loads'
+import { useLoads, useUpdateLoad, useCreateLoad } from '@/hooks/use-loads'
+import { useCustomers } from '@/hooks/use-customers'
 import { useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, MapPin, Clock, User, X, Truck } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, Clock, User, X, Truck, Plus } from 'lucide-react'
 import { format, startOfWeek, addDays, isSameDay, parseISO, startOfDay, endOfDay } from 'date-fns'
+import { AddressAutocomplete } from '@/components/ui/address-autocomplete'
 import {
   DndContext,
   DragEndEvent,
@@ -206,11 +218,29 @@ function DroppableDriverRow({ driverId, children }: { driverId: number, children
   )
 }
 
+// New Load Form Data interface
+interface NewLoadFormData {
+  load_number: string
+  customer_id: number | null
+  pickup_location: string
+  delivery_location: string
+  pickup_date: string
+  pickup_time: string
+  delivery_date: string
+  delivery_time: string
+  miles: number
+  rate: number
+}
+
 export default function DispatchBoardPage() {
   const queryClient = useQueryClient()
   const { data: driversData } = useDrivers(1, 100)
   const { data: loadsData } = useLoads(1, 10000) // Get all loads
+  const { data: customersData } = useCustomers(1, 100)
   const updateLoad = useUpdateLoad()
+  const createLoad = useCreateLoad()
+
+  const customers = customersData?.items || []
 
   // Optimistic update helper - instantly updates the cache
   const optimisticUpdateLoad = (loadId: number, newDriverId: number | null) => {
@@ -238,6 +268,83 @@ export default function DispatchBoardPage() {
 
   // Current week start date (Monday)
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+
+  // New Load Dialog state
+  const [newLoadDialogOpen, setNewLoadDialogOpen] = useState(false)
+  const [newLoadTargetDriver, setNewLoadTargetDriver] = useState<number | null>(null)
+  const [newLoadTargetDate, setNewLoadTargetDate] = useState<Date | null>(null)
+  const [newLoadForm, setNewLoadForm] = useState<NewLoadFormData>({
+    load_number: '',
+    customer_id: null,
+    pickup_location: '',
+    delivery_location: '',
+    pickup_date: '',
+    pickup_time: '08:00',
+    delivery_date: '',
+    delivery_time: '17:00',
+    miles: 0,
+    rate: 0,
+  })
+  const [isCreatingLoad, setIsCreatingLoad] = useState(false)
+
+  // Open new load dialog for a specific driver and date
+  const openNewLoadDialog = (driverId: number, date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd')
+    // Find default customer (Absolute Trucking Inc)
+    const absoluteTrucking = customers.find(c =>
+      c.name?.toLowerCase().includes('absolute trucking')
+    )
+    const defaultCustomerId = absoluteTrucking?.id || customers[0]?.id || null
+
+    setNewLoadTargetDriver(driverId)
+    setNewLoadTargetDate(date)
+    setNewLoadForm({
+      load_number: '',
+      customer_id: defaultCustomerId,
+      pickup_location: '',
+      delivery_location: '',
+      pickup_date: dateStr,
+      pickup_time: '08:00',
+      delivery_date: dateStr,
+      delivery_time: '17:00',
+      miles: 0,
+      rate: 0,
+    })
+    setNewLoadDialogOpen(true)
+  }
+
+  // Handle creating new load
+  const handleCreateNewLoad = async () => {
+    if (!newLoadTargetDriver) return
+
+    setIsCreatingLoad(true)
+    try {
+      // Combine date and time for ISO format
+      const pickupDateTime = `${newLoadForm.pickup_date}T${newLoadForm.pickup_time}:00`
+      const deliveryDateTime = `${newLoadForm.delivery_date}T${newLoadForm.delivery_time}:00`
+
+      const backendData: any = {
+        load_number: newLoadForm.load_number || '',
+        customer_id: newLoadForm.customer_id,
+        driver_id: newLoadTargetDriver,
+        truck_id: null,
+        pickup_location: newLoadForm.pickup_location,
+        delivery_location: newLoadForm.delivery_location,
+        pickup_date: pickupDateTime,
+        delivery_date: deliveryDateTime,
+        miles: newLoadForm.miles || 0,
+        rate: newLoadForm.rate || 0,
+        status: 'dispatched',
+      }
+
+      await createLoad.mutateAsync(backendData)
+      setNewLoadDialogOpen(false)
+    } catch (error: any) {
+      console.error('Failed to create load:', error)
+    } finally {
+      setIsCreatingLoad(false)
+    }
+  }
 
   // Get unassigned loads (no driver assigned) for the current week, sorted by pickup date
   const unassignedLoads = useMemo(() => {
@@ -730,15 +837,29 @@ export default function DispatchBoardPage() {
                                       </div>
                                     ) : driverLoads.length === 0 ? (
                                       <div
-                                        className="h-full flex items-center justify-center rounded-lg bg-green-50 border border-green-200 cursor-pointer hover:bg-green-100 transition-colors"
+                                        className="h-full flex flex-col items-center justify-center rounded-lg bg-green-50 border border-green-200 hover:bg-green-100 transition-colors group relative"
                                         style={{ minHeight: '70px' }}
-                                        onClick={() => toggleDriverDayOff(driver.id, day)}
-                                        title="Click to mark as off"
                                       >
-                                        <span className="text-sm text-green-600 font-medium">Available</span>
+                                        <span
+                                          className="text-sm text-green-600 font-medium cursor-pointer"
+                                          onClick={() => toggleDriverDayOff(driver.id, day)}
+                                          title="Click to mark as off"
+                                        >
+                                          Available
+                                        </span>
+                                        <button
+                                          className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-600"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            openNewLoadDialog(driver.id, day)
+                                          }}
+                                          title="Add new load"
+                                        >
+                                          <Plus className="h-4 w-4" />
+                                        </button>
                                       </div>
                                     ) : (
-                                      <div className={driverLoads.length === 1 ? 'h-full' : 'space-y-1'}>
+                                      <div className={`${driverLoads.length === 1 ? 'h-full' : 'space-y-1'} relative group`}>
                                         {driverLoads.map((load) => (
                                           <DraggableAssignedLoad
                                             key={load.id}
@@ -750,6 +871,16 @@ export default function DispatchBoardPage() {
                                             fillCell={driverLoads.length === 1}
                                           />
                                         ))}
+                                        <button
+                                          className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-600 z-10"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            openNewLoadDialog(driver.id, day)
+                                          }}
+                                          title="Add new load"
+                                        >
+                                          <Plus className="h-4 w-4" />
+                                        </button>
                                       </div>
                                     )}
                                   </div>
@@ -825,6 +956,155 @@ export default function DispatchBoardPage() {
             </div>
           </>
         )}
+
+        {/* New Load Dialog */}
+        <Dialog open={newLoadDialogOpen} onOpenChange={setNewLoadDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                Add New Load
+                {newLoadTargetDate && (
+                  <span className="text-sm font-normal text-gray-500 ml-2">
+                    for {format(newLoadTargetDate, 'EEEE, MMM d, yyyy')}
+                  </span>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-4">
+              {/* Row 1: Load Number and Customer */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="load_number">Load Number</Label>
+                  <Input
+                    id="load_number"
+                    value={newLoadForm.load_number}
+                    onChange={(e) => setNewLoadForm({ ...newLoadForm, load_number: e.target.value })}
+                    placeholder="Auto-generated if blank"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customer">Customer/Broker</Label>
+                  <Select
+                    value={newLoadForm.customer_id?.toString() || ''}
+                    onValueChange={(value) => setNewLoadForm({ ...newLoadForm, customer_id: parseInt(value) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customers.map((customer) => (
+                        <SelectItem key={customer.id} value={customer.id.toString()}>
+                          {customer.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 2: Pickup Location */}
+              <div className="space-y-2">
+                <Label htmlFor="pickup_location">Pickup Location</Label>
+                <AddressAutocomplete
+                  value={newLoadForm.pickup_location}
+                  onChange={(address) => setNewLoadForm({ ...newLoadForm, pickup_location: address })}
+                  onAddressSelect={(data) => setNewLoadForm({ ...newLoadForm, pickup_location: data.formatted })}
+                  placeholder="Enter pickup address"
+                />
+              </div>
+
+              {/* Row 3: Pickup Date and Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pickup_date">Pickup Date</Label>
+                  <Input
+                    id="pickup_date"
+                    type="date"
+                    value={newLoadForm.pickup_date}
+                    onChange={(e) => setNewLoadForm({ ...newLoadForm, pickup_date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pickup_time">Pickup Time</Label>
+                  <Input
+                    id="pickup_time"
+                    type="time"
+                    value={newLoadForm.pickup_time}
+                    onChange={(e) => setNewLoadForm({ ...newLoadForm, pickup_time: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Row 4: Delivery Location */}
+              <div className="space-y-2">
+                <Label htmlFor="delivery_location">Delivery Location</Label>
+                <AddressAutocomplete
+                  value={newLoadForm.delivery_location}
+                  onChange={(address) => setNewLoadForm({ ...newLoadForm, delivery_location: address })}
+                  onAddressSelect={(data) => setNewLoadForm({ ...newLoadForm, delivery_location: data.formatted })}
+                  placeholder="Enter delivery address"
+                />
+              </div>
+
+              {/* Row 5: Delivery Date and Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="delivery_date">Delivery Date</Label>
+                  <Input
+                    id="delivery_date"
+                    type="date"
+                    value={newLoadForm.delivery_date}
+                    onChange={(e) => setNewLoadForm({ ...newLoadForm, delivery_date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="delivery_time">Delivery Time</Label>
+                  <Input
+                    id="delivery_time"
+                    type="time"
+                    value={newLoadForm.delivery_time}
+                    onChange={(e) => setNewLoadForm({ ...newLoadForm, delivery_time: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Row 6: Miles and Rate */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="miles">Miles</Label>
+                  <Input
+                    id="miles"
+                    type="number"
+                    value={newLoadForm.miles || ''}
+                    onChange={(e) => setNewLoadForm({ ...newLoadForm, miles: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rate">Rate ($)</Label>
+                  <Input
+                    id="rate"
+                    type="number"
+                    step="0.01"
+                    value={newLoadForm.rate || ''}
+                    onChange={(e) => setNewLoadForm({ ...newLoadForm, rate: parseFloat(e.target.value) || 0 })}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setNewLoadDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateNewLoad} disabled={isCreatingLoad}>
+                {isCreatingLoad ? 'Creating...' : 'Create Load'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </DndContext>
     </Layout>
   )
