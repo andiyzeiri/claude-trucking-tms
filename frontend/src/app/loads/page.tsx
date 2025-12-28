@@ -1089,14 +1089,31 @@ export default function LoadsPageInline() {
           return
         }
 
-        // For existing loads, prepare data for backend
-        const updatedLocationData = {
+        // Close editing immediately for smooth UX
+        setEditingLocation(null)
+        setEditingCell(null)
+
+        // Update local state optimistically
+        const optimisticUpdate = {
           ...load,
           [locationField]: locationString,
           [dateField]: dateTime
         }
 
-        // Calculate miles if both locations are filled
+        // Recalculate week info if pickup_date changed
+        if (type === 'pickup' && dateTime) {
+          const pickupDate = new Date(dateTime)
+          optimisticUpdate.weekNumber = getWeekNumber(pickupDate)
+          optimisticUpdate.weekLabel = getWeekLabel(pickupDate)
+          optimisticUpdate.weekDateRange = getWeekDateRange(pickupDate)
+          optimisticUpdate.dayOfWeek = pickupDate.getDay()
+          optimisticUpdate.dayLabel = getDayLabel(pickupDate)
+        }
+
+        // Apply optimistic update to local state immediately
+        setEditableLoads(prev => prev.map(l => l.id === load.id ? optimisticUpdate : l))
+
+        // Calculate miles if both locations are filled (in background)
         let calculatedMiles = load.miles || 0
         const pickup = type === 'pickup' ? locationString : load.pickup_location
         const delivery = type === 'delivery' ? locationString : load.delivery_location
@@ -1114,6 +1131,8 @@ export default function LoadsPageInline() {
 
             if (response.data.status === 'success' && response.data.distance_miles) {
               calculatedMiles = Math.round(response.data.distance_miles)
+              // Update local state with calculated miles
+              setEditableLoads(prev => prev.map(l => l.id === load.id ? { ...l, miles: calculatedMiles } : l))
               toast.success(`Calculated ${calculatedMiles} miles`)
             } else {
               console.warn('[Maps] API returned non-success status:', response.data)
@@ -1127,7 +1146,6 @@ export default function LoadsPageInline() {
         }
 
         // Update backend with location, date, and miles
-        // React Query will automatically refetch via query invalidation
         const backendData: any = {
           load_number: load.load_number,
           customer_id: load.customer_id,
@@ -1145,9 +1163,6 @@ export default function LoadsPageInline() {
           notes: load.notes || null
         }
         await updateLoad.mutateAsync({ id: load.id, data: backendData })
-
-        setEditingLocation(null)
-        setEditingCell(null)
       } catch (error) {
         console.error('Error saving location:', error)
         toast.error('Failed to save location changes')

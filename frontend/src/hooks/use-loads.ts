@@ -80,9 +80,18 @@ export function useUpdateLoad() {
       return response.data
     },
     onSuccess: (updatedLoad, { id }) => {
-      // Invalidate all loads queries to ensure dispatch board and loads page stay in sync
-      queryClient.invalidateQueries({ queryKey: ['loads'] })
-      queryClient.invalidateQueries({ queryKey: ['load', id] })
+      // Update the cache directly with the returned data to avoid refetch flash
+      queryClient.setQueryData(['loads', 1, 10000], (oldData: any) => {
+        if (!oldData?.items) return oldData
+        return {
+          ...oldData,
+          items: oldData.items.map((load: Load) =>
+            load.id === id ? { ...load, ...updatedLoad } : load
+          )
+        }
+      })
+      // Update individual load cache
+      queryClient.setQueryData(['load', id], updatedLoad)
     },
     onError: (error: any) => {
       const detail = error.response?.data?.detail
