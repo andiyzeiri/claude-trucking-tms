@@ -330,7 +330,7 @@ export default function DispatchBoardPage() {
     })
   }
 
-  // Get loads for a specific driver on a specific day
+  // Get loads for a specific driver on a specific day (pickup or delivery day)
   const getLoadsForDriverOnDay = (driverId: number, date: Date) => {
     return loads.filter(load => {
       if (load.driver_id !== driverId) return false
@@ -343,6 +343,29 @@ export default function DispatchBoardPage() {
       const isDeliveryDay = deliveryDate && isSameDay(deliveryDate, date)
 
       return isPickupDay || isDeliveryDay
+    })
+  }
+
+  // Get loads where driver is "loaded" (in transit) on a specific day
+  // This is for multi-day loads where pickup was before this day and delivery is after this day
+  const getLoadedLoadsForDriverOnDay = (driverId: number, date: Date) => {
+    const dayStart = startOfDay(date)
+    const dayEnd = endOfDay(date)
+
+    return loads.filter(load => {
+      if (load.driver_id !== driverId) return false
+
+      const pickupDate = load.pickup_date ? startOfDay(parseISO(load.pickup_date)) : null
+      const deliveryDate = load.delivery_date ? startOfDay(parseISO(load.delivery_date)) : null
+
+      if (!pickupDate || !deliveryDate) return false
+
+      // Check if this day is between pickup and delivery (exclusive of pickup/delivery days)
+      // Pickup must be before this day and delivery must be after this day
+      const isAfterPickup = dayStart > pickupDate
+      const isBeforeDelivery = dayEnd < deliveryDate
+
+      return isAfterPickup && isBeforeDelivery
     })
   }
 
@@ -673,6 +696,8 @@ export default function DispatchBoardPage() {
                               const isToday = isSameDay(day, new Date())
                               const isOff = isDriverOff(driver.id, day)
                               const driverLoads = getLoadsForDriverOnDay(driver.id, day)
+                              const loadedLoads = getLoadedLoadsForDriverOnDay(driver.id, day)
+                              const isLoaded = loadedLoads.length > 0
 
                               return (
                                 <td
@@ -693,6 +718,16 @@ export default function DispatchBoardPage() {
                                         title="Click to mark as working"
                                       >
                                         <span className="text-sm text-gray-500 font-medium">OFF</span>
+                                      </div>
+                                    ) : isLoaded && driverLoads.length === 0 ? (
+                                      // Driver is in transit (loaded) on a multi-day trip
+                                      <div
+                                        className="h-full flex flex-col items-center justify-center rounded-lg bg-red-50 border border-red-200"
+                                        style={{ minHeight: '70px' }}
+                                        title={`In transit: Load #${loadedLoads[0].load_number}`}
+                                      >
+                                        <span className="text-sm text-red-600 font-semibold">Loaded</span>
+                                        <span className="text-xs text-red-500 mt-1">#{loadedLoads[0].load_number}</span>
                                       </div>
                                     ) : driverLoads.length === 0 ? (
                                       <div
@@ -741,6 +776,10 @@ export default function DispatchBoardPage() {
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-blue-50 border border-blue-200"></div>
               <span style={{ color: 'var(--monday-text-secondary)' }}>Has Loads</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-red-50 border border-red-200"></div>
+              <span style={{ color: 'var(--monday-text-secondary)' }}>Loaded (In Transit)</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-gray-100"></div>
