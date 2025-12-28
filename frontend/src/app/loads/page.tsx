@@ -1293,8 +1293,8 @@ export default function LoadsPageInline() {
       const weekNumberStr = weekKey.replace('Week ', '')
       const weekNumber = parseInt(weekNumberStr)
       if (!isNaN(weekNumber)) {
-        // Get the Monday of this week
-        const targetDate = getDateFromWeekNumber(weekNumber)
+        // Get the Monday of this week using the selected year tab
+        const targetDate = getDateFromWeekNumber(weekNumber, selectedYear)
         pickup_date = targetDate.toISOString()
       }
     }
@@ -1414,7 +1414,7 @@ export default function LoadsPageInline() {
       let borderColor = 'var(--monday-border-light)'
       if (currentGroupType === 'week') {
         iconColor = 'var(--monday-blue)'
-        bgColor = '#F4FAFF'
+        bgColor = '#F3F6F6'
         borderColor = '#ffffff'
       } else if (currentGroupType === 'driver') {
         iconColor = 'var(--monday-working)'
