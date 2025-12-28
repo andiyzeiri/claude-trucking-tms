@@ -2499,7 +2499,7 @@ export default function LoadsPageInline() {
           <DedicatedLanesPanel onClose={() => setShowDedicatedPanel(false)} />
         )}
 
-        <div className="border rounded-lg bg-white overflow-hidden shadow-sm" style={{borderColor: 'var(--monday-border-light)'}} onContextMenu={handleGeneralContextMenu}>
+        <div className="border rounded-lg bg-white overflow-hidden shadow-sm" style={{borderColor: 'var(--monday-border-light)', marginBottom: '60px'}} onContextMenu={handleGeneralContextMenu}>
           <div className="overflow-x-auto">
             <table className="w-full table-auto" style={{borderCollapse: 'separate', borderSpacing: 0}}>
               <thead className="sticky top-0 z-10 shadow-sm" style={{backgroundColor: 'var(--monday-bg-secondary)'}}>
