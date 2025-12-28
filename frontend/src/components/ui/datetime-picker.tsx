@@ -243,21 +243,31 @@ export function InlineDateTimePicker({
   const date = parseDate(dateValue)
 
   // Get current time in HH:mm format for comparison
+  // timeValue can be "8:00 AM" (12-hour) or "08:00" (24-hour)
   const getCurrentTimeValue = (): string => {
     if (!timeValue) return ""
-    try {
-      const parsed = parse(timeValue, "h:mm a", new Date())
-      if (!isNaN(parsed.getTime())) {
-        return format(parsed, "HH:mm")
-      }
-    } catch {}
-    // Try parsing as HH:mm directly
-    try {
-      const parsed = parse(timeValue, "HH:mm", new Date())
-      if (!isNaN(parsed.getTime())) {
-        return format(parsed, "HH:mm")
-      }
-    } catch {}
+
+    // If already in 24-hour format (HH:MM), return as-is
+    const match24 = timeValue.match(/^(\d{1,2}):(\d{2})$/)
+    if (match24) {
+      const hours = parseInt(match24[1])
+      const minutes = parseInt(match24[2])
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+    }
+
+    // Parse 12-hour format (h:mm AM/PM)
+    const match12 = timeValue.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
+    if (match12) {
+      let hours = parseInt(match12[1])
+      const minutes = parseInt(match12[2])
+      const ampm = match12[3].toUpperCase()
+
+      if (ampm === 'PM' && hours !== 12) hours += 12
+      else if (ampm === 'AM' && hours === 12) hours = 0
+
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+    }
+
     return ""
   }
 
@@ -277,15 +287,17 @@ export function InlineDateTimePicker({
       return timeVal
     }
 
-    // Convert HH:mm to display format
-    try {
-      const [hours, minutes] = timeVal.split(':').map(Number)
-      const date = new Date()
-      date.setHours(hours, minutes, 0, 0)
-      return format(date, "h:mm a")
-    } catch {
-      return timeVal
+    // Convert HH:mm to 12-hour display format manually (no date-fns to avoid timezone issues)
+    const match = timeVal.match(/^(\d{1,2}):(\d{2})$/)
+    if (match) {
+      let hours = parseInt(match[1])
+      const minutes = match[2]
+      const ampm = hours >= 12 ? 'PM' : 'AM'
+      hours = hours % 12 || 12
+      return `${hours}:${minutes} ${ampm}`
     }
+
+    return timeVal
   }
 
   const timeDisplayLabel = getTimeDisplayLabel()

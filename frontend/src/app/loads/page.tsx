@@ -241,30 +241,41 @@ function parseDateInput(dateInput: string, existingDateTime: string): string {
   return `${year}-${monthStr}-${dayStr}T${hoursStr}:${minutesStr}:00.000Z`
 }
 
-// Helper to parse time input (HH:MM AM/PM) and combine with existing date
+// Helper to parse time input (HH:MM or HH:MM AM/PM) and combine with existing date
+// The time input is in 24-hour format from the picker (e.g., "08:00" for 8 AM, "14:00" for 2 PM)
+// We store wall-clock time directly as UTC (no timezone conversion)
 function parseTimeInput(timeInput: string, existingDateTime: string): string {
   if (!timeInput) return existingDateTime
 
-  // Parse time format like "2:30 PM" or "14:30"
-  const match = timeInput.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i)
-  if (!match) return existingDateTime
+  let hours: number
+  let minutes: number
 
-  let hours = parseInt(match[1])
-  const minutes = parseInt(match[2])
-  const ampm = match[3]?.toUpperCase()
+  // Check if it's 24-hour format (HH:MM without AM/PM)
+  const match24 = timeInput.match(/^(\d{1,2}):(\d{2})$/)
+  if (match24) {
+    hours = parseInt(match24[1])
+    minutes = parseInt(match24[2])
+  } else {
+    // Parse 12-hour format like "2:30 PM"
+    const match12 = timeInput.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
+    if (!match12) return existingDateTime
 
-  // Handle 12-hour format
-  if (ampm === 'PM' && hours !== 12) {
-    hours += 12
-  } else if (ampm === 'AM' && hours === 12) {
-    hours = 0
+    hours = parseInt(match12[1])
+    minutes = parseInt(match12[2])
+    const ampm = match12[3].toUpperCase()
+
+    // Convert 12-hour to 24-hour
+    if (ampm === 'PM' && hours !== 12) {
+      hours += 12
+    } else if (ampm === 'AM' && hours === 12) {
+      hours = 0
+    }
   }
 
-  // Get existing date - use UTC methods to avoid timezone issues
+  // Get existing date components - use UTC methods
   const existingDate = existingDateTime ? new Date(existingDateTime) : new Date()
 
-  // Build ISO string manually to avoid timezone conversion
-  // We store wall-clock time as UTC
+  // Build ISO string manually - store wall-clock time as UTC
   const year = existingDate.getUTCFullYear()
   const month = String(existingDate.getUTCMonth() + 1).padStart(2, '0')
   const day = String(existingDate.getUTCDate()).padStart(2, '0')
