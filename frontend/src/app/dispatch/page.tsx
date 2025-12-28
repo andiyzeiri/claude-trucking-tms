@@ -722,12 +722,11 @@ export default function DispatchBoardPage() {
                                     ) : isLoaded && driverLoads.length === 0 ? (
                                       // Driver is in transit (loaded) on a multi-day trip
                                       <div
-                                        className="h-full flex flex-col items-center justify-center rounded-lg bg-red-50 border border-red-200"
+                                        className="h-full flex items-center justify-center rounded-lg bg-red-50 border border-red-200"
                                         style={{ minHeight: '70px' }}
                                         title={`In transit: Load #${loadedLoads[0].load_number}`}
                                       >
                                         <span className="text-sm text-red-600 font-semibold">Loaded</span>
-                                        <span className="text-xs text-red-500 mt-1">#{loadedLoads[0].load_number}</span>
                                       </div>
                                     ) : driverLoads.length === 0 ? (
                                       <div
