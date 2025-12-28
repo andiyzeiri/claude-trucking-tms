@@ -59,7 +59,10 @@ function getWeekNumber(date: Date): number {
 }
 
 // Helper to get ISO week year (the year the week belongs to)
-// e.g., Dec 30, 2024 is in Week 1 of 2025, so ISO week year is 2025
+// Works for any year transition:
+// - Dec 30, 2024 is in Week 1 of 2025, so ISO week year is 2025
+// - Dec 29-31, 2025 are in Week 1 of 2026, so ISO week year is 2026
+// The ISO week year is the year containing the Thursday of that week
 function getISOWeekYear(date: Date): number {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
   const dayNum = d.getUTCDay() || 7
@@ -469,11 +472,12 @@ export default function LoadsPageInline() {
     const years = new Set<number>()
     const currentYear = new Date().getFullYear()
     years.add(currentYear) // Always include current year
+    years.add(currentYear + 1) // Always include next year (for end-of-year week transitions)
 
     editableLoads.forEach(load => {
       if (load.pickup_date) {
         const year = getISOWeekYear(new Date(load.pickup_date))
-        if (year >= 2020 && year <= currentYear + 1) { // Reasonable year range
+        if (year >= 2020 && year <= currentYear + 2) { // Reasonable year range
           years.add(year)
         }
       }
