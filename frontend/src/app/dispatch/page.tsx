@@ -1008,9 +1008,9 @@ export default function DispatchBoardPage() {
                 <Label htmlFor="pickup_location">Pickup Location</Label>
                 <AddressAutocomplete
                   value={newLoadForm.pickup_location}
-                  onChange={(address) => setNewLoadForm({ ...newLoadForm, pickup_location: address })}
-                  onAddressSelect={(data) => setNewLoadForm({ ...newLoadForm, pickup_location: data.formatted })}
+                  onChange={(data) => setNewLoadForm({ ...newLoadForm, pickup_location: data.formatted_address })}
                   placeholder="Enter pickup address"
+                  className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -1041,9 +1041,9 @@ export default function DispatchBoardPage() {
                 <Label htmlFor="delivery_location">Delivery Location</Label>
                 <AddressAutocomplete
                   value={newLoadForm.delivery_location}
-                  onChange={(address) => setNewLoadForm({ ...newLoadForm, delivery_location: address })}
-                  onAddressSelect={(data) => setNewLoadForm({ ...newLoadForm, delivery_location: data.formatted })}
+                  onChange={(data) => setNewLoadForm({ ...newLoadForm, delivery_location: data.formatted_address })}
                   placeholder="Enter delivery address"
+                  className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
