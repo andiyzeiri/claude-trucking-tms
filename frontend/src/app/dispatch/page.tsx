@@ -58,24 +58,28 @@ function DraggableTripCard({ load, formatDateTime, getShortLocation }: {
     <div
       ref={setNodeRef}
       style={style}
-      className={`rounded-lg p-2 bg-white border border-gray-200 text-xs cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-shadow ${isDragging ? 'opacity-50' : ''}`}
+      className={`rounded-lg p-2.5 bg-white border border-slate-200 text-xs cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md hover:border-slate-300 transition-all ${isDragging ? 'opacity-50' : ''}`}
       {...listeners}
       {...attributes}
     >
-      <div className="font-semibold text-blue-700 mb-1">{load.load_number}</div>
-      <div className="space-y-1">
-        <div className="flex items-start gap-1 text-green-700">
-          <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />
+      <div className="font-semibold text-slate-700 mb-1.5">{load.load_number}</div>
+      <div className="space-y-1.5">
+        <div className="flex items-start gap-1.5 text-slate-600">
+          <div className="w-4 h-4 rounded bg-emerald-100 flex items-center justify-center flex-shrink-0">
+            <MapPin className="h-2.5 w-2.5 text-emerald-600" />
+          </div>
           <div>
-            <div className="font-medium">{getShortLocation(load.pickup_location)}</div>
-            <div className="text-gray-500 text-[10px]">{formatDateTime(load.pickup_date)}</div>
+            <div className="font-medium text-slate-700">{getShortLocation(load.pickup_location)}</div>
+            <div className="text-slate-400 text-[10px]">{formatDateTime(load.pickup_date)}</div>
           </div>
         </div>
-        <div className="flex items-start gap-1 text-red-700">
-          <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-1.5 text-slate-600">
+          <div className="w-4 h-4 rounded bg-rose-100 flex items-center justify-center flex-shrink-0">
+            <MapPin className="h-2.5 w-2.5 text-rose-500" />
+          </div>
           <div>
-            <div className="font-medium">{getShortLocation(load.delivery_location)}</div>
-            <div className="text-gray-500 text-[10px]">{formatDateTime(load.delivery_date)}</div>
+            <div className="font-medium text-slate-700">{getShortLocation(load.delivery_location)}</div>
+            <div className="text-slate-400 text-[10px]">{formatDateTime(load.delivery_date)}</div>
           </div>
         </div>
       </div>
@@ -113,7 +117,7 @@ function DraggableAssignedLoad({ load, day, formatTime, getShortLocation, onUnas
         ...style,
         ...(fillCell ? { minHeight: '70px', height: '100%' } : {})
       }}
-      className={`relative rounded-lg p-2 bg-blue-50 border border-blue-200 text-xs cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group flex flex-col justify-center ${isDragging ? 'opacity-50' : ''}`}
+      className={`relative rounded-lg p-2 bg-white border border-slate-200 text-xs cursor-grab active:cursor-grabbing hover:shadow-md hover:border-slate-300 transition-all group flex flex-col justify-center ${isDragging ? 'opacity-50' : ''}`}
       {...listeners}
       {...attributes}
     >
@@ -125,18 +129,20 @@ function DraggableAssignedLoad({ load, day, formatTime, getShortLocation, onUnas
           onUnassign(load.id)
         }}
         onPointerDown={(e) => e.stopPropagation()}
-        className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute -top-1 -right-1 w-4 h-4 bg-slate-400 hover:bg-slate-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
         title="Unassign load"
       >
         <X className="h-2.5 w-2.5" />
       </button>
-      <div className="font-semibold text-blue-700 mb-1">{load.load_number}</div>
+      <div className="font-semibold text-slate-700 mb-1">{load.load_number}</div>
       {isPickupDay && (
-        <div className="flex items-center gap-1 text-green-700">
-          <MapPin className="h-3 w-3 flex-shrink-0" />
-          <span className="truncate">P: {getShortLocation(load.pickup_location)}</span>
+        <div className="flex items-center gap-1.5 text-slate-600">
+          <div className="w-3.5 h-3.5 rounded bg-emerald-100 flex items-center justify-center flex-shrink-0">
+            <MapPin className="h-2 w-2 text-emerald-600" />
+          </div>
+          <span className="truncate font-medium">{getShortLocation(load.pickup_location)}</span>
           {load.pickup_date && (
-            <span className="ml-auto flex items-center gap-0.5 text-xs whitespace-nowrap">
+            <span className="ml-auto flex items-center gap-0.5 text-slate-400 whitespace-nowrap">
               <Clock className="h-2.5 w-2.5" />
               {formatTime(load.pickup_date)}
             </span>
@@ -144,11 +150,13 @@ function DraggableAssignedLoad({ load, day, formatTime, getShortLocation, onUnas
         </div>
       )}
       {isDeliveryDay && (
-        <div className="flex items-center gap-1 text-red-700">
-          <MapPin className="h-3 w-3 flex-shrink-0" />
-          <span className="truncate">D: {getShortLocation(load.delivery_location)}</span>
+        <div className="flex items-center gap-1.5 text-slate-600">
+          <div className="w-3.5 h-3.5 rounded bg-rose-100 flex items-center justify-center flex-shrink-0">
+            <MapPin className="h-2 w-2 text-rose-500" />
+          </div>
+          <span className="truncate font-medium">{getShortLocation(load.delivery_location)}</span>
           {load.delivery_date && (
-            <span className="ml-auto flex items-center gap-0.5 text-xs whitespace-nowrap">
+            <span className="ml-auto flex items-center gap-0.5 text-slate-400 whitespace-nowrap">
               <Clock className="h-2.5 w-2.5" />
               {formatTime(load.delivery_date)}
             </span>
@@ -166,21 +174,25 @@ function DragOverlayCard({ load, formatDateTime, getShortLocation }: {
   getShortLocation: (location: string) => string
 }) {
   return (
-    <div className="rounded-lg p-2 bg-white border-2 border-blue-400 text-xs shadow-lg w-48">
-      <div className="font-semibold text-blue-700 mb-1">{load.load_number}</div>
-      <div className="space-y-1">
-        <div className="flex items-start gap-1 text-green-700">
-          <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />
+    <div className="rounded-lg p-2.5 bg-white border-2 border-indigo-400 text-xs shadow-xl w-48">
+      <div className="font-semibold text-slate-700 mb-1.5">{load.load_number}</div>
+      <div className="space-y-1.5">
+        <div className="flex items-start gap-1.5 text-slate-600">
+          <div className="w-4 h-4 rounded bg-emerald-100 flex items-center justify-center flex-shrink-0">
+            <MapPin className="h-2.5 w-2.5 text-emerald-600" />
+          </div>
           <div>
-            <div className="font-medium">{getShortLocation(load.pickup_location)}</div>
-            <div className="text-gray-500 text-[10px]">{formatDateTime(load.pickup_date)}</div>
+            <div className="font-medium text-slate-700">{getShortLocation(load.pickup_location)}</div>
+            <div className="text-slate-400 text-[10px]">{formatDateTime(load.pickup_date)}</div>
           </div>
         </div>
-        <div className="flex items-start gap-1 text-red-700">
-          <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-1.5 text-slate-600">
+          <div className="w-4 h-4 rounded bg-rose-100 flex items-center justify-center flex-shrink-0">
+            <MapPin className="h-2.5 w-2.5 text-rose-500" />
+          </div>
           <div>
-            <div className="font-medium">{getShortLocation(load.delivery_location)}</div>
-            <div className="text-gray-500 text-[10px]">{formatDateTime(load.delivery_date)}</div>
+            <div className="font-medium text-slate-700">{getShortLocation(load.delivery_location)}</div>
+            <div className="text-slate-400 text-[10px]">{formatDateTime(load.delivery_date)}</div>
           </div>
         </div>
       </div>
@@ -192,7 +204,7 @@ function DragOverlayCard({ load, formatDateTime, getShortLocation }: {
 function DroppableUnassignedColumn({ children, isOver }: { children: React.ReactNode, isOver: boolean }) {
   return (
     <div
-      className={`p-2 space-y-2 overflow-y-auto flex-1 transition-colors ${isOver ? 'bg-orange-50' : ''}`}
+      className={`p-2 space-y-2 overflow-y-auto flex-1 transition-colors ${isOver ? 'bg-indigo-50' : ''}`}
       style={{ minHeight: '200px' }}
     >
       {children}
@@ -210,8 +222,8 @@ function DroppableDriverRow({ driverId, children }: { driverId: number, children
   return (
     <tr
       ref={setNodeRef}
-      className={`transition-colors ${isOver ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
-      style={{ backgroundColor: isOver ? 'rgba(59, 130, 246, 0.15)' : undefined }}
+      className={`transition-colors ${isOver ? '' : 'hover:bg-slate-50'}`}
+      style={{ backgroundColor: isOver ? 'rgba(99, 102, 241, 0.08)' : undefined }}
     >
       {children}
     </tr>
@@ -824,38 +836,39 @@ export default function DispatchBoardPage() {
                                   className="px-2 py-2 border-b border-r align-top"
                                   style={{
                                     borderColor: 'var(--cell-borderColor)',
-                                    backgroundColor: isToday ? 'rgba(37, 99, 235, 0.04)' : undefined,
+                                    backgroundColor: isToday ? 'rgba(99, 102, 241, 0.06)' : undefined,
                                     minHeight: '80px'
                                   }}
                                 >
                                   <div className="min-h-[70px]">
                                     {isOff ? (
                                       <div
-                                        className="h-full flex items-center justify-center rounded-lg bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+                                        className="h-full flex items-center justify-center rounded-lg bg-slate-100 cursor-pointer hover:bg-slate-200 transition-colors"
                                         style={{ minHeight: '70px' }}
                                         onClick={() => toggleDriverDayOff(driver.id, day)}
                                         title="Click to mark as working"
                                       >
-                                        <span className="text-sm text-gray-500 font-medium">OFF</span>
+                                        <span className="text-sm text-slate-400 font-medium">OFF</span>
                                       </div>
                                     ) : isLoaded && driverLoads.length === 0 ? (
                                       // Driver is in transit (loaded) on a multi-day trip
                                       <div
-                                        className="h-full flex items-center justify-center rounded-lg bg-red-50 border border-red-200"
+                                        className="h-full flex items-center justify-center rounded-lg bg-amber-50 border border-amber-200"
                                         style={{ minHeight: '70px' }}
+                                        onContextMenu={(e) => handleCellContextMenu(e, driver.id, day)}
                                         title={`In transit: Load #${loadedLoads[0].load_number}`}
                                       >
-                                        <span className="text-sm text-red-600 font-semibold">Loaded</span>
+                                        <span className="text-sm text-amber-600 font-medium">In Transit</span>
                                       </div>
                                     ) : driverLoads.length === 0 ? (
                                       <div
-                                        className="h-full flex items-center justify-center rounded-lg bg-green-50 border border-green-200 cursor-pointer hover:bg-green-100 transition-colors"
+                                        className="h-full flex items-center justify-center rounded-lg bg-slate-50 border border-slate-200 border-dashed cursor-pointer hover:bg-slate-100 hover:border-slate-300 transition-all"
                                         style={{ minHeight: '70px' }}
                                         onClick={() => toggleDriverDayOff(driver.id, day)}
                                         onContextMenu={(e) => handleCellContextMenu(e, driver.id, day)}
                                         title="Click to mark as off, right-click for options"
                                       >
-                                        <span className="text-sm text-green-600 font-medium">Available</span>
+                                        <span className="text-sm text-slate-400 font-medium">Available</span>
                                       </div>
                                     ) : (
                                       <div
@@ -892,23 +905,23 @@ export default function DispatchBoardPage() {
           {/* Legend */}
           <div className="flex items-center justify-center gap-6 text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-green-50 border border-green-200"></div>
-              <span style={{ color: 'var(--monday-text-secondary)' }}>Available</span>
+              <div className="w-4 h-4 rounded bg-slate-50 border border-slate-200 border-dashed"></div>
+              <span className="text-slate-500">Available</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-blue-50 border border-blue-200"></div>
-              <span style={{ color: 'var(--monday-text-secondary)' }}>Has Loads</span>
+              <div className="w-4 h-4 rounded bg-white border border-slate-200 shadow-sm"></div>
+              <span className="text-slate-500">Scheduled</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-red-50 border border-red-200"></div>
-              <span style={{ color: 'var(--monday-text-secondary)' }}>Loaded (In Transit)</span>
+              <div className="w-4 h-4 rounded bg-amber-50 border border-amber-200"></div>
+              <span className="text-slate-500">In Transit</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-gray-100"></div>
-              <span style={{ color: 'var(--monday-text-secondary)' }}>OFF</span>
+              <div className="w-4 h-4 rounded bg-slate-100"></div>
+              <span className="text-slate-500">OFF</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span style={{ color: 'var(--monday-text-secondary)' }}>Drag cards to assign/reassign</span>
+            <div className="flex items-center gap-2 ml-4 pl-4 border-l border-slate-200">
+              <span className="text-slate-400 text-xs">Right-click for options • Drag to reassign</span>
             </div>
           </div>
         </div>
