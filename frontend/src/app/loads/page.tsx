@@ -190,10 +190,23 @@ function combineLocation(street: string, city: string, state: string, zip: strin
   return parts.join(', ')
 }
 
+// Helper to normalize datetime string to ensure it's treated as UTC
+// Backend returns datetimes without timezone (e.g., "2024-12-28T14:00:00")
+// JavaScript would parse these as local time, so we append 'Z' to force UTC
+function normalizeDateTime(dateString: string): string {
+  if (!dateString) return dateString
+  // If already has timezone info (Z or +/-offset), return as-is
+  if (dateString.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateString)) {
+    return dateString
+  }
+  // Append Z to treat as UTC
+  return dateString + 'Z'
+}
+
 // Helper to format date as MM/DD/YY
 function formatDateShort(dateString: string): string {
   if (!dateString) return ''
-  const date = new Date(dateString)
+  const date = new Date(normalizeDateTime(dateString))
   // Use UTC methods to avoid timezone conversion (we store wall-clock time as UTC)
   const month = String(date.getUTCMonth() + 1).padStart(2, '0')
   const day = String(date.getUTCDate()).padStart(2, '0')
@@ -204,7 +217,7 @@ function formatDateShort(dateString: string): string {
 // Helper to format time as HH:MM AM/PM
 function formatTimeShort(dateString: string): string {
   if (!dateString) return ''
-  const date = new Date(dateString)
+  const date = new Date(normalizeDateTime(dateString))
   // Use UTC methods to avoid timezone conversion (we store wall-clock time as UTC)
   let hours = date.getUTCHours()
   const minutes = String(date.getUTCMinutes()).padStart(2, '0')
@@ -231,7 +244,8 @@ function parseDateInput(dateInput: string, existingDateTime: string): string {
   }
 
   // Get existing time from the datetime string (use UTC to avoid timezone issues)
-  const existingDate = existingDateTime ? new Date(existingDateTime) : new Date()
+  // Normalize the datetime to ensure it's treated as UTC
+  const existingDate = existingDateTime ? new Date(normalizeDateTime(existingDateTime)) : new Date()
   const hours = existingDate.getUTCHours()
   const minutes = existingDate.getUTCMinutes()
 
@@ -248,7 +262,6 @@ function parseDateInput(dateInput: string, existingDateTime: string): string {
 // The time input is in 24-hour format from the picker (e.g., "08:00" for 8 AM, "14:00" for 2 PM)
 // We store wall-clock time directly as UTC (no timezone conversion)
 function parseTimeInput(timeInput: string, existingDateTime: string): string {
-  console.log('[parseTimeInput] Input:', { timeInput, existingDateTime })
   if (!timeInput) return existingDateTime
 
   let hours: number
@@ -259,7 +272,6 @@ function parseTimeInput(timeInput: string, existingDateTime: string): string {
   if (match24) {
     hours = parseInt(match24[1])
     minutes = parseInt(match24[2])
-    console.log('[parseTimeInput] Parsed 24h format:', { hours, minutes })
   } else {
     // Parse 12-hour format like "2:30 PM"
     const match12 = timeInput.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
@@ -275,18 +287,12 @@ function parseTimeInput(timeInput: string, existingDateTime: string): string {
     } else if (ampm === 'AM' && hours === 12) {
       hours = 0
     }
-    console.log('[parseTimeInput] Parsed 12h format:', { hours, minutes, ampm })
   }
 
   // Get existing date components - use UTC methods
-  const existingDate = existingDateTime ? new Date(existingDateTime) : new Date()
-  console.log('[parseTimeInput] existingDate UTC:', {
-    year: existingDate.getUTCFullYear(),
-    month: existingDate.getUTCMonth() + 1,
-    day: existingDate.getUTCDate(),
-    hours: existingDate.getUTCHours(),
-    minutes: existingDate.getUTCMinutes()
-  })
+  // Normalize the datetime to ensure it's treated as UTC
+  const normalizedDateTime = normalizeDateTime(existingDateTime)
+  const existingDate = normalizedDateTime ? new Date(normalizedDateTime) : new Date()
 
   // Build ISO string manually - store wall-clock time as UTC
   const year = existingDate.getUTCFullYear()
@@ -295,9 +301,7 @@ function parseTimeInput(timeInput: string, existingDateTime: string): string {
   const hoursStr = String(hours).padStart(2, '0')
   const minutesStr = String(minutes).padStart(2, '0')
 
-  const result = `${year}-${month}-${day}T${hoursStr}:${minutesStr}:00.000Z`
-  console.log('[parseTimeInput] Result:', result)
-  return result
+  return `${year}-${month}-${day}T${hoursStr}:${minutesStr}:00.000Z`
 }
 
 export default function LoadsPageInline() {
@@ -387,7 +391,8 @@ export default function LoadsPageInline() {
   // we can simply transform the loads data and use it
   React.useEffect(() => {
     const loadsWithWeeks = loads.map(load => {
-      const pickupDate = new Date(load.pickup_date)
+      // Normalize pickup_date to ensure it's treated as UTC
+      const pickupDate = new Date(normalizeDateTime(load.pickup_date))
 
       // Check if we have local edits for this load that we should preserve
       const existingLocal = editableLoads.find(el => el.id === load.id)
@@ -395,14 +400,15 @@ export default function LoadsPageInline() {
 
       // If this load is being edited, preserve local values
       if (isBeingEdited && existingLocal) {
+        const existingPickupDate = new Date(normalizeDateTime(existingLocal.pickup_date || load.pickup_date))
         return {
           ...existingLocal,
           // Always update week info based on current pickup_date
-          weekNumber: getWeekNumber(new Date(existingLocal.pickup_date || load.pickup_date)),
-          weekLabel: getWeekLabel(new Date(existingLocal.pickup_date || load.pickup_date)),
-          weekDateRange: getWeekDateRange(new Date(existingLocal.pickup_date || load.pickup_date)),
-          dayOfWeek: new Date(existingLocal.pickup_date || load.pickup_date).getDay(),
-          dayLabel: getDayLabel(new Date(existingLocal.pickup_date || load.pickup_date))
+          weekNumber: getWeekNumber(existingPickupDate),
+          weekLabel: getWeekLabel(existingPickupDate),
+          weekDateRange: getWeekDateRange(existingPickupDate),
+          dayOfWeek: existingPickupDate.getDay(),
+          dayLabel: getDayLabel(existingPickupDate)
         }
       }
 
@@ -488,7 +494,7 @@ export default function LoadsPageInline() {
 
     editableLoads.forEach(load => {
       if (load.pickup_date) {
-        const year = getISOWeekYear(new Date(load.pickup_date))
+        const year = getISOWeekYear(new Date(normalizeDateTime(load.pickup_date)))
         if (year >= 2020 && year <= currentYear + 2) { // Reasonable year range
           years.add(year)
         }
@@ -505,7 +511,7 @@ export default function LoadsPageInline() {
     // Apply year filter using ISO week year (so Dec 30, 2024 shows in 2025 if it's Week 1 of 2025)
     filtered = filtered.filter(load => {
       if (!load.pickup_date) return false
-      const loadYear = getISOWeekYear(new Date(load.pickup_date))
+      const loadYear = getISOWeekYear(new Date(normalizeDateTime(load.pickup_date)))
       return loadYear === selectedYear
     })
 
@@ -539,7 +545,7 @@ export default function LoadsPageInline() {
       sevenDaysLater.setDate(today.getDate() + 6)
 
       filtered = filtered.filter(load => {
-        const pickupDate = new Date(load.pickup_date)
+        const pickupDate = new Date(normalizeDateTime(load.pickup_date))
         pickupDate.setHours(0, 0, 0, 0)
         return pickupDate.getTime() >= today.getTime() && pickupDate.getTime() <= sevenDaysLater.getTime()
       })
@@ -686,7 +692,7 @@ export default function LoadsPageInline() {
     sevenDaysLater.setDate(today.getDate() + 6) // Today + 6 more days = 7 days total
 
     const upcomingLoads = editableLoads.filter(load => {
-      const pickupDate = new Date(load.pickup_date)
+      const pickupDate = new Date(normalizeDateTime(load.pickup_date))
       pickupDate.setHours(0, 0, 0, 0)
       return pickupDate.getTime() >= today.getTime() && pickupDate.getTime() <= sevenDaysLater.getTime()
     })
@@ -982,7 +988,7 @@ export default function LoadsPageInline() {
   const totals = useMemo(() => {
     const yearLoads = editableLoads.filter(load => {
       if (!load.pickup_date || load.isNew) return false
-      const loadDate = new Date(load.pickup_date)
+      const loadDate = new Date(normalizeDateTime(load.pickup_date))
       const loadISOYear = getISOWeekYear(loadDate)
       const weekNum = getWeekNumber(loadDate)
       // Only include loads from weeks 1-52 of the selected year
@@ -1038,10 +1044,8 @@ export default function LoadsPageInline() {
   }
 
   const stopLocationEdit = async (overrideValues?: { street?: string; city?: string; state?: string; zip?: string; date?: string; time?: string }) => {
-    console.log('[stopLocationEdit] Called with overrideValues:', overrideValues)
     if (editingLocation) {
       const { loadId, type, street: stateStreet, city: stateCity, state: stateState, zip: stateZip, date: stateDate, time: stateTime } = editingLocation
-      console.log('[stopLocationEdit] editingLocation state:', { stateDate, stateTime })
       // Use override values if provided, otherwise use state values
       const street = overrideValues?.street ?? stateStreet
       const city = overrideValues?.city ?? stateCity
@@ -1049,7 +1053,6 @@ export default function LoadsPageInline() {
       const zip = overrideValues?.zip ?? stateZip
       const date = overrideValues?.date ?? stateDate
       const time = overrideValues?.time ?? stateTime
-      console.log('[stopLocationEdit] Final date/time values:', { date, time })
 
       try {
         // Combine location components
@@ -1065,14 +1068,11 @@ export default function LoadsPageInline() {
         // Parse date/time
         const dateField = type === 'pickup' ? 'pickup_date' : 'delivery_date'
         let dateTime = load[dateField]
-        console.log('[stopLocationEdit] Original dateTime from load:', dateTime)
         if (date) {
           dateTime = parseDateInput(date, dateTime)
-          console.log('[stopLocationEdit] After parseDateInput:', dateTime)
         }
         if (time) {
           dateTime = parseTimeInput(time, dateTime)
-          console.log('[stopLocationEdit] After parseTimeInput:', dateTime)
         }
 
         const locationField = type === 'pickup' ? 'pickup_location' : 'delivery_location'
@@ -1592,7 +1592,7 @@ export default function LoadsPageInline() {
             />
           ) : (
             <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: '#3a86ff'}}>
-              {new Date(load.pickup_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
+              {new Date(normalizeDateTime(load.pickup_date)).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
             </div>
           )}
         </td>
