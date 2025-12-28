@@ -2769,7 +2769,7 @@ export default function LoadsPageInline() {
                 {totals.count} Loads
               </div>
             </div>
-            <div className="flex items-center gap-6" style={{ marginRight: '100px' }}>
+            <div className="flex items-center gap-6" style={{ marginRight: '300px' }}>
               <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-done)' }}>
                 {formatCurrency(totals.rate)}
               </div>
