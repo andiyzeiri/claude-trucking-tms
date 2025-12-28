@@ -248,6 +248,7 @@ function parseDateInput(dateInput: string, existingDateTime: string): string {
 // The time input is in 24-hour format from the picker (e.g., "08:00" for 8 AM, "14:00" for 2 PM)
 // We store wall-clock time directly as UTC (no timezone conversion)
 function parseTimeInput(timeInput: string, existingDateTime: string): string {
+  console.log('[parseTimeInput] Input:', { timeInput, existingDateTime })
   if (!timeInput) return existingDateTime
 
   let hours: number
@@ -258,6 +259,7 @@ function parseTimeInput(timeInput: string, existingDateTime: string): string {
   if (match24) {
     hours = parseInt(match24[1])
     minutes = parseInt(match24[2])
+    console.log('[parseTimeInput] Parsed 24h format:', { hours, minutes })
   } else {
     // Parse 12-hour format like "2:30 PM"
     const match12 = timeInput.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
@@ -273,10 +275,18 @@ function parseTimeInput(timeInput: string, existingDateTime: string): string {
     } else if (ampm === 'AM' && hours === 12) {
       hours = 0
     }
+    console.log('[parseTimeInput] Parsed 12h format:', { hours, minutes, ampm })
   }
 
   // Get existing date components - use UTC methods
   const existingDate = existingDateTime ? new Date(existingDateTime) : new Date()
+  console.log('[parseTimeInput] existingDate UTC:', {
+    year: existingDate.getUTCFullYear(),
+    month: existingDate.getUTCMonth() + 1,
+    day: existingDate.getUTCDate(),
+    hours: existingDate.getUTCHours(),
+    minutes: existingDate.getUTCMinutes()
+  })
 
   // Build ISO string manually - store wall-clock time as UTC
   const year = existingDate.getUTCFullYear()
@@ -285,7 +295,9 @@ function parseTimeInput(timeInput: string, existingDateTime: string): string {
   const hoursStr = String(hours).padStart(2, '0')
   const minutesStr = String(minutes).padStart(2, '0')
 
-  return `${year}-${month}-${day}T${hoursStr}:${minutesStr}:00.000Z`
+  const result = `${year}-${month}-${day}T${hoursStr}:${minutesStr}:00.000Z`
+  console.log('[parseTimeInput] Result:', result)
+  return result
 }
 
 export default function LoadsPageInline() {
@@ -1026,8 +1038,10 @@ export default function LoadsPageInline() {
   }
 
   const stopLocationEdit = async (overrideValues?: { street?: string; city?: string; state?: string; zip?: string; date?: string; time?: string }) => {
+    console.log('[stopLocationEdit] Called with overrideValues:', overrideValues)
     if (editingLocation) {
       const { loadId, type, street: stateStreet, city: stateCity, state: stateState, zip: stateZip, date: stateDate, time: stateTime } = editingLocation
+      console.log('[stopLocationEdit] editingLocation state:', { stateDate, stateTime })
       // Use override values if provided, otherwise use state values
       const street = overrideValues?.street ?? stateStreet
       const city = overrideValues?.city ?? stateCity
@@ -1035,6 +1049,7 @@ export default function LoadsPageInline() {
       const zip = overrideValues?.zip ?? stateZip
       const date = overrideValues?.date ?? stateDate
       const time = overrideValues?.time ?? stateTime
+      console.log('[stopLocationEdit] Final date/time values:', { date, time })
 
       try {
         // Combine location components
@@ -1050,11 +1065,14 @@ export default function LoadsPageInline() {
         // Parse date/time
         const dateField = type === 'pickup' ? 'pickup_date' : 'delivery_date'
         let dateTime = load[dateField]
+        console.log('[stopLocationEdit] Original dateTime from load:', dateTime)
         if (date) {
           dateTime = parseDateInput(date, dateTime)
+          console.log('[stopLocationEdit] After parseDateInput:', dateTime)
         }
         if (time) {
           dateTime = parseTimeInput(time, dateTime)
+          console.log('[stopLocationEdit] After parseTimeInput:', dateTime)
         }
 
         const locationField = type === 'pickup' ? 'pickup_location' : 'delivery_location'
