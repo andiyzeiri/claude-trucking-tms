@@ -556,7 +556,7 @@ export default function LoadsPageInline() {
       filtered = filtered.filter(load => load.status === statusFilter)
     }
 
-    // Apply sorting
+    // Apply sorting with stable secondary sort by id
     filtered = [...filtered].sort((a, b) => {
       let aValue: any = a[sortField]
       let bValue: any = b[sortField]
@@ -572,24 +572,33 @@ export default function LoadsPageInline() {
 
       // Handle dates
       if (sortField === 'pickup_date' || sortField === 'delivery_date') {
-        aValue = new Date(aValue).getTime()
-        bValue = new Date(bValue).getTime()
+        aValue = new Date(normalizeDateTime(aValue)).getTime()
+        bValue = new Date(normalizeDateTime(bValue)).getTime()
       }
+
+      let result: number
 
       // Handle numbers
       if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
-      }
-
-      // Handle strings
-      const aStr = String(aValue || '').toLowerCase()
-      const bStr = String(bValue || '').toLowerCase()
-
-      if (sortDirection === 'asc') {
-        return aStr.localeCompare(bStr)
+        result = sortDirection === 'asc' ? aValue - bValue : bValue - aValue
       } else {
-        return bStr.localeCompare(aStr)
+        // Handle strings
+        const aStr = String(aValue || '').toLowerCase()
+        const bStr = String(bValue || '').toLowerCase()
+
+        if (sortDirection === 'asc') {
+          result = aStr.localeCompare(bStr)
+        } else {
+          result = bStr.localeCompare(aStr)
+        }
       }
+
+      // Secondary sort by id for stability - keeps order consistent when primary values are equal
+      if (result === 0) {
+        return (a.id || 0) - (b.id || 0)
+      }
+
+      return result
     })
 
     return filtered
