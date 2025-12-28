@@ -194,6 +194,36 @@ export default function PayrollPage() {
 
   const weeks = useMemo(() => generateWeeks(), [])
 
+  // Helper function to check if a driver was employed during a specific week
+  const isDriverEmployedDuringWeek = (driver: any, weekStart: Date, weekEnd: Date): boolean => {
+    // If driver has a hire date, they must be hired on or before the week ends
+    if (driver.date_hired) {
+      const hireDate = new Date(driver.date_hired)
+      if (hireDate > weekEnd) {
+        return false // Driver wasn't hired yet
+      }
+    }
+
+    // If driver has a termination date, they must be terminated after the week starts
+    // (so they're included in the last week they worked)
+    if (driver.date_terminated) {
+      const terminationDate = new Date(driver.date_terminated)
+      if (terminationDate < weekStart) {
+        return false // Driver was already terminated before this week
+      }
+    }
+
+    return true
+  }
+
+  // Get drivers employed during a specific week
+  const getDriversForWeek = (weekNumber: number) => {
+    const week = weeks.find(w => w.weekNumber === weekNumber)
+    if (!week) return drivers
+
+    return drivers.filter(driver => isDriverEmployedDuringWeek(driver, week.startDate, week.endDate))
+  }
+
   // Transform calculated payroll data into the format expected by the page
   const payrollData: DriverPayrollData[] = useMemo(() => {
     // Create a map from driver ID to driver data
@@ -370,7 +400,7 @@ export default function PayrollPage() {
     }
   }
 
-  // Calculate week totals
+  // Calculate week totals (only for drivers employed during that week)
   const getWeekTotals = (weekNumber: number) => {
     const totals = {
       gross: 0,
@@ -385,7 +415,12 @@ export default function PayrollPage() {
       check_amount: 0
     }
 
+    const employedDriverIds = new Set(getDriversForWeek(weekNumber).map(d => d.id))
+
     payrollData.forEach(driverData => {
+      // Only include drivers who were employed during this week
+      if (!employedDriverIds.has(driverData.driver_id)) return
+
       const weekData = driverData.weeks[weekNumber]
       if (weekData) {
         totals.gross += weekData.gross
@@ -817,6 +852,9 @@ export default function PayrollPage() {
                     const isExpanded = expandedWeeks.has(week.weekNumber)
                     const weekTotals = getWeekTotals(week.weekNumber)
                     const hasData = weekTotals.check_amount > 0
+                    // Get drivers employed during this week
+                    const employedDrivers = getDriversForWeek(week.weekNumber)
+                    const employedDriverIds = new Set(employedDrivers.map(d => d.id))
 
                     return (
                       <React.Fragment key={week.weekNumber}>
@@ -854,7 +892,7 @@ export default function PayrollPage() {
                             </div>
                           </td>
                           <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'var(--colors-foreground-muted)'}}>
-                            {payrollData.length} drivers
+                            {employedDrivers.length} drivers
                           </td>
                           <td className="px-3 py-2.5 border-r text-right" style={{borderColor: 'var(--cell-borderColor)', fontSize: '13px', fontWeight: 600, color: 'var(--colors-foreground-default)'}}>
                             {formatCurrency(weekTotals.gross)}
@@ -888,10 +926,12 @@ export default function PayrollPage() {
                           </td>
                         </tr>
 
-                        {/* Driver Rows (shown when expanded) */}
-                        {isExpanded && payrollData.map((driverData, driverIndex) => {
+                        {/* Driver Rows (shown when expanded) - only show drivers employed during this week */}
+                        {isExpanded && payrollData
+                          .filter(driverData => employedDriverIds.has(driverData.driver_id))
+                          .map((driverData, driverIndex) => {
                           const weekData = driverData.weeks[week.weekNumber]
-                          const rowIndex = weekIndex * payrollData.length + driverIndex
+                          const rowIndex = weekIndex * employedDrivers.length + driverIndex
                           const isEvenRow = rowIndex % 2 === 0
                           const defaultBgColor = isEvenRow ? 'var(--cell-background-base)' : 'rgba(0, 0, 0, 0.02)'
 
