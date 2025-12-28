@@ -1414,7 +1414,7 @@ export default function LoadsPageInline() {
       let borderColor = 'var(--monday-border-light)'
       if (currentGroupType === 'week') {
         iconColor = 'var(--monday-blue)'
-        bgColor = '#dfe7fd'
+        bgColor = '#F4FAFF'
         borderColor = '#ffffff'
       } else if (currentGroupType === 'driver') {
         iconColor = 'var(--monday-working)'
