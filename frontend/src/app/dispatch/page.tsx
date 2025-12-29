@@ -117,7 +117,7 @@ function DraggableAssignedLoad({ load, day, formatTime, getShortLocation, onUnas
         ...style,
         ...(fillCell ? { minHeight: '70px', height: '100%' } : {})
       }}
-      className={`relative rounded-lg p-2 bg-emerald-50 border border-emerald-200 text-xs cursor-grab active:cursor-grabbing hover:shadow-md hover:border-emerald-300 transition-all group flex flex-col justify-center ${isDragging ? 'opacity-50' : ''}`}
+      className={`relative rounded-lg p-2 bg-white border border-slate-200 text-xs cursor-grab active:cursor-grabbing hover:shadow-md hover:border-slate-300 transition-all group flex flex-col justify-center ${isDragging ? 'opacity-50' : ''}`}
       {...listeners}
       {...attributes}
     >
@@ -862,13 +862,13 @@ export default function DispatchBoardPage() {
                                       </div>
                                     ) : driverLoads.length === 0 ? (
                                       <div
-                                        className="h-full flex items-center justify-center rounded-lg bg-emerald-50 border border-emerald-300 border-dashed cursor-pointer hover:bg-emerald-100 hover:border-emerald-400 transition-all"
+                                        className="h-full flex items-center justify-center rounded-lg bg-slate-50 border border-slate-300 border-dashed cursor-pointer hover:bg-slate-100 hover:border-slate-400 transition-all"
                                         style={{ minHeight: '70px' }}
                                         onClick={() => toggleDriverDayOff(driver.id, day)}
                                         onContextMenu={(e) => handleCellContextMenu(e, driver.id, day)}
                                         title="Click to mark as off, right-click for options"
                                       >
-                                        <span className="text-sm text-emerald-300 font-medium">Available</span>
+                                        <span className="text-sm text-emerald-500 font-medium">Available</span>
                                       </div>
                                     ) : (
                                       <div
@@ -905,11 +905,11 @@ export default function DispatchBoardPage() {
           {/* Legend */}
           <div className="flex items-center justify-center gap-6 text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-emerald-50 border border-emerald-300 border-dashed"></div>
+              <div className="w-4 h-4 rounded bg-slate-50 border border-slate-300 border-dashed"></div>
               <span className="text-slate-500">Available</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-emerald-50 border border-emerald-200"></div>
+              <div className="w-4 h-4 rounded bg-white border border-slate-200 shadow-sm"></div>
               <span className="text-slate-500">Scheduled</span>
             </div>
             <div className="flex items-center gap-2">
