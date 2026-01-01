@@ -17,7 +17,8 @@ import { useDrivers } from '@/hooks/use-drivers'
 import { useLoads, useUpdateLoad, useCreateLoad } from '@/hooks/use-loads'
 import { useCustomers } from '@/hooks/use-customers'
 import { useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, MapPin, Clock, User, X, Truck, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, Clock, User, X, Truck, Plus, DollarSign, Route, Package, FileText, Calendar } from 'lucide-react'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { format, startOfWeek, addDays, isSameDay, parseISO, startOfDay, endOfDay } from 'date-fns'
 import { AddressAutocomplete } from '@/components/ui/address-autocomplete'
 import {
@@ -39,6 +40,183 @@ interface DayOffDriver {
   date: string // ISO date string
 }
 
+// Load Details Tooltip Content
+function LoadDetailsTooltipContent({ load, formatDateTime }: {
+  load: Load
+  formatDateTime: (dateStr: string | undefined) => string
+}) {
+  const formatCurrency = (amount: number | undefined) => {
+    if (!amount) return '-'
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800'
+      case 'assigned': return 'bg-blue-100 text-blue-800'
+      case 'dispatched': return 'bg-indigo-100 text-indigo-800'
+      case 'in_transit': return 'bg-amber-100 text-amber-800'
+      case 'delivered': return 'bg-green-100 text-green-800'
+      case 'cancelled': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const formatStatus = (status: string) => {
+    return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Header with Load Number and Status */}
+      <div className="flex items-center justify-between border-b pb-2">
+        <span className="font-bold text-base text-slate-800">{load.load_number}</span>
+        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(load.status)}`}>
+          {formatStatus(load.status)}
+        </span>
+      </div>
+
+      {/* Customer */}
+      {load.customer && (
+        <div className="flex items-start gap-2">
+          <Package className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
+          <div>
+            <div className="text-xs text-slate-500">Customer</div>
+            <div className="text-sm font-medium text-slate-700">{load.customer.name}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Pickup */}
+      <div className="flex items-start gap-2">
+        <div className="w-4 h-4 rounded bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <MapPin className="h-2.5 w-2.5 text-emerald-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-xs text-slate-500">Pickup</div>
+          <div className="text-sm font-medium text-slate-700">{load.pickup_location || '-'}</div>
+          <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
+            <Calendar className="h-3 w-3" />
+            {formatDateTime(load.pickup_date)}
+          </div>
+          {load.pickup_notes && (
+            <div className="text-xs text-slate-500 mt-1 italic">"{load.pickup_notes}"</div>
+          )}
+        </div>
+      </div>
+
+      {/* Delivery */}
+      <div className="flex items-start gap-2">
+        <div className="w-4 h-4 rounded bg-rose-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <MapPin className="h-2.5 w-2.5 text-rose-500" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-xs text-slate-500">Delivery</div>
+          <div className="text-sm font-medium text-slate-700">{load.delivery_location || '-'}</div>
+          <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
+            <Calendar className="h-3 w-3" />
+            {formatDateTime(load.delivery_date)}
+          </div>
+          {load.delivery_notes && (
+            <div className="text-xs text-slate-500 mt-1 italic">"{load.delivery_notes}"</div>
+          )}
+        </div>
+      </div>
+
+      {/* Financial Info */}
+      <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+        <div className="flex items-center gap-2">
+          <Route className="h-4 w-4 text-slate-400" />
+          <div>
+            <div className="text-xs text-slate-500">Miles</div>
+            <div className="text-sm font-semibold text-slate-700">{load.miles?.toLocaleString() || '-'}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <DollarSign className="h-4 w-4 text-slate-400" />
+          <div>
+            <div className="text-xs text-slate-500">Rate</div>
+            <div className="text-sm font-semibold text-emerald-600">{formatCurrency(load.rate)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Rate per mile */}
+      {load.miles && load.rate && load.miles > 0 && (
+        <div className="text-xs text-center text-slate-500 bg-slate-50 rounded py-1">
+          {formatCurrency(load.rate / load.miles)}/mile
+        </div>
+      )}
+
+      {/* Carrier Rate if different */}
+      {load.carrier_rate && load.carrier_rate !== load.rate && (
+        <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+          <span>Carrier Rate:</span>
+          <span className="font-medium">{formatCurrency(load.carrier_rate)}</span>
+        </div>
+      )}
+
+      {/* Weight */}
+      {load.weight && (
+        <div className="flex items-center justify-between text-xs text-slate-500">
+          <span>Weight:</span>
+          <span className="font-medium">{load.weight.toLocaleString()} lbs</span>
+        </div>
+      )}
+
+      {/* Driver */}
+      {load.driver && (
+        <div className="flex items-center gap-2 pt-2 border-t">
+          <User className="h-4 w-4 text-slate-400" />
+          <div>
+            <div className="text-xs text-slate-500">Driver</div>
+            <div className="text-sm font-medium text-slate-700">
+              {load.driver.first_name} {load.driver.last_name}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Truck */}
+      {load.truck && (
+        <div className="flex items-center gap-2">
+          <Truck className="h-4 w-4 text-slate-400" />
+          <div>
+            <div className="text-xs text-slate-500">Truck</div>
+            <div className="text-sm font-medium text-slate-700">#{load.truck.truck_number}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Notes */}
+      {load.notes && (
+        <div className="pt-2 border-t">
+          <div className="flex items-start gap-2">
+            <FileText className="h-4 w-4 text-slate-400 mt-0.5" />
+            <div>
+              <div className="text-xs text-slate-500">Notes</div>
+              <div className="text-sm text-slate-600">{load.notes}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Documents indicator */}
+      {(load.pod_url || load.ratecon_url) && (
+        <div className="flex items-center gap-2 pt-2 border-t text-xs text-slate-500">
+          <FileText className="h-3 w-3" />
+          <span>
+            {load.ratecon_url && 'Rate Con'}
+            {load.ratecon_url && load.pod_url && ' | '}
+            {load.pod_url && 'POD'}
+            {' attached'}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Draggable Trip Card Component (for unassigned column)
 function DraggableTripCard({ load, formatDateTime, getShortLocation }: {
   load: Load
@@ -55,43 +233,51 @@ function DraggableTripCard({ load, formatDateTime, getShortLocation }: {
   } : undefined
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`rounded-lg p-2.5 bg-white border border-slate-200 text-xs cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md hover:border-slate-300 transition-all ${isDragging ? 'opacity-50' : ''}`}
-      {...listeners}
-      {...attributes}
-    >
-      <div className="font-semibold text-slate-700 mb-1.5">{load.load_number}</div>
-      <div className="space-y-1.5">
-        <div className="flex items-start gap-1.5 text-slate-600">
-          <div className="w-4 h-4 rounded bg-emerald-100 flex items-center justify-center flex-shrink-0">
-            <MapPin className="h-2.5 w-2.5 text-emerald-600" />
-          </div>
-          <div>
-            <div className="font-medium text-slate-700">{getShortLocation(load.pickup_location)}</div>
-            <div className="text-slate-400 text-[10px]">{formatDateTime(load.pickup_date)}</div>
+    <HoverCard openDelay={300} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        <div
+          ref={setNodeRef}
+          style={style}
+          className={`rounded-lg p-2.5 bg-white border border-slate-200 text-xs cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md hover:border-slate-300 transition-all ${isDragging ? 'opacity-50' : ''}`}
+          {...listeners}
+          {...attributes}
+        >
+          <div className="font-semibold text-slate-700 mb-1.5">{load.load_number}</div>
+          <div className="space-y-1.5">
+            <div className="flex items-start gap-1.5 text-slate-600">
+              <div className="w-4 h-4 rounded bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <MapPin className="h-2.5 w-2.5 text-emerald-600" />
+              </div>
+              <div>
+                <div className="font-medium text-slate-700">{getShortLocation(load.pickup_location)}</div>
+                <div className="text-slate-400 text-[10px]">{formatDateTime(load.pickup_date)}</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-1.5 text-slate-600">
+              <div className="w-4 h-4 rounded bg-rose-100 flex items-center justify-center flex-shrink-0">
+                <MapPin className="h-2.5 w-2.5 text-rose-500" />
+              </div>
+              <div>
+                <div className="font-medium text-slate-700">{getShortLocation(load.delivery_location)}</div>
+                <div className="text-slate-400 text-[10px]">{formatDateTime(load.delivery_date)}</div>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="flex items-start gap-1.5 text-slate-600">
-          <div className="w-4 h-4 rounded bg-rose-100 flex items-center justify-center flex-shrink-0">
-            <MapPin className="h-2.5 w-2.5 text-rose-500" />
-          </div>
-          <div>
-            <div className="font-medium text-slate-700">{getShortLocation(load.delivery_location)}</div>
-            <div className="text-slate-400 text-[10px]">{formatDateTime(load.delivery_date)}</div>
-          </div>
-        </div>
-      </div>
-    </div>
+      </HoverCardTrigger>
+      <HoverCardContent side="right" align="start" className="w-80">
+        <LoadDetailsTooltipContent load={load} formatDateTime={formatDateTime} />
+      </HoverCardContent>
+    </HoverCard>
   )
 }
 
 // Draggable Assigned Load Component (for driver cells)
-function DraggableAssignedLoad({ load, day, formatTime, getShortLocation, onUnassign, fillCell }: {
+function DraggableAssignedLoad({ load, day, formatTime, formatDateTime, getShortLocation, onUnassign, fillCell }: {
   load: Load
   day: Date
   formatTime: (dateStr: string | undefined) => string
+  formatDateTime: (dateStr: string | undefined) => string
   getShortLocation: (location: string) => string
   onUnassign: (loadId: number) => void
   fillCell?: boolean
@@ -111,59 +297,66 @@ function DraggableAssignedLoad({ load, day, formatTime, getShortLocation, onUnas
   } : undefined
 
   return (
-    <div
-      ref={setNodeRef}
-      style={{
-        ...style,
-        ...(fillCell ? { minHeight: '70px', height: '100%' } : {})
-      }}
-      className={`relative rounded-lg p-2 bg-white border border-slate-200 text-xs cursor-grab active:cursor-grabbing hover:shadow-md hover:border-slate-300 transition-all group flex flex-col justify-center ${isDragging ? 'opacity-50' : ''}`}
-      {...listeners}
-      {...attributes}
-    >
-      {/* Unassign X button */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          e.preventDefault()
-          onUnassign(load.id)
-        }}
-        onPointerDown={(e) => e.stopPropagation()}
-        className="absolute -top-1 -right-1 w-4 h-4 bg-slate-400 hover:bg-slate-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-        title="Unassign load"
-      >
-        <X className="h-2.5 w-2.5" />
-      </button>
-      <div className="font-semibold text-slate-700 mb-1">{load.load_number}</div>
-      {isPickupDay && (
-        <div className="flex items-center gap-1.5 text-slate-600">
-          <div className="w-3.5 h-3.5 rounded bg-emerald-100 flex items-center justify-center flex-shrink-0">
-            <MapPin className="h-2 w-2 text-emerald-600" />
-          </div>
-          <span className="truncate font-medium">{getShortLocation(load.pickup_location)}</span>
-          {load.pickup_date && (
-            <span className="ml-auto flex items-center gap-0.5 text-slate-400 whitespace-nowrap">
-              <Clock className="h-2.5 w-2.5" />
-              {formatTime(load.pickup_date)}
-            </span>
+    <HoverCard openDelay={300} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        <div
+          ref={setNodeRef}
+          style={{
+            ...style,
+            ...(fillCell ? { minHeight: '70px', height: '100%' } : {})
+          }}
+          className={`relative rounded-lg p-2 bg-white border border-slate-200 text-xs cursor-grab active:cursor-grabbing hover:shadow-md hover:border-slate-300 transition-all group flex flex-col justify-center ${isDragging ? 'opacity-50' : ''}`}
+          {...listeners}
+          {...attributes}
+        >
+          {/* Unassign X button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              onUnassign(load.id)
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="absolute -top-1 -right-1 w-4 h-4 bg-slate-400 hover:bg-slate-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+            title="Unassign load"
+          >
+            <X className="h-2.5 w-2.5" />
+          </button>
+          <div className="font-semibold text-slate-700 mb-1">{load.load_number}</div>
+          {isPickupDay && (
+            <div className="flex items-center gap-1.5 text-slate-600">
+              <div className="w-3.5 h-3.5 rounded bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <MapPin className="h-2 w-2 text-emerald-600" />
+              </div>
+              <span className="truncate font-medium">{getShortLocation(load.pickup_location)}</span>
+              {load.pickup_date && (
+                <span className="ml-auto flex items-center gap-0.5 text-slate-400 whitespace-nowrap">
+                  <Clock className="h-2.5 w-2.5" />
+                  {formatTime(load.pickup_date)}
+                </span>
+              )}
+            </div>
+          )}
+          {isDeliveryDay && (
+            <div className="flex items-center gap-1.5 text-slate-600">
+              <div className="w-3.5 h-3.5 rounded bg-rose-100 flex items-center justify-center flex-shrink-0">
+                <MapPin className="h-2 w-2 text-rose-500" />
+              </div>
+              <span className="truncate font-medium">{getShortLocation(load.delivery_location)}</span>
+              {load.delivery_date && (
+                <span className="ml-auto flex items-center gap-0.5 text-slate-400 whitespace-nowrap">
+                  <Clock className="h-2.5 w-2.5" />
+                  {formatTime(load.delivery_date)}
+                </span>
+              )}
+            </div>
           )}
         </div>
-      )}
-      {isDeliveryDay && (
-        <div className="flex items-center gap-1.5 text-slate-600">
-          <div className="w-3.5 h-3.5 rounded bg-rose-100 flex items-center justify-center flex-shrink-0">
-            <MapPin className="h-2 w-2 text-rose-500" />
-          </div>
-          <span className="truncate font-medium">{getShortLocation(load.delivery_location)}</span>
-          {load.delivery_date && (
-            <span className="ml-auto flex items-center gap-0.5 text-slate-400 whitespace-nowrap">
-              <Clock className="h-2.5 w-2.5" />
-              {formatTime(load.delivery_date)}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
+      </HoverCardTrigger>
+      <HoverCardContent side="top" align="start" className="w-80">
+        <LoadDetailsTooltipContent load={load} formatDateTime={formatDateTime} />
+      </HoverCardContent>
+    </HoverCard>
   )
 }
 
@@ -881,6 +1074,7 @@ export default function DispatchBoardPage() {
                                             load={load}
                                             day={day}
                                             formatTime={formatTime}
+                                            formatDateTime={formatDateTime}
                                             getShortLocation={getShortLocation}
                                             onUnassign={handleUnassign}
                                             fillCell={driverLoads.length === 1}

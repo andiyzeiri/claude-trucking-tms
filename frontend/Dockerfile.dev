@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -10,6 +10,9 @@ COPY package*.json ./
 
 # Install dependencies
 RUN npm ci
+
+# Ensure node_modules binaries are executable
+RUN chmod -R +x node_modules/.bin/
 
 # Copy application code
 COPY . .

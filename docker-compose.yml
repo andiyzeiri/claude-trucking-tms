@@ -94,18 +94,20 @@ services:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
       - ./frontend/next.config.mjs:/app/next.config.mjs
-      - /app/node_modules
+      - web_node_modules:/app/node_modules
       - /app/.next
     depends_on:
       - api
     networks:
       - andi-tms-network
-    command: npm run dev
+    command: sh -c "npm install && chmod -R +x node_modules/.bin && npm run dev"
 
 volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  web_node_modules:
     driver: local
 
 networks:
