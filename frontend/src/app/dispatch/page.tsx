@@ -40,7 +40,7 @@ interface DayOffDriver {
   date: string // ISO date string
 }
 
-// Load Details Tooltip Content
+// Load Details Tooltip Content - Compact version
 function LoadDetailsTooltipContent({ load, formatDateTime }: {
   load: Load
   formatDateTime: (dateStr: string | undefined) => string
@@ -67,150 +67,77 @@ function LoadDetailsTooltipContent({ load, formatDateTime }: {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-1.5 text-[10px]">
       {/* Header with Load Number and Status */}
-      <div className="flex items-center justify-between border-b pb-2">
-        <span className="font-bold text-base text-slate-800">{load.load_number}</span>
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(load.status)}`}>
+      <div className="flex items-center justify-between border-b pb-1">
+        <span className="font-bold text-xs text-slate-800">{load.load_number}</span>
+        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${getStatusColor(load.status)}`}>
           {formatStatus(load.status)}
         </span>
       </div>
 
       {/* Customer */}
       {load.customer && (
-        <div className="flex items-start gap-2">
-          <Package className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
-          <div>
-            <div className="text-xs text-slate-500">Customer</div>
-            <div className="text-sm font-medium text-slate-700">{load.customer.name}</div>
-          </div>
+        <div className="flex items-center gap-1">
+          <Package className="h-2.5 w-2.5 text-slate-400 flex-shrink-0" />
+          <span className="text-slate-500">Customer:</span>
+          <span className="font-medium text-slate-700 truncate">{load.customer.name}</span>
         </div>
       )}
 
       {/* Pickup */}
-      <div className="flex items-start gap-2">
-        <div className="w-4 h-4 rounded bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <MapPin className="h-2.5 w-2.5 text-emerald-600" />
+      <div className="flex items-start gap-1">
+        <div className="w-2.5 h-2.5 rounded bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <MapPin className="h-1.5 w-1.5 text-emerald-600" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs text-slate-500">Pickup</div>
-          <div className="text-sm font-medium text-slate-700">{load.pickup_location || '-'}</div>
-          <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
-            <Calendar className="h-3 w-3" />
-            {formatDateTime(load.pickup_date)}
-          </div>
-          {load.pickup_notes && (
-            <div className="text-xs text-slate-500 mt-1 italic">"{load.pickup_notes}"</div>
-          )}
+          <div className="font-medium text-slate-700 truncate">{load.pickup_location || '-'}</div>
+          <div className="text-slate-400">{formatDateTime(load.pickup_date)}</div>
         </div>
       </div>
 
       {/* Delivery */}
-      <div className="flex items-start gap-2">
-        <div className="w-4 h-4 rounded bg-rose-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <MapPin className="h-2.5 w-2.5 text-rose-500" />
+      <div className="flex items-start gap-1">
+        <div className="w-2.5 h-2.5 rounded bg-rose-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <MapPin className="h-1.5 w-1.5 text-rose-500" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs text-slate-500">Delivery</div>
-          <div className="text-sm font-medium text-slate-700">{load.delivery_location || '-'}</div>
-          <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
-            <Calendar className="h-3 w-3" />
-            {formatDateTime(load.delivery_date)}
-          </div>
-          {load.delivery_notes && (
-            <div className="text-xs text-slate-500 mt-1 italic">"{load.delivery_notes}"</div>
-          )}
+          <div className="font-medium text-slate-700 truncate">{load.delivery_location || '-'}</div>
+          <div className="text-slate-400">{formatDateTime(load.delivery_date)}</div>
         </div>
       </div>
 
       {/* Financial Info */}
-      <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-        <div className="flex items-center gap-2">
-          <Route className="h-4 w-4 text-slate-400" />
-          <div>
-            <div className="text-xs text-slate-500">Miles</div>
-            <div className="text-sm font-semibold text-slate-700">{load.miles?.toLocaleString() || '-'}</div>
-          </div>
+      <div className="flex items-center gap-3 pt-1 border-t">
+        <div className="flex items-center gap-1">
+          <Route className="h-2.5 w-2.5 text-slate-400" />
+          <span className="font-semibold text-slate-700">{load.miles?.toLocaleString() || '-'} mi</span>
         </div>
-        <div className="flex items-center gap-2">
-          <DollarSign className="h-4 w-4 text-slate-400" />
-          <div>
-            <div className="text-xs text-slate-500">Rate</div>
-            <div className="text-sm font-semibold text-emerald-600">{formatCurrency(load.rate)}</div>
-          </div>
+        <div className="flex items-center gap-1">
+          <DollarSign className="h-2.5 w-2.5 text-slate-400" />
+          <span className="font-semibold text-emerald-600">{formatCurrency(load.rate)}</span>
         </div>
+        {load.miles && load.rate && load.miles > 0 && (
+          <span className="text-slate-400">({formatCurrency(load.rate / load.miles)}/mi)</span>
+        )}
       </div>
 
-      {/* Rate per mile */}
-      {load.miles && load.rate && load.miles > 0 && (
-        <div className="text-xs text-center text-slate-500 bg-slate-50 rounded py-1">
-          {formatCurrency(load.rate / load.miles)}/mile
-        </div>
-      )}
-
-      {/* Carrier Rate if different */}
-      {load.carrier_rate && load.carrier_rate !== load.rate && (
-        <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-          <span>Carrier Rate:</span>
-          <span className="font-medium">{formatCurrency(load.carrier_rate)}</span>
-        </div>
-      )}
-
-      {/* Weight */}
-      {load.weight && (
-        <div className="flex items-center justify-between text-xs text-slate-500">
-          <span>Weight:</span>
-          <span className="font-medium">{load.weight.toLocaleString()} lbs</span>
-        </div>
-      )}
-
-      {/* Driver */}
-      {load.driver && (
-        <div className="flex items-center gap-2 pt-2 border-t">
-          <User className="h-4 w-4 text-slate-400" />
-          <div>
-            <div className="text-xs text-slate-500">Driver</div>
-            <div className="text-sm font-medium text-slate-700">
-              {load.driver.first_name} {load.driver.last_name}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Truck */}
-      {load.truck && (
-        <div className="flex items-center gap-2">
-          <Truck className="h-4 w-4 text-slate-400" />
-          <div>
-            <div className="text-xs text-slate-500">Truck</div>
-            <div className="text-sm font-medium text-slate-700">#{load.truck.truck_number}</div>
-          </div>
+      {/* Driver & Truck */}
+      {(load.driver || load.truck) && (
+        <div className="flex items-center gap-2 pt-1 border-t text-slate-500">
+          {load.driver && (
+            <span><User className="h-2.5 w-2.5 inline mr-0.5" />{load.driver.first_name} {load.driver.last_name}</span>
+          )}
+          {load.truck && (
+            <span><Truck className="h-2.5 w-2.5 inline mr-0.5" />#{load.truck.truck_number}</span>
+          )}
         </div>
       )}
 
       {/* Notes */}
       {load.notes && (
-        <div className="pt-2 border-t">
-          <div className="flex items-start gap-2">
-            <FileText className="h-4 w-4 text-slate-400 mt-0.5" />
-            <div>
-              <div className="text-xs text-slate-500">Notes</div>
-              <div className="text-sm text-slate-600">{load.notes}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Documents indicator */}
-      {(load.pod_url || load.ratecon_url) && (
-        <div className="flex items-center gap-2 pt-2 border-t text-xs text-slate-500">
-          <FileText className="h-3 w-3" />
-          <span>
-            {load.ratecon_url && 'Rate Con'}
-            {load.ratecon_url && load.pod_url && ' | '}
-            {load.pod_url && 'POD'}
-            {' attached'}
-          </span>
+        <div className="pt-1 border-t text-slate-500 truncate">
+          <FileText className="h-2.5 w-2.5 inline mr-0.5" />{load.notes}
         </div>
       )}
     </div>
@@ -265,7 +192,7 @@ function DraggableTripCard({ load, formatDateTime, getShortLocation }: {
           </div>
         </div>
       </HoverCardTrigger>
-      <HoverCardContent side="right" align="start" className="w-80">
+      <HoverCardContent side="right" align="start" className="w-52 p-2">
         <LoadDetailsTooltipContent load={load} formatDateTime={formatDateTime} />
       </HoverCardContent>
     </HoverCard>
@@ -353,7 +280,7 @@ function DraggableAssignedLoad({ load, day, formatTime, formatDateTime, getShort
           )}
         </div>
       </HoverCardTrigger>
-      <HoverCardContent side="top" align="start" className="w-80">
+      <HoverCardContent side="top" align="start" className="w-52 p-2">
         <LoadDetailsTooltipContent load={load} formatDateTime={formatDateTime} />
       </HoverCardContent>
     </HoverCard>
