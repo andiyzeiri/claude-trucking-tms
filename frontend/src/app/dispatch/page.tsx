@@ -614,6 +614,28 @@ export default function DispatchBoardPage() {
     })
   }
 
+  // Get weekly stats for a driver (total gross, miles, rate per mile)
+  const getDriverWeeklyStats = (driverId: number) => {
+    const weekStartDay = startOfDay(weekStart)
+    const weekEndDay = endOfDay(addDays(weekStart, 6))
+
+    // Get all loads for this driver that have pickup within the current week
+    const driverLoads = loads.filter(load => {
+      if (load.driver_id !== driverId) return false
+
+      const pickupDate = load.pickup_date ? startOfDay(parseISO(load.pickup_date)) : null
+      if (!pickupDate) return false
+
+      return pickupDate >= weekStartDay && pickupDate <= weekEndDay
+    })
+
+    const totalGross = driverLoads.reduce((sum, load) => sum + (load.rate || 0), 0)
+    const totalMiles = driverLoads.reduce((sum, load) => sum + (load.miles || 0), 0)
+    const ratePerMile = totalMiles > 0 ? totalGross / totalMiles : 0
+
+    return { totalGross, totalMiles, ratePerMile, loadCount: driverLoads.length }
+  }
+
   // Format date and time together
   const formatDateTime = (dateStr: string | undefined) => {
     if (!dateStr) return ''
@@ -916,6 +938,7 @@ export default function DispatchBoardPage() {
                       drivers.map((driver, driverIndex) => {
                         const isEvenRow = driverIndex % 2 === 0
                         const rowBgColor = isEvenRow ? 'var(--cell-background-base)' : 'rgba(0, 0, 0, 0.02)'
+                        const weeklyStats = getDriverWeeklyStats(driver.id)
 
                         return (
                           <DroppableDriverRow key={driver.id} driverId={driver.id}>
@@ -944,6 +967,27 @@ export default function DispatchBoardPage() {
                                   {driver.trailer && (
                                     <span>TR: {driver.trailer.truck_number}</span>
                                   )}
+                                </div>
+                                {/* Weekly Stats */}
+                                <div className="mt-1.5 pt-1.5 border-t border-slate-200 space-y-0.5">
+                                  <div className="flex justify-between text-xs">
+                                    <span style={{ color: 'var(--colors-foreground-muted)' }}>Gross:</span>
+                                    <span className="font-semibold text-emerald-600">
+                                      ${weeklyStats.totalGross.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-xs">
+                                    <span style={{ color: 'var(--colors-foreground-muted)' }}>Miles:</span>
+                                    <span className="font-medium" style={{ color: 'var(--colors-foreground-default)' }}>
+                                      {weeklyStats.totalMiles.toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-xs">
+                                    <span style={{ color: 'var(--colors-foreground-muted)' }}>$/Mile:</span>
+                                    <span className="font-medium" style={{ color: weeklyStats.ratePerMile >= 3 ? '#16a34a' : weeklyStats.ratePerMile >= 2 ? '#ca8a04' : '#dc2626' }}>
+                                      ${weeklyStats.ratePerMile.toFixed(2)}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </td>
