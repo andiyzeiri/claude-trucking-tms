@@ -390,9 +390,15 @@ export default function DispatchBoardPage() {
   const allDrivers = driversData?.items || []
   const loads = loadsData?.items || []
 
-  // Filter out terminated drivers (those with date_terminated set)
+  // Filter out terminated drivers and "Outside Carrier" driver (brokerage loads)
   const drivers = useMemo(() => {
-    return allDrivers.filter(driver => !driver.date_terminated)
+    return allDrivers.filter(driver => {
+      if (driver.date_terminated) return false
+      // Exclude "Outside Carrier" driver - those loads are brokerage and shouldn't show on dispatch board
+      const fullName = `${driver.first_name} ${driver.last_name}`.toLowerCase()
+      if (fullName.includes('outside carrier')) return false
+      return true
+    })
   }, [allDrivers])
 
   // Track which drivers are marked as off for which days
