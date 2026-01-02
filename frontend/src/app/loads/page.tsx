@@ -2217,13 +2217,17 @@ export default function LoadsPageInline() {
               value={load.adjustment_amount ?? ''}
               onChange={(e) => {
                 const value = e.target.value
-                if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                  const numValue = value === '' ? null : parseFloat(value)
+                // Allow negative numbers, decimals
+                if (value === '' || value === '-' || /^-?\d*\.?\d*$/.test(value)) {
+                  const numValue = value === '' || value === '-' ? null : parseFloat(value)
                   updateField(load.id, 'adjustment_amount', numValue)
                 }
               }}
               className="h-6 text-xs w-full"
-              style={{fontSize: '11px'}}
+              style={{
+                fontSize: '11px',
+                color: load.adjustment_amount ? (load.adjustment_amount > 0 ? '#16a34a' : load.adjustment_amount < 0 ? '#dc2626' : undefined) : undefined
+              }}
             />
           </div>
         </td>
