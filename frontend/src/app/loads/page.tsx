@@ -322,7 +322,8 @@ export default function LoadsPageInline() {
   }, [rawCustomers])
 
   const { data: driversData } = useDrivers()
-  const drivers = driversData?.items || []
+  // Filter out terminated drivers (those with date_terminated set)
+  const drivers = (driversData?.items || []).filter(driver => !driver.date_terminated)
 
   const { data: trucksData } = useTrucks()
   const trucks = trucksData?.items || []

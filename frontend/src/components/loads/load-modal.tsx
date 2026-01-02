@@ -48,7 +48,8 @@ export function LoadModal({ isOpen, onClose, onSave, load, mode }: LoadModalProp
   const { data: customersData } = useCustomers()
   const { data: driversData } = useDrivers()
   const customers = customersData?.items || []
-  const drivers = driversData?.items || []
+  // Filter out terminated drivers (those with date_terminated set)
+  const drivers = (driversData?.items || []).filter(driver => !driver.date_terminated)
   const [formData, setFormData] = useState<LoadData>({
     load_number: '',
     pickup_location: '',
