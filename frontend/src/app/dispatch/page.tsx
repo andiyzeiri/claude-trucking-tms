@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -402,7 +402,25 @@ export default function DispatchBoardPage() {
   }, [allDrivers])
 
   // Track which drivers are marked as off for which days
-  const [daysOff, setDaysOff] = useState<DayOffDriver[]>([])
+  // Persist to localStorage so it survives page refresh
+  const [daysOff, setDaysOff] = useState<DayOffDriver[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const saved = localStorage.getItem('dispatch-days-off')
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
+
+  // Save daysOff to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('dispatch-days-off', JSON.stringify(daysOff))
+    } catch (e) {
+      console.error('Failed to save days off to localStorage:', e)
+    }
+  }, [daysOff])
 
   // Current week start date (Monday)
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
