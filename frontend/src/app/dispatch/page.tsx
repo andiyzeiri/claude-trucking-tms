@@ -600,19 +600,27 @@ export default function DispatchBoardPage() {
   }
 
   // Get loads for a specific driver on a specific day (pickup or delivery day)
+  // Sorted by pickup time
   const getLoadsForDriverOnDay = (driverId: number, date: Date) => {
-    return loads.filter(load => {
-      if (load.driver_id !== driverId) return false
+    return loads
+      .filter(load => {
+        if (load.driver_id !== driverId) return false
 
-      // Check if pickup or delivery falls on this day
-      const pickupDate = load.pickup_date ? parseISO(load.pickup_date) : null
-      const deliveryDate = load.delivery_date ? parseISO(load.delivery_date) : null
+        // Check if pickup or delivery falls on this day
+        const pickupDate = load.pickup_date ? parseISO(load.pickup_date) : null
+        const deliveryDate = load.delivery_date ? parseISO(load.delivery_date) : null
 
-      const isPickupDay = pickupDate && isSameDay(pickupDate, date)
-      const isDeliveryDay = deliveryDate && isSameDay(deliveryDate, date)
+        const isPickupDay = pickupDate && isSameDay(pickupDate, date)
+        const isDeliveryDay = deliveryDate && isSameDay(deliveryDate, date)
 
-      return isPickupDay || isDeliveryDay
-    })
+        return isPickupDay || isDeliveryDay
+      })
+      .sort((a, b) => {
+        // Sort by pickup time
+        const aTime = a.pickup_date ? parseISO(a.pickup_date).getTime() : 0
+        const bTime = b.pickup_date ? parseISO(b.pickup_date).getTime() : 0
+        return aTime - bTime
+      })
   }
 
   // Get loads where driver is "loaded" (in transit) on a specific day
