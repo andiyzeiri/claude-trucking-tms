@@ -2177,8 +2177,82 @@ export default function LoadsPageInline() {
           )}
         </td>
 
+        {/* Ratecon */}
+        <td className={`px-3 py-2.5 border-r ${load.ratecon_url ? 'bg-green-50' : ''}`} style={{borderColor: 'var(--monday-border-light)'}}>
+          <div className="flex items-center gap-2">
+            {load.ratecon_url ? (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    // Handle both old S3 URLs and new API paths
+                    let pdfUrl = load.ratecon_url
+                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.absolutetms.com/api'
+                    const baseUrl = apiUrl.replace('/api/v1', '').replace('/api', '')
+
+                    console.log('Ratecon Click - Original URL:', pdfUrl)
+
+                    if (pdfUrl.includes('s3.amazonaws.com')) {
+                      // Old S3 URL - extract filename and use API endpoint
+                      const filename = pdfUrl.split('/').pop()
+                      pdfUrl = `${baseUrl}/api/v1/uploads/s3/${filename}`
+                      console.log('Ratecon Click - Old S3 URL detected, converted to:', pdfUrl)
+                    } else if (!pdfUrl.startsWith('http')) {
+                      // It's a relative path, construct full API URL
+                      pdfUrl = `${baseUrl}${pdfUrl}`
+                      console.log('Ratecon Click - Relative path detected, converted to:', pdfUrl)
+                    }
+
+                    console.log('Ratecon Click - Final URL:', pdfUrl)
+
+                    setPdfModal({
+                      url: pdfUrl,
+                      loadId: load.id,
+                      type: 'ratecon'
+                    })
+                  }}
+                  className="text-blue-600 hover:underline text-sm"
+                >
+                  View
+                </button>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => handleFileUpload(e, loadKey, 'ratecon_url')}
+                  className="hidden"
+                  id={`ratecon-upload-${loadKey}`}
+                />
+                <label
+                  htmlFor={`ratecon-upload-${loadKey}`}
+                  className="text-xs text-gray-500 hover:text-gray-700 cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Replace
+                </label>
+              </>
+            ) : (
+              <>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => handleFileUpload(e, loadKey, 'ratecon_url')}
+                  className="hidden"
+                  id={`ratecon-upload-${loadKey}`}
+                />
+                <label
+                  htmlFor={`ratecon-upload-${loadKey}`}
+                  className="text-sm text-blue-600 hover:underline cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Upload
+                </label>
+              </>
+            )}
+          </div>
+        </td>
+
         {/* POD */}
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)'}}>
+        <td className={`px-3 py-2.5 border-r ${load.pod_url ? 'bg-green-50' : ''}`} style={{borderColor: 'var(--monday-border-light)'}}>
           <div className="flex items-center gap-2">
             {load.pod_url ? (
               <>
@@ -2243,80 +2317,6 @@ export default function LoadsPageInline() {
                 />
                 <label
                   htmlFor={`pod-upload-${loadKey}`}
-                  className="text-sm text-blue-600 hover:underline cursor-pointer"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Upload
-                </label>
-              </>
-            )}
-          </div>
-        </td>
-
-        {/* Ratecon */}
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)'}}>
-          <div className="flex items-center gap-2">
-            {load.ratecon_url ? (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    // Handle both old S3 URLs and new API paths
-                    let pdfUrl = load.ratecon_url
-                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.absolutetms.com/api'
-                    const baseUrl = apiUrl.replace('/api/v1', '').replace('/api', '')
-
-                    console.log('Ratecon Click - Original URL:', pdfUrl)
-
-                    if (pdfUrl.includes('s3.amazonaws.com')) {
-                      // Old S3 URL - extract filename and use API endpoint
-                      const filename = pdfUrl.split('/').pop()
-                      pdfUrl = `${baseUrl}/api/v1/uploads/s3/${filename}`
-                      console.log('Ratecon Click - Old S3 URL detected, converted to:', pdfUrl)
-                    } else if (!pdfUrl.startsWith('http')) {
-                      // It's a relative path, construct full API URL
-                      pdfUrl = `${baseUrl}${pdfUrl}`
-                      console.log('Ratecon Click - Relative path detected, converted to:', pdfUrl)
-                    }
-
-                    console.log('Ratecon Click - Final URL:', pdfUrl)
-
-                    setPdfModal({
-                      url: pdfUrl,
-                      loadId: load.id,
-                      type: 'ratecon'
-                    })
-                  }}
-                  className="text-blue-600 hover:underline text-sm"
-                >
-                  View
-                </button>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => handleFileUpload(e, loadKey, 'ratecon_url')}
-                  className="hidden"
-                  id={`ratecon-upload-${loadKey}`}
-                />
-                <label
-                  htmlFor={`ratecon-upload-${loadKey}`}
-                  className="text-xs text-gray-500 hover:text-gray-700 cursor-pointer"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Replace
-                </label>
-              </>
-            ) : (
-              <>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => handleFileUpload(e, loadKey, 'ratecon_url')}
-                  className="hidden"
-                  id={`ratecon-upload-${loadKey}`}
-                />
-                <label
-                  htmlFor={`ratecon-upload-${loadKey}`}
                   className="text-sm text-blue-600 hover:underline cursor-pointer"
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -2653,19 +2653,19 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.pod}px`, minWidth: `${columnWidths.pod}px`}}>
-                    <ColumnWidthControl
-                      currentWidth={columnWidths.pod}
-                      onAdjust={(delta) => adjustWidth('pod', delta)}
-                    />
-                    POD
-                  </th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.ratecon}px`, minWidth: `${columnWidths.ratecon}px`}}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.ratecon}
                       onAdjust={(delta) => adjustWidth('ratecon', delta)}
                     />
                     Ratecon
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.pod}px`, minWidth: `${columnWidths.pod}px`}}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.pod}
+                      onAdjust={(delta) => adjustWidth('pod', delta)}
+                    />
+                    POD
                   </th>
                 </tr>
               </thead>
