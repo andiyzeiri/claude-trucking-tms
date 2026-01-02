@@ -1,8 +1,8 @@
 from pydantic import BaseModel, field_validator
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional
-from app.models.load import LoadStatus
+from typing import Optional, Literal
+from app.models.load import LoadStatus, AdjustmentType
 from app.schemas.driver import DriverResponse
 from app.schemas.truck import TruckResponse
 
@@ -31,6 +31,8 @@ class LoadBase(BaseModel):
     ratecon_url: Optional[str] = None
     pickup_notes: Optional[str] = None
     delivery_notes: Optional[str] = None
+    adjustment_type: Optional[AdjustmentType] = None
+    adjustment_amount: Optional[Decimal] = None
 
 
 class LoadCreate(LoadBase):
@@ -67,6 +69,8 @@ class LoadUpdate(BaseModel):
     ratecon_url: Optional[str] = None
     pickup_notes: Optional[str] = None
     delivery_notes: Optional[str] = None
+    adjustment_type: Optional[AdjustmentType] = None
+    adjustment_amount: Optional[Decimal] = None
 
     @field_validator('pickup_date', 'delivery_date', 'pickup_deadline', 'delivery_deadline', mode='after')
     @classmethod
@@ -102,6 +106,8 @@ class LoadResponse(BaseModel):
     ratecon_url: Optional[str] = None
     pickup_notes: Optional[str] = None
     delivery_notes: Optional[str] = None
+    adjustment_type: Optional[AdjustmentType] = None
+    adjustment_amount: Optional[Decimal] = None
     driver: Optional[DriverResponse] = None
     truck: Optional[TruckResponse] = None
     created_at: datetime

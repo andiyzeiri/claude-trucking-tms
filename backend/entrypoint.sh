@@ -61,6 +61,10 @@ python3 create_ifta_table.py || echo "⚠️  create_ifta_table.py had errors, c
 echo "🔧 Adding IFTA to user permissions..."
 python3 add_ifta_permission.py || echo "⚠️  add_ifta_permission.py had errors, continuing..."
 
+# Add adjustment columns to loads table
+echo "🔧 Adding adjustment columns to loads table..."
+python3 add_adjustment_columns.py || echo "⚠️  add_adjustment_columns.py had errors, continuing..."
+
 # Stamp Alembic version to match current state
 echo "📦 Stamping Alembic version..."
 python3 stamp_alembic.py || echo "⚠️  stamp_alembic.py had errors, continuing..."

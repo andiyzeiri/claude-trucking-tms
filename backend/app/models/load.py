@@ -12,6 +12,14 @@ class LoadStatus(str, enum.Enum):
     invoiced = "invoiced"
 
 
+class AdjustmentType(str, enum.Enum):
+    lumper = "lumper"
+    detention = "detention"
+    layover = "layover"
+    pickup = "pickup"
+    delivery = "delivery"
+
+
 class Load(Base):
     __tablename__ = "loads"
 
@@ -41,6 +49,10 @@ class Load(Base):
     # Documents
     pod_url = Column(String)
     ratecon_url = Column(String)
+
+    # Adjustments
+    adjustment_type = Column(Enum(AdjustmentType), nullable=True)
+    adjustment_amount = Column(Numeric(10, 2), nullable=True)
 
     # Notes
     pickup_notes = Column(Text)

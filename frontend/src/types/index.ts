@@ -107,6 +107,8 @@ export interface Load {
   notes?: string
   pod_url?: string
   ratecon_url?: string
+  adjustment_type?: 'lumper' | 'detention' | 'layover' | 'pickup' | 'delivery' | null
+  adjustment_amount?: number | null
   created_at: string
   updated_at: string
 }

@@ -350,6 +350,7 @@ export default function LoadsPageInline() {
   const [upcomingFilter, setUpcomingFilter] = useState<boolean>(false)
   const [showDedicatedPanel, setShowDedicatedPanel] = useState<boolean>(false)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [showBrokerageOnly, setShowBrokerageOnly] = useState<boolean>(false)
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, loadId?: number, type: 'load' | 'general'} | null>(null)
   const [pdfModal, setPdfModal] = useState<{url: string, loadId: number, type: 'pod' | 'ratecon'} | null>(null)
   const [sortField, setSortField] = useState<keyof EditableLoad>('pickup_date')
@@ -369,6 +370,7 @@ export default function LoadsPageInline() {
     delivery: 250,
     notes: 150,
     rate: 100,
+    adjustment: 120,
     miles: 100,
     rpm: 80,
     pod: 100,
@@ -515,6 +517,14 @@ export default function LoadsPageInline() {
       const loadYear = getISOWeekYear(new Date(normalizeDateTime(load.pickup_date)))
       return loadYear === selectedYear
     })
+
+    // Apply brokerage filter - only show loads from "Absolute Brokerage" customer
+    if (showBrokerageOnly) {
+      filtered = filtered.filter(load => {
+        const customerName = customers.find(c => c.id === load.customer_id)?.name || ''
+        return customerName.toLowerCase().includes('absolute brokerage')
+      })
+    }
 
     // Apply search filter
     if (searchQuery.trim()) {
@@ -978,6 +988,8 @@ export default function LoadsPageInline() {
         pod_url: field === 'pod_url' ? value : (load.pod_url || null),
         ratecon_url: field === 'ratecon_url' ? value : (load.ratecon_url || null),
         notes: field === 'notes' ? value : (load.notes || null),
+        adjustment_type: field === 'adjustment_type' ? value : (load.adjustment_type || null),
+        adjustment_amount: field === 'adjustment_amount' ? value : (load.adjustment_amount || null),
         [field]: value
       }
       await updateLoad.mutateAsync({ id: load.id, data: backendData })
@@ -2177,6 +2189,45 @@ export default function LoadsPageInline() {
           )}
         </td>
 
+        {/* Adjustment */}
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)'}}>
+          <div className="space-y-1">
+            <Select
+              value={load.adjustment_type || ''}
+              onValueChange={(value) => {
+                const newType = value === '' ? null : value as 'lumper' | 'detention' | 'layover' | 'pickup' | 'delivery'
+                updateField(load.id, 'adjustment_type', newType)
+              }}
+            >
+              <SelectTrigger className="h-6 text-xs w-full" style={{fontSize: '11px'}}>
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="lumper">Lumper</SelectItem>
+                <SelectItem value="detention">Detention</SelectItem>
+                <SelectItem value="layover">Layover</SelectItem>
+                <SelectItem value="pickup">Pickup</SelectItem>
+                <SelectItem value="delivery">Delivery</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="text"
+              inputMode="decimal"
+              placeholder="$0.00"
+              value={load.adjustment_amount ?? ''}
+              onChange={(e) => {
+                const value = e.target.value
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  const numValue = value === '' ? null : parseFloat(value)
+                  updateField(load.id, 'adjustment_amount', numValue)
+                }
+              }}
+              className="h-6 text-xs w-full"
+              style={{fontSize: '11px'}}
+            />
+          </div>
+        </td>
+
         {/* Ratecon */}
         <td className={`px-3 py-2.5 border-r ${load.ratecon_url ? 'bg-green-50' : ''}`} style={{borderColor: 'var(--monday-border-light)'}}>
           <div className="flex items-center gap-2">
@@ -2652,6 +2703,13 @@ export default function LoadsPageInline() {
                         sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.adjustment}px`, minWidth: `${columnWidths.adjustment}px`}}>
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.adjustment}
+                      onAdjust={(delta) => adjustWidth('adjustment', delta)}
+                    />
+                    Adjustment
                   </th>
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.ratecon}px`, minWidth: `${columnWidths.ratecon}px`}}>
                     <ColumnWidthControl
