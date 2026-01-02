@@ -615,6 +615,7 @@ export default function DispatchBoardPage() {
   }
 
   // Get weekly stats for a driver (total gross, miles, rate per mile)
+  // Uses same calculation as loads page: Number(load.rate) and Number(load.miles)
   const getDriverWeeklyStats = (driverId: number) => {
     const weekStartDay = startOfDay(weekStart)
     const weekEndDay = endOfDay(addDays(weekStart, 6))
@@ -629,8 +630,9 @@ export default function DispatchBoardPage() {
       return pickupDate >= weekStartDay && pickupDate <= weekEndDay
     })
 
-    const totalGross = driverLoads.reduce((sum, load) => sum + (load.rate || 0), 0)
-    const totalMiles = driverLoads.reduce((sum, load) => sum + (load.miles || 0), 0)
+    // Use Number() to convert like the loads page does
+    const totalGross = driverLoads.reduce((sum, load) => sum + (Number(load.rate) || 0), 0)
+    const totalMiles = driverLoads.reduce((sum, load) => sum + (Number(load.miles) || 0), 0)
     const ratePerMile = totalMiles > 0 ? totalGross / totalMiles : 0
 
     return { totalGross, totalMiles, ratePerMile, loadCount: driverLoads.length }
