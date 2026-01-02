@@ -14,6 +14,7 @@ from .expense import Expense
 from .fuel import Fuel
 from .dedicated_lane import DedicatedLane
 from .ifta import IFTA
+from .driver_day_off import DriverDayOff
 
 __all__ = [
     "Base",
@@ -31,5 +32,6 @@ __all__ = [
     "Expense",
     "Fuel",
     "DedicatedLane",
-    "IFTA"
+    "IFTA",
+    "DriverDayOff"
 ]

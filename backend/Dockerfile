@@ -58,6 +58,7 @@ COPY create_dedicated_lanes_table.py ./
 COPY create_ifta_table.py ./
 COPY add_ifta_permission.py ./
 COPY add_adjustment_columns.py ./
+COPY create_driver_days_off_table.py ./
 COPY entrypoint.sh ./
 
 # Copy scripts directory

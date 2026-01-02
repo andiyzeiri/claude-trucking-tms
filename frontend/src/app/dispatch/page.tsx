@@ -34,6 +34,8 @@ import {
 } from '@dnd-kit/core'
 import { Load } from '@/types'
 import toast from 'react-hot-toast'
+import api from '@/lib/api'
+import { useQuery, useMutation, useQueryClient as useQueryClientHook } from '@tanstack/react-query'
 
 interface DayOffDriver {
   driverId: number
@@ -402,25 +404,37 @@ export default function DispatchBoardPage() {
   }, [allDrivers])
 
   // Track which drivers are marked as off for which days
-  // Persist to localStorage so it survives page refresh
-  const [daysOff, setDaysOff] = useState<DayOffDriver[]>(() => {
-    if (typeof window === 'undefined') return []
-    try {
-      const saved = localStorage.getItem('dispatch-days-off')
-      return saved ? JSON.parse(saved) : []
-    } catch {
-      return []
-    }
+  // Fetch from API so it persists across all users/computers
+  const { data: daysOffData } = useQuery({
+    queryKey: ['driver-days-off'],
+    queryFn: async () => {
+      const response = await api.get('/v1/driver-days-off/')
+      return response.data as { id: number; driver_id: number; date: string }[]
+    },
   })
 
-  // Save daysOff to localStorage whenever it changes
-  useEffect(() => {
-    try {
-      localStorage.setItem('dispatch-days-off', JSON.stringify(daysOff))
-    } catch (e) {
-      console.error('Failed to save days off to localStorage:', e)
-    }
-  }, [daysOff])
+  // Convert API data to local format
+  const daysOff: DayOffDriver[] = useMemo(() => {
+    if (!daysOffData) return []
+    return daysOffData.map(d => ({
+      driverId: d.driver_id,
+      date: d.date // Already in YYYY-MM-DD format from API
+    }))
+  }, [daysOffData])
+
+  // Mutation to toggle day off
+  const toggleDayOffMutation = useMutation({
+    mutationFn: async ({ driverId, date }: { driverId: number; date: string }) => {
+      const response = await api.post('/v1/driver-days-off/toggle', {
+        driver_id: driverId,
+        date: date
+      })
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['driver-days-off'] })
+    },
+  })
 
   // Current week start date (Monday)
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
@@ -555,42 +569,34 @@ export default function DispatchBoardPage() {
     return daysOff.some(d => d.driverId === driverId && d.date === dateStr)
   }
 
-  // Toggle driver day off
+  // Toggle driver day off - uses API to persist
   const toggleDriverDayOff = (driverId: number, date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd')
-    setDaysOff(prev => {
-      const exists = prev.some(d => d.driverId === driverId && d.date === dateStr)
-      if (exists) {
-        return prev.filter(d => !(d.driverId === driverId && d.date === dateStr))
-      } else {
-        return [...prev, { driverId, date: dateStr }]
-      }
-    })
+    toggleDayOffMutation.mutate({ driverId, date: dateStr })
   }
 
   // Toggle entire week off for a driver
-  const toggleDriverWeekOff = (driverId: number) => {
+  const toggleDriverWeekOff = async (driverId: number) => {
     const weekDates = weekDays.map(day => format(day, 'yyyy-MM-dd'))
-    setDaysOff(prev => {
-      // Check if all days of the week are already off
-      const allDaysOff = weekDates.every(dateStr =>
-        prev.some(d => d.driverId === driverId && d.date === dateStr)
-      )
+    // Check if all days of the week are already off
+    const allDaysOff = weekDates.every(dateStr =>
+      daysOff.some(d => d.driverId === driverId && d.date === dateStr)
+    )
 
-      if (allDaysOff) {
-        // Remove all days of this week for this driver
-        return prev.filter(d => !(d.driverId === driverId && weekDates.includes(d.date)))
-      } else {
-        // Add all days of this week for this driver (that aren't already off)
-        const newDaysOff = [...prev]
-        weekDates.forEach(dateStr => {
-          if (!newDaysOff.some(d => d.driverId === driverId && d.date === dateStr)) {
-            newDaysOff.push({ driverId, date: dateStr })
-          }
+    // Toggle each day - the API will add if not exists, remove if exists
+    // For simplicity, we'll toggle each day that needs changing
+    for (const dateStr of weekDates) {
+      const isCurrentlyOff = daysOff.some(d => d.driverId === driverId && d.date === dateStr)
+      // If all days are off, we want to remove them (toggle off -> on)
+      // If not all days are off, we want to add the missing ones (toggle on -> off for those not off)
+      if (allDaysOff || !isCurrentlyOff) {
+        await api.post('/v1/driver-days-off/toggle', {
+          driver_id: driverId,
+          date: dateStr
         })
-        return newDaysOff
       }
-    })
+    }
+    queryClient.invalidateQueries({ queryKey: ['driver-days-off'] })
   }
 
   // Get loads for a specific driver on a specific day (pickup or delivery day)
