@@ -2210,25 +2210,44 @@ export default function LoadsPageInline() {
                 <SelectItem value="delivery">Delivery</SelectItem>
               </SelectContent>
             </Select>
-            <Input
-              type="text"
-              inputMode="decimal"
-              placeholder="$0.00"
-              value={load.adjustment_amount ?? ''}
-              onChange={(e) => {
-                const value = e.target.value
-                // Allow negative numbers, decimals
-                if (value === '' || value === '-' || /^-?\d*\.?\d*$/.test(value)) {
+            {editingCell?.loadId === loadKey && editingCell?.field === 'adjustment_amount' ? (
+              <Input
+                type="text"
+                inputMode="text"
+                placeholder="0.00"
+                autoFocus
+                defaultValue={load.adjustment_amount ?? ''}
+                onBlur={(e) => {
+                  const value = e.target.value.replace(/[^-\d.]/g, '')
                   const numValue = value === '' || value === '-' ? null : parseFloat(value)
                   updateField(load.id, 'adjustment_amount', numValue)
+                  stopEdit()
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur()
+                  } else if (e.key === 'Escape') {
+                    stopEdit()
+                  }
+                }}
+                className="h-6 text-xs w-full"
+                style={{fontSize: '11px'}}
+              />
+            ) : (
+              <div
+                className="h-6 flex items-center cursor-pointer hover:bg-blue-50 rounded px-1"
+                onClick={() => startEdit(loadKey, 'adjustment_amount')}
+                style={{
+                  fontSize: '11px',
+                  color: load.adjustment_amount ? (load.adjustment_amount > 0 ? '#16a34a' : load.adjustment_amount < 0 ? '#dc2626' : '#6b7280') : '#9ca3af'
+                }}
+              >
+                {load.adjustment_amount != null
+                  ? `${load.adjustment_amount < 0 ? '-' : ''}$${Math.abs(load.adjustment_amount).toFixed(2)}`
+                  : '$0.00'
                 }
-              }}
-              className="h-6 text-xs w-full"
-              style={{
-                fontSize: '11px',
-                color: load.adjustment_amount ? (load.adjustment_amount > 0 ? '#16a34a' : load.adjustment_amount < 0 ? '#dc2626' : undefined) : undefined
-              }}
-            />
+              </div>
+            )}
           </div>
         </td>
 
