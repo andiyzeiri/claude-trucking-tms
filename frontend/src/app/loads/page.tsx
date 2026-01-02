@@ -1520,7 +1520,7 @@ export default function LoadsPageInline() {
               </div>
             </div>
           </td>
-          <td className="px-2 py-2 text-sm" colSpan={3}></td>
+          <td className="px-2 py-2 text-sm" colSpan={4}></td>
         </tr>
       )
 
@@ -1534,7 +1534,7 @@ export default function LoadsPageInline() {
         if (Array.isArray(groupData)) {
           elements.push(
             <tr key={`add-${uniqueGroupKey}`} className="border-b transition-colors" style={{borderColor: 'var(--monday-border-light)'}}>
-              <td colSpan={11} className="px-2 py-2">
+              <td colSpan={13} className="px-2 py-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
