@@ -77,6 +77,10 @@ python3 add_needs_attention_column.py || echo "⚠️  add_needs_attention_colum
 echo "🔧 Creating driver_attention_days table..."
 python3 create_driver_attention_days_table.py || echo "⚠️  create_driver_attention_days_table.py had errors, continuing..."
 
+# Create driver_day_notes table for dispatch board notes
+echo "🔧 Creating driver_day_notes table..."
+python3 create_driver_day_notes_table.py || echo "⚠️  create_driver_day_notes_table.py had errors, continuing..."
+
 # Stamp Alembic version to match current state
 echo "📦 Stamping Alembic version..."
 python3 stamp_alembic.py || echo "⚠️  stamp_alembic.py had errors, continuing..."

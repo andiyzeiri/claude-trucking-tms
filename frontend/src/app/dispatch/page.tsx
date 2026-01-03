@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
@@ -17,7 +18,7 @@ import { useDrivers } from '@/hooks/use-drivers'
 import { useLoads, useUpdateLoad, useCreateLoad } from '@/hooks/use-loads'
 import { useCustomers } from '@/hooks/use-customers'
 import { useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, MapPin, Clock, User, X, Truck, Plus, DollarSign, Route, Package, FileText, Calendar, AlertTriangle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, Clock, User, X, Truck, Plus, DollarSign, Route, Package, FileText, Calendar, AlertTriangle, MessageSquare } from 'lucide-react'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { format, startOfWeek, addDays, isSameDay, parseISO, startOfDay, endOfDay } from 'date-fns'
 import { AddressAutocomplete } from '@/components/ui/address-autocomplete'
@@ -502,6 +503,71 @@ export default function DispatchBoardPage() {
       queryClient.invalidateQueries({ queryKey: ['driver-attention-days'] })
     },
   })
+
+  // Track notes for driver days
+  const { data: dayNotesData } = useQuery({
+    queryKey: ['driver-day-notes'],
+    queryFn: async () => {
+      const response = await api.get('/v1/driver-day-notes/')
+      return response.data as { id: number; driver_id: number; date: string; note: string }[]
+    },
+  })
+
+  // Convert API data to a map for easy lookup
+  const dayNotesMap = useMemo(() => {
+    const map = new Map<string, string>()
+    if (dayNotesData) {
+      dayNotesData.forEach(d => {
+        map.set(`${d.driver_id}-${d.date}`, d.note)
+      })
+    }
+    return map
+  }, [dayNotesData])
+
+  // Get note for a specific driver and day
+  const getDayNote = (driverId: number, date: Date): string | undefined => {
+    const dateStr = format(date, 'yyyy-MM-dd')
+    return dayNotesMap.get(`${driverId}-${dateStr}`)
+  }
+
+  // Mutation to save note
+  const saveNoteMutation = useMutation({
+    mutationFn: async ({ driverId, date, note }: { driverId: number; date: string; note: string }) => {
+      const response = await api.post('/v1/driver-day-notes/', {
+        driver_id: driverId,
+        date: date,
+        note: note
+      })
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['driver-day-notes'] })
+    },
+  })
+
+  // Note dialog state
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false)
+  const [noteTargetDriver, setNoteTargetDriver] = useState<number | null>(null)
+  const [noteTargetDate, setNoteTargetDate] = useState<Date | null>(null)
+  const [noteText, setNoteText] = useState('')
+
+  // Open note dialog
+  const openNoteDialog = (driverId: number, date: Date) => {
+    const existingNote = getDayNote(driverId, date)
+    setNoteTargetDriver(driverId)
+    setNoteTargetDate(date)
+    setNoteText(existingNote || '')
+    setNoteDialogOpen(true)
+  }
+
+  // Save note and close dialog
+  const saveNote = () => {
+    if (noteTargetDriver && noteTargetDate) {
+      const dateStr = format(noteTargetDate, 'yyyy-MM-dd')
+      saveNoteMutation.mutate({ driverId: noteTargetDriver, date: dateStr, note: noteText })
+      setNoteDialogOpen(false)
+    }
+  }
 
   // Current week start date (Monday)
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
@@ -1182,6 +1248,7 @@ export default function DispatchBoardPage() {
                               const driverLoads = getLoadsForDriverOnDay(driver.id, day)
                               const loadedLoads = getLoadedLoadsForDriverOnDay(driver.id, day)
                               const isLoaded = loadedLoads.length > 0
+                              const dayNote = getDayNote(driver.id, day)
 
                               return (
                                 <td
@@ -1196,18 +1263,21 @@ export default function DispatchBoardPage() {
                                   <div className="min-h-[70px]">
                                     {isOff ? (
                                       <div
-                                        className="h-full flex items-center justify-center rounded-lg bg-slate-100 cursor-pointer hover:bg-slate-200 transition-colors"
+                                        className="h-full flex flex-col items-center justify-center rounded-lg bg-slate-100 cursor-pointer hover:bg-slate-200 transition-colors"
                                         style={{ minHeight: '70px' }}
                                         onClick={() => cycleDriverDayState(driver.id, day)}
                                         onContextMenu={(e) => handleCellContextMenu(e, driver.id, day)}
                                         title="Click to mark as available"
                                       >
                                         <span className="text-sm text-slate-400 font-medium">OFF</span>
+                                        {dayNote && (
+                                          <span className="text-[10px] text-slate-500 mt-1 px-2 text-center line-clamp-2">{dayNote}</span>
+                                        )}
                                       </div>
                                     ) : needsAttention && driverLoads.length === 0 ? (
                                       // Driver needs attention - find a load
                                       <div
-                                        className="h-full flex items-center justify-center rounded-lg bg-orange-100 border-2 border-orange-400 cursor-pointer hover:bg-orange-200 transition-colors relative"
+                                        className="h-full flex flex-col items-center justify-center rounded-lg bg-orange-100 border-2 border-orange-400 cursor-pointer hover:bg-orange-200 transition-colors relative"
                                         style={{ minHeight: '70px' }}
                                         onClick={() => cycleDriverDayState(driver.id, day)}
                                         onContextMenu={(e) => handleCellContextMenu(e, driver.id, day)}
@@ -1217,26 +1287,35 @@ export default function DispatchBoardPage() {
                                           !
                                         </div>
                                         <span className="text-sm text-orange-600 font-medium">Attention</span>
+                                        {dayNote && (
+                                          <span className="text-[10px] text-orange-700 mt-1 px-2 text-center line-clamp-2">{dayNote}</span>
+                                        )}
                                       </div>
                                     ) : isLoaded && driverLoads.length === 0 ? (
                                       // Driver is in transit (loaded) on a multi-day trip
                                       <div
-                                        className="h-full flex items-center justify-center rounded-lg bg-amber-50 border border-amber-200"
+                                        className="h-full flex flex-col items-center justify-center rounded-lg bg-amber-50 border border-amber-200"
                                         style={{ minHeight: '70px' }}
                                         onContextMenu={(e) => handleCellContextMenu(e, driver.id, day)}
                                         title={`In transit: Load #${loadedLoads[0].load_number}`}
                                       >
                                         <span className="text-sm text-amber-600 font-medium">In Transit</span>
+                                        {dayNote && (
+                                          <span className="text-[10px] text-amber-700 mt-1 px-2 text-center line-clamp-2">{dayNote}</span>
+                                        )}
                                       </div>
                                     ) : driverLoads.length === 0 ? (
                                       <div
-                                        className="h-full flex items-center justify-center rounded-lg bg-slate-50 border border-slate-300 border-dashed cursor-pointer hover:bg-slate-100 hover:border-slate-400 transition-all"
+                                        className="h-full flex flex-col items-center justify-center rounded-lg bg-slate-50 border border-slate-300 border-dashed cursor-pointer hover:bg-slate-100 hover:border-slate-400 transition-all"
                                         style={{ minHeight: '70px' }}
                                         onClick={() => cycleDriverDayState(driver.id, day)}
                                         onContextMenu={(e) => handleCellContextMenu(e, driver.id, day)}
                                         title="Click to mark as attention, right-click for options"
                                       >
                                         <span className="text-sm text-emerald-500 font-medium">Available</span>
+                                        {dayNote && (
+                                          <span className="text-[10px] text-slate-500 mt-1 px-2 text-center line-clamp-2">{dayNote}</span>
+                                        )}
                                       </div>
                                     ) : (
                                       <div
@@ -1368,6 +1447,17 @@ export default function DispatchBoardPage() {
                   >
                     <X className="h-4 w-4" />
                     {isDriverOff(contextMenu.driverId, contextMenu.date!) ? 'Remove OFF' : 'Mark as OFF'}
+                  </button>
+                  <div className="border-t my-1" />
+                  <button
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 text-blue-600"
+                    onClick={() => {
+                      openNoteDialog(contextMenu.driverId, contextMenu.date!)
+                      closeContextMenu()
+                    }}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    {getDayNote(contextMenu.driverId, contextMenu.date!) ? 'Edit Note' : 'Add Note'}
                   </button>
                 </>
               ) : (
@@ -1531,6 +1621,46 @@ export default function DispatchBoardPage() {
               </Button>
               <Button onClick={handleCreateNewLoad} disabled={isCreatingLoad}>
                 {isCreatingLoad ? 'Creating...' : 'Create Load'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Note Dialog */}
+        <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                {noteText ? 'Edit Note' : 'Add Note'}
+                {noteTargetDate && (
+                  <span className="text-sm font-normal text-gray-500 ml-2">
+                    {format(noteTargetDate, 'EEEE, MMM d')}
+                  </span>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="py-4">
+              <Textarea
+                placeholder="Enter note for this day..."
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                rows={3}
+                maxLength={500}
+                className="resize-none"
+              />
+              <div className="text-xs text-gray-400 mt-1 text-right">
+                {noteText.length}/500
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setNoteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={saveNote}>
+                Save Note
               </Button>
             </DialogFooter>
           </DialogContent>
