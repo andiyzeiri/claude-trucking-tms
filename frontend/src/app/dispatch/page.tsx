@@ -37,6 +37,30 @@ import toast from 'react-hot-toast'
 import api from '@/lib/api'
 import { useQuery, useMutation, useQueryClient as useQueryClientHook } from '@tanstack/react-query'
 
+// Backend stores wall-clock time as UTC (e.g., 6 AM local is stored as T06:00:00Z)
+// This normalizes datetime strings to ensure they're treated as UTC
+function normalizeDateTime(dateString: string): string {
+  if (!dateString) return dateString
+  // If already has timezone info (Z or +/-offset), return as-is
+  if (dateString.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateString)) {
+    return dateString
+  }
+  // Append Z to treat as UTC
+  return dateString + 'Z'
+}
+
+// Compare if two dates are the same day using UTC (wall-clock time)
+function isSameDayUTC(date1: Date, date2: Date): boolean {
+  return date1.getUTCFullYear() === date2.getUTCFullYear() &&
+         date1.getUTCMonth() === date2.getUTCMonth() &&
+         date1.getUTCDate() === date2.getUTCDate()
+}
+
+// Get a date as UTC from a local date (for comparing with stored UTC wall-clock times)
+function toUTCDate(localDate: Date): Date {
+  return new Date(Date.UTC(localDate.getFullYear(), localDate.getMonth(), localDate.getDate()))
+}
+
 interface DayOffDriver {
   driverId: number
   date: string // ISO date string
@@ -516,27 +540,30 @@ export default function DispatchBoardPage() {
     }
   }
 
-  // Get unassigned loads (no driver assigned) for the current week, sorted by pickup date
+  // Get unassigned loads for the current week using UTC comparison
   const unassignedLoads = useMemo(() => {
-    const weekStartDay = startOfDay(weekStart)
-    const weekEndDay = endOfDay(addDays(weekStart, 6))
+    const weekStartUTC = toUTCDate(weekStart)
+    const weekEndUTC = toUTCDate(addDays(weekStart, 6))
 
     return loads
       .filter(load => {
         if (load.driver_id) return false
 
-        // Check if pickup or delivery falls within the current week
-        const pickupDate = load.pickup_date ? startOfDay(parseISO(load.pickup_date)) : null
-        const deliveryDate = load.delivery_date ? startOfDay(parseISO(load.delivery_date)) : null
+        // Check if pickup or delivery falls within the current week (using UTC)
+        const pickupDate = load.pickup_date ? new Date(normalizeDateTime(load.pickup_date)) : null
+        const deliveryDate = load.delivery_date ? new Date(normalizeDateTime(load.delivery_date)) : null
 
-        const isPickupInWeek = pickupDate && pickupDate >= weekStartDay && pickupDate <= weekEndDay
-        const isDeliveryInWeek = deliveryDate && deliveryDate >= weekStartDay && deliveryDate <= weekEndDay
+        const pickupDateUTC = pickupDate ? new Date(Date.UTC(pickupDate.getUTCFullYear(), pickupDate.getUTCMonth(), pickupDate.getUTCDate())) : null
+        const deliveryDateUTC = deliveryDate ? new Date(Date.UTC(deliveryDate.getUTCFullYear(), deliveryDate.getUTCMonth(), deliveryDate.getUTCDate())) : null
+
+        const isPickupInWeek = pickupDateUTC && pickupDateUTC >= weekStartUTC && pickupDateUTC <= weekEndUTC
+        const isDeliveryInWeek = deliveryDateUTC && deliveryDateUTC >= weekStartUTC && deliveryDateUTC <= weekEndUTC
 
         return isPickupInWeek || isDeliveryInWeek
       })
       .sort((a, b) => {
-        const dateA = a.pickup_date ? new Date(a.pickup_date).getTime() : 0
-        const dateB = b.pickup_date ? new Date(b.pickup_date).getTime() : 0
+        const dateA = a.pickup_date ? new Date(normalizeDateTime(a.pickup_date)).getTime() : 0
+        const dateB = b.pickup_date ? new Date(normalizeDateTime(b.pickup_date)).getTime() : 0
         return dateA - dateB
       })
   }, [loads, weekStart])
@@ -601,46 +628,53 @@ export default function DispatchBoardPage() {
 
   // Get loads for a specific driver on a specific day (pickup or delivery day)
   // Sorted by pickup time
+  // Uses UTC comparison because backend stores wall-clock time as UTC
   const getLoadsForDriverOnDay = (driverId: number, date: Date) => {
+    const dateUTC = toUTCDate(date)
+
     return loads
       .filter(load => {
         if (load.driver_id !== driverId) return false
 
-        // Check if pickup or delivery falls on this day
-        const pickupDate = load.pickup_date ? parseISO(load.pickup_date) : null
-        const deliveryDate = load.delivery_date ? parseISO(load.delivery_date) : null
+        // Check if pickup or delivery falls on this day (using UTC comparison)
+        const pickupDate = load.pickup_date ? new Date(normalizeDateTime(load.pickup_date)) : null
+        const deliveryDate = load.delivery_date ? new Date(normalizeDateTime(load.delivery_date)) : null
 
-        const isPickupDay = pickupDate && isSameDay(pickupDate, date)
-        const isDeliveryDay = deliveryDate && isSameDay(deliveryDate, date)
+        const isPickupDay = pickupDate && isSameDayUTC(pickupDate, dateUTC)
+        const isDeliveryDay = deliveryDate && isSameDayUTC(deliveryDate, dateUTC)
 
         return isPickupDay || isDeliveryDay
       })
       .sort((a, b) => {
-        // Sort by pickup time
-        const aTime = a.pickup_date ? parseISO(a.pickup_date).getTime() : 0
-        const bTime = b.pickup_date ? parseISO(b.pickup_date).getTime() : 0
+        // Sort by pickup time (using UTC)
+        const aTime = a.pickup_date ? new Date(normalizeDateTime(a.pickup_date)).getTime() : 0
+        const bTime = b.pickup_date ? new Date(normalizeDateTime(b.pickup_date)).getTime() : 0
         return aTime - bTime
       })
   }
 
   // Get loads where driver is "loaded" (in transit) on a specific day
   // This is for multi-day loads where pickup was before this day and delivery is after this day
+  // Uses UTC comparison because backend stores wall-clock time as UTC
   const getLoadedLoadsForDriverOnDay = (driverId: number, date: Date) => {
-    const dayStart = startOfDay(date)
-    const dayEnd = endOfDay(date)
+    const dateUTC = toUTCDate(date)
 
     return loads.filter(load => {
       if (load.driver_id !== driverId) return false
 
-      const pickupDate = load.pickup_date ? startOfDay(parseISO(load.pickup_date)) : null
-      const deliveryDate = load.delivery_date ? startOfDay(parseISO(load.delivery_date)) : null
+      const pickupDate = load.pickup_date ? new Date(normalizeDateTime(load.pickup_date)) : null
+      const deliveryDate = load.delivery_date ? new Date(normalizeDateTime(load.delivery_date)) : null
 
       if (!pickupDate || !deliveryDate) return false
 
+      // Get just the date parts in UTC for comparison
+      const pickupDateOnly = new Date(Date.UTC(pickupDate.getUTCFullYear(), pickupDate.getUTCMonth(), pickupDate.getUTCDate()))
+      const deliveryDateOnly = new Date(Date.UTC(deliveryDate.getUTCFullYear(), deliveryDate.getUTCMonth(), deliveryDate.getUTCDate()))
+
       // Check if this day is between pickup and delivery (exclusive of pickup/delivery days)
       // Pickup must be before this day and delivery must be after this day
-      const isAfterPickup = dayStart > pickupDate
-      const isBeforeDelivery = dayEnd < deliveryDate
+      const isAfterPickup = dateUTC > pickupDateOnly
+      const isBeforeDelivery = dateUTC < deliveryDateOnly
 
       return isAfterPickup && isBeforeDelivery
     })
@@ -648,18 +682,20 @@ export default function DispatchBoardPage() {
 
   // Get weekly stats for a driver (total gross, miles, rate per mile)
   // Uses same calculation as loads page: Number(load.rate) and Number(load.miles)
+  // Uses UTC comparison because backend stores wall-clock time as UTC
   const getDriverWeeklyStats = (driverId: number) => {
-    const weekStartDay = startOfDay(weekStart)
-    const weekEndDay = endOfDay(addDays(weekStart, 6))
+    const weekStartUTC = toUTCDate(weekStart)
+    const weekEndUTC = toUTCDate(addDays(weekStart, 6))
 
     // Get all loads for this driver that have pickup within the current week
     const driverLoads = loads.filter(load => {
       if (load.driver_id !== driverId) return false
 
-      const pickupDate = load.pickup_date ? startOfDay(parseISO(load.pickup_date)) : null
+      const pickupDate = load.pickup_date ? new Date(normalizeDateTime(load.pickup_date)) : null
       if (!pickupDate) return false
 
-      return pickupDate >= weekStartDay && pickupDate <= weekEndDay
+      const pickupDateUTC = new Date(Date.UTC(pickupDate.getUTCFullYear(), pickupDate.getUTCMonth(), pickupDate.getUTCDate()))
+      return pickupDateUTC >= weekStartUTC && pickupDateUTC <= weekEndUTC
     })
 
     // Use Number() to convert like the loads page does
@@ -670,23 +706,33 @@ export default function DispatchBoardPage() {
     return { totalGross, totalMiles, ratePerMile, loadCount: driverLoads.length }
   }
 
-  // Format date and time together
+  // Format date and time together using UTC (wall-clock time)
   const formatDateTime = (dateStr: string | undefined) => {
     if (!dateStr) return ''
     try {
-      const date = parseISO(dateStr)
-      return format(date, 'M/d h:mm a')
+      const date = new Date(normalizeDateTime(dateStr))
+      const month = date.getUTCMonth() + 1
+      const day = date.getUTCDate()
+      let hours = date.getUTCHours()
+      const minutes = String(date.getUTCMinutes()).padStart(2, '0')
+      const ampm = hours >= 12 ? 'PM' : 'AM'
+      hours = hours % 12 || 12
+      return `${month}/${day} ${hours}:${minutes} ${ampm}`
     } catch {
       return ''
     }
   }
 
-  // Format time from datetime string
+  // Format time from datetime string using UTC (wall-clock time)
   const formatTime = (dateStr: string | undefined) => {
     if (!dateStr) return ''
     try {
-      const date = parseISO(dateStr)
-      return format(date, 'h:mm a')
+      const date = new Date(normalizeDateTime(dateStr))
+      let hours = date.getUTCHours()
+      const minutes = String(date.getUTCMinutes()).padStart(2, '0')
+      const ampm = hours >= 12 ? 'PM' : 'AM'
+      hours = hours % 12 || 12
+      return `${hours}:${minutes} ${ampm}`
     } catch {
       return ''
     }
