@@ -2265,8 +2265,11 @@ export default function LoadsPageInline() {
         </td>
 
         {/* Ratecon */}
-        <td className={`px-3 py-2.5 border-r ${load.ratecon_url ? 'bg-green-50' : ''}`} style={{borderColor: 'var(--monday-border-light)'}}>
+        <td className={`px-3 py-2.5 border-r ${load.ratecon_url ? 'bg-green-50' : ''}`} style={{borderColor: 'var(--monday-border-light)', backgroundColor: load.ratecon_url ? undefined : '#fff3e0'}}>
           <div className="flex items-center gap-2">
+            {!load.ratecon_url && (
+              <span className="text-orange-600 font-bold text-lg">!</span>
+            )}
             {load.ratecon_url ? (
               <>
                 <button
@@ -2339,8 +2342,11 @@ export default function LoadsPageInline() {
         </td>
 
         {/* POD */}
-        <td className={`px-3 py-2.5 border-r ${load.pod_url ? 'bg-green-50' : ''}`} style={{borderColor: 'var(--monday-border-light)'}}>
+        <td className={`px-3 py-2.5 border-r ${load.pod_url ? 'bg-green-50' : ''}`} style={{borderColor: 'var(--monday-border-light)', backgroundColor: load.pod_url ? undefined : '#fff3e0'}}>
           <div className="flex items-center gap-2">
+            {!load.pod_url && (
+              <span className="text-orange-600 font-bold text-lg">!</span>
+            )}
             {load.pod_url ? (
               <>
                 <button
