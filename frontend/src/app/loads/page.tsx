@@ -203,6 +203,16 @@ function normalizeDateTime(dateString: string): string {
   return dateString + 'Z'
 }
 
+// Helper to create a wall-clock UTC datetime string from a local date
+// This stores the local date/time AS UTC (not converted to UTC)
+// e.g., if local date is Dec 30 at midnight, returns "2024-12-30T00:00:00.000Z"
+function toWallClockUTC(date: Date, time: string = '00:00'): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}T${time}:00.000Z`
+}
+
 // Helper to format date as MM/DD/YY
 function formatDateShort(dateString: string): string {
   if (!dateString) return ''
@@ -739,6 +749,8 @@ export default function LoadsPageInline() {
     const defaultCustomerId = absoluteTrucking?.id || customers[0].id
 
     // Create a new load immediately in the backend
+    // Use wall-clock UTC format (local date stored as UTC)
+    const today = new Date()
     const backendData: any = {
       load_number: '',
       customer_id: defaultCustomerId,
@@ -746,8 +758,8 @@ export default function LoadsPageInline() {
       truck_id: null,
       pickup_location: '',
       delivery_location: '',
-      pickup_date: new Date().toISOString(),
-      delivery_date: new Date().toISOString(),
+      pickup_date: toWallClockUTC(today, '00:00'),  // Today at midnight
+      delivery_date: toWallClockUTC(today, '23:59'),  // Today at end of day
       miles: 0,
       rate: 0,
       status: 'available'
@@ -1349,7 +1361,7 @@ export default function LoadsPageInline() {
     // Determine the customer_id or driver_id based on the grouping
     let customer_id = customers.length > 0 ? customers[0].id : null
     let driver_id = null
-    let pickup_date = new Date().toISOString()
+    let pickup_date = toWallClockUTC(new Date(), '00:00')
 
     // Check parent keys for week information first
     const weekKey = parentKeys.find(key => key.startsWith('Week ')) || (groupKey.startsWith('Week ') ? groupKey : null)
@@ -1359,7 +1371,7 @@ export default function LoadsPageInline() {
       if (!isNaN(weekNumber)) {
         // Get the Monday of this week using the selected year tab
         const targetDate = getDateFromWeekNumber(weekNumber, selectedYear)
-        pickup_date = targetDate.toISOString()
+        pickup_date = toWallClockUTC(targetDate, '00:00')
       }
     }
 
@@ -1408,7 +1420,7 @@ export default function LoadsPageInline() {
               targetDate.setFullYear(currentYear + 1)
             }
 
-            pickup_date = targetDate.toISOString()
+            pickup_date = toWallClockUTC(targetDate, '00:00')
           }
         }
       }
