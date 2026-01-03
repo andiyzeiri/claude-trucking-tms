@@ -78,18 +78,17 @@ function getWeekLabel(date: Date): string {
 
 // Helper to get week date range
 function getWeekDateRange(date: Date): string {
-  const dayOfWeek = date.getDay()
+  // Use UTC methods to avoid timezone conversion (we store wall-clock time as UTC)
+  const dayOfWeek = date.getUTCDay()
   const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek
-  const monday = new Date(date)
-  monday.setDate(date.getDate() + diffToMonday)
+  const monday = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + diffToMonday))
 
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
+  const sunday = new Date(Date.UTC(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate() + 6))
 
-  const startMonth = monday.getMonth() + 1
-  const startDay = monday.getDate()
-  const endMonth = sunday.getMonth() + 1
-  const endDay = sunday.getDate()
+  const startMonth = monday.getUTCMonth() + 1
+  const startDay = monday.getUTCDate()
+  const endMonth = sunday.getUTCMonth() + 1
+  const endDay = sunday.getUTCDate()
 
   return `(${startMonth}/${startDay}-${endMonth}/${endDay})`
 }
@@ -119,9 +118,10 @@ function getDayLabel(date: Date): string {
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-  const dayName = dayNames[date.getDay()]
-  const monthName = monthNames[date.getMonth()]
-  const dayNum = date.getDate()
+  // Use UTC methods to avoid timezone conversion (we store wall-clock time as UTC)
+  const dayName = dayNames[date.getUTCDay()]
+  const monthName = monthNames[date.getUTCMonth()]
+  const dayNum = date.getUTCDate()
 
   return `${dayName}, ${monthName} ${dayNum}`
 }
@@ -420,7 +420,7 @@ export default function LoadsPageInline() {
           weekNumber: getWeekNumber(existingPickupDate),
           weekLabel: getWeekLabel(existingPickupDate),
           weekDateRange: getWeekDateRange(existingPickupDate),
-          dayOfWeek: existingPickupDate.getDay(),
+          dayOfWeek: existingPickupDate.getUTCDay(),
           dayLabel: getDayLabel(existingPickupDate)
         }
       }
@@ -430,7 +430,7 @@ export default function LoadsPageInline() {
         weekNumber: getWeekNumber(pickupDate),
         weekLabel: getWeekLabel(pickupDate),
         weekDateRange: getWeekDateRange(pickupDate),
-        dayOfWeek: pickupDate.getDay(),
+        dayOfWeek: pickupDate.getUTCDay(),
         dayLabel: getDayLabel(pickupDate)
       }
     })
@@ -833,7 +833,7 @@ export default function LoadsPageInline() {
                       weekNumber: getWeekNumber(pickupDate),
                       weekLabel: getWeekLabel(pickupDate),
                       weekDateRange: getWeekDateRange(pickupDate),
-                      dayOfWeek: pickupDate.getDay(),
+                      dayOfWeek: pickupDate.getUTCDay(),
                       dayLabel: getDayLabel(pickupDate)
                     }
                     setEditableLoads(prev => [...prev, restoredLoad])
@@ -942,7 +942,7 @@ export default function LoadsPageInline() {
             updated.weekNumber = getWeekNumber(pickupDate)
             updated.weekLabel = getWeekLabel(pickupDate)
             updated.weekDateRange = getWeekDateRange(pickupDate)
-            updated.dayOfWeek = pickupDate.getDay()
+            updated.dayOfWeek = pickupDate.getUTCDay()
             updated.dayLabel = getDayLabel(pickupDate)
           }
 
@@ -973,7 +973,7 @@ export default function LoadsPageInline() {
           updated.weekNumber = getWeekNumber(pickupDate)
           updated.weekLabel = getWeekLabel(pickupDate)
           updated.weekDateRange = getWeekDateRange(pickupDate)
-          updated.dayOfWeek = pickupDate.getDay()
+          updated.dayOfWeek = pickupDate.getUTCDay()
           updated.dayLabel = getDayLabel(pickupDate)
         }
 
@@ -1127,7 +1127,7 @@ export default function LoadsPageInline() {
                 updated.weekNumber = getWeekNumber(pickupDate)
                 updated.weekLabel = getWeekLabel(pickupDate)
                 updated.weekDateRange = getWeekDateRange(pickupDate)
-                updated.dayOfWeek = pickupDate.getDay()
+                updated.dayOfWeek = pickupDate.getUTCDay()
                 updated.dayLabel = getDayLabel(pickupDate)
               }
 
@@ -1158,7 +1158,7 @@ export default function LoadsPageInline() {
           optimisticUpdate.weekNumber = getWeekNumber(pickupDate)
           optimisticUpdate.weekLabel = getWeekLabel(pickupDate)
           optimisticUpdate.weekDateRange = getWeekDateRange(pickupDate)
-          optimisticUpdate.dayOfWeek = pickupDate.getDay()
+          optimisticUpdate.dayOfWeek = pickupDate.getUTCDay()
           optimisticUpdate.dayLabel = getDayLabel(pickupDate)
         }
 
@@ -1345,7 +1345,7 @@ export default function LoadsPageInline() {
         weekNumber: getWeekNumber(pickupDate),
         weekLabel: getWeekLabel(pickupDate),
         weekDateRange: getWeekDateRange(pickupDate),
-        dayOfWeek: pickupDate.getDay(),
+        dayOfWeek: pickupDate.getUTCDay(),
         dayLabel: getDayLabel(pickupDate)
       }
       setEditableLoads([...editableLoads, newLoadWithWeek])
@@ -1613,7 +1613,7 @@ export default function LoadsPageInline() {
             <Input
               type="date"
               value={formatDateForInput(load.pickup_date)}
-              onChange={(e) => updateField(loadKey, 'pickup_date', `${e.target.value}T00:00:00`)}
+              onChange={(e) => updateField(loadKey, 'pickup_date', `${e.target.value}T00:00:00.000Z`)}
               onBlur={stopEdit}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -1626,7 +1626,7 @@ export default function LoadsPageInline() {
             />
           ) : (
             <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: '#3a86ff'}}>
-              {new Date(normalizeDateTime(load.pickup_date)).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
+              {formatDateShort(load.pickup_date)}
             </div>
           )}
         </td>
