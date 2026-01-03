@@ -470,6 +470,39 @@ export default function DispatchBoardPage() {
     },
   })
 
+  // Track which drivers need attention for which days
+  // Fetch from API so it persists across all users/computers
+  const { data: attentionDaysData } = useQuery({
+    queryKey: ['driver-attention-days'],
+    queryFn: async () => {
+      const response = await api.get('/v1/driver-attention-days/')
+      return response.data as { id: number; driver_id: number; date: string }[]
+    },
+  })
+
+  // Convert API data to local format
+  const attentionDays: DayOffDriver[] = useMemo(() => {
+    if (!attentionDaysData) return []
+    return attentionDaysData.map(d => ({
+      driverId: d.driver_id,
+      date: d.date // Already in YYYY-MM-DD format from API
+    }))
+  }, [attentionDaysData])
+
+  // Mutation to toggle attention
+  const toggleAttentionMutation = useMutation({
+    mutationFn: async ({ driverId, date }: { driverId: number; date: string }) => {
+      const response = await api.post('/v1/driver-attention-days/toggle', {
+        driver_id: driverId,
+        date: date
+      })
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['driver-attention-days'] })
+    },
+  })
+
   // Current week start date (Monday)
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
 
@@ -634,6 +667,36 @@ export default function DispatchBoardPage() {
       }
     }
     queryClient.invalidateQueries({ queryKey: ['driver-days-off'] })
+  }
+
+  // Check if a driver needs attention on a specific day
+  const isDriverAttention = (driverId: number, date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd')
+    return attentionDays.some(d => d.driverId === driverId && d.date === dateStr)
+  }
+
+  // Toggle driver attention - uses API to persist
+  const toggleDriverAttention = (driverId: number, date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd')
+    toggleAttentionMutation.mutate({ driverId, date: dateStr })
+  }
+
+  // Cycle through states: Available -> Attention -> OFF -> Available
+  const cycleDriverDayState = (driverId: number, date: Date) => {
+    const isOff = isDriverOff(driverId, date)
+    const needsAttention = isDriverAttention(driverId, date)
+
+    if (needsAttention) {
+      // Attention -> OFF: remove attention, add off
+      toggleDriverAttention(driverId, date)
+      toggleDriverDayOff(driverId, date)
+    } else if (isOff) {
+      // OFF -> Available: remove off
+      toggleDriverDayOff(driverId, date)
+    } else {
+      // Available -> Attention: add attention
+      toggleDriverAttention(driverId, date)
+    }
   }
 
   // Get loads for a specific driver on a specific day (pickup or delivery day)
@@ -1115,6 +1178,7 @@ export default function DispatchBoardPage() {
                             {weekDays.map((day) => {
                               const isToday = isSameDay(day, new Date())
                               const isOff = isDriverOff(driver.id, day)
+                              const needsAttention = isDriverAttention(driver.id, day)
                               const driverLoads = getLoadsForDriverOnDay(driver.id, day)
                               const loadedLoads = getLoadedLoadsForDriverOnDay(driver.id, day)
                               const isLoaded = loadedLoads.length > 0
@@ -1134,10 +1198,25 @@ export default function DispatchBoardPage() {
                                       <div
                                         className="h-full flex items-center justify-center rounded-lg bg-slate-100 cursor-pointer hover:bg-slate-200 transition-colors"
                                         style={{ minHeight: '70px' }}
-                                        onClick={() => toggleDriverDayOff(driver.id, day)}
-                                        title="Click to mark as working"
+                                        onClick={() => cycleDriverDayState(driver.id, day)}
+                                        onContextMenu={(e) => handleCellContextMenu(e, driver.id, day)}
+                                        title="Click to mark as available"
                                       >
                                         <span className="text-sm text-slate-400 font-medium">OFF</span>
+                                      </div>
+                                    ) : needsAttention && driverLoads.length === 0 ? (
+                                      // Driver needs attention - find a load
+                                      <div
+                                        className="h-full flex items-center justify-center rounded-lg bg-orange-100 border-2 border-orange-400 cursor-pointer hover:bg-orange-200 transition-colors relative"
+                                        style={{ minHeight: '70px' }}
+                                        onClick={() => cycleDriverDayState(driver.id, day)}
+                                        onContextMenu={(e) => handleCellContextMenu(e, driver.id, day)}
+                                        title="Needs attention - click to mark as OFF"
+                                      >
+                                        <div className="absolute -top-2 -left-2 w-7 h-7 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-md">
+                                          !
+                                        </div>
+                                        <span className="text-sm text-orange-600 font-medium">Attention</span>
                                       </div>
                                     ) : isLoaded && driverLoads.length === 0 ? (
                                       // Driver is in transit (loaded) on a multi-day trip
@@ -1153,9 +1232,9 @@ export default function DispatchBoardPage() {
                                       <div
                                         className="h-full flex items-center justify-center rounded-lg bg-slate-50 border border-slate-300 border-dashed cursor-pointer hover:bg-slate-100 hover:border-slate-400 transition-all"
                                         style={{ minHeight: '70px' }}
-                                        onClick={() => toggleDriverDayOff(driver.id, day)}
+                                        onClick={() => cycleDriverDayState(driver.id, day)}
                                         onContextMenu={(e) => handleCellContextMenu(e, driver.id, day)}
-                                        title="Click to mark as off, right-click for options"
+                                        title="Click to mark as attention, right-click for options"
                                       >
                                         <span className="text-sm text-emerald-500 font-medium">Available</span>
                                       </div>
@@ -1271,6 +1350,16 @@ export default function DispatchBoardPage() {
                     Add Load
                   </button>
                   <button
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 text-orange-600"
+                    onClick={() => {
+                      toggleDriverAttention(contextMenu.driverId, contextMenu.date!)
+                      closeContextMenu()
+                    }}
+                  >
+                    <AlertTriangle className="h-4 w-4 text-orange-500" />
+                    {isDriverAttention(contextMenu.driverId, contextMenu.date!) ? 'Remove Attention' : 'Mark Attention'}
+                  </button>
+                  <button
                     className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
                     onClick={() => {
                       toggleDriverDayOff(contextMenu.driverId, contextMenu.date!)
@@ -1278,7 +1367,7 @@ export default function DispatchBoardPage() {
                     }}
                   >
                     <X className="h-4 w-4" />
-                    Mark as OFF
+                    {isDriverOff(contextMenu.driverId, contextMenu.date!) ? 'Remove OFF' : 'Mark as OFF'}
                   </button>
                 </>
               ) : (
