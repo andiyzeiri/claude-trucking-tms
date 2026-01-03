@@ -109,6 +109,7 @@ export interface Load {
   ratecon_url?: string
   adjustment_type?: 'lumper' | 'detention' | 'layover' | 'pickup' | 'delivery' | null
   adjustment_amount?: number | null
+  needs_attention?: boolean
   created_at: string
   updated_at: string
 }

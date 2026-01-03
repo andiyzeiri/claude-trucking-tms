@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Numeric, DateTime, ForeignKey, Integer, Enum
+from sqlalchemy import Column, String, Text, Numeric, DateTime, ForeignKey, Integer, Enum, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 import enum
@@ -53,6 +53,9 @@ class Load(Base):
     # Adjustments
     adjustment_type = Column(Enum(AdjustmentType), nullable=True)
     adjustment_amount = Column(Numeric(10, 2), nullable=True)
+
+    # Attention flag for dispatch board
+    needs_attention = Column(Boolean, default=False, nullable=False)
 
     # Notes
     pickup_notes = Column(Text)

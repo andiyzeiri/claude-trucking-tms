@@ -69,6 +69,10 @@ python3 add_adjustment_columns.py || echo "⚠️  add_adjustment_columns.py had
 echo "🔧 Creating driver_days_off table..."
 python3 create_driver_days_off_table.py || echo "⚠️  create_driver_days_off_table.py had errors, continuing..."
 
+# Add needs_attention column to loads table
+echo "🔧 Adding needs_attention column to loads table..."
+python3 add_needs_attention_column.py || echo "⚠️  add_needs_attention_column.py had errors, continuing..."
+
 # Stamp Alembic version to match current state
 echo "📦 Stamping Alembic version..."
 python3 stamp_alembic.py || echo "⚠️  stamp_alembic.py had errors, continuing..."

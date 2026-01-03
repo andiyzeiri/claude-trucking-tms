@@ -59,6 +59,7 @@ COPY create_ifta_table.py ./
 COPY add_ifta_permission.py ./
 COPY add_adjustment_columns.py ./
 COPY create_driver_days_off_table.py ./
+COPY add_needs_attention_column.py ./
 COPY entrypoint.sh ./
 
 # Copy scripts directory

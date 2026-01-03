@@ -17,7 +17,7 @@ import { useDrivers } from '@/hooks/use-drivers'
 import { useLoads, useUpdateLoad, useCreateLoad } from '@/hooks/use-loads'
 import { useCustomers } from '@/hooks/use-customers'
 import { useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, MapPin, Clock, User, X, Truck, Plus, DollarSign, Route, Package, FileText, Calendar } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, Clock, User, X, Truck, Plus, DollarSign, Route, Package, FileText, Calendar, AlertTriangle } from 'lucide-react'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { format, startOfWeek, addDays, isSameDay, parseISO, startOfDay, endOfDay } from 'date-fns'
 import { AddressAutocomplete } from '@/components/ui/address-autocomplete'
@@ -226,13 +226,14 @@ function DraggableTripCard({ load, formatDateTime, getShortLocation }: {
 }
 
 // Draggable Assigned Load Component (for driver cells)
-function DraggableAssignedLoad({ load, day, formatTime, formatDateTime, getShortLocation, onUnassign, fillCell }: {
+function DraggableAssignedLoad({ load, day, formatTime, formatDateTime, getShortLocation, onUnassign, onContextMenu, fillCell }: {
   load: Load
   day: Date
   formatTime: (dateStr: string | undefined) => string
   formatDateTime: (dateStr: string | undefined) => string
   getShortLocation: (location: string) => string
   onUnassign: (loadId: number) => void
+  onContextMenu: (e: React.MouseEvent, load: Load) => void
   fillCell?: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -244,6 +245,7 @@ function DraggableAssignedLoad({ load, day, formatTime, formatDateTime, getShort
   const deliveryDate = load.delivery_date ? parseISO(load.delivery_date) : null
   const isPickupDay = pickupDate && isSameDay(pickupDate, day)
   const isDeliveryDay = deliveryDate && isSameDay(deliveryDate, day)
+  const needsAttention = load.needs_attention || false
 
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
@@ -256,12 +258,20 @@ function DraggableAssignedLoad({ load, day, formatTime, formatDateTime, getShort
           ref={setNodeRef}
           style={{
             ...style,
-            ...(fillCell ? { minHeight: '70px', height: '100%' } : {})
+            ...(fillCell ? { minHeight: '70px', height: '100%' } : {}),
+            ...(needsAttention ? { backgroundColor: '#fed7aa', borderColor: '#fb923c' } : {})
           }}
-          className={`relative rounded-lg p-2 bg-white border border-slate-200 text-xs cursor-grab active:cursor-grabbing hover:shadow-md hover:border-slate-300 transition-all group flex flex-col justify-center ${isDragging ? 'opacity-50' : ''}`}
+          className={`relative rounded-lg p-2 ${needsAttention ? '' : 'bg-white'} border ${needsAttention ? 'border-orange-400' : 'border-slate-200'} text-xs cursor-grab active:cursor-grabbing hover:shadow-md transition-all group flex flex-col justify-center ${isDragging ? 'opacity-50' : ''}`}
+          onContextMenu={(e) => onContextMenu(e, load)}
           {...listeners}
           {...attributes}
         >
+          {/* Attention exclamation mark */}
+          {needsAttention && (
+            <div className="absolute -top-2 -left-2 w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-md z-10">
+              !
+            </div>
+          )}
           {/* Unassign X button */}
           <button
             onClick={(e) => {
@@ -850,12 +860,14 @@ export default function DispatchBoardPage() {
     )
   }
 
-  // Context menu state - can be for driver row or day cell
+  // Context menu state - can be for driver row, day cell, or load
   const [contextMenu, setContextMenu] = useState<{
     x: number
     y: number
     driverId: number
     date?: Date  // If date is present, it's a day cell context menu
+    loadId?: number  // If loadId is present, it's a load context menu
+    loadNeedsAttention?: boolean  // Current attention state of the load
   } | null>(null)
 
   // Handle right-click on driver name (for OFF entire week)
@@ -869,6 +881,33 @@ export default function DispatchBoardPage() {
     e.preventDefault()
     e.stopPropagation()
     setContextMenu({ x: e.clientX, y: e.clientY, driverId, date })
+  }
+
+  // Handle right-click on load (for Attention)
+  const handleLoadContextMenu = (e: React.MouseEvent, load: Load) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      driverId: load.driver_id || 0,
+      loadId: load.id,
+      loadNeedsAttention: load.needs_attention || false
+    })
+  }
+
+  // Toggle attention on a load
+  const toggleLoadAttention = async (loadId: number, currentState: boolean) => {
+    try {
+      await updateLoad.mutateAsync({
+        id: loadId,
+        data: { needs_attention: !currentState }
+      })
+      toast.success(currentState ? 'Attention removed' : 'Marked for attention')
+    } catch (error) {
+      console.error('Failed to toggle attention:', error)
+      toast.error('Failed to update load')
+    }
   }
 
   // Close context menu
@@ -1134,6 +1173,7 @@ export default function DispatchBoardPage() {
                                             formatDateTime={formatDateTime}
                                             getShortLocation={getShortLocation}
                                             onUnassign={handleUnassign}
+                                            onContextMenu={handleLoadContextMenu}
                                             fillCell={driverLoads.length === 1}
                                           />
                                         ))}
@@ -1171,6 +1211,12 @@ export default function DispatchBoardPage() {
               <div className="w-4 h-4 rounded bg-slate-100"></div>
               <span className="text-slate-500">OFF</span>
             </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-orange-200 border border-orange-400 flex items-center justify-center">
+                <span className="text-orange-600 text-[8px] font-bold">!</span>
+              </div>
+              <span className="text-slate-500">Attention</span>
+            </div>
             <div className="flex items-center gap-2 ml-4 pl-4 border-l border-slate-200">
               <span className="text-slate-400 text-xs">Right-click for options • Drag to reassign</span>
             </div>
@@ -1199,7 +1245,19 @@ export default function DispatchBoardPage() {
               className="fixed z-50 bg-white rounded-lg shadow-lg border py-1 min-w-[180px]"
               style={{ left: contextMenu.x, top: contextMenu.y }}
             >
-              {contextMenu.date ? (
+              {contextMenu.loadId ? (
+                // Load context menu
+                <button
+                  className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 ${contextMenu.loadNeedsAttention ? 'text-orange-600' : ''}`}
+                  onClick={() => {
+                    toggleLoadAttention(contextMenu.loadId!, contextMenu.loadNeedsAttention || false)
+                    closeContextMenu()
+                  }}
+                >
+                  <AlertTriangle className={`h-4 w-4 ${contextMenu.loadNeedsAttention ? 'text-orange-500' : ''}`} />
+                  {contextMenu.loadNeedsAttention ? 'Remove Attention' : 'Mark Attention'}
+                </button>
+              ) : contextMenu.date ? (
                 // Day cell context menu
                 <>
                   <button

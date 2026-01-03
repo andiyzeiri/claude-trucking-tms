@@ -33,6 +33,7 @@ class LoadBase(BaseModel):
     delivery_notes: Optional[str] = None
     adjustment_type: Optional[AdjustmentType] = None
     adjustment_amount: Optional[Decimal] = None
+    needs_attention: bool = False
 
 
 class LoadCreate(LoadBase):
@@ -71,6 +72,7 @@ class LoadUpdate(BaseModel):
     delivery_notes: Optional[str] = None
     adjustment_type: Optional[AdjustmentType] = None
     adjustment_amount: Optional[Decimal] = None
+    needs_attention: Optional[bool] = None
 
     @field_validator('pickup_date', 'delivery_date', 'pickup_deadline', 'delivery_deadline', mode='after')
     @classmethod
@@ -108,6 +110,7 @@ class LoadResponse(BaseModel):
     delivery_notes: Optional[str] = None
     adjustment_type: Optional[AdjustmentType] = None
     adjustment_amount: Optional[Decimal] = None
+    needs_attention: bool = False
     driver: Optional[DriverResponse] = None
     truck: Optional[TruckResponse] = None
     created_at: datetime
