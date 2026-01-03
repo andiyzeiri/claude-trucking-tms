@@ -13,7 +13,7 @@ class Fuel(Base):
     def_gallons = Column(Numeric(10, 2))  # Diesel Exhaust Fluid gallons
     def_price = Column(Numeric(10, 2))  # DEF price per gallon
     total_amount = Column(Numeric(10, 2), nullable=False)
-    odometer = Column(Integer)  # Odometer reading
+    odometer = Column(Integer)  # Ending truck miles / odometer reading
     notes = Column(Text)
 
     # Multi-tenant

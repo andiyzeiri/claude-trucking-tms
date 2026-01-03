@@ -16,6 +16,18 @@ type EditingCell = {
   field: string
 } | null
 
+// Helper to get previous week's ending miles for a driver
+function getPreviousWeekEndingMiles(
+  fuelByWeekAndDriver: Record<number, Record<number, FuelEntryWithWeek | null>>,
+  weekNum: number,
+  driverId: number
+): number | null {
+  const prevWeek = weekNum - 1
+  if (prevWeek < 1) return null
+  const prevEntry = fuelByWeekAndDriver[prevWeek]?.[driverId]
+  return prevEntry?.odometer ? Number(prevEntry.odometer) : null
+}
+
 // Helper to get week number from date (ISO 8601)
 function getWeekNumber(date: Date): number {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
@@ -154,6 +166,7 @@ export default function FuelPage() {
         weekNumber,
         driverId,
         truckId: existing.truck_id || null,
+        odometer: existing.odometer || 0,
         gallons: existing.gallons || 0,
         pricePerGallon: existing.price_per_gallon || 0,
         defGallons: existing.def_gallons || 0,
@@ -165,6 +178,7 @@ export default function FuelPage() {
         weekNumber,
         driverId,
         truckId: null,
+        odometer: 0,
         gallons: 0,
         pricePerGallon: 0,
         defGallons: 0,
@@ -188,7 +202,7 @@ export default function FuelPage() {
     const existing = fuelByWeekAndDriver[weekNumber]?.[driverId]
 
     // Check if there's any meaningful data
-    const hasData = editValues.gallons > 0 || editValues.totalAmount > 0 || editValues.defGallons > 0
+    const hasData = editValues.gallons > 0 || editValues.totalAmount > 0 || editValues.defGallons > 0 || editValues.odometer > 0
 
     if (hasData) {
       // Convert week number to date (Monday of that week)
@@ -202,6 +216,7 @@ export default function FuelPage() {
         def_gallons: editValues.defGallons || undefined,
         def_price: editValues.defPrice || undefined,
         total_amount: editValues.totalAmount || 0,
+        odometer: editValues.odometer || undefined,
         driver_id: driverId,
         truck_id: editValues.truckId || undefined,
       }
@@ -305,6 +320,45 @@ export default function FuelPage() {
               {trucks.find(t => t.id === entry?.truck_id)?.truck_number || '-'}
             </div>
           )}
+        </td>
+
+        {/* Ending Miles */}
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
+          {isEditingField('odometer') ? (
+            <input
+              type="number"
+              className="w-full px-2 py-1 border rounded text-right text-sm"
+              style={{ borderColor: 'var(--monday-border)' }}
+              value={editValues.odometer || ''}
+              onChange={(e) => handleCellChange('odometer', parseInt(e.target.value) || 0)}
+              onBlur={handleCellBlur}
+              onKeyDown={handleKeyDown}
+              autoFocus
+            />
+          ) : (
+            <div
+              onClick={() => handleCellClick(weekNum, driver.id, 'odometer')}
+              className="cursor-pointer rounded px-1.5 py-0.5"
+              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
+            >
+              {entry?.odometer ? Number(entry.odometer).toLocaleString() : '-'}
+            </div>
+          )}
+        </td>
+
+        {/* Weekly Miles (calculated) */}
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
+          <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
+            {(() => {
+              const currentMiles = entry?.odometer ? Number(entry.odometer) : null
+              const prevMiles = getPreviousWeekEndingMiles(fuelByWeekAndDriver, weekNum, driver.id)
+              if (currentMiles !== null && prevMiles !== null) {
+                const weeklyMiles = currentMiles - prevMiles
+                return weeklyMiles.toLocaleString()
+              }
+              return '-'
+            })()}
+          </div>
         </td>
 
         {/* Gallons */}
@@ -460,6 +514,8 @@ export default function FuelPage() {
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: '20px' }}></th>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Driver</th>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Truck</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Ending Miles</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Weekly Miles</th>
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Gallons</th>
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Price/Gal</th>
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>DEF Gal</th>
@@ -498,7 +554,7 @@ export default function FuelPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-2 py-2" colSpan={5}></td>
+                      <td className="px-2 py-2" colSpan={7}></td>
                       <td className="px-2 py-2">
                         <div className="mb-0.5">
                           <div style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)' }}>
