@@ -41,8 +41,8 @@ type EditingCell = {
 
 // Helper to get week number from date (ISO 8601)
 function getWeekNumber(date: Date): number {
-  // Copy date so we don't mutate the original
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  // Use UTC methods to get the date components (we store wall-clock time as UTC)
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
 
   // Set to nearest Thursday: current date + 4 - current day number
   // Make Sunday's day number 7
@@ -64,7 +64,8 @@ function getWeekNumber(date: Date): number {
 // - Dec 29-31, 2025 are in Week 1 of 2026, so ISO week year is 2026
 // The ISO week year is the year containing the Thursday of that week
 function getISOWeekYear(date: Date): number {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  // Use UTC methods to get the date components (we store wall-clock time as UTC)
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
   const dayNum = d.getUTCDay() || 7
   d.setUTCDate(d.getUTCDate() + 4 - dayNum)
   return d.getUTCFullYear()
