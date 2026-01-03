@@ -473,9 +473,9 @@ export default function DispatchBoardPage() {
     pickup_location: '',
     delivery_location: '',
     pickup_date: '',
-    pickup_time: '08:00',
+    pickup_time: '00:00',  // Default to midnight
     delivery_date: '',
-    delivery_time: '17:00',
+    delivery_time: '23:59',  // Default to end of day
     miles: 0,
     rate: 0,
   })
@@ -498,9 +498,9 @@ export default function DispatchBoardPage() {
       pickup_location: '',
       delivery_location: '',
       pickup_date: dateStr,
-      pickup_time: '08:00',
+      pickup_time: '00:00',  // Default to midnight (12:00 AM)
       delivery_date: dateStr,
-      delivery_time: '17:00',
+      delivery_time: '23:59',  // Default to end of day
       miles: 0,
       rate: 0,
     })
@@ -513,9 +513,9 @@ export default function DispatchBoardPage() {
 
     setIsCreatingLoad(true)
     try {
-      // Combine date and time for ISO format
-      const pickupDateTime = `${newLoadForm.pickup_date}T${newLoadForm.pickup_time}:00`
-      const deliveryDateTime = `${newLoadForm.delivery_date}T${newLoadForm.delivery_time}:00`
+      // Combine date and time for ISO format with Z suffix (store as UTC wall-clock time)
+      const pickupDateTime = `${newLoadForm.pickup_date}T${newLoadForm.pickup_time}:00.000Z`
+      const deliveryDateTime = `${newLoadForm.delivery_date}T${newLoadForm.delivery_time}:00.000Z`
 
       const backendData: any = {
         load_number: newLoadForm.load_number || '',
