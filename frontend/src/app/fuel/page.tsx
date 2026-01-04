@@ -78,6 +78,48 @@ function getWeekDateRange(weekNumber: number, year?: number): string {
   return `(${startMonth}/${startDay}-${endMonth}/${endDay})`
 }
 
+// Get Monday and Sunday dates for a week
+function getWeekBounds(weekNumber: number, year?: number): { monday: Date, sunday: Date } {
+  const date = getDateFromWeekNumber(weekNumber, year)
+
+  const dayOfWeek = date.getDay()
+  const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek
+  const monday = new Date(date)
+  monday.setDate(date.getDate() + diffToMonday)
+  monday.setHours(0, 0, 0, 0)
+
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  sunday.setHours(23, 59, 59, 999)
+
+  return { monday, sunday }
+}
+
+// Check if a driver was employed during a specific week
+function wasDriverEmployedDuringWeek(
+  driver: { date_hired?: string, date_terminated?: string },
+  weekNumber: number,
+  year?: number
+): boolean {
+  const { monday, sunday } = getWeekBounds(weekNumber, year)
+
+  // If no hire date, assume they were always employed (legacy data)
+  const hireDate = driver.date_hired ? new Date(driver.date_hired) : null
+  const termDate = driver.date_terminated ? new Date(driver.date_terminated) : null
+
+  // Driver must have been hired on or before the end of the week
+  if (hireDate && hireDate > sunday) {
+    return false
+  }
+
+  // Driver must not have been terminated before the start of the week
+  if (termDate && termDate < monday) {
+    return false
+  }
+
+  return true
+}
+
 // Extended fuel entry with week info for local state
 interface FuelEntryWithWeek extends Fuel {
   weekNumber: number
@@ -568,10 +610,12 @@ export default function FuelPage() {
                       <td className="px-2 py-2"></td>
                     </tr>
 
-                    {/* Driver Rows */}
-                    {!isCollapsed && drivers.map((driver, driverIndex) =>
-                      renderFuelRow(weekNum, driver, driverIndex)
-                    )}
+                    {/* Driver Rows - filtered by employment during this week */}
+                    {!isCollapsed && drivers
+                      .filter(driver => wasDriverEmployedDuringWeek(driver, weekNum, currentYear))
+                      .map((driver, driverIndex) =>
+                        renderFuelRow(weekNum, driver, driverIndex)
+                      )}
                   </React.Fragment>
                 )
               })}
