@@ -38,6 +38,15 @@ function getWeekNumber(date: Date): number {
   return weekNum
 }
 
+// Helper to get ISO week year (the year the week belongs to)
+// e.g., Dec 30, 2024 is in Week 1 of 2025, so ISO week year is 2025
+function getISOWeekYear(date: Date): number {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  return d.getUTCFullYear()
+}
+
 // Helper to get a date from a week number (ISO 8601) - matches loads page
 function getDateFromWeekNumber(weekNumber: number, year?: number): Date {
   const currentYear = year || new Date().getFullYear()
@@ -140,17 +149,41 @@ export default function FuelPage() {
   const [editValues, setEditValues] = useState<Record<string, any>>({})
   const [collapsedWeeks, setCollapsedWeeks] = useState<Set<number>>(new Set())
   const hasInitiallyCollapsed = useRef(false)
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
 
-  const currentYear = new Date().getFullYear()
-
-  // Convert API fuel entries to include week numbers
-  const fuelEntries: FuelEntryWithWeek[] = useMemo(() => {
+  // Convert API fuel entries to include week numbers and year
+  const fuelEntriesWithYear = useMemo(() => {
     if (!fuelData) return []
-    return fuelData.map(entry => ({
-      ...entry,
-      weekNumber: getWeekNumber(new Date(entry.date))
-    }))
+    return fuelData.map(entry => {
+      const entryDate = new Date(entry.date)
+      return {
+        ...entry,
+        weekNumber: getWeekNumber(entryDate),
+        isoYear: getISOWeekYear(entryDate)
+      }
+    })
   }, [fuelData])
+
+  // Get available years from fuel data
+  const availableYears = useMemo(() => {
+    const years = new Set<number>()
+    const currentYear = new Date().getFullYear()
+    years.add(currentYear) // Always include current year
+    years.add(currentYear + 1) // Always include next year for end-of-year transitions
+
+    fuelEntriesWithYear.forEach(entry => {
+      if (entry.isoYear >= 2020 && entry.isoYear <= currentYear + 2) {
+        years.add(entry.isoYear)
+      }
+    })
+
+    return Array.from(years).sort((a, b) => b - a) // Sort descending (newest first)
+  }, [fuelEntriesWithYear])
+
+  // Filter fuel entries by selected year
+  const fuelEntries: FuelEntryWithWeek[] = useMemo(() => {
+    return fuelEntriesWithYear.filter(entry => entry.isoYear === selectedYear)
+  }, [fuelEntriesWithYear, selectedYear])
 
   // Generate all 52 weeks
   const allWeeks = useMemo(() => {
@@ -248,7 +281,7 @@ export default function FuelPage() {
 
     if (hasData) {
       // Convert week number to date (Monday of that week)
-      const weekDate = getDateFromWeekNumber(weekNumber, currentYear)
+      const weekDate = getDateFromWeekNumber(weekNumber, selectedYear)
       const dateStr = weekDate.toISOString().split('T')[0]
 
       const fuelData = {
@@ -549,6 +582,27 @@ export default function FuelPage() {
       <div className="p-4 page-fuel">
         <h1 className="text-2xl font-semibold mb-4" style={{ color: 'var(--monday-text-primary)' }}>Fuel</h1>
 
+        {/* Year Tabs */}
+        <div className="flex items-center gap-2 border-b mb-4" style={{ borderColor: 'var(--monday-border-light)' }}>
+          {availableYears.map(year => (
+            <button
+              key={year}
+              onClick={() => setSelectedYear(year)}
+              className="px-4 py-2 text-sm font-medium transition-all relative"
+              style={{
+                color: selectedYear === year ? 'var(--monday-cornflower)' : 'var(--monday-text-secondary)',
+                borderBottom: selectedYear === year ? '2px solid var(--monday-cornflower)' : '2px solid transparent',
+                marginBottom: '-1px'
+              }}
+            >
+              {year}
+              {year === new Date().getFullYear() && (
+                <span className="ml-1 text-xs opacity-60">(Current)</span>
+              )}
+            </button>
+          ))}
+        </div>
+
         <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
           <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
@@ -589,7 +643,7 @@ export default function FuelPage() {
                             <ChevronDown className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--monday-blue)' }} />
                           )}
                           <span className="whitespace-nowrap" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>
-                            Week {weekNum} {getWeekDateRange(weekNum, currentYear)}
+                            Week {weekNum} {getWeekDateRange(weekNum, selectedYear)}
                           </span>
                           <span style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
                             ({weekEntries.length} entries)
@@ -612,7 +666,7 @@ export default function FuelPage() {
 
                     {/* Driver Rows - filtered by employment during this week */}
                     {!isCollapsed && drivers
-                      .filter(driver => wasDriverEmployedDuringWeek(driver, weekNum, currentYear))
+                      .filter(driver => wasDriverEmployedDuringWeek(driver, weekNum, selectedYear))
                       .map((driver, driverIndex) =>
                         renderFuelRow(weekNum, driver, driverIndex)
                       )}
