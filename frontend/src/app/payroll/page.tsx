@@ -45,28 +45,32 @@ interface FuelEntry {
   totalAmount: number
 }
 
-// Generate 52 weeks starting from Monday, December 30, 2024
-function generateWeeks() {
+// Generate 52 weeks for a given year using ISO week numbering
+function generateWeeks(year: number) {
   const weeks = []
-  // Use Date constructor to avoid timezone issues (2024, 11=December, 30)
-  const startDate = new Date(2024, 11, 30) // Monday, December 30, 2024
+
+  // Find the Monday of week 1 for the given year
+  // January 4th is always in week 1 of its year
+  const jan4 = new Date(Date.UTC(year, 0, 4))
+  const dayNum = jan4.getUTCDay() || 7
+  const week1Monday = new Date(jan4)
+  week1Monday.setUTCDate(jan4.getUTCDate() - dayNum + 1)
 
   for (let i = 0; i < 52; i++) {
-    const weekStart = new Date(startDate)
-    weekStart.setDate(startDate.getDate() + (i * 7))
+    const weekStart = new Date(week1Monday)
+    weekStart.setUTCDate(week1Monday.getUTCDate() + (i * 7))
 
     const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekStart.getDate() + 6) // Sunday
+    weekEnd.setUTCDate(weekStart.getUTCDate() + 6) // Sunday
 
     const weekNumber = i + 1
-    const year = weekStart.getFullYear()
 
     weeks.push({
       weekNumber,
       year,
-      startDate: weekStart,
-      endDate: weekEnd,
-      label: `Week ${weekNumber} (${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`
+      startDate: new Date(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate()),
+      endDate: new Date(weekEnd.getUTCFullYear(), weekEnd.getUTCMonth(), weekEnd.getUTCDate()),
+      label: `Week ${weekNumber} (${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })})`
     })
   }
 
@@ -99,11 +103,18 @@ type EditingCell = {
 } | null
 
 export default function PayrollPage() {
-  const currentYear = new Date().getFullYear()
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const { data: driversData, isLoading: driversLoading } = useDrivers()
-  const { data: calculatedPayroll, isLoading: payrollLoading, refetch: refetchPayroll } = useCalculatedPayroll(currentYear)
+  const { data: calculatedPayroll, isLoading: payrollLoading, refetch: refetchPayroll } = useCalculatedPayroll(selectedYear)
   const drivers = driversData?.items || []
   const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([1])) // Week 1 expanded by default
+
+  // Available years for the tabs
+  const availableYears = useMemo(() => {
+    const currentYear = new Date().getFullYear()
+    const years = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2]
+    return years.filter(y => y >= 2024) // Start from 2024
+  }, [])
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
   const [sortField, setSortField] = useState<string>('weekNumber')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
@@ -192,7 +203,7 @@ export default function PayrollPage() {
     pay: 120
   })
 
-  const weeks = useMemo(() => generateWeeks(), [])
+  const weeks = useMemo(() => generateWeeks(selectedYear), [selectedYear])
 
   // Helper function to check if a driver was employed during a specific week
   const isDriverEmployedDuringWeek = (driver: any, weekStart: Date, weekEnd: Date): boolean => {
@@ -599,6 +610,27 @@ export default function PayrollPage() {
               Collapse All
             </Button>
           </div>
+        </div>
+
+        {/* Year Tabs */}
+        <div className="flex items-center gap-2 border-b" style={{ borderColor: 'var(--monday-border-light)' }}>
+          {availableYears.map(year => (
+            <button
+              key={year}
+              onClick={() => setSelectedYear(year)}
+              className="px-4 py-2 text-sm font-medium transition-all relative"
+              style={{
+                color: selectedYear === year ? 'var(--monday-cornflower)' : 'var(--monday-text-secondary)',
+                borderBottom: selectedYear === year ? '2px solid var(--monday-cornflower)' : '2px solid transparent',
+                marginBottom: '-1px'
+              }}
+            >
+              {year}
+              {year === new Date().getFullYear() && (
+                <span className="ml-1 text-xs opacity-60">(Current)</span>
+              )}
+            </button>
+          ))}
         </div>
 
         {/* Grand Totals Summary */}
