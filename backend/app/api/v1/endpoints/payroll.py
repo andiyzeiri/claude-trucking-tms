@@ -34,6 +34,15 @@ def get_week_number(date: datetime) -> int:
     return date.isocalendar()[1]
 
 
+def get_iso_week_year(date: datetime) -> int:
+    """Get ISO week year from a date.
+
+    Important: ISO week year can differ from calendar year at year boundaries.
+    For example, Dec 30, 2025 is in ISO week 1 of 2026.
+    """
+    return date.isocalendar()[0]
+
+
 def get_week_start_end(date: datetime) -> tuple:
     """Get the Monday and Sunday of the week containing the given date."""
     # Get the day of the week (0=Monday, 6=Sunday)
@@ -102,16 +111,23 @@ async def calculate_payroll_from_loads(
         if not load.pickup_date:
             continue
 
-        # Get week information
+        # Get week information using ISO week year (handles year boundary correctly)
         week_num = get_week_number(load.pickup_date)
+        iso_year = get_iso_week_year(load.pickup_date)
         week_start, week_end = get_week_start_end(load.pickup_date)
+
+        # Filter by ISO year (not calendar year) to handle year boundaries correctly
+        # e.g., Dec 30, 2025 is in week 1 of ISO year 2026
+        if iso_year != year:
+            loads_filtered_by_year += 1
+            continue
 
         loads_processed += 1
         if loads_processed <= 3:  # Log first 3 loads for debugging
-            print(f"  Load {load.id}: pickup={load.pickup_date}, week={week_num}, week_start={week_start}, rate={load.rate}, miles={load.miles}")
+            print(f"  Load {load.id}: pickup={load.pickup_date}, iso_year={iso_year}, week={week_num}, week_start={week_start}, rate={load.rate}, miles={load.miles}")
 
-        # Create unique key for driver + week
-        key = f"{load.driver_id}_{week_num}"
+        # Create unique key for driver + year + week (year needed to distinguish between years)
+        key = f"{load.driver_id}_{iso_year}_{week_num}"
 
         if key not in payroll_data:
             driver = drivers.get(load.driver_id)
