@@ -276,36 +276,43 @@ export default function FuelPage() {
     const { weekNumber, driverId } = editingCell
     const existing = fuelByWeekAndDriver[weekNumber]?.[driverId]
 
-    // Check if there's any meaningful data
-    const hasData = editValues.gallons > 0 || editValues.totalAmount > 0 || editValues.defGallons > 0 || editValues.odometer > 0
+    // Check if there's any meaningful data (including zero values that were explicitly set)
+    const hasData =
+      editValues.gallons > 0 ||
+      editValues.totalAmount > 0 ||
+      editValues.defGallons > 0 ||
+      editValues.odometer > 0 ||
+      editValues.pricePerGallon > 0 ||
+      editValues.defPrice > 0
 
     if (hasData) {
       // Convert week number to date (Monday of that week)
       const weekDate = getDateFromWeekNumber(weekNumber, selectedYear)
       const dateStr = weekDate.toISOString().split('T')[0]
 
+      // Build fuel data - use null checks instead of || to preserve zero values
       const fuelData = {
         date: dateStr,
-        gallons: editValues.gallons || 0,
-        price_per_gallon: editValues.pricePerGallon || undefined,
-        def_gallons: editValues.defGallons || undefined,
-        def_price: editValues.defPrice || undefined,
-        total_amount: editValues.totalAmount || 0,
-        odometer: editValues.odometer || undefined,
+        gallons: editValues.gallons ?? 0,
+        price_per_gallon: editValues.pricePerGallon != null && editValues.pricePerGallon !== 0 ? editValues.pricePerGallon : undefined,
+        def_gallons: editValues.defGallons != null && editValues.defGallons !== 0 ? editValues.defGallons : undefined,
+        def_price: editValues.defPrice != null && editValues.defPrice !== 0 ? editValues.defPrice : undefined,
+        total_amount: editValues.totalAmount ?? 0,
+        odometer: editValues.odometer != null && editValues.odometer !== 0 ? editValues.odometer : undefined,
         driver_id: driverId,
-        truck_id: editValues.truckId || undefined,
+        truck_id: editValues.truckId != null ? editValues.truckId : undefined,
       }
 
       try {
         if (existing) {
-          // Update existing
           await updateFuel.mutateAsync({ id: existing.id, data: fuelData })
         } else {
-          // Create new
           await createFuel.mutateAsync(fuelData)
         }
-      } catch (error) {
-        console.error('Failed to save fuel entry:', error)
+      } catch (error: any) {
+        // Error is already handled by mutation's onError (shows toast)
+        // Log for debugging
+        console.error('Failed to save fuel entry:', error?.response?.data || error)
       }
     }
 
