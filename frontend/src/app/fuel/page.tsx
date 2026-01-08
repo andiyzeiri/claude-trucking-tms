@@ -155,7 +155,8 @@ export default function FuelPage() {
   const fuelEntriesWithYear = useMemo(() => {
     if (!fuelData) return []
     return fuelData.map(entry => {
-      const entryDate = new Date(entry.date)
+      // Parse date as local time, not UTC (YYYY-MM-DD without time is parsed as UTC by default)
+      const entryDate = new Date(entry.date + 'T00:00:00')
       return {
         ...entry,
         weekNumber: getWeekNumber(entryDate),
