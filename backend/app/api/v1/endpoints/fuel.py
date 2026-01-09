@@ -84,6 +84,7 @@ async def update_fuel_entry(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    logger.info(f"🔧 Fuel update request for ID {fuel_id}: {fuel_update.dict()}")
     query = (
         select(Fuel)
         .options(selectinload(Fuel.driver), selectinload(Fuel.truck))
