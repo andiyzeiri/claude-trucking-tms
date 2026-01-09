@@ -672,9 +672,9 @@ export default function FuelPage() {
                       <td className="px-2 py-2"></td>
                     </tr>
 
-                    {/* Driver Rows - filtered by employment during this week */}
+                    {/* Driver Rows - filtered by employment during this week and fuel card */}
                     {!isCollapsed && drivers
-                      .filter(driver => wasDriverEmployedDuringWeek(driver, weekNum, selectedYear))
+                      .filter(driver => driver.has_fuel_card && wasDriverEmployedDuringWeek(driver, weekNum, selectedYear))
                       .map((driver, driverIndex) =>
                         renderFuelRow(weekNum, driver, driverIndex)
                       )}
