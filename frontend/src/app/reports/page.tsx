@@ -5,7 +5,7 @@ import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatCurrency } from '@/lib/utils'
-import { Download, Search, ChevronRight, ChevronDown, TrendingUp, Users, Truck } from 'lucide-react'
+import { Download, Search, ChevronRight, ChevronDown, TrendingUp, Users, Truck, Calendar } from 'lucide-react'
 import { useLoads } from '@/hooks/use-loads'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useExpenses } from '@/hooks/use-expenses'
@@ -21,7 +21,7 @@ function getISOWeekInfo(date: Date) {
   return {
     year: d.getUTCFullYear(),
     week: weekNumber,
-    label: `Week ${weekNumber}, ${d.getUTCFullYear()}`
+    label: `Week ${weekNumber}`
   }
 }
 
@@ -40,7 +40,7 @@ function getWeekDateRange(date: Date) {
   return {
     start: monday,
     end: sunday,
-    label: `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+    label: `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
   }
 }
 
@@ -48,6 +48,7 @@ interface WeekData {
   weekKey: string
   weekLabel: string
   weekDateRange: string
+  weekNumber: number
   gross: number
   miles: number
   expenses: number
@@ -83,12 +84,44 @@ export default function ReportsPage() {
   const fuel = fuelData || []
 
   const [activeTab, setActiveTab] = useState<TabType>('drivers')
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [searchTerm, setSearchTerm] = useState('')
   const [expandedDrivers, setExpandedDrivers] = useState<Set<number>>(new Set())
 
   const isLoading = loadsLoading || driversLoading || expensesLoading || fuelLoading
 
-  // Build expense lookup by driver and week
+  // Get available years from loads data
+  const availableYears = useMemo(() => {
+    const years = new Set<number>()
+    const currentYear = new Date().getFullYear()
+    years.add(currentYear) // Always include current year
+
+    loads.forEach(load => {
+      if (load.pickup_date) {
+        const loadDate = new Date(load.pickup_date + 'T00:00:00')
+        const weekInfo = getISOWeekInfo(loadDate)
+        years.add(weekInfo.year)
+      }
+    })
+
+    expenses.forEach(expense => {
+      if (expense.date) {
+        const expenseDate = new Date(expense.date + 'T00:00:00')
+        years.add(expenseDate.getFullYear())
+      }
+    })
+
+    fuel.forEach(f => {
+      if (f.date) {
+        const fuelDate = new Date(f.date + 'T00:00:00')
+        years.add(fuelDate.getFullYear())
+      }
+    })
+
+    return Array.from(years).sort((a, b) => b - a) // Sort descending (newest first)
+  }, [loads, expenses, fuel])
+
+  // Build expense lookup by driver and week (filtered by year)
   const expensesByDriverWeek = useMemo(() => {
     const map = new Map<string, number>()
 
@@ -97,6 +130,7 @@ export default function ReportsPage() {
       if (!expense.driver_id || !expense.date) return
       const expenseDate = new Date(expense.date + 'T00:00:00')
       const weekInfo = getISOWeekInfo(expenseDate)
+      if (weekInfo.year !== selectedYear) return
       const key = `${expense.driver_id}-${weekInfo.year}-${weekInfo.week}`
       map.set(key, (map.get(key) || 0) + Number(expense.amount || 0))
     })
@@ -106,14 +140,15 @@ export default function ReportsPage() {
       if (!f.driver_id || !f.date) return
       const fuelDate = new Date(f.date + 'T00:00:00')
       const weekInfo = getISOWeekInfo(fuelDate)
+      if (weekInfo.year !== selectedYear) return
       const key = `${f.driver_id}-${weekInfo.year}-${weekInfo.week}`
       map.set(key, (map.get(key) || 0) + Number(f.total_amount || 0))
     })
 
     return map
-  }, [expenses, fuel])
+  }, [expenses, fuel, selectedYear])
 
-  // Process data grouped by driver and week
+  // Process data grouped by driver and week (filtered by year)
   const reportData = useMemo(() => {
     const driverMap = new Map<number, DriverReportData>()
 
@@ -136,14 +171,19 @@ export default function ReportsPage() {
 
       const loadDate = new Date(load.pickup_date + 'T00:00:00')
       const weekInfo = getISOWeekInfo(loadDate)
+
+      // Filter by selected year
+      if (weekInfo.year !== selectedYear) return
+
       const weekDateRange = getWeekDateRange(loadDate)
       const driverWeekKey = `${load.driver_id}-${weekInfo.year}-${weekInfo.week}`
 
       if (!weekMap.has(driverWeekKey)) {
         weekMap.set(driverWeekKey, {
-          weekKey: `${weekInfo.year}-W${weekInfo.week}`,
+          weekKey: `${weekInfo.year}-W${String(weekInfo.week).padStart(2, '0')}`,
           weekLabel: weekInfo.label,
           weekDateRange: weekDateRange.label,
+          weekNumber: weekInfo.week,
           gross: 0,
           miles: 0,
           expenses: 0,
@@ -177,13 +217,13 @@ export default function ReportsPage() {
       }
     })
 
-    // Sort weeks within each driver (most recent first)
+    // Sort weeks within each driver (by week number, descending)
     driverMap.forEach(driverData => {
-      driverData.weeks.sort((a, b) => b.weekKey.localeCompare(a.weekKey))
+      driverData.weeks.sort((a, b) => b.weekNumber - a.weekNumber)
     })
 
     return Array.from(driverMap.values())
-  }, [loads, drivers, expensesByDriverWeek])
+  }, [loads, drivers, expensesByDriverWeek, selectedYear])
 
   // Filter by tab and search
   const filteredData = useMemo(() => {
@@ -198,13 +238,13 @@ export default function ReportsPage() {
           return false
         }
 
-        // Only show drivers with data
+        // Only show drivers with data for the selected year
         return d.totals.loadCount > 0
       })
       .sort((a, b) => a.driver_name.localeCompare(b.driver_name))
   }, [reportData, activeTab, searchTerm])
 
-  // Calculate grand totals for current tab
+  // Calculate grand totals for current tab and year
   const grandTotals = useMemo(() => {
     return filteredData.reduce((acc, driver) => ({
       gross: acc.gross + driver.totals.gross,
@@ -236,13 +276,14 @@ export default function ReportsPage() {
 
   // Export to CSV
   const exportToCSV = () => {
-    const rows: string[] = ['Driver,Type,Week,Gross,Miles,Expenses,Profit']
+    const rows: string[] = ['Driver,Type,Year,Week,Gross,Miles,Expenses,Profit']
 
     filteredData.forEach(driver => {
       driver.weeks.forEach(week => {
         rows.push([
           driver.driver_name,
           driver.driver_type === 'owner_operator' ? 'Owner Operator' : 'Company',
+          selectedYear,
           week.weekLabel,
           week.gross.toFixed(2),
           week.miles,
@@ -257,7 +298,7 @@ export default function ReportsPage() {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${activeTab}-report-${Date.now()}.csv`
+    a.download = `${activeTab}-report-${selectedYear}-${Date.now()}.csv`
     a.click()
   }
 
@@ -299,7 +340,25 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Year Tabs */}
+        <div className="bg-white border border-gray-200 rounded-lg p-1 inline-flex gap-1">
+          <Calendar className="h-5 w-5 text-gray-400 my-auto mx-2" />
+          {availableYears.map(year => (
+            <button
+              key={year}
+              onClick={() => setSelectedYear(year)}
+              className={`px-4 py-2 rounded-md font-medium text-sm transition-colors ${
+                selectedYear === year
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {year}
+            </button>
+          ))}
+        </div>
+
+        {/* Driver/Owner Tabs */}
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
             <button
@@ -341,19 +400,19 @@ export default function ReportsPage() {
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="text-sm text-gray-600 mb-1">Total Loads</div>
+            <div className="text-sm text-gray-600 mb-1">Total Loads ({selectedYear})</div>
             <div className="text-3xl font-bold text-blue-600">{grandTotals.loadCount}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="text-sm text-gray-600 mb-1">Total Gross</div>
+            <div className="text-sm text-gray-600 mb-1">Total Gross ({selectedYear})</div>
             <div className="text-3xl font-bold" style={{color: '#1a5f2a'}}>{formatCurrency(grandTotals.gross)}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="text-sm text-gray-600 mb-1">Total Expenses</div>
+            <div className="text-sm text-gray-600 mb-1">Total Expenses ({selectedYear})</div>
             <div className="text-3xl font-bold text-red-600">{formatCurrency(grandTotals.expenses)}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="text-sm text-gray-600 mb-1">Total Profit</div>
+            <div className="text-sm text-gray-600 mb-1">Total Profit ({selectedYear})</div>
             <div className="text-3xl font-bold" style={{color: grandTotals.profit >= 0 ? '#1a5f2a' : '#b91c1c'}}>
               {formatCurrency(grandTotals.profit)}
             </div>
@@ -368,8 +427,8 @@ export default function ReportsPage() {
               <h2 className="text-xl font-semibold text-gray-900 mb-2">No Data Found</h2>
               <p className="text-gray-600">
                 {activeTab === 'drivers'
-                  ? 'No company drivers with loads found.'
-                  : 'No owner operators with loads found.'}
+                  ? `No company drivers with loads found for ${selectedYear}.`
+                  : `No owner operators with loads found for ${selectedYear}.`}
               </p>
             </div>
           </div>
