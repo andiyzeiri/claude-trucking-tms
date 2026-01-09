@@ -66,6 +66,8 @@ export interface Driver {
   experience?: string
   mvr_expiry?: string
   medical_card_expiry?: string
+  has_fuel_card?: boolean
+  fuel_card_number?: string
   created_at: string
   updated_at: string
 }

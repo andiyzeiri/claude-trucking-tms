@@ -20,6 +20,9 @@ class DriverBase(BaseModel):
     experience: Optional[str] = None
     mvr_expiry: Optional[date] = None
     medical_card_expiry: Optional[date] = None
+    # Fuel card
+    has_fuel_card: bool = False
+    fuel_card_number: Optional[str] = None
 
 
 class DriverCreate(DriverBase):
@@ -42,6 +45,9 @@ class DriverUpdate(BaseModel):
     experience: Optional[str] = None
     mvr_expiry: Optional[date] = None
     medical_card_expiry: Optional[date] = None
+    # Fuel card
+    has_fuel_card: Optional[bool] = None
+    fuel_card_number: Optional[str] = None
 
 
 class DriverResponse(DriverBase):

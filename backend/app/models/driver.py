@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Date, ForeignKey, Integer, Enum
+from sqlalchemy import Column, String, Date, ForeignKey, Integer, Enum, Boolean
 from sqlalchemy.orm import relationship
 import enum
 from .base import Base
@@ -32,6 +32,10 @@ class Driver(Base):
     experience = Column(String, nullable=True)  # e.g., "5 years", "2 years"
     mvr_expiry = Column(Date, nullable=True)  # Motor Vehicle Record expiry date
     medical_card_expiry = Column(Date, nullable=True)  # Medical Card expiry date
+
+    # Fuel card
+    has_fuel_card = Column(Boolean, default=False, nullable=False)
+    fuel_card_number = Column(String, nullable=True)
 
     # Multi-tenant
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)

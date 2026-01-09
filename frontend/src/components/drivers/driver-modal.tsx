@@ -22,6 +22,8 @@ export interface DriverData {
   experience?: string
   mvr_expiry?: string
   medical_card_expiry?: string
+  has_fuel_card?: boolean
+  fuel_card_number?: string
   created_at?: string
 }
 
@@ -46,7 +48,9 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
     date_of_birth: '',
     experience: '',
     mvr_expiry: '',
-    medical_card_expiry: ''
+    medical_card_expiry: '',
+    has_fuel_card: false,
+    fuel_card_number: ''
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -68,6 +72,8 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
         experience: '',
         mvr_expiry: '',
         medical_card_expiry: '',
+        has_fuel_card: false,
+        fuel_card_number: '',
         created_at: new Date().toISOString()
       })
     }
@@ -259,6 +265,31 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
               value={formData.medical_card_expiry || ''}
               onChange={(date) => setFormData({ ...formData, medical_card_expiry: date })}
               placeholder="Select medical card expiry"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="has_fuel_card" className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="has_fuel_card"
+                checked={formData.has_fuel_card || false}
+                onChange={(e) => setFormData({ ...formData, has_fuel_card: e.target.checked })}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              Has Fuel Card
+            </Label>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fuel_card_number">Fuel Card Number</Label>
+            <Input
+              id="fuel_card_number"
+              value={formData.fuel_card_number || ''}
+              onChange={(e) => setFormData({ ...formData, fuel_card_number: e.target.value })}
+              placeholder="Enter fuel card number"
+              disabled={!formData.has_fuel_card}
+              className={!formData.has_fuel_card ? 'bg-gray-100' : ''}
             />
           </div>
         </div>

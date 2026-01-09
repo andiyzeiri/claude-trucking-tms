@@ -49,6 +49,10 @@ python3 fix_trucks_table.py || echo "⚠️  fix_trucks_table.py had errors, con
 echo "🔧 Fixing drivers table..."
 python3 fix_drivers_columns.py || echo "⚠️  fix_drivers_columns.py had errors, continuing..."
 
+# Add fuel card columns to drivers table
+echo "🔧 Adding fuel card columns to drivers table..."
+python3 add_fuel_card_columns.py || echo "⚠️  add_fuel_card_columns.py had errors, continuing..."
+
 # Create dedicated_lanes table for recurring lane templates
 echo "🔧 Creating dedicated_lanes table..."
 python3 create_dedicated_lanes_table.py || echo "⚠️  create_dedicated_lanes_table.py had errors, continuing..."

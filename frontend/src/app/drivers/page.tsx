@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { DataTable, Column } from '@/components/ui/data-table'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
 import { DriverModal, DriverData } from '@/components/drivers/driver-modal'
-import { Plus, Users, Phone, Mail, Edit, Trash2 } from 'lucide-react'
+import { Plus, Users, Phone, Mail, Edit, Trash2, Check, CreditCard } from 'lucide-react'
 import { useDrivers, useCreateDriver, useUpdateDriver, useDeleteDriver } from '@/hooks/use-drivers'
 
 export default function DriversPage() {
@@ -53,7 +53,9 @@ export default function DriversPage() {
       date_of_birth: driver.date_of_birth || '',
       experience: driver.experience || '',
       mvr_expiry: driver.mvr_expiry || '',
-      medical_card_expiry: driver.medical_card_expiry || ''
+      medical_card_expiry: driver.medical_card_expiry || '',
+      has_fuel_card: driver.has_fuel_card || false,
+      fuel_card_number: driver.fuel_card_number || ''
     }
     setEditingDriver(driverData)
     setModalMode('edit')
@@ -79,7 +81,9 @@ export default function DriversPage() {
       date_of_birth: driverData.date_of_birth || null,
       experience: driverData.experience || null,
       mvr_expiry: driverData.mvr_expiry || null,
-      medical_card_expiry: driverData.medical_card_expiry || null
+      medical_card_expiry: driverData.medical_card_expiry || null,
+      has_fuel_card: driverData.has_fuel_card || false,
+      fuel_card_number: driverData.fuel_card_number || null
     }
 
     if (modalMode === 'create') {
@@ -260,6 +264,28 @@ export default function DriversPage() {
           </span>
         )
       }
+    },
+    {
+      key: 'has_fuel_card',
+      label: 'Fuel Card',
+      width: '150px',
+      filterable: true,
+      render: (value, row) => (
+        <div className="flex items-center gap-2">
+          {value ? (
+            <>
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100">
+                <Check className="h-3 w-3 text-green-600" />
+              </span>
+              <span className="text-sm font-mono" style={{ color: 'var(--monday-text-secondary)' }}>
+                {row.fuel_card_number || '—'}
+              </span>
+            </>
+          ) : (
+            <span style={{ color: 'var(--monday-text-muted)' }}>No</span>
+          )}
+        </div>
+      )
     }
   ]
 
