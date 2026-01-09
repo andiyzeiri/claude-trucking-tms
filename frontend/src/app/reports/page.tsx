@@ -10,6 +10,13 @@ import { useLoads } from '@/hooks/use-loads'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useExpenses } from '@/hooks/use-expenses'
 import { useFuel } from '@/hooks/use-fuel'
+import { Driver } from '@/types'
+
+// Helper to safely convert to number, defaulting to 0 for NaN/null/undefined
+function safeNumber(value: any): number {
+  const num = Number(value)
+  return isNaN(num) ? 0 : num
+}
 
 // Helper function to get ISO week number and year
 function getISOWeekInfo(date: Date) {
@@ -44,6 +51,25 @@ function getWeekDateRange(date: Date) {
   }
 }
 
+// Helper function to check if a driver was employed during a specific year
+function wasEmployedDuringYear(driver: Driver, year: number): boolean {
+  const yearStart = new Date(year, 0, 1)
+  const yearEnd = new Date(year, 11, 31)
+
+  // If no hire date, assume they were employed
+  const hireDate = driver.date_hired ? new Date(driver.date_hired + 'T00:00:00') : null
+  const terminationDate = driver.date_terminated ? new Date(driver.date_terminated + 'T00:00:00') : null
+
+  // Driver was employed during the year if:
+  // 1. They were hired before or during the year (or no hire date recorded)
+  // 2. They were not terminated before the year started (or no termination date)
+
+  const hiredBeforeYearEnd = !hireDate || hireDate <= yearEnd
+  const notTerminatedBeforeYearStart = !terminationDate || terminationDate >= yearStart
+
+  return hiredBeforeYearEnd && notTerminatedBeforeYearStart
+}
+
 interface WeekData {
   weekKey: string
   weekLabel: string
@@ -60,6 +86,7 @@ interface DriverReportData {
   driver_id: number
   driver_name: string
   driver_type: 'company' | 'owner_operator'
+  wasEmployed: boolean
   weeks: WeekData[]
   totals: {
     gross: number
@@ -132,7 +159,7 @@ export default function ReportsPage() {
       const weekInfo = getISOWeekInfo(expenseDate)
       if (weekInfo.year !== selectedYear) return
       const key = `${expense.driver_id}-${weekInfo.year}-${weekInfo.week}`
-      map.set(key, (map.get(key) || 0) + Number(expense.amount || 0))
+      map.set(key, (map.get(key) || 0) + safeNumber(expense.amount))
     })
 
     // Add fuel
@@ -142,7 +169,7 @@ export default function ReportsPage() {
       const weekInfo = getISOWeekInfo(fuelDate)
       if (weekInfo.year !== selectedYear) return
       const key = `${f.driver_id}-${weekInfo.year}-${weekInfo.week}`
-      map.set(key, (map.get(key) || 0) + Number(f.total_amount || 0))
+      map.set(key, (map.get(key) || 0) + safeNumber(f.total_amount))
     })
 
     return map
@@ -152,12 +179,14 @@ export default function ReportsPage() {
   const reportData = useMemo(() => {
     const driverMap = new Map<number, DriverReportData>()
 
-    // Initialize with all drivers
+    // Initialize with all drivers, checking employment status
     drivers.forEach(driver => {
+      const wasEmployed = wasEmployedDuringYear(driver, selectedYear)
       driverMap.set(driver.id, {
         driver_id: driver.id,
         driver_name: `${driver.first_name} ${driver.last_name}`,
         driver_type: driver.driver_type || 'company',
+        wasEmployed,
         weeks: [],
         totals: { gross: 0, miles: 0, expenses: 0, profit: 0, loadCount: 0 }
       })
@@ -193,8 +222,8 @@ export default function ReportsPage() {
       }
 
       const weekData = weekMap.get(driverWeekKey)!
-      weekData.gross += Number(load.rate || 0)
-      weekData.miles += Number(load.miles || 0)
+      weekData.gross += safeNumber(load.rate)
+      weekData.miles += safeNumber(load.miles)
       weekData.loadCount += 1
     })
 
@@ -225,7 +254,7 @@ export default function ReportsPage() {
     return Array.from(driverMap.values())
   }, [loads, drivers, expensesByDriverWeek, selectedYear])
 
-  // Filter by tab and search
+  // Filter by tab and search - show all drivers who were employed during the year
   const filteredData = useMemo(() => {
     return reportData
       .filter(d => {
@@ -238,8 +267,8 @@ export default function ReportsPage() {
           return false
         }
 
-        // Only show drivers with data for the selected year
-        return d.totals.loadCount > 0
+        // Show all drivers who were employed during the selected year
+        return d.wasEmployed
       })
       .sort((a, b) => a.driver_name.localeCompare(b.driver_name))
   }, [reportData, activeTab, searchTerm])
@@ -279,18 +308,32 @@ export default function ReportsPage() {
     const rows: string[] = ['Driver,Type,Year,Week,Gross,Miles,Expenses,Profit']
 
     filteredData.forEach(driver => {
-      driver.weeks.forEach(week => {
+      if (driver.weeks.length === 0) {
+        // Include drivers with no loads
         rows.push([
           driver.driver_name,
           driver.driver_type === 'owner_operator' ? 'Owner Operator' : 'Company',
           selectedYear,
-          week.weekLabel,
-          week.gross.toFixed(2),
-          week.miles,
-          week.expenses.toFixed(2),
-          week.profit.toFixed(2)
+          'No loads',
+          '0.00',
+          '0',
+          '0.00',
+          '0.00'
         ].join(','))
-      })
+      } else {
+        driver.weeks.forEach(week => {
+          rows.push([
+            driver.driver_name,
+            driver.driver_type === 'owner_operator' ? 'Owner Operator' : 'Company',
+            selectedYear,
+            week.weekLabel,
+            week.gross.toFixed(2),
+            week.miles,
+            week.expenses.toFixed(2),
+            week.profit.toFixed(2)
+          ].join(','))
+        })
+      }
     })
 
     const csv = rows.join('\n')
@@ -300,6 +343,12 @@ export default function ReportsPage() {
     a.href = url
     a.download = `${activeTab}-report-${selectedYear}-${Date.now()}.csv`
     a.click()
+  }
+
+  // Format number safely (avoid NaN display)
+  const formatNumber = (num: number): string => {
+    const safe = safeNumber(num)
+    return safe.toLocaleString()
   }
 
   if (isLoading) {
@@ -405,16 +454,16 @@ export default function ReportsPage() {
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Gross ({selectedYear})</div>
-            <div className="text-3xl font-bold" style={{color: '#1a5f2a'}}>{formatCurrency(grandTotals.gross)}</div>
+            <div className="text-3xl font-bold" style={{color: '#1a5f2a'}}>{formatCurrency(safeNumber(grandTotals.gross))}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Expenses ({selectedYear})</div>
-            <div className="text-3xl font-bold text-red-600">{formatCurrency(grandTotals.expenses)}</div>
+            <div className="text-3xl font-bold text-red-600">{formatCurrency(safeNumber(grandTotals.expenses))}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Profit ({selectedYear})</div>
-            <div className="text-3xl font-bold" style={{color: grandTotals.profit >= 0 ? '#1a5f2a' : '#b91c1c'}}>
-              {formatCurrency(grandTotals.profit)}
+            <div className="text-3xl font-bold" style={{color: safeNumber(grandTotals.profit) >= 0 ? '#1a5f2a' : '#b91c1c'}}>
+              {formatCurrency(safeNumber(grandTotals.profit))}
             </div>
           </div>
         </div>
@@ -424,11 +473,11 @@ export default function ReportsPage() {
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <TrendingUp className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">No Data Found</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">No Drivers Found</h2>
               <p className="text-gray-600">
                 {activeTab === 'drivers'
-                  ? `No company drivers with loads found for ${selectedYear}.`
-                  : `No owner operators with loads found for ${selectedYear}.`}
+                  ? `No company drivers were employed during ${selectedYear}.`
+                  : `No owner operators were employed during ${selectedYear}.`}
               </p>
             </div>
           </div>
@@ -458,41 +507,50 @@ export default function ReportsPage() {
                 <tbody className="bg-white">
                   {filteredData.map((driverData) => {
                     const isExpanded = expandedDrivers.has(driverData.driver_id)
+                    const hasNoLoads = driverData.totals.loadCount === 0
 
                     return (
                       <React.Fragment key={driverData.driver_id}>
                         {/* Driver Row */}
                         <tr
-                          className="border-t-2 border-gray-300 cursor-pointer hover:bg-groupDriver/80 bg-groupDriver"
+                          className={`border-t-2 border-gray-300 cursor-pointer hover:bg-groupDriver/80 ${hasNoLoads ? 'bg-gray-50' : 'bg-groupDriver'}`}
                           onClick={() => toggleDriver(driverData.driver_id)}
                         >
                           <td className="px-4 py-3 text-sm font-bold text-gray-900">
                             <div className="flex items-center gap-2">
-                              {isExpanded ? (
-                                <ChevronDown className="h-4 w-4 text-gray-600" />
+                              {driverData.weeks.length > 0 ? (
+                                isExpanded ? (
+                                  <ChevronDown className="h-4 w-4 text-gray-600" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4 text-gray-600" />
+                                )
                               ) : (
-                                <ChevronRight className="h-4 w-4 text-gray-600" />
+                                <span className="w-4" />
                               )}
-                              <span>{driverData.driver_name}</span>
-                              <span className="text-gray-500 font-normal">
-                                ({driverData.totals.loadCount} loads, {driverData.weeks.length} weeks)
-                              </span>
+                              <span className={hasNoLoads ? 'text-gray-500' : ''}>{driverData.driver_name}</span>
+                              {hasNoLoads ? (
+                                <span className="text-gray-400 font-normal italic">(No loads)</span>
+                              ) : (
+                                <span className="text-gray-500 font-normal">
+                                  ({driverData.totals.loadCount} loads, {driverData.weeks.length} weeks)
+                                </span>
+                              )}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-right font-bold" style={{color: '#1a5f2a'}}>
-                            {formatCurrency(driverData.totals.gross)}
+                          <td className="px-4 py-3 text-sm text-right font-bold" style={{color: hasNoLoads ? '#9ca3af' : '#1a5f2a'}}>
+                            {formatCurrency(safeNumber(driverData.totals.gross))}
                           </td>
-                          <td className="px-4 py-3 text-sm text-right font-bold text-gray-900">
-                            {driverData.totals.miles.toLocaleString()}
+                          <td className="px-4 py-3 text-sm text-right font-bold" style={{color: hasNoLoads ? '#9ca3af' : undefined}}>
+                            {formatNumber(driverData.totals.miles)}
                           </td>
-                          <td className="px-4 py-3 text-sm text-right font-bold text-red-600">
-                            {formatCurrency(driverData.totals.expenses)}
+                          <td className="px-4 py-3 text-sm text-right font-bold" style={{color: hasNoLoads ? '#9ca3af' : '#dc2626'}}>
+                            {formatCurrency(safeNumber(driverData.totals.expenses))}
                           </td>
                           <td className="px-4 py-3 text-sm text-right font-bold" style={{
-                            backgroundColor: 'rgba(26, 95, 42, 0.1)',
-                            color: driverData.totals.profit >= 0 ? '#1a5f2a' : '#b91c1c'
+                            backgroundColor: hasNoLoads ? 'transparent' : 'rgba(26, 95, 42, 0.1)',
+                            color: hasNoLoads ? '#9ca3af' : (safeNumber(driverData.totals.profit) >= 0 ? '#1a5f2a' : '#b91c1c')
                           }}>
-                            {formatCurrency(driverData.totals.profit)}
+                            {formatCurrency(safeNumber(driverData.totals.profit))}
                           </td>
                         </tr>
 
@@ -510,19 +568,19 @@ export default function ReportsPage() {
                               </div>
                             </td>
                             <td className="px-4 py-2 text-sm text-right font-semibold" style={{color: '#1a5f2a'}}>
-                              {formatCurrency(week.gross)}
+                              {formatCurrency(safeNumber(week.gross))}
                             </td>
                             <td className="px-4 py-2 text-sm text-right font-semibold text-gray-900">
-                              {week.miles.toLocaleString()}
+                              {formatNumber(week.miles)}
                             </td>
                             <td className="px-4 py-2 text-sm text-right font-semibold text-red-600">
-                              {formatCurrency(week.expenses)}
+                              {formatCurrency(safeNumber(week.expenses))}
                             </td>
                             <td className="px-4 py-2 text-sm text-right font-semibold" style={{
                               backgroundColor: 'rgba(26, 95, 42, 0.05)',
-                              color: week.profit >= 0 ? '#1a5f2a' : '#b91c1c'
+                              color: safeNumber(week.profit) >= 0 ? '#1a5f2a' : '#b91c1c'
                             }}>
-                              {formatCurrency(week.profit)}
+                              {formatCurrency(safeNumber(week.profit))}
                             </td>
                           </tr>
                         ))}
