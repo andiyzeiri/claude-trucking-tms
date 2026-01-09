@@ -55,6 +55,7 @@ COPY fix_enum_types.py ./
 COPY fix_trucks_table.py ./
 COPY fix_drivers_columns.py ./
 COPY add_fuel_card_columns.py ./
+COPY add_driver_type_column.py ./
 COPY create_dedicated_lanes_table.py ./
 COPY create_ifta_table.py ./
 COPY add_ifta_permission.py ./

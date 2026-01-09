@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, Literal
 from app.models.driver import DriverStatus
 
 
@@ -12,6 +12,7 @@ class DriverBase(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     status: DriverStatus = DriverStatus.OFF_DUTY
+    driver_type: Literal["company", "owner_operator"] = "company"
     # Employment dates
     date_hired: Optional[date] = None
     date_terminated: Optional[date] = None
@@ -37,6 +38,7 @@ class DriverUpdate(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     status: Optional[DriverStatus] = None
+    driver_type: Optional[Literal["company", "owner_operator"]] = None
     # Employment dates
     date_hired: Optional[date] = None
     date_terminated: Optional[date] = None

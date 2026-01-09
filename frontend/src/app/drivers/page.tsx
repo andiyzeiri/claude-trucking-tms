@@ -48,6 +48,7 @@ export default function DriversPage() {
       phone: driver.phone || '',
       email: driver.email || '',
       status: driver.status,
+      driver_type: driver.driver_type || 'company',
       date_hired: driver.date_hired || '',
       date_terminated: driver.date_terminated || '',
       date_of_birth: driver.date_of_birth || '',
@@ -76,6 +77,7 @@ export default function DriversPage() {
       phone: driverData.phone,
       email: driverData.email,
       status: driverData.status,
+      driver_type: driverData.driver_type || 'company',
       date_hired: driverData.date_hired || null,
       date_terminated: driverData.date_terminated || null,
       date_of_birth: driverData.date_of_birth || null,
@@ -180,6 +182,21 @@ export default function DriversPage() {
             'var(--monday-gray)'
         }}>
           {value}
+        </span>
+      )
+    },
+    {
+      key: 'driver_type',
+      label: 'Type',
+      width: '130px',
+      filterable: true,
+      groupable: true,
+      render: (value) => (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style={{
+          backgroundColor: value === 'owner_operator' ? 'rgba(255, 183, 77, 0.15)' : 'rgba(33, 150, 243, 0.15)',
+          color: value === 'owner_operator' ? '#f57c00' : '#1976d2'
+        }}>
+          {value === 'owner_operator' ? 'Owner Operator' : 'Company'}
         </span>
       )
     },

@@ -5,18 +5,23 @@ import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatCurrency } from '@/lib/utils'
-import { Download, Search, ChevronRight, ChevronDown, TrendingUp } from 'lucide-react'
+import { Download, Search, ChevronRight, ChevronDown, TrendingUp, Users, Truck } from 'lucide-react'
 import { useLoads } from '@/hooks/use-loads'
+import { useDrivers } from '@/hooks/use-drivers'
+import { useExpenses } from '@/hooks/use-expenses'
+import { useFuel } from '@/hooks/use-fuel'
 
-// Helper function to get week number and year
-function getWeekInfo(date: Date) {
-  const startOfYear = new Date(date.getFullYear(), 0, 1)
-  const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000))
-  const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7)
+// Helper function to get ISO week number and year
+function getISOWeekInfo(date: Date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  const weekNumber = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
   return {
-    year: date.getFullYear(),
+    year: d.getUTCFullYear(),
     week: weekNumber,
-    label: `Week ${weekNumber}, ${date.getFullYear()}`
+    label: `Week ${weekNumber}, ${d.getUTCFullYear()}`
   }
 }
 
@@ -39,198 +44,211 @@ function getWeekDateRange(date: Date) {
   }
 }
 
-interface ProcessedLoad {
-  id: number
-  date: string
-  driver: string
-  driver_id: number | null
-  truck: string
-  truck_id: number | null
-  rate: number
-  miles: number
-  expense: number
-  profit: number
-}
-
-interface WeekGroup {
+interface WeekData {
   weekKey: string
   weekLabel: string
   weekDateRange: string
-  loads: ProcessedLoad[]
+  gross: number
+  miles: number
+  expenses: number
+  profit: number
+  loadCount: number
+}
+
+interface DriverReportData {
+  driver_id: number
+  driver_name: string
+  driver_type: 'company' | 'owner_operator'
+  weeks: WeekData[]
   totals: {
-    rate: number
+    gross: number
     miles: number
-    expense: number
+    expenses: number
     profit: number
+    loadCount: number
   }
 }
 
-interface DriverGroup {
-  driver: string
-  driver_id: number | null
-  weeks: WeekGroup[]
-  totals: {
-    rate: number
-    miles: number
-    expense: number
-    profit: number
-    loadsCount: number
-  }
-}
+type TabType = 'drivers' | 'owners'
 
 export default function ReportsPage() {
-  const { data: loadsData, isLoading } = useLoads()
+  const { data: loadsData, isLoading: loadsLoading } = useLoads()
+  const { data: driversData, isLoading: driversLoading } = useDrivers()
+  const { data: expensesData, isLoading: expensesLoading } = useExpenses(1, 1000)
+  const { data: fuelData, isLoading: fuelLoading } = useFuel()
+
   const loads = loadsData?.items || []
+  const drivers = driversData?.items || []
+  const expenses = expensesData?.items || []
+  const fuel = fuelData || []
+
+  const [activeTab, setActiveTab] = useState<TabType>('drivers')
   const [searchTerm, setSearchTerm] = useState('')
-  const [expandedDrivers, setExpandedDrivers] = useState<Set<string>>(new Set())
-  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set())
+  const [expandedDrivers, setExpandedDrivers] = useState<Set<number>>(new Set())
 
-  // Process loads to include calculated profit
-  const processedLoads = useMemo(() => {
-    return loads.map(load => {
-      const estimatedExpense = (load.rate || 0) * 0.65 // Assume 65% of rate goes to expenses
-      const profit = (load.rate || 0) - estimatedExpense
+  const isLoading = loadsLoading || driversLoading || expensesLoading || fuelLoading
 
-      return {
-        id: load.id,
-        date: load.pickup_date || load.created_at,
-        driver: load.driver ? `${load.driver.first_name} ${load.driver.last_name}` : 'Unassigned',
-        driver_id: load.driver_id,
-        truck: load.truck ? load.truck.truck_number : 'N/A',
-        truck_id: load.truck_id,
-        rate: load.rate || 0,
-        miles: load.miles || 0,
-        expense: estimatedExpense,
-        profit: profit,
-      }
-    })
-  }, [loads])
+  // Build expense lookup by driver and week
+  const expensesByDriverWeek = useMemo(() => {
+    const map = new Map<string, number>()
 
-  // Group loads by driver and week
-  const groupedData = useMemo(() => {
-    const filtered = processedLoads.filter(load => {
-      const matchesSearch = searchTerm === '' ||
-        load.driver.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        load.truck.toLowerCase().includes(searchTerm.toLowerCase())
-      return matchesSearch
+    // Add expenses
+    expenses.forEach(expense => {
+      if (!expense.driver_id || !expense.date) return
+      const expenseDate = new Date(expense.date + 'T00:00:00')
+      const weekInfo = getISOWeekInfo(expenseDate)
+      const key = `${expense.driver_id}-${weekInfo.year}-${weekInfo.week}`
+      map.set(key, (map.get(key) || 0) + Number(expense.amount || 0))
     })
 
-    const driverMap = new Map<string, DriverGroup>()
+    // Add fuel
+    fuel.forEach(f => {
+      if (!f.driver_id || !f.date) return
+      const fuelDate = new Date(f.date + 'T00:00:00')
+      const weekInfo = getISOWeekInfo(fuelDate)
+      const key = `${f.driver_id}-${weekInfo.year}-${weekInfo.week}`
+      map.set(key, (map.get(key) || 0) + Number(f.total_amount || 0))
+    })
 
-    filtered.forEach(load => {
-      if (!load.date) return
+    return map
+  }, [expenses, fuel])
 
-      const loadDate = new Date(load.date)
-      const weekInfo = getWeekInfo(loadDate)
+  // Process data grouped by driver and week
+  const reportData = useMemo(() => {
+    const driverMap = new Map<number, DriverReportData>()
+
+    // Initialize with all drivers
+    drivers.forEach(driver => {
+      driverMap.set(driver.id, {
+        driver_id: driver.id,
+        driver_name: `${driver.first_name} ${driver.last_name}`,
+        driver_type: driver.driver_type || 'company',
+        weeks: [],
+        totals: { gross: 0, miles: 0, expenses: 0, profit: 0, loadCount: 0 }
+      })
+    })
+
+    // Group loads by driver and week
+    const weekMap = new Map<string, WeekData>()
+
+    loads.forEach(load => {
+      if (!load.driver_id || !load.pickup_date) return
+
+      const loadDate = new Date(load.pickup_date + 'T00:00:00')
+      const weekInfo = getISOWeekInfo(loadDate)
       const weekDateRange = getWeekDateRange(loadDate)
-      const weekKey = `${weekInfo.year}-W${weekInfo.week}`
-      const driverKey = load.driver
+      const driverWeekKey = `${load.driver_id}-${weekInfo.year}-${weekInfo.week}`
 
-      if (!driverMap.has(driverKey)) {
-        driverMap.set(driverKey, {
-          driver: load.driver,
-          driver_id: load.driver_id,
-          weeks: [],
-          totals: { rate: 0, miles: 0, expense: 0, profit: 0, loadsCount: 0 }
+      if (!weekMap.has(driverWeekKey)) {
+        weekMap.set(driverWeekKey, {
+          weekKey: `${weekInfo.year}-W${weekInfo.week}`,
+          weekLabel: weekInfo.label,
+          weekDateRange: weekDateRange.label,
+          gross: 0,
+          miles: 0,
+          expenses: 0,
+          profit: 0,
+          loadCount: 0
         })
       }
 
-      const driverGroup = driverMap.get(driverKey)!
-      let weekGroup = driverGroup.weeks.find(w => w.weekKey === weekKey)
+      const weekData = weekMap.get(driverWeekKey)!
+      weekData.gross += Number(load.rate || 0)
+      weekData.miles += Number(load.miles || 0)
+      weekData.loadCount += 1
+    })
 
-      if (!weekGroup) {
-        weekGroup = {
-          weekKey,
-          weekLabel: weekInfo.label,
-          weekDateRange: weekDateRange.label,
-          loads: [],
-          totals: { rate: 0, miles: 0, expense: 0, profit: 0 }
-        }
-        driverGroup.weeks.push(weekGroup)
+    // Add expense data to weeks and build driver data
+    weekMap.forEach((weekData, key) => {
+      const [driverIdStr, year, week] = key.split('-')
+      const driverId = parseInt(driverIdStr)
+      const expenseKey = `${driverId}-${year}-${week}`
+      weekData.expenses = expensesByDriverWeek.get(expenseKey) || 0
+      weekData.profit = weekData.gross - weekData.expenses
+
+      const driverData = driverMap.get(driverId)
+      if (driverData) {
+        driverData.weeks.push(weekData)
+        driverData.totals.gross += weekData.gross
+        driverData.totals.miles += weekData.miles
+        driverData.totals.expenses += weekData.expenses
+        driverData.totals.profit += weekData.profit
+        driverData.totals.loadCount += weekData.loadCount
       }
-
-      weekGroup.loads.push(load)
-      weekGroup.totals.rate += load.rate
-      weekGroup.totals.miles += load.miles
-      weekGroup.totals.expense += load.expense
-      weekGroup.totals.profit += load.profit
-
-      driverGroup.totals.rate += load.rate
-      driverGroup.totals.miles += load.miles
-      driverGroup.totals.expense += load.expense
-      driverGroup.totals.profit += load.profit
-      driverGroup.totals.loadsCount += 1
     })
 
     // Sort weeks within each driver (most recent first)
-    driverMap.forEach(driverGroup => {
-      driverGroup.weeks.sort((a, b) => b.weekKey.localeCompare(a.weekKey))
+    driverMap.forEach(driverData => {
+      driverData.weeks.sort((a, b) => b.weekKey.localeCompare(a.weekKey))
     })
 
-    return Array.from(driverMap.values()).sort((a, b) => a.driver.localeCompare(b.driver))
-  }, [processedLoads, searchTerm])
+    return Array.from(driverMap.values())
+  }, [loads, drivers, expensesByDriverWeek])
 
-  // Calculate grand totals
+  // Filter by tab and search
+  const filteredData = useMemo(() => {
+    return reportData
+      .filter(d => {
+        // Filter by tab
+        if (activeTab === 'drivers' && d.driver_type !== 'company') return false
+        if (activeTab === 'owners' && d.driver_type !== 'owner_operator') return false
+
+        // Filter by search
+        if (searchTerm && !d.driver_name.toLowerCase().includes(searchTerm.toLowerCase())) {
+          return false
+        }
+
+        // Only show drivers with data
+        return d.totals.loadCount > 0
+      })
+      .sort((a, b) => a.driver_name.localeCompare(b.driver_name))
+  }, [reportData, activeTab, searchTerm])
+
+  // Calculate grand totals for current tab
   const grandTotals = useMemo(() => {
-    return groupedData.reduce((acc, driver) => ({
-      rate: acc.rate + driver.totals.rate,
+    return filteredData.reduce((acc, driver) => ({
+      gross: acc.gross + driver.totals.gross,
       miles: acc.miles + driver.totals.miles,
-      expense: acc.expense + driver.totals.expense,
+      expenses: acc.expenses + driver.totals.expenses,
       profit: acc.profit + driver.totals.profit,
-      loadsCount: acc.loadsCount + driver.totals.loadsCount
-    }), { rate: 0, miles: 0, expense: 0, profit: 0, loadsCount: 0 })
-  }, [groupedData])
+      loadCount: acc.loadCount + driver.totals.loadCount
+    }), { gross: 0, miles: 0, expenses: 0, profit: 0, loadCount: 0 })
+  }, [filteredData])
 
-  const toggleDriver = (driver: string) => {
+  const toggleDriver = (driverId: number) => {
     const newExpanded = new Set(expandedDrivers)
-    if (newExpanded.has(driver)) {
-      newExpanded.delete(driver)
+    if (newExpanded.has(driverId)) {
+      newExpanded.delete(driverId)
     } else {
-      newExpanded.add(driver)
+      newExpanded.add(driverId)
     }
     setExpandedDrivers(newExpanded)
   }
 
-  const toggleWeek = (weekKey: string) => {
-    const newExpanded = new Set(expandedWeeks)
-    if (newExpanded.has(weekKey)) {
-      newExpanded.delete(weekKey)
-    } else {
-      newExpanded.add(weekKey)
-    }
-    setExpandedWeeks(newExpanded)
-  }
-
   const expandAll = () => {
-    const allDrivers = new Set(groupedData.map(d => d.driver))
-    const allWeeks = new Set(groupedData.flatMap(d => d.weeks.map(w => w.weekKey)))
-    setExpandedDrivers(allDrivers)
-    setExpandedWeeks(allWeeks)
+    const allDriverIds = new Set(filteredData.map(d => d.driver_id))
+    setExpandedDrivers(allDriverIds)
   }
 
   const collapseAll = () => {
     setExpandedDrivers(new Set())
-    setExpandedWeeks(new Set())
   }
 
   // Export to CSV
   const exportToCSV = () => {
-    const rows: string[] = ['Driver,Week,Date,Truck,Rate,Miles,Expense,Profit']
+    const rows: string[] = ['Driver,Type,Week,Gross,Miles,Expenses,Profit']
 
-    groupedData.forEach(driver => {
+    filteredData.forEach(driver => {
       driver.weeks.forEach(week => {
-        week.loads.forEach(load => {
-          rows.push([
-            driver.driver,
-            week.weekLabel,
-            load.date ? new Date(load.date).toLocaleDateString() : '',
-            load.truck,
-            load.rate,
-            load.miles,
-            load.expense.toFixed(2),
-            load.profit.toFixed(2)
-          ].join(','))
-        })
+        rows.push([
+          driver.driver_name,
+          driver.driver_type === 'owner_operator' ? 'Owner Operator' : 'Company',
+          week.weekLabel,
+          week.gross.toFixed(2),
+          week.miles,
+          week.expenses.toFixed(2),
+          week.profit.toFixed(2)
+        ].join(','))
       })
     })
 
@@ -239,7 +257,7 @@ export default function ReportsPage() {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `loads-report-grouped-${Date.now()}.csv`
+    a.download = `${activeTab}-report-${Date.now()}.csv`
     a.click()
   }
 
@@ -265,7 +283,7 @@ export default function ReportsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Reports</h1>
-            <p className="text-gray-600">Loads grouped by driver and week</p>
+            <p className="text-gray-600">Financial reports grouped by driver and week</p>
           </div>
           <div className="flex gap-2">
             <Button onClick={expandAll} variant="outline">
@@ -281,11 +299,39 @@ export default function ReportsPage() {
           </div>
         </div>
 
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('drivers')}
+              className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'drivers'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              Company Drivers
+            </button>
+            <button
+              onClick={() => setActiveTab('owners')}
+              className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'owners'
+                  ? 'border-orange-500 text-orange-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Truck className="h-4 w-4" />
+              Owner Operators
+            </button>
+          </nav>
+        </div>
+
         {/* Search */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search by driver or truck..."
+            placeholder="Search by name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -296,15 +342,15 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Loads</div>
-            <div className="text-3xl font-bold text-blue-600">{grandTotals.loadsCount}</div>
+            <div className="text-3xl font-bold text-blue-600">{grandTotals.loadCount}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="text-sm text-gray-600 mb-1">Total Revenue</div>
-            <div className="text-3xl font-bold" style={{color: '#1a5f2a'}}>{formatCurrency(grandTotals.rate)}</div>
+            <div className="text-sm text-gray-600 mb-1">Total Gross</div>
+            <div className="text-3xl font-bold" style={{color: '#1a5f2a'}}>{formatCurrency(grandTotals.gross)}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Expenses</div>
-            <div className="text-3xl font-bold text-red-600">{formatCurrency(grandTotals.expense)}</div>
+            <div className="text-3xl font-bold text-red-600">{formatCurrency(grandTotals.expenses)}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Profit</div>
@@ -314,13 +360,17 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Grouped Table */}
-        {groupedData.length === 0 ? (
+        {/* Data Table */}
+        {filteredData.length === 0 ? (
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <TrendingUp className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">No Loads Found</h2>
-              <p className="text-gray-600">No loads match your current filters.</p>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">No Data Found</h2>
+              <p className="text-gray-600">
+                {activeTab === 'drivers'
+                  ? 'No company drivers with loads found.'
+                  : 'No owner operators with loads found.'}
+              </p>
             </div>
           </div>
         ) : (
@@ -329,20 +379,17 @@ export default function ReportsPage() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[250px]">
-                      Driver / Week / Date
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                      Truck
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[300px]">
+                      {activeTab === 'drivers' ? 'Driver' : 'Owner'} / Week
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                      Rate
+                      Gross
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
                       Miles
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                      Expense
+                      Expenses
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] bg-green-50">
                       Profit
@@ -350,111 +397,76 @@ export default function ReportsPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white">
-                  {groupedData.map((driverGroup) => {
-                    const isDriverExpanded = expandedDrivers.has(driverGroup.driver)
+                  {filteredData.map((driverData) => {
+                    const isExpanded = expandedDrivers.has(driverData.driver_id)
 
                     return (
-                      <React.Fragment key={driverGroup.driver}>
+                      <React.Fragment key={driverData.driver_id}>
                         {/* Driver Row */}
                         <tr
                           className="border-t-2 border-gray-300 cursor-pointer hover:bg-groupDriver/80 bg-groupDriver"
-                          onClick={() => toggleDriver(driverGroup.driver)}
+                          onClick={() => toggleDriver(driverData.driver_id)}
                         >
                           <td className="px-4 py-3 text-sm font-bold text-gray-900">
                             <div className="flex items-center gap-2">
-                              {isDriverExpanded ? (
+                              {isExpanded ? (
                                 <ChevronDown className="h-4 w-4 text-gray-600" />
                               ) : (
                                 <ChevronRight className="h-4 w-4 text-gray-600" />
                               )}
-                              <span>{driverGroup.driver}</span>
-                              <span className="text-gray-500 font-normal">({driverGroup.totals.loadsCount} loads)</span>
+                              <span>{driverData.driver_name}</span>
+                              <span className="text-gray-500 font-normal">
+                                ({driverData.totals.loadCount} loads, {driverData.weeks.length} weeks)
+                              </span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-gray-600">
-                            {driverGroup.weeks.length} weeks
-                          </td>
                           <td className="px-4 py-3 text-sm text-right font-bold" style={{color: '#1a5f2a'}}>
-                            {formatCurrency(driverGroup.totals.rate)}
+                            {formatCurrency(driverData.totals.gross)}
                           </td>
                           <td className="px-4 py-3 text-sm text-right font-bold text-gray-900">
-                            {driverGroup.totals.miles.toLocaleString()}
+                            {driverData.totals.miles.toLocaleString()}
                           </td>
                           <td className="px-4 py-3 text-sm text-right font-bold text-red-600">
-                            {formatCurrency(driverGroup.totals.expense)}
+                            {formatCurrency(driverData.totals.expenses)}
                           </td>
-                          <td className="px-4 py-3 text-sm text-right font-bold" style={{backgroundColor: 'rgba(26, 95, 42, 0.1)', color: driverGroup.totals.profit >= 0 ? '#1a5f2a' : '#b91c1c'}}>
-                            {formatCurrency(driverGroup.totals.profit)}
+                          <td className="px-4 py-3 text-sm text-right font-bold" style={{
+                            backgroundColor: 'rgba(26, 95, 42, 0.1)',
+                            color: driverData.totals.profit >= 0 ? '#1a5f2a' : '#b91c1c'
+                          }}>
+                            {formatCurrency(driverData.totals.profit)}
                           </td>
                         </tr>
 
                         {/* Week Rows */}
-                        {isDriverExpanded && driverGroup.weeks.map((weekGroup) => {
-                          const isWeekExpanded = expandedWeeks.has(weekGroup.weekKey)
-
-                          return (
-                            <React.Fragment key={weekGroup.weekKey}>
-                              <tr
-                                className="border-t border-gray-200 cursor-pointer hover:bg-groupWeek/80 bg-groupWeek"
-                                onClick={() => toggleWeek(weekGroup.weekKey)}
-                              >
-                                <td className="px-4 py-2 text-sm font-semibold text-gray-800 pl-12">
-                                  <div className="flex items-center gap-2">
-                                    {isWeekExpanded ? (
-                                      <ChevronDown className="h-4 w-4 text-gray-600" />
-                                    ) : (
-                                      <ChevronRight className="h-4 w-4 text-gray-600" />
-                                    )}
-                                    <span>{weekGroup.weekLabel}</span>
-                                    <span className="text-gray-500 text-xs">({weekGroup.weekDateRange})</span>
-                                    <span className="text-gray-500 font-normal">- {weekGroup.loads.length} loads</span>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-2 text-sm text-gray-600"></td>
-                                <td className="px-4 py-2 text-sm text-right font-semibold" style={{color: '#1a5f2a'}}>
-                                  {formatCurrency(weekGroup.totals.rate)}
-                                </td>
-                                <td className="px-4 py-2 text-sm text-right font-semibold text-gray-900">
-                                  {weekGroup.totals.miles.toLocaleString()}
-                                </td>
-                                <td className="px-4 py-2 text-sm text-right font-semibold text-red-600">
-                                  {formatCurrency(weekGroup.totals.expense)}
-                                </td>
-                                <td className="px-4 py-2 text-sm text-right font-semibold" style={{backgroundColor: 'rgba(26, 95, 42, 0.05)', color: weekGroup.totals.profit >= 0 ? '#1a5f2a' : '#b91c1c'}}>
-                                  {formatCurrency(weekGroup.totals.profit)}
-                                </td>
-                              </tr>
-
-                              {/* Load Rows */}
-                              {isWeekExpanded && weekGroup.loads.map((load) => (
-                                <tr key={load.id} className="hover:bg-gray-50 border-b border-gray-100">
-                                  <td className="px-4 py-2 text-sm text-gray-900 pl-20">
-                                    {load.date ? new Date(load.date).toLocaleDateString('en-US', {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      year: 'numeric'
-                                    }) : 'N/A'}
-                                  </td>
-                                  <td className="px-4 py-2 text-sm text-gray-900">
-                                    {load.truck}
-                                  </td>
-                                  <td className="px-4 py-2 text-sm text-right" style={{color: '#1a5f2a'}}>
-                                    {formatCurrency(load.rate)}
-                                  </td>
-                                  <td className="px-4 py-2 text-sm text-right text-gray-900">
-                                    {load.miles.toLocaleString()}
-                                  </td>
-                                  <td className="px-4 py-2 text-sm text-right text-red-600">
-                                    {formatCurrency(load.expense)}
-                                  </td>
-                                  <td className="px-4 py-2 text-sm text-right font-semibold" style={{backgroundColor: 'rgba(26, 95, 42, 0.05)', color: load.profit >= 0 ? '#1a5f2a' : '#b91c1c'}}>
-                                    {formatCurrency(load.profit)}
-                                  </td>
-                                </tr>
-                              ))}
-                            </React.Fragment>
-                          )
-                        })}
+                        {isExpanded && driverData.weeks.map((week) => (
+                          <tr
+                            key={week.weekKey}
+                            className="border-t border-gray-200 bg-groupWeek hover:bg-groupWeek/80"
+                          >
+                            <td className="px-4 py-2 text-sm text-gray-800 pl-12">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{week.weekLabel}</span>
+                                <span className="text-gray-500 text-xs">({week.weekDateRange})</span>
+                                <span className="text-gray-500">- {week.loadCount} loads</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-2 text-sm text-right font-semibold" style={{color: '#1a5f2a'}}>
+                              {formatCurrency(week.gross)}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-right font-semibold text-gray-900">
+                              {week.miles.toLocaleString()}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-right font-semibold text-red-600">
+                              {formatCurrency(week.expenses)}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-right font-semibold" style={{
+                              backgroundColor: 'rgba(26, 95, 42, 0.05)',
+                              color: week.profit >= 0 ? '#1a5f2a' : '#b91c1c'
+                            }}>
+                              {formatCurrency(week.profit)}
+                            </td>
+                          </tr>
+                        ))}
                       </React.Fragment>
                     )
                   })}
