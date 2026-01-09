@@ -2,52 +2,67 @@
 """
 Add fuel card columns to drivers table.
 """
-import asyncio
 import os
 import sys
-
-# Add the app directory to the path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from sqlalchemy import text
-from app.database import async_engine
+import psycopg2
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 
-async def add_fuel_card_columns():
+def get_db_connection():
+    """Get database connection from environment"""
+    database_url = os.environ.get("DATABASE_URL")
+
+    if not database_url:
+        # Try to parse from JSON secret
+        import json
+        secret_json = os.environ.get("DATABASE_SECRET_JSON")
+        if secret_json:
+            secret = json.loads(secret_json)
+            database_url = f"postgresql://{secret['username']}:{secret['password']}@{secret['host']}:{secret['port']}/{secret['dbname']}"
+
+    if not database_url:
+        print("ERROR: No database connection info found")
+        sys.exit(1)
+
+    # Convert asyncpg URL to psycopg2 format
+    if "postgresql+asyncpg://" in database_url:
+        database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
+
+    return psycopg2.connect(database_url)
+
+
+def add_fuel_card_columns():
     """Add has_fuel_card and fuel_card_number columns to drivers table."""
-    async with async_engine.begin() as conn:
-        # Check if columns exist
-        result = await conn.execute(text("""
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_name = 'drivers' AND column_name IN ('has_fuel_card', 'fuel_card_number')
-        """))
-        existing_columns = {row[0] for row in result.fetchall()}
+    conn = get_db_connection()
+    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    cursor = conn.cursor()
 
-        # Add has_fuel_card column if it doesn't exist
-        if 'has_fuel_card' not in existing_columns:
-            print("Adding has_fuel_card column to drivers table...")
-            await conn.execute(text("""
-                ALTER TABLE drivers
-                ADD COLUMN has_fuel_card BOOLEAN NOT NULL DEFAULT FALSE
-            """))
-            print("✅ Added has_fuel_card column")
-        else:
-            print("ℹ️ has_fuel_card column already exists")
+    columns_to_add = [
+        ("has_fuel_card", "BOOLEAN NOT NULL DEFAULT FALSE"),
+        ("fuel_card_number", "VARCHAR"),
+    ]
 
-        # Add fuel_card_number column if it doesn't exist
-        if 'fuel_card_number' not in existing_columns:
-            print("Adding fuel_card_number column to drivers table...")
-            await conn.execute(text("""
-                ALTER TABLE drivers
-                ADD COLUMN fuel_card_number VARCHAR NULL
-            """))
-            print("✅ Added fuel_card_number column")
-        else:
-            print("ℹ️ fuel_card_number column already exists")
+    for column_name, column_type in columns_to_add:
+        try:
+            # Check if column exists
+            cursor.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'drivers' AND column_name = %s
+            """, (column_name,))
 
-        print("✅ Fuel card columns migration complete!")
+            if cursor.fetchone() is None:
+                print(f"Adding column {column_name} to drivers table...")
+                cursor.execute(f"ALTER TABLE drivers ADD COLUMN {column_name} {column_type}")
+                print(f"  ✅ Added {column_name}")
+            else:
+                print(f"  ℹ️ Column {column_name} already exists")
+        except Exception as e:
+            print(f"  ⚠️ Warning: Could not add {column_name}: {e}")
+
+    cursor.close()
+    conn.close()
+    print("✅ Fuel card columns migration complete!")
 
 
 if __name__ == "__main__":
-    asyncio.run(add_fuel_card_columns())
+    add_fuel_card_columns()
