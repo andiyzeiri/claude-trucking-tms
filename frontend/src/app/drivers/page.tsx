@@ -1,22 +1,26 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { DataTable, Column } from '@/components/ui/data-table'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
 import { DriverModal, DriverData } from '@/components/drivers/driver-modal'
-import { Plus, Users, Phone, Mail, Edit, Trash2, Check, CreditCard } from 'lucide-react'
+import { Plus, Users, Phone, Mail, Edit, Trash2, Check, Truck } from 'lucide-react'
 import { useDrivers, useCreateDriver, useUpdateDriver, useDeleteDriver } from '@/hooks/use-drivers'
+
+type TabType = 'drivers' | 'owners'
 
 export default function DriversPage() {
   // Fetch drivers from API
   const { data: driversData, isLoading } = useDrivers()
-  const drivers = driversData?.items || []
+  const allDrivers = driversData?.items || []
   const createDriver = useCreateDriver()
   const updateDriver = useUpdateDriver()
   const deleteDriver = useDeleteDriver()
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<TabType>('drivers')
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -28,9 +32,21 @@ export default function DriversPage() {
     isVisible: boolean
     x: number
     y: number
-    row: typeof drivers[0] | null
+    row: typeof allDrivers[0] | null
   }>({ isVisible: false, x: 0, y: 0, row: null })
 
+  // Filter drivers by type
+  const companyDrivers = useMemo(() =>
+    allDrivers.filter(d => d.driver_type !== 'owner_operator'),
+    [allDrivers]
+  )
+  const ownerOperators = useMemo(() =>
+    allDrivers.filter(d => d.driver_type === 'owner_operator'),
+    [allDrivers]
+  )
+
+  // Get current filtered list based on active tab
+  const drivers = activeTab === 'drivers' ? companyDrivers : ownerOperators
 
   // CRUD operations
   const handleCreateDriver = () => {
@@ -39,7 +55,7 @@ export default function DriversPage() {
     setIsModalOpen(true)
   }
 
-  const handleEditDriver = (driver: typeof drivers[0]) => {
+  const handleEditDriver = (driver: typeof allDrivers[0]) => {
     const driverData: DriverData = {
       id: driver.id,
       first_name: driver.first_name || '',
@@ -70,6 +86,11 @@ export default function DriversPage() {
   }
 
   const handleSaveDriver = (driverData: DriverData) => {
+    // Use the current tab to set driver_type for new drivers
+    const driverType = modalMode === 'create'
+      ? (activeTab === 'owners' ? 'owner_operator' : 'company')
+      : (driverData.driver_type || 'company')
+
     const backendData = {
       first_name: driverData.first_name,
       last_name: driverData.last_name,
@@ -77,7 +98,7 @@ export default function DriversPage() {
       phone: driverData.phone,
       email: driverData.email,
       status: driverData.status,
-      driver_type: driverData.driver_type || 'company',
+      driver_type: driverType,
       date_hired: driverData.date_hired || null,
       date_terminated: driverData.date_terminated || null,
       date_of_birth: driverData.date_of_birth || null,
@@ -97,7 +118,7 @@ export default function DriversPage() {
   }
 
   // Context menu handlers
-  const handleRowRightClick = (row: typeof drivers[0], event: React.MouseEvent) => {
+  const handleRowRightClick = (row: typeof allDrivers[0], event: React.MouseEvent) => {
     setContextMenu({
       isVisible: true,
       x: event.clientX,
@@ -125,7 +146,7 @@ export default function DriversPage() {
   }
 
 
-  const columns: Column<typeof drivers[0]>[] = [
+  const columns: Column<typeof allDrivers[0]>[] = [
     {
       key: 'first_name',
       label: 'Name',
@@ -182,21 +203,6 @@ export default function DriversPage() {
             'var(--monday-gray)'
         }}>
           {value}
-        </span>
-      )
-    },
-    {
-      key: 'driver_type',
-      label: 'Type',
-      width: '130px',
-      filterable: true,
-      groupable: true,
-      render: (value) => (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style={{
-          backgroundColor: value === 'owner_operator' ? 'rgba(255, 183, 77, 0.15)' : 'rgba(33, 150, 243, 0.15)',
-          color: value === 'owner_operator' ? '#f57c00' : '#1976d2'
-        }}>
-          {value === 'owner_operator' ? 'Owner Operator' : 'Company'}
         </span>
       )
     },
@@ -319,15 +325,53 @@ export default function DriversPage() {
           </div>
           <Button className="hover:opacity-90" style={{ backgroundColor: 'var(--monday-cornflower)', color: 'white' }} onClick={handleCreateDriver}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Driver
+            Add {activeTab === 'owners' ? 'Owner Operator' : 'Driver'}
           </Button>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('drivers')}
+              className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'drivers'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              Company Drivers
+              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                activeTab === 'drivers' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {companyDrivers.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('owners')}
+              className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'owners'
+                  ? 'border-orange-500 text-orange-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Truck className="h-4 w-4" />
+              Owner Operators
+              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                activeTab === 'owners' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {ownerOperators.length}
+              </span>
+            </button>
+          </nav>
         </div>
 
         <DataTable
           data={drivers}
           columns={columns}
           onRowRightClick={handleRowRightClick}
-          tableId="drivers-table"
+          tableId={`${activeTab}-table`}
         />
 
         <DriverModal
@@ -348,14 +392,14 @@ export default function DriversPage() {
             onClick={handleContextEdit}
             icon={<Edit className="h-4 w-4" />}
           >
-            Edit Driver
+            Edit {activeTab === 'owners' ? 'Owner' : 'Driver'}
           </ContextMenuItem>
           <ContextMenuItem
             onClick={handleContextDelete}
             icon={<Trash2 className="h-4 w-4" />}
             className="text-red-600 hover:bg-red-50"
           >
-            Delete Driver
+            Delete {activeTab === 'owners' ? 'Owner' : 'Driver'}
           </ContextMenuItem>
         </ContextMenu>
       </div>
