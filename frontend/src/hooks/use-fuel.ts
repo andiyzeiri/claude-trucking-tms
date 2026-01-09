@@ -3,6 +3,23 @@ import api from '@/lib/api'
 import { Fuel } from '@/types'
 import toast from 'react-hot-toast'
 
+// Helper to extract error message from Pydantic validation errors
+function getErrorMessage(error: any, fallback: string): string {
+  const detail = error.response?.data?.detail
+  if (typeof detail === 'string') {
+    return detail
+  }
+  if (Array.isArray(detail) && detail.length > 0) {
+    // Pydantic validation error format: [{loc, msg, type}, ...]
+    const firstError = detail[0]
+    if (firstError.msg) {
+      const field = firstError.loc?.slice(-1)[0] || 'field'
+      return `${field}: ${firstError.msg}`
+    }
+  }
+  return fallback
+}
+
 interface FuelFormData {
   date: string
   location?: string
@@ -52,7 +69,7 @@ export function useCreateFuel() {
       toast.success('Fuel entry created successfully')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Failed to create fuel entry')
+      toast.error(getErrorMessage(error, 'Failed to create fuel entry'))
     }
   })
 }
@@ -70,7 +87,7 @@ export function useUpdateFuel() {
       toast.success('Fuel entry updated successfully')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Failed to update fuel entry')
+      toast.error(getErrorMessage(error, 'Failed to update fuel entry'))
     }
   })
 }
@@ -87,7 +104,7 @@ export function useDeleteFuel() {
       toast.success('Fuel entry deleted successfully')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Failed to delete fuel entry')
+      toast.error(getErrorMessage(error, 'Failed to delete fuel entry'))
     }
   })
 }
