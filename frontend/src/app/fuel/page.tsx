@@ -173,6 +173,7 @@ export default function FuelPage() {
     const years = new Set<number>()
     const currentYear = new Date().getFullYear()
     years.add(currentYear) // Always include current year
+    years.add(currentYear - 1) // Always include previous year (e.g., 2024 for week 52)
 
     fuelEntriesWithYear.forEach(entry => {
       if (entry.isoYear >= 2020 && entry.isoYear <= currentYear + 2) {
