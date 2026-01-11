@@ -740,6 +740,9 @@ export default function FuelPage() {
                   Total Gallons
                 </th>
                 <th className="px-4 py-3 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
+                  MPG
+                </th>
+                <th className="px-4 py-3 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
                   Avg Price/Gal
                 </th>
                 <th className="px-4 py-3 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
@@ -753,7 +756,7 @@ export default function FuelPage() {
             <tbody>
               {summaryByTruck.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                     No fuel data available
                   </td>
                 </tr>
@@ -780,6 +783,9 @@ export default function FuelPage() {
                         {truck.totalGallons > 0 ? truck.totalGallons.toFixed(1) : '-'}
                       </td>
                       <td className="px-4 py-3 text-right" style={{ color: 'var(--monday-text-primary)' }}>
+                        {truck.totalMiles > 0 && truck.totalGallons > 0 ? (truck.totalMiles / truck.totalGallons).toFixed(2) : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-right" style={{ color: 'var(--monday-text-primary)' }}>
                         {truck.avgPricePerGallon > 0 ? `$${truck.avgPricePerGallon.toFixed(3)}` : '-'}
                       </td>
                       <td className="px-4 py-3 text-right" style={{ color: 'var(--monday-text-primary)' }}>
@@ -800,6 +806,9 @@ export default function FuelPage() {
                     </td>
                     <td className="px-4 py-3 text-right font-bold" style={{ color: 'var(--monday-text-primary)' }}>
                       {summaryTotals.totalGallons.toFixed(1)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold" style={{ color: 'var(--monday-text-primary)' }}>
+                      {summaryTotals.totalMiles > 0 && summaryTotals.totalGallons > 0 ? (summaryTotals.totalMiles / summaryTotals.totalGallons).toFixed(2) : '-'}
                     </td>
                     <td className="px-4 py-3 text-right font-bold" style={{ color: 'var(--monday-text-primary)' }}>
                       {summaryTotals.totalGallons > 0 ? `$${(summaryTotals.totalFuelPrice / summaryTotals.totalGallons).toFixed(3)}` : '-'}
