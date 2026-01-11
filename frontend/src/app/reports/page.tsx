@@ -100,9 +100,10 @@ interface DriverReportData {
 type TabType = 'drivers' | 'owners'
 
 export default function ReportsPage() {
-  const { data: loadsData, isLoading: loadsLoading } = useLoads()
+  // Fetch ALL data - use large limit to get everything
+  const { data: loadsData, isLoading: loadsLoading } = useLoads(1, 10000)
   const { data: driversData, isLoading: driversLoading } = useDrivers()
-  const { data: expensesData, isLoading: expensesLoading } = useExpenses(1, 1000)
+  const { data: expensesData, isLoading: expensesLoading } = useExpenses(1, 10000)
   const { data: fuelData, isLoading: fuelLoading } = useFuel()
 
   const loads = loadsData?.items || []
@@ -126,26 +127,41 @@ export default function ReportsPage() {
     loads.forEach(load => {
       if (load.pickup_date) {
         const loadDate = new Date(load.pickup_date + 'T00:00:00')
-        const weekInfo = getISOWeekInfo(loadDate)
-        years.add(weekInfo.year)
+        if (!isNaN(loadDate.getTime())) {
+          const weekInfo = getISOWeekInfo(loadDate)
+          if (!isNaN(weekInfo.year)) {
+            years.add(weekInfo.year)
+          }
+        }
       }
     })
 
     expenses.forEach(expense => {
       if (expense.date) {
         const expenseDate = new Date(expense.date + 'T00:00:00')
-        years.add(expenseDate.getFullYear())
+        if (!isNaN(expenseDate.getTime())) {
+          const year = expenseDate.getFullYear()
+          if (!isNaN(year)) {
+            years.add(year)
+          }
+        }
       }
     })
 
     fuel.forEach(f => {
       if (f.date) {
         const fuelDate = new Date(f.date + 'T00:00:00')
-        years.add(fuelDate.getFullYear())
+        if (!isNaN(fuelDate.getTime())) {
+          const year = fuelDate.getFullYear()
+          if (!isNaN(year)) {
+            years.add(year)
+          }
+        }
       }
     })
 
-    return Array.from(years).sort((a, b) => b - a) // Sort descending (newest first)
+    // Filter out any NaN values and sort descending (newest first)
+    return Array.from(years).filter(y => !isNaN(y)).sort((a, b) => b - a)
   }, [loads, expenses, fuel])
 
   // Build expense lookup by driver and week (filtered by year)
@@ -156,8 +172,9 @@ export default function ReportsPage() {
     expenses.forEach(expense => {
       if (!expense.driver_id || !expense.date) return
       const expenseDate = new Date(expense.date + 'T00:00:00')
+      if (isNaN(expenseDate.getTime())) return
       const weekInfo = getISOWeekInfo(expenseDate)
-      if (weekInfo.year !== selectedYear) return
+      if (isNaN(weekInfo.year) || weekInfo.year !== selectedYear) return
       const key = `${expense.driver_id}-${weekInfo.year}-${weekInfo.week}`
       map.set(key, (map.get(key) || 0) + safeNumber(expense.amount))
     })
@@ -166,8 +183,9 @@ export default function ReportsPage() {
     fuel.forEach(f => {
       if (!f.driver_id || !f.date) return
       const fuelDate = new Date(f.date + 'T00:00:00')
+      if (isNaN(fuelDate.getTime())) return
       const weekInfo = getISOWeekInfo(fuelDate)
-      if (weekInfo.year !== selectedYear) return
+      if (isNaN(weekInfo.year) || weekInfo.year !== selectedYear) return
       const key = `${f.driver_id}-${weekInfo.year}-${weekInfo.week}`
       map.set(key, (map.get(key) || 0) + safeNumber(f.total_amount))
     })
@@ -199,10 +217,11 @@ export default function ReportsPage() {
       if (!load.driver_id || !load.pickup_date) return
 
       const loadDate = new Date(load.pickup_date + 'T00:00:00')
+      if (isNaN(loadDate.getTime())) return
       const weekInfo = getISOWeekInfo(loadDate)
 
-      // Filter by selected year
-      if (weekInfo.year !== selectedYear) return
+      // Filter by selected year (also check for NaN)
+      if (isNaN(weekInfo.year) || weekInfo.year !== selectedYear) return
 
       const weekDateRange = getWeekDateRange(loadDate)
       const driverWeekKey = `${load.driver_id}-${weekInfo.year}-${weekInfo.week}`
