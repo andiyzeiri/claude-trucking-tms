@@ -16,16 +16,26 @@ type EditingCell = {
   field: string
 } | null
 
-// Helper to get previous week's ending miles for a driver
-function getPreviousWeekEndingMiles(
-  fuelByWeekAndDriver: Record<number, Record<number, FuelEntryWithWeek | null>>,
+// Helper to get previous entry's ending miles for a driver
+// Looks through all entries (sorted by year/week) to find the most recent prior entry
+function getPreviousEndingMiles(
+  sortedEntriesByDriver: Map<number, Array<{ isoYear: number, weekNumber: number, odometer: number | null }>>,
+  currentYear: number,
   weekNum: number,
   driverId: number
 ): number | null {
-  const prevWeek = weekNum - 1
-  if (prevWeek < 1) return null
-  const prevEntry = fuelByWeekAndDriver[prevWeek]?.[driverId]
-  return prevEntry?.odometer ? Number(prevEntry.odometer) : null
+  const driverEntries = sortedEntriesByDriver.get(driverId)
+  if (!driverEntries || driverEntries.length === 0) return null
+
+  // Find the most recent entry BEFORE the current week
+  // Entries are sorted by year desc, week desc
+  for (const entry of driverEntries) {
+    // Check if this entry is before the current week
+    if (entry.isoYear < currentYear || (entry.isoYear === currentYear && entry.weekNumber < weekNum)) {
+      return entry.odometer
+    }
+  }
+  return null
 }
 
 // Helper to get week number from date (ISO 8601)
@@ -284,6 +294,36 @@ export default function FuelPage() {
     return weeks
   }, [])
 
+  // Create sorted entries by driver for weekly miles calculation (uses ALL fuel data, not filtered)
+  const sortedEntriesByDriver = useMemo(() => {
+    const driverMap = new Map<number, Array<{ isoYear: number, weekNumber: number, odometer: number | null }>>()
+
+    // Process ALL fuel entries (not just filtered by year)
+    fuelEntriesWithYear.forEach(entry => {
+      if (!entry.driver_id) return
+
+      if (!driverMap.has(entry.driver_id)) {
+        driverMap.set(entry.driver_id, [])
+      }
+
+      driverMap.get(entry.driver_id)!.push({
+        isoYear: entry.isoYear,
+        weekNumber: entry.weekNumber,
+        odometer: entry.odometer ? Number(entry.odometer) : null
+      })
+    })
+
+    // Sort each driver's entries by year desc, week desc (most recent first)
+    driverMap.forEach((entries) => {
+      entries.sort((a, b) => {
+        if (a.isoYear !== b.isoYear) return b.isoYear - a.isoYear
+        return b.weekNumber - a.weekNumber
+      })
+    })
+
+    return driverMap
+  }, [fuelEntriesWithYear])
+
   // Group fuel entries by week and driver
   const fuelByWeekAndDriver = useMemo(() => {
     const grouped: Record<number, Record<number, FuelEntryWithWeek | null>> = {}
@@ -523,7 +563,7 @@ export default function FuelPage() {
           <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
             {(() => {
               const currentMiles = entry?.odometer ? Number(entry.odometer) : null
-              const prevMiles = getPreviousWeekEndingMiles(fuelByWeekAndDriver, weekNum, driver.id)
+              const prevMiles = getPreviousEndingMiles(sortedEntriesByDriver, selectedYear, weekNum, driver.id)
               if (currentMiles !== null && prevMiles !== null) {
                 const weeklyMiles = currentMiles - prevMiles
                 return weeklyMiles.toLocaleString()
