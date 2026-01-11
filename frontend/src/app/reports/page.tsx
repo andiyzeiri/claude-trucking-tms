@@ -130,6 +130,16 @@ export default function ReportsPage() {
   const expenses = expensesData?.items || []
   const fuel = fuelData || []
 
+  // Debug logging
+  console.log('Reports Debug:', {
+    loadsCount: loads.length,
+    driversCount: drivers.length,
+    sampleLoad: loads[0],
+    sampleDriver: drivers[0],
+    loadsWithDriverId: loads.filter(l => l.driver_id).length,
+    loadsWithPickupDate: loads.filter(l => l.pickup_date).length,
+  })
+
   const [activeTab, setActiveTab] = useState<TabType>('drivers')
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [searchTerm, setSearchTerm] = useState('')
@@ -234,17 +244,39 @@ export default function ReportsPage() {
     // Group loads by driver and week
     const weekMap = new Map<string, WeekData>()
 
+    // Debug: track load processing
+    let processedLoads = 0
+    let skippedNoDriverId = 0
+    let skippedNoPickupDate = 0
+    let skippedInvalidDate = 0
+    let skippedWrongYear = 0
+
     loads.forEach(load => {
-      if (!load.driver_id || !load.pickup_date) return
+      if (!load.driver_id) {
+        skippedNoDriverId++
+        return
+      }
+      if (!load.pickup_date) {
+        skippedNoPickupDate++
+        return
+      }
 
       const loadDate = new Date(normalizeDateTime(load.pickup_date))
-      if (isNaN(loadDate.getTime())) return
+      if (isNaN(loadDate.getTime())) {
+        skippedInvalidDate++
+        return
+      }
 
       const isoYear = getISOWeekYear(loadDate)
       const weekNum = getWeekNumber(loadDate)
 
       // Filter by selected year (also check for NaN)
-      if (isNaN(isoYear) || isoYear !== selectedYear) return
+      if (isNaN(isoYear) || isoYear !== selectedYear) {
+        skippedWrongYear++
+        return
+      }
+
+      processedLoads++
 
       const weekDateRange = getWeekDateRange(loadDate)
       const driverWeekKey = `${load.driver_id}-${isoYear}-${weekNum}`
@@ -267,6 +299,18 @@ export default function ReportsPage() {
       weekData.gross += safeNumber(load.rate)
       weekData.miles += safeNumber(load.miles)
       weekData.loadCount += 1
+    })
+
+    // Debug: log load processing stats
+    console.log('Reports Load Processing:', {
+      selectedYear,
+      totalLoads: loads.length,
+      processedLoads,
+      skippedNoDriverId,
+      skippedNoPickupDate,
+      skippedInvalidDate,
+      skippedWrongYear,
+      weekMapSize: weekMap.size
     })
 
     // Add expense data to weeks and build driver data
