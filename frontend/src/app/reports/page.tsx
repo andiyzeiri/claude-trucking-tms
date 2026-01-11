@@ -18,37 +18,61 @@ function safeNumber(value: any): number {
   return isNaN(num) ? 0 : num
 }
 
-// Helper function to get ISO week number and year
-function getISOWeekInfo(date: Date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-  const dayNum = d.getUTCDay() || 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  const weekNumber = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
-  return {
-    year: d.getUTCFullYear(),
-    week: weekNumber,
-    label: `Week ${weekNumber}`
+// Backend returns datetimes without timezone (e.g., "2024-12-28T14:00:00")
+// JavaScript would parse these as local time, so we append 'Z' to force UTC
+function normalizeDateTime(dateString: string): string {
+  if (!dateString) return dateString
+  // If already has timezone info (Z or +/-offset), return as-is
+  if (dateString.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateString)) {
+    return dateString
   }
+  // Append Z to treat as UTC
+  return dateString + 'Z'
 }
 
-// Helper function to get date range for a week
-function getWeekDateRange(date: Date) {
-  const dayOfWeek = date.getDay()
+// Helper to get week number from date (ISO 8601)
+function getWeekNumber(date: Date): number {
+  // Use UTC methods to get the date components (we store wall-clock time as UTC)
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+
+  // Set to nearest Thursday: current date + 4 - current day number
+  // Make Sunday's day number 7
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+
+  // Get first day of year
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+
+  // Calculate full weeks to nearest Thursday
+  const weekNum = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+
+  return weekNum
+}
+
+// Helper to get ISO week year (the year the week belongs to)
+function getISOWeekYear(date: Date): number {
+  // Use UTC methods to get the date components (we store wall-clock time as UTC)
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  return d.getUTCFullYear()
+}
+
+// Helper to get week date range
+function getWeekDateRange(date: Date): string {
+  // Use UTC methods to avoid timezone conversion (we store wall-clock time as UTC)
+  const dayOfWeek = date.getUTCDay()
   const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek
-  const monday = new Date(date)
-  monday.setDate(date.getDate() + diffToMonday)
-  monday.setHours(0, 0, 0, 0)
+  const monday = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + diffToMonday))
 
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  sunday.setHours(23, 59, 59, 999)
+  const sunday = new Date(Date.UTC(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate() + 6))
 
-  return {
-    start: monday,
-    end: sunday,
-    label: `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-  }
+  const startMonth = monday.getUTCMonth() + 1
+  const startDay = monday.getUTCDate()
+  const endMonth = sunday.getUTCMonth() + 1
+  const endDay = sunday.getUTCDate()
+
+  return `${startMonth}/${startDay}-${endMonth}/${endDay}`
 }
 
 // Helper function to check if a driver was employed during a specific year
@@ -56,13 +80,8 @@ function wasEmployedDuringYear(driver: Driver, year: number): boolean {
   const yearStart = new Date(year, 0, 1)
   const yearEnd = new Date(year, 11, 31)
 
-  // If no hire date, assume they were employed
-  const hireDate = driver.date_hired ? new Date(driver.date_hired + 'T00:00:00') : null
-  const terminationDate = driver.date_terminated ? new Date(driver.date_terminated + 'T00:00:00') : null
-
-  // Driver was employed during the year if:
-  // 1. They were hired before or during the year (or no hire date recorded)
-  // 2. They were not terminated before the year started (or no termination date)
+  const hireDate = driver.date_hired ? new Date(normalizeDateTime(driver.date_hired)) : null
+  const terminationDate = driver.date_terminated ? new Date(normalizeDateTime(driver.date_terminated)) : null
 
   const hiredBeforeYearEnd = !hireDate || hireDate <= yearEnd
   const notTerminatedBeforeYearStart = !terminationDate || terminationDate >= yearStart
@@ -126,11 +145,11 @@ export default function ReportsPage() {
 
     loads.forEach(load => {
       if (load.pickup_date) {
-        const loadDate = new Date(load.pickup_date + 'T00:00:00')
+        const loadDate = new Date(normalizeDateTime(load.pickup_date))
         if (!isNaN(loadDate.getTime())) {
-          const weekInfo = getISOWeekInfo(loadDate)
-          if (!isNaN(weekInfo.year)) {
-            years.add(weekInfo.year)
+          const isoYear = getISOWeekYear(loadDate)
+          if (!isNaN(isoYear)) {
+            years.add(isoYear)
           }
         }
       }
@@ -138,9 +157,9 @@ export default function ReportsPage() {
 
     expenses.forEach(expense => {
       if (expense.date) {
-        const expenseDate = new Date(expense.date + 'T00:00:00')
+        const expenseDate = new Date(normalizeDateTime(expense.date))
         if (!isNaN(expenseDate.getTime())) {
-          const year = expenseDate.getFullYear()
+          const year = expenseDate.getUTCFullYear()
           if (!isNaN(year)) {
             years.add(year)
           }
@@ -150,9 +169,9 @@ export default function ReportsPage() {
 
     fuel.forEach(f => {
       if (f.date) {
-        const fuelDate = new Date(f.date + 'T00:00:00')
+        const fuelDate = new Date(normalizeDateTime(f.date))
         if (!isNaN(fuelDate.getTime())) {
-          const year = fuelDate.getFullYear()
+          const year = fuelDate.getUTCFullYear()
           if (!isNaN(year)) {
             years.add(year)
           }
@@ -171,22 +190,24 @@ export default function ReportsPage() {
     // Add expenses
     expenses.forEach(expense => {
       if (!expense.driver_id || !expense.date) return
-      const expenseDate = new Date(expense.date + 'T00:00:00')
+      const expenseDate = new Date(normalizeDateTime(expense.date))
       if (isNaN(expenseDate.getTime())) return
-      const weekInfo = getISOWeekInfo(expenseDate)
-      if (isNaN(weekInfo.year) || weekInfo.year !== selectedYear) return
-      const key = `${expense.driver_id}-${weekInfo.year}-${weekInfo.week}`
+      const isoYear = getISOWeekYear(expenseDate)
+      const weekNum = getWeekNumber(expenseDate)
+      if (isNaN(isoYear) || isoYear !== selectedYear) return
+      const key = `${expense.driver_id}-${isoYear}-${weekNum}`
       map.set(key, (map.get(key) || 0) + safeNumber(expense.amount))
     })
 
     // Add fuel
     fuel.forEach(f => {
       if (!f.driver_id || !f.date) return
-      const fuelDate = new Date(f.date + 'T00:00:00')
+      const fuelDate = new Date(normalizeDateTime(f.date))
       if (isNaN(fuelDate.getTime())) return
-      const weekInfo = getISOWeekInfo(fuelDate)
-      if (isNaN(weekInfo.year) || weekInfo.year !== selectedYear) return
-      const key = `${f.driver_id}-${weekInfo.year}-${weekInfo.week}`
+      const isoYear = getISOWeekYear(fuelDate)
+      const weekNum = getWeekNumber(fuelDate)
+      if (isNaN(isoYear) || isoYear !== selectedYear) return
+      const key = `${f.driver_id}-${isoYear}-${weekNum}`
       map.set(key, (map.get(key) || 0) + safeNumber(f.total_amount))
     })
 
@@ -216,22 +237,24 @@ export default function ReportsPage() {
     loads.forEach(load => {
       if (!load.driver_id || !load.pickup_date) return
 
-      const loadDate = new Date(load.pickup_date + 'T00:00:00')
+      const loadDate = new Date(normalizeDateTime(load.pickup_date))
       if (isNaN(loadDate.getTime())) return
-      const weekInfo = getISOWeekInfo(loadDate)
+
+      const isoYear = getISOWeekYear(loadDate)
+      const weekNum = getWeekNumber(loadDate)
 
       // Filter by selected year (also check for NaN)
-      if (isNaN(weekInfo.year) || weekInfo.year !== selectedYear) return
+      if (isNaN(isoYear) || isoYear !== selectedYear) return
 
       const weekDateRange = getWeekDateRange(loadDate)
-      const driverWeekKey = `${load.driver_id}-${weekInfo.year}-${weekInfo.week}`
+      const driverWeekKey = `${load.driver_id}-${isoYear}-${weekNum}`
 
       if (!weekMap.has(driverWeekKey)) {
         weekMap.set(driverWeekKey, {
-          weekKey: `${weekInfo.year}-W${String(weekInfo.week).padStart(2, '0')}`,
-          weekLabel: weekInfo.label,
-          weekDateRange: weekDateRange.label,
-          weekNumber: weekInfo.week,
+          weekKey: `${isoYear}-W${String(weekNum).padStart(2, '0')}`,
+          weekLabel: `Week ${weekNum}`,
+          weekDateRange: weekDateRange,
+          weekNumber: weekNum,
           gross: 0,
           miles: 0,
           expenses: 0,
