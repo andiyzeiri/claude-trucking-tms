@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
-import { ChevronRight, ChevronDown, Trash2 } from 'lucide-react'
+import { ChevronRight, ChevronDown, Trash2, Truck, BarChart3 } from 'lucide-react'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
 import { useFuel, useCreateFuel, useUpdateFuel, useDeleteFuel } from '@/hooks/use-fuel'
@@ -134,6 +134,9 @@ interface FuelEntryWithWeek extends Fuel {
   weekNumber: number
 }
 
+// Tab type - either 'summary' or a year number
+type TabType = 'summary' | number
+
 export default function FuelPage() {
   const { data: driversData, isLoading: driversLoading } = useDrivers()
   const { data: trucksData } = useTrucks()
@@ -149,7 +152,7 @@ export default function FuelPage() {
   const [editValues, setEditValues] = useState<Record<string, any>>({})
   const [collapsedWeeks, setCollapsedWeeks] = useState<Set<number>>(new Set())
   const hasInitiallyCollapsed = useRef(false)
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [activeTab, setActiveTab] = useState<TabType>('summary')
 
   // Convert API fuel entries to include week numbers and year
   const fuelEntriesWithYear = useMemo(() => {
@@ -170,7 +173,6 @@ export default function FuelPage() {
     const years = new Set<number>()
     const currentYear = new Date().getFullYear()
     years.add(currentYear) // Always include current year
-    years.add(currentYear + 1) // Always include next year for end-of-year transitions
 
     fuelEntriesWithYear.forEach(entry => {
       if (entry.isoYear >= 2020 && entry.isoYear <= currentYear + 2) {
@@ -181,10 +183,95 @@ export default function FuelPage() {
     return Array.from(years).sort((a, b) => b - a) // Sort descending (newest first)
   }, [fuelEntriesWithYear])
 
-  // Filter fuel entries by selected year
+  // Get selected year for year tab view
+  const selectedYear = typeof activeTab === 'number' ? activeTab : new Date().getFullYear()
+
+  // Filter fuel entries by selected year (only for year tab view)
   const fuelEntries: FuelEntryWithWeek[] = useMemo(() => {
-    return fuelEntriesWithYear.filter(entry => entry.isoYear === selectedYear)
-  }, [fuelEntriesWithYear, selectedYear])
+    if (activeTab === 'summary') return []
+    return fuelEntriesWithYear.filter(entry => entry.isoYear === activeTab)
+  }, [fuelEntriesWithYear, activeTab])
+
+  // Calculate summary data by truck (all time)
+  const summaryByTruck = useMemo(() => {
+    const truckMap = new Map<number, {
+      truck_id: number
+      truck_number: string
+      totalMiles: number
+      totalGallons: number
+      totalFuelPrice: number
+      totalDefPrice: number
+      entryCount: number
+      avgPricePerGallon: number
+    }>()
+
+    // Initialize with all trucks
+    trucks.filter(t => t.type === 'truck').forEach(truck => {
+      truckMap.set(truck.id, {
+        truck_id: truck.id,
+        truck_number: truck.truck_number,
+        totalMiles: 0,
+        totalGallons: 0,
+        totalFuelPrice: 0,
+        totalDefPrice: 0,
+        entryCount: 0,
+        avgPricePerGallon: 0
+      })
+    })
+
+    // Group fuel entries by truck and calculate totals
+    fuelEntriesWithYear.forEach(entry => {
+      if (!entry.truck_id) return
+
+      const truckData = truckMap.get(entry.truck_id)
+      if (truckData) {
+        truckData.totalGallons += Number(entry.gallons) || 0
+        truckData.totalFuelPrice += Number(entry.total_amount) || 0
+        truckData.totalDefPrice += Number(entry.def_price) || 0
+        truckData.entryCount += 1
+      }
+    })
+
+    // Calculate miles from odometer readings (difference between max and min for each truck)
+    const odometerByTruck = new Map<number, number[]>()
+    fuelEntriesWithYear.forEach(entry => {
+      if (!entry.truck_id || !entry.odometer) return
+      if (!odometerByTruck.has(entry.truck_id)) {
+        odometerByTruck.set(entry.truck_id, [])
+      }
+      odometerByTruck.get(entry.truck_id)!.push(Number(entry.odometer))
+    })
+
+    odometerByTruck.forEach((readings, truckId) => {
+      const truckData = truckMap.get(truckId)
+      if (truckData && readings.length > 1) {
+        const minOdometer = Math.min(...readings)
+        const maxOdometer = Math.max(...readings)
+        truckData.totalMiles = maxOdometer - minOdometer
+      }
+    })
+
+    // Calculate average price per gallon
+    truckMap.forEach(truckData => {
+      if (truckData.totalGallons > 0) {
+        truckData.avgPricePerGallon = truckData.totalFuelPrice / truckData.totalGallons
+      }
+    })
+
+    return Array.from(truckMap.values())
+      .filter(t => t.entryCount > 0 || t.totalGallons > 0 || t.totalFuelPrice > 0)
+      .sort((a, b) => a.truck_number.localeCompare(b.truck_number))
+  }, [fuelEntriesWithYear, trucks])
+
+  // Calculate grand totals for summary
+  const summaryTotals = useMemo(() => {
+    return summaryByTruck.reduce((acc, truck) => ({
+      totalMiles: acc.totalMiles + truck.totalMiles,
+      totalGallons: acc.totalGallons + truck.totalGallons,
+      totalFuelPrice: acc.totalFuelPrice + truck.totalFuelPrice,
+      totalDefPrice: acc.totalDefPrice + truck.totalDefPrice,
+    }), { totalMiles: 0, totalGallons: 0, totalFuelPrice: 0, totalDefPrice: 0 })
+  }, [summaryByTruck])
 
   // Generate all 52 weeks
   const allWeeks = useMemo(() => {
@@ -585,21 +672,237 @@ export default function FuelPage() {
     )
   }
 
+  // Render Summary View
+  const renderSummaryView = () => {
+    return (
+      <div className="space-y-6">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="text-sm text-gray-600 mb-1">Total Miles</div>
+            <div className="text-2xl font-bold text-blue-600">{summaryTotals.totalMiles.toLocaleString()}</div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="text-sm text-gray-600 mb-1">Total Gallons</div>
+            <div className="text-2xl font-bold text-purple-600">{summaryTotals.totalGallons.toFixed(1)}</div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="text-sm text-gray-600 mb-1">Total DEF Price</div>
+            <div className="text-2xl font-bold text-orange-600">{formatCurrency(summaryTotals.totalDefPrice)}</div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="text-sm text-gray-600 mb-1">Total Fuel Price</div>
+            <div className="text-2xl font-bold" style={{ color: '#1a5f2a' }}>{formatCurrency(summaryTotals.totalFuelPrice)}</div>
+          </div>
+        </div>
+
+        {/* Truck Table */}
+        <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
+          <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+            <thead>
+              <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                <th className="px-4 py-3 text-left border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
+                  Truck
+                </th>
+                <th className="px-4 py-3 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
+                  Total Miles
+                </th>
+                <th className="px-4 py-3 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
+                  Total Gallons
+                </th>
+                <th className="px-4 py-3 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
+                  Avg Price/Gal
+                </th>
+                <th className="px-4 py-3 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
+                  Total DEF Price
+                </th>
+                <th className="px-4 py-3 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
+                  Total Fuel Price
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {summaryByTruck.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                    No fuel data available
+                  </td>
+                </tr>
+              ) : (
+                <>
+                  {summaryByTruck.map((truck) => (
+                    <tr
+                      key={truck.truck_id}
+                      className="border-b transition-colors hover:bg-gray-50"
+                      style={{ borderColor: 'var(--monday-border-light)' }}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-4 w-4 text-gray-400" />
+                          <span className="font-medium" style={{ color: 'var(--monday-text-primary)' }}>
+                            {truck.truck_number}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right" style={{ color: 'var(--monday-text-primary)' }}>
+                        {truck.totalMiles > 0 ? truck.totalMiles.toLocaleString() : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-right" style={{ color: 'var(--monday-text-primary)' }}>
+                        {truck.totalGallons > 0 ? truck.totalGallons.toFixed(1) : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-right" style={{ color: 'var(--monday-text-primary)' }}>
+                        {truck.avgPricePerGallon > 0 ? `$${truck.avgPricePerGallon.toFixed(3)}` : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-right" style={{ color: 'var(--monday-text-primary)' }}>
+                        {truck.totalDefPrice > 0 ? formatCurrency(truck.totalDefPrice) : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold" style={{ color: '#1a5f2a' }}>
+                        {formatCurrency(truck.totalFuelPrice)}
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Totals Row */}
+                  <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                    <td className="px-4 py-3 font-bold" style={{ color: 'var(--monday-text-primary)' }}>
+                      Total
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold" style={{ color: 'var(--monday-text-primary)' }}>
+                      {summaryTotals.totalMiles.toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold" style={{ color: 'var(--monday-text-primary)' }}>
+                      {summaryTotals.totalGallons.toFixed(1)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold" style={{ color: 'var(--monday-text-primary)' }}>
+                      {summaryTotals.totalGallons > 0 ? `$${(summaryTotals.totalFuelPrice / summaryTotals.totalGallons).toFixed(3)}` : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold" style={{ color: 'var(--monday-text-primary)' }}>
+                      {formatCurrency(summaryTotals.totalDefPrice)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold" style={{ color: '#1a5f2a' }}>
+                      {formatCurrency(summaryTotals.totalFuelPrice)}
+                    </td>
+                  </tr>
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
+
+  // Render Weekly View (existing view)
+  const renderWeeklyView = () => {
+    return (
+      <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
+        <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+          <thead>
+            <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+              <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: '20px' }}></th>
+              <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Driver</th>
+              <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Truck</th>
+              <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Ending Miles</th>
+              <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Weekly Miles</th>
+              <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Gallons</th>
+              <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Price/Gal</th>
+              <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>DEF Gal</th>
+              <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>DEF Price</th>
+              <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Total</th>
+              <th className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: '50px' }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {allWeeks.map((weekNum) => {
+              const isCollapsed = collapsedWeeks.has(weekNum)
+              const weekEntries = fuelEntries.filter(e => e.weekNumber === weekNum)
+              const weekTotal = weekEntries.reduce((sum, e) => sum + (Number(e.total_amount) || 0), 0)
+              const weekGallons = weekEntries.reduce((sum, e) => sum + (Number(e.gallons) || 0), 0)
+
+              return (
+                <React.Fragment key={weekNum}>
+                  {/* Week Header */}
+                  <tr
+                    className="border-b cursor-pointer"
+                    style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-secondary)' }}
+                    onClick={() => toggleWeek(weekNum)}
+                  >
+                    <td colSpan={2} className="px-2 py-2" style={{ paddingLeft: '8px' }}>
+                      <div className="flex items-center gap-2">
+                        {isCollapsed ? (
+                          <ChevronRight className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--monday-blue)' }} />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--monday-blue)' }} />
+                        )}
+                        <span className="whitespace-nowrap" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>
+                          Week {weekNum} {getWeekDateRange(weekNum, selectedYear)}
+                        </span>
+                        <span style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
+                          ({weekEntries.length} entries)
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-2" colSpan={7}></td>
+                    <td className="px-2 py-2">
+                      <div className="mb-0.5">
+                        <div style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)' }}>
+                          {formatCurrency(weekTotal)}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: 'var(--monday-blue)' }}>
+                        {weekGallons.toFixed(1)} gal
+                      </div>
+                    </td>
+                    <td className="px-2 py-2"></td>
+                  </tr>
+
+                  {/* Driver Rows - filtered by employment during this week and fuel card */}
+                  {!isCollapsed && drivers
+                    .filter(driver => driver.has_fuel_card && wasDriverEmployedDuringWeek(driver, weekNum, selectedYear))
+                    .map((driver, driverIndex) =>
+                      renderFuelRow(weekNum, driver, driverIndex)
+                    )}
+                </React.Fragment>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
   return (
     <Layout>
       <div className="p-4 page-fuel">
         <h1 className="text-2xl font-semibold mb-4" style={{ color: 'var(--monday-text-primary)' }}>Fuel</h1>
 
-        {/* Year Tabs */}
+        {/* Tabs: Summary + Years */}
         <div className="flex items-center gap-2 border-b mb-4" style={{ borderColor: 'var(--monday-border-light)' }}>
+          {/* Summary Tab */}
+          <button
+            onClick={() => setActiveTab('summary')}
+            className="px-4 py-2 text-sm font-medium transition-all relative flex items-center gap-2"
+            style={{
+              color: activeTab === 'summary' ? 'var(--monday-cornflower)' : 'var(--monday-text-secondary)',
+              borderBottom: activeTab === 'summary' ? '2px solid var(--monday-cornflower)' : '2px solid transparent',
+              marginBottom: '-1px'
+            }}
+          >
+            <BarChart3 className="h-4 w-4" />
+            Summary
+          </button>
+
+          {/* Divider */}
+          <div className="h-6 w-px bg-gray-300 mx-2"></div>
+
+          {/* Year Tabs */}
           {availableYears.map(year => (
             <button
               key={year}
-              onClick={() => setSelectedYear(year)}
+              onClick={() => setActiveTab(year)}
               className="px-4 py-2 text-sm font-medium transition-all relative"
               style={{
-                color: selectedYear === year ? 'var(--monday-cornflower)' : 'var(--monday-text-secondary)',
-                borderBottom: selectedYear === year ? '2px solid var(--monday-cornflower)' : '2px solid transparent',
+                color: activeTab === year ? 'var(--monday-cornflower)' : 'var(--monday-text-secondary)',
+                borderBottom: activeTab === year ? '2px solid var(--monday-cornflower)' : '2px solid transparent',
                 marginBottom: '-1px'
               }}
             >
@@ -611,79 +914,8 @@ export default function FuelPage() {
           ))}
         </div>
 
-        <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
-          <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
-            <thead>
-              <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: '20px' }}></th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Driver</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Truck</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Ending Miles</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Weekly Miles</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Gallons</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Price/Gal</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>DEF Gal</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>DEF Price</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Total</th>
-                <th className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: '50px' }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {allWeeks.map((weekNum) => {
-                const isCollapsed = collapsedWeeks.has(weekNum)
-                const weekEntries = fuelEntries.filter(e => e.weekNumber === weekNum)
-                const weekTotal = weekEntries.reduce((sum, e) => sum + (Number(e.total_amount) || 0), 0)
-                const weekGallons = weekEntries.reduce((sum, e) => sum + (Number(e.gallons) || 0), 0)
-
-                return (
-                  <React.Fragment key={weekNum}>
-                    {/* Week Header */}
-                    <tr
-                      className="border-b cursor-pointer"
-                      style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-secondary)' }}
-                      onClick={() => toggleWeek(weekNum)}
-                    >
-                      <td colSpan={2} className="px-2 py-2" style={{ paddingLeft: '8px' }}>
-                        <div className="flex items-center gap-2">
-                          {isCollapsed ? (
-                            <ChevronRight className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--monday-blue)' }} />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--monday-blue)' }} />
-                          )}
-                          <span className="whitespace-nowrap" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>
-                            Week {weekNum} {getWeekDateRange(weekNum, selectedYear)}
-                          </span>
-                          <span style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
-                            ({weekEntries.length} entries)
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2" colSpan={7}></td>
-                      <td className="px-2 py-2">
-                        <div className="mb-0.5">
-                          <div style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)' }}>
-                            {formatCurrency(weekTotal)}
-                          </div>
-                        </div>
-                        <div style={{ fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: 'var(--monday-blue)' }}>
-                          {weekGallons.toFixed(1)} gal
-                        </div>
-                      </td>
-                      <td className="px-2 py-2"></td>
-                    </tr>
-
-                    {/* Driver Rows - filtered by employment during this week and fuel card */}
-                    {!isCollapsed && drivers
-                      .filter(driver => driver.has_fuel_card && wasDriverEmployedDuringWeek(driver, weekNum, selectedYear))
-                      .map((driver, driverIndex) =>
-                        renderFuelRow(weekNum, driver, driverIndex)
-                      )}
-                  </React.Fragment>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        {/* Content based on active tab */}
+        {activeTab === 'summary' ? renderSummaryView() : renderWeeklyView()}
       </div>
     </Layout>
   )
