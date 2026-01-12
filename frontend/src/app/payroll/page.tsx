@@ -655,87 +655,87 @@ export default function PayrollPage() {
           ))}
         </div>
 
-        {/* Grand Totals Summary - QuickBooks style */}
+        {/* Grand Totals Summary - QuickBooks style - uses same column widths as main table */}
         {drivers.length > 0 && (
           <div style={{ border: `1px solid ${qbColors.borderLight}`, borderRadius: '8px', backgroundColor: qbColors.bgWhite, overflow: 'hidden' }}>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full table-auto" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
                 <thead style={{ backgroundColor: qbColors.bgHeader }}>
                   <tr>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '280px' }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px` }}>
                       {selectedYear} Annual Summary
                     </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '180px' }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px` }}>
                       Drivers
                     </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '100px' }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.gross}px`, minWidth: `${columnWidths.gross}px` }}>
                       Gross
                     </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '100px' }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.extra}px`, minWidth: `${columnWidths.extra}px` }}>
                       Extra
                     </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '100px' }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.dispatch_fee}px`, minWidth: `${columnWidths.dispatch_fee}px` }}>
                       Dispatch
                     </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '100px' }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.insurance}px`, minWidth: `${columnWidths.insurance}px` }}>
                       Insurance
                     </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '100px' }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.fuel}px`, minWidth: `${columnWidths.fuel}px` }}>
                       Fuel
                     </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '100px' }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.parking}px`, minWidth: `${columnWidths.parking}px` }}>
                       Parking
                     </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '100px' }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.trailer}px`, minWidth: `${columnWidths.trailer}px` }}>
                       Trailer
                     </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '100px' }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.misc}px`, minWidth: `${columnWidths.misc}px` }}>
                       Misc
                     </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '90px' }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.miles}px`, minWidth: `${columnWidths.miles}px` }}>
                       Miles
                     </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '120px', backgroundColor: 'rgba(44, 160, 28, 0.3)' }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.pay}px`, minWidth: `${columnWidths.pay}px`, backgroundColor: 'rgba(44, 160, 28, 0.3)' }}>
                       Net Pay
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr style={{ backgroundColor: qbColors.bgGray, borderBottom: `1px solid ${qbColors.borderLight}` }}>
-                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: 600, color: qbColors.textPrimary }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, color: qbColors.textPrimary }}>
                       52 Weeks Total
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: 500, color: qbColors.textSecondary }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, color: qbColors.textSecondary }}>
                       {payrollData.length} drivers
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: 600, textAlign: 'right', color: qbColors.textPrimary }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, textAlign: 'right', color: qbColors.textPrimary }}>
                       {formatCurrency(grandTotals.gross)}
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: 600, textAlign: 'right', color: qbColors.textPrimary }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, textAlign: 'right', color: qbColors.textPrimary }}>
                       {formatCurrency(grandTotals.extra)}
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
                       ({formatCurrency(grandTotals.dispatch_fee)})
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
                       ({formatCurrency(grandTotals.insurance)})
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
                       ({formatCurrency(grandTotals.fuel)})
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
                       ({formatCurrency(grandTotals.parking)})
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
                       ({formatCurrency(grandTotals.trailer)})
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
                       ({formatCurrency(grandTotals.misc)})
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: 600, textAlign: 'right', color: qbColors.textPrimary }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, textAlign: 'right', color: qbColors.textPrimary }}>
                       {grandTotals.miles.toLocaleString()}
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '16px', fontWeight: 700, textAlign: 'right', color: qbColors.green, backgroundColor: qbColors.greenLight }}>
+                    <td style={{ padding: '14px 12px', fontSize: '16px', fontWeight: 700, textAlign: 'right', color: qbColors.green, backgroundColor: qbColors.greenLight }}>
                       {formatCurrency(grandTotals.check_amount)}
                     </td>
                   </tr>
