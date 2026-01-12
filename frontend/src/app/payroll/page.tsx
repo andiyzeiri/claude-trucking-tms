@@ -668,13 +668,13 @@ export default function PayrollPage() {
                     <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px` }}>
                       Drivers
                     </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.gross}px`, minWidth: `${columnWidths.gross}px` }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.gross}px`, minWidth: `${columnWidths.gross}px` }}>
                       Gross
                     </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.extra}px`, minWidth: `${columnWidths.extra}px` }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.extra}px`, minWidth: `${columnWidths.extra}px` }}>
                       Extra
                     </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.dispatch_fee}px`, minWidth: `${columnWidths.dispatch_fee}px` }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.dispatch_fee}px`, minWidth: `${columnWidths.dispatch_fee}px` }}>
                       Dispatch
                     </th>
                     <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.insurance}px`, minWidth: `${columnWidths.insurance}px` }}>
@@ -708,13 +708,13 @@ export default function PayrollPage() {
                     <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, color: qbColors.textSecondary }}>
                       {payrollData.length} drivers
                     </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, textAlign: 'right', color: qbColors.textPrimary }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, textAlign: 'left', color: qbColors.textPrimary }}>
                       {formatCurrency(grandTotals.gross)}
                     </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, textAlign: 'right', color: qbColors.textPrimary }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, textAlign: 'left', color: qbColors.textPrimary }}>
                       {formatCurrency(grandTotals.extra)}
                     </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'left', color: qbColors.red }}>
                       ({formatCurrency(grandTotals.dispatch_fee)})
                     </td>
                     <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
@@ -774,17 +774,17 @@ export default function PayrollPage() {
                         {sortField === 'driver' ? (sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                       </div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-right cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.gross}px`, minWidth: `${columnWidths.gross}px` }} onClick={() => handleSort('gross')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.gross}px`, minWidth: `${columnWidths.gross}px` }} onClick={() => handleSort('gross')}>
                       <ColumnWidthControl currentWidth={columnWidths.gross} onAdjust={(delta) => adjustWidth('gross', delta)} />
-                      <div className="flex items-center gap-1 justify-end">Gross</div>
+                      <div className="flex items-center gap-1">Gross</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-right cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.extra}px`, minWidth: `${columnWidths.extra}px` }} onClick={() => handleSort('extra')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.extra}px`, minWidth: `${columnWidths.extra}px` }} onClick={() => handleSort('extra')}>
                       <ColumnWidthControl currentWidth={columnWidths.extra} onAdjust={(delta) => adjustWidth('extra', delta)} />
-                      <div className="flex items-center gap-1 justify-end">Extra</div>
+                      <div className="flex items-center gap-1">Extra</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-right cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.dispatch_fee}px`, minWidth: `${columnWidths.dispatch_fee}px` }} onClick={() => handleSort('dispatch_fee')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.dispatch_fee}px`, minWidth: `${columnWidths.dispatch_fee}px` }} onClick={() => handleSort('dispatch_fee')}>
                       <ColumnWidthControl currentWidth={columnWidths.dispatch_fee} onAdjust={(delta) => adjustWidth('dispatch_fee', delta)} />
-                      <div className="flex items-center gap-1 justify-end">Dispatch</div>
+                      <div className="flex items-center gap-1">Dispatch</div>
                     </th>
                     <th className="relative group px-3 py-2.5 text-right cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.insurance}px`, minWidth: `${columnWidths.insurance}px` }} onClick={() => handleSort('insurance')}>
                       <ColumnWidthControl currentWidth={columnWidths.insurance} onAdjust={(delta) => adjustWidth('insurance', delta)} />
@@ -859,13 +859,13 @@ export default function PayrollPage() {
                           <td className="px-3 py-2.5" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.textSecondary, borderRight: `1px solid ${qbColors.borderLight}` }}>
                             {employedDrivers.length} drivers
                           </td>
-                          <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 600, color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
+                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 600, color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
                             {formatCurrency(weekTotals.gross)}
                           </td>
-                          <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 600, color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
+                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 600, color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
                             {formatCurrency(weekTotals.extra)}
                           </td>
-                          <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
+                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
                             ({formatCurrency(weekTotals.dispatch_fee)})
                           </td>
                           <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
@@ -917,23 +917,23 @@ export default function PayrollPage() {
                               <td className="px-3 py-2 pl-8" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
                                 {driverData.driver_name}
                               </td>
-                              <td className="px-3 py-2 text-right cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'gross') && startEdit(week.weekNumber, driverData.driver_id, 'gross', weekData?.gross || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'gross') && startEdit(week.weekNumber, driverData.driver_id, 'gross', weekData?.gross || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'gross') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm text-right" />
+                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData ? formatCurrency(weekData.gross) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-right cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'extra') && startEdit(week.weekNumber, driverData.driver_id, 'extra', weekData?.extra || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'extra') && startEdit(week.weekNumber, driverData.driver_id, 'extra', weekData?.extra || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'extra') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm text-right" />
+                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData ? formatCurrency(weekData.extra) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-right cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'dispatch_fee') && startEdit(week.weekNumber, driverData.driver_id, 'dispatch_fee', weekData?.dispatch_fee || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'dispatch_fee') && startEdit(week.weekNumber, driverData.driver_id, 'dispatch_fee', weekData?.dispatch_fee || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'dispatch_fee') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm text-right" />
+                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.dispatch_fee > 0 ? `(${formatCurrency(weekData.dispatch_fee)})` : '-'}</span>
                                 )}
@@ -994,13 +994,13 @@ export default function PayrollPage() {
                   <tr style={{ backgroundColor: qbColors.bgGray }}>
                     <td className="px-3 py-3 sticky left-0" style={{ fontSize: '13px', fontWeight: 700, color: qbColors.textPrimary, backgroundColor: qbColors.bgGray }}>Annual Total</td>
                     <td className="px-3 py-3" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.textSecondary }}>{payrollData.length} drivers</td>
-                    <td className="px-3 py-3 text-right" style={{ fontSize: '13px', fontWeight: 700, color: qbColors.textPrimary }}>
+                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 700, color: qbColors.textPrimary }}>
                       {formatCurrency(grandTotals.gross)}
                     </td>
-                    <td className="px-3 py-3 text-right" style={{ fontSize: '13px', fontWeight: 700, color: qbColors.textPrimary }}>
+                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 700, color: qbColors.textPrimary }}>
                       {formatCurrency(grandTotals.extra)}
                     </td>
-                    <td className="px-3 py-3 text-right" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
+                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
                       ({formatCurrency(grandTotals.dispatch_fee)})
                     </td>
                     <td className="px-3 py-3 text-right" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
