@@ -677,25 +677,25 @@ export default function PayrollPage() {
                     <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.dispatch_fee}px`, minWidth: `${columnWidths.dispatch_fee}px` }}>
                       Dispatch
                     </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.insurance}px`, minWidth: `${columnWidths.insurance}px` }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.insurance}px`, minWidth: `${columnWidths.insurance}px` }}>
                       Insurance
                     </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.fuel}px`, minWidth: `${columnWidths.fuel}px` }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.fuel}px`, minWidth: `${columnWidths.fuel}px` }}>
                       Fuel
                     </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.parking}px`, minWidth: `${columnWidths.parking}px` }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.parking}px`, minWidth: `${columnWidths.parking}px` }}>
                       Parking
                     </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.trailer}px`, minWidth: `${columnWidths.trailer}px` }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.trailer}px`, minWidth: `${columnWidths.trailer}px` }}>
                       Trailer
                     </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.misc}px`, minWidth: `${columnWidths.misc}px` }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.misc}px`, minWidth: `${columnWidths.misc}px` }}>
                       Misc
                     </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.miles}px`, minWidth: `${columnWidths.miles}px` }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.miles}px`, minWidth: `${columnWidths.miles}px` }}>
                       Miles
                     </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.pay}px`, minWidth: `${columnWidths.pay}px`, backgroundColor: 'rgba(44, 160, 28, 0.3)' }}>
+                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.pay}px`, minWidth: `${columnWidths.pay}px`, backgroundColor: 'rgba(44, 160, 28, 0.3)' }}>
                       Net Pay
                     </th>
                   </tr>
@@ -717,25 +717,25 @@ export default function PayrollPage() {
                     <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'left', color: qbColors.red }}>
                       ({formatCurrency(grandTotals.dispatch_fee)})
                     </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'left', color: qbColors.red }}>
                       ({formatCurrency(grandTotals.insurance)})
                     </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'left', color: qbColors.red }}>
                       ({formatCurrency(grandTotals.fuel)})
                     </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'left', color: qbColors.red }}>
                       ({formatCurrency(grandTotals.parking)})
                     </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'left', color: qbColors.red }}>
                       ({formatCurrency(grandTotals.trailer)})
                     </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'right', color: qbColors.red }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'left', color: qbColors.red }}>
                       ({formatCurrency(grandTotals.misc)})
                     </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, textAlign: 'right', color: qbColors.textPrimary }}>
+                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, textAlign: 'left', color: qbColors.textPrimary }}>
                       {grandTotals.miles.toLocaleString()}
                     </td>
-                    <td style={{ padding: '14px 12px', fontSize: '16px', fontWeight: 700, textAlign: 'right', color: qbColors.green, backgroundColor: qbColors.greenLight }}>
+                    <td style={{ padding: '14px 12px', fontSize: '16px', fontWeight: 700, textAlign: 'left', color: qbColors.green, backgroundColor: qbColors.greenLight }}>
                       {formatCurrency(grandTotals.check_amount)}
                     </td>
                   </tr>
@@ -786,31 +786,31 @@ export default function PayrollPage() {
                       <ColumnWidthControl currentWidth={columnWidths.dispatch_fee} onAdjust={(delta) => adjustWidth('dispatch_fee', delta)} />
                       <div className="flex items-center gap-1">Dispatch</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-right cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.insurance}px`, minWidth: `${columnWidths.insurance}px` }} onClick={() => handleSort('insurance')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.insurance}px`, minWidth: `${columnWidths.insurance}px` }} onClick={() => handleSort('insurance')}>
                       <ColumnWidthControl currentWidth={columnWidths.insurance} onAdjust={(delta) => adjustWidth('insurance', delta)} />
-                      <div className="flex items-center gap-1 justify-end">Insurance</div>
+                      <div className="flex items-center gap-1">Insurance</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-right cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.fuel}px`, minWidth: `${columnWidths.fuel}px` }} onClick={() => handleSort('fuel')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.fuel}px`, minWidth: `${columnWidths.fuel}px` }} onClick={() => handleSort('fuel')}>
                       <ColumnWidthControl currentWidth={columnWidths.fuel} onAdjust={(delta) => adjustWidth('fuel', delta)} />
-                      <div className="flex items-center gap-1 justify-end">Fuel</div>
+                      <div className="flex items-center gap-1">Fuel</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-right cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.parking}px`, minWidth: `${columnWidths.parking}px` }} onClick={() => handleSort('parking')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.parking}px`, minWidth: `${columnWidths.parking}px` }} onClick={() => handleSort('parking')}>
                       <ColumnWidthControl currentWidth={columnWidths.parking} onAdjust={(delta) => adjustWidth('parking', delta)} />
-                      <div className="flex items-center gap-1 justify-end">Parking</div>
+                      <div className="flex items-center gap-1">Parking</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-right cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.trailer}px`, minWidth: `${columnWidths.trailer}px` }} onClick={() => handleSort('trailer')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.trailer}px`, minWidth: `${columnWidths.trailer}px` }} onClick={() => handleSort('trailer')}>
                       <ColumnWidthControl currentWidth={columnWidths.trailer} onAdjust={(delta) => adjustWidth('trailer', delta)} />
-                      <div className="flex items-center gap-1 justify-end">Trailer</div>
+                      <div className="flex items-center gap-1">Trailer</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-right cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.misc}px`, minWidth: `${columnWidths.misc}px` }} onClick={() => handleSort('misc')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.misc}px`, minWidth: `${columnWidths.misc}px` }} onClick={() => handleSort('misc')}>
                       <ColumnWidthControl currentWidth={columnWidths.misc} onAdjust={(delta) => adjustWidth('misc', delta)} />
-                      <div className="flex items-center gap-1 justify-end">Misc</div>
+                      <div className="flex items-center gap-1">Misc</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-right cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.miles}px`, minWidth: `${columnWidths.miles}px` }} onClick={() => handleSort('miles')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.miles}px`, minWidth: `${columnWidths.miles}px` }} onClick={() => handleSort('miles')}>
                       <ColumnWidthControl currentWidth={columnWidths.miles} onAdjust={(delta) => adjustWidth('miles', delta)} />
-                      <div className="flex items-center gap-1 justify-end">Miles</div>
+                      <div className="flex items-center gap-1">Miles</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-right" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.green, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.pay}px`, minWidth: `${columnWidths.pay}px`, backgroundColor: qbColors.greenLight }}>
+                    <th className="relative group px-3 py-2.5 text-left" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.green, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.pay}px`, minWidth: `${columnWidths.pay}px`, backgroundColor: qbColors.greenLight }}>
                       <ColumnWidthControl currentWidth={columnWidths.pay} onAdjust={(delta) => adjustWidth('pay', delta)} />
                       Net Pay
                     </th>
@@ -868,25 +868,25 @@ export default function PayrollPage() {
                           <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
                             ({formatCurrency(weekTotals.dispatch_fee)})
                           </td>
-                          <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
+                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
                             ({formatCurrency(weekTotals.insurance)})
                           </td>
-                          <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
+                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
                             ({formatCurrency(weekTotals.fuel)})
                           </td>
-                          <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
+                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
                             ({formatCurrency(weekTotals.parking)})
                           </td>
-                          <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
+                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
                             ({formatCurrency(weekTotals.trailer)})
                           </td>
-                          <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
+                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
                             ({formatCurrency(weekTotals.misc)})
                           </td>
-                          <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 600, color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
+                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 600, color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
                             {weekTotals.miles.toLocaleString()}
                           </td>
-                          <td className="px-3 py-2.5 text-right" style={{ fontSize: '14px', fontWeight: 700, color: qbColors.green, backgroundColor: qbColors.greenLight }}>
+                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '14px', fontWeight: 700, color: qbColors.green, backgroundColor: qbColors.greenLight }}>
                             {formatCurrency(weekTotals.check_amount)}
                           </td>
                         </tr>
@@ -938,49 +938,49 @@ export default function PayrollPage() {
                                   <span>{weekData && weekData.dispatch_fee > 0 ? `(${formatCurrency(weekData.dispatch_fee)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-right cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'insurance') && startEdit(week.weekNumber, driverData.driver_id, 'insurance', weekData?.insurance || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'insurance') && startEdit(week.weekNumber, driverData.driver_id, 'insurance', weekData?.insurance || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'insurance') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm text-right" />
+                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.insurance > 0 ? `(${formatCurrency(weekData.insurance)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-right cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'fuel') && startEdit(week.weekNumber, driverData.driver_id, 'fuel', weekData?.fuel || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'fuel') && startEdit(week.weekNumber, driverData.driver_id, 'fuel', weekData?.fuel || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'fuel') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm text-right" />
+                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.fuel > 0 ? `(${formatCurrency(weekData.fuel)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-right cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'parking') && startEdit(week.weekNumber, driverData.driver_id, 'parking', weekData?.parking || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'parking') && startEdit(week.weekNumber, driverData.driver_id, 'parking', weekData?.parking || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'parking') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm text-right" />
+                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.parking > 0 ? `(${formatCurrency(weekData.parking)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-right cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'trailer') && startEdit(week.weekNumber, driverData.driver_id, 'trailer', weekData?.trailer || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'trailer') && startEdit(week.weekNumber, driverData.driver_id, 'trailer', weekData?.trailer || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'trailer') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm text-right" />
+                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.trailer > 0 ? `(${formatCurrency(weekData.trailer)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-right cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'misc') && startEdit(week.weekNumber, driverData.driver_id, 'misc', weekData?.misc || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'misc') && startEdit(week.weekNumber, driverData.driver_id, 'misc', weekData?.misc || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'misc') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm text-right" />
+                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.misc > 0 ? `(${formatCurrency(weekData.misc)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-right cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'miles') && startEdit(week.weekNumber, driverData.driver_id, 'miles', weekData?.miles || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'miles') && startEdit(week.weekNumber, driverData.driver_id, 'miles', weekData?.miles || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'miles') ? (
-                                  <Input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm text-right" />
+                                  <Input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData ? weekData.miles.toLocaleString() : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-right" style={{ fontSize: '13px', fontWeight: 600, color: qbColors.green, backgroundColor: 'rgba(232, 245, 230, 0.5)' }}>
+                              <td className="px-3 py-2 text-left" style={{ fontSize: '13px', fontWeight: 600, color: qbColors.green, backgroundColor: 'rgba(232, 245, 230, 0.5)' }}>
                                 {weekData ? formatCurrency(weekData.check_amount) : '-'}
                               </td>
                             </tr>
@@ -1003,25 +1003,25 @@ export default function PayrollPage() {
                     <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
                       ({formatCurrency(grandTotals.dispatch_fee)})
                     </td>
-                    <td className="px-3 py-3 text-right" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
+                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
                       ({formatCurrency(grandTotals.insurance)})
                     </td>
-                    <td className="px-3 py-3 text-right" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
+                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
                       ({formatCurrency(grandTotals.fuel)})
                     </td>
-                    <td className="px-3 py-3 text-right" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
+                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
                       ({formatCurrency(grandTotals.parking)})
                     </td>
-                    <td className="px-3 py-3 text-right" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
+                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
                       ({formatCurrency(grandTotals.trailer)})
                     </td>
-                    <td className="px-3 py-3 text-right" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
+                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
                       ({formatCurrency(grandTotals.misc)})
                     </td>
-                    <td className="px-3 py-3 text-right" style={{ fontSize: '13px', fontWeight: 700, color: qbColors.textPrimary }}>
+                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 700, color: qbColors.textPrimary }}>
                       {grandTotals.miles.toLocaleString()}
                     </td>
-                    <td className="px-3 py-3 text-right" style={{ fontSize: '15px', fontWeight: 700, color: qbColors.green, backgroundColor: qbColors.greenLight }}>
+                    <td className="px-3 py-3 text-left" style={{ fontSize: '15px', fontWeight: 700, color: qbColors.green, backgroundColor: qbColors.greenLight }}>
                       {formatCurrency(grandTotals.check_amount)}
                     </td>
                   </tr>
