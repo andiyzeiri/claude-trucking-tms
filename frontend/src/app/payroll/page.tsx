@@ -663,7 +663,7 @@ export default function PayrollPage() {
                 <thead style={{ backgroundColor: qbColors.bgHeader }}>
                   <tr>
                     <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px` }}>
-                      {selectedYear} Annual Summary
+                      {selectedYear}
                     </th>
                     <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px` }}>
                       Drivers
