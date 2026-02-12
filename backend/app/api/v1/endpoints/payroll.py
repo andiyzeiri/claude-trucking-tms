@@ -150,7 +150,18 @@ async def calculate_payroll_from_loads(
         # Use rate as the driver's gross pay
         gross_amount = float(load.rate) if load.rate else 0.0
         miles_amount = load.miles if load.miles else 0
-        adjustment_amount = float(load.adjustment_amount) if load.adjustment_amount else 0.0
+        raw_adjustment = float(load.adjustment_amount) if load.adjustment_amount else 0.0
+
+        # Automatically treat certain adjustment types as deductions (subtract from pay)
+        # Lumper fees are always deducted from driver pay
+        # Detention, layover, pickup, delivery are bonuses (add to pay)
+        adjustment_type = load.adjustment_type.value if load.adjustment_type else None
+        if adjustment_type == 'lumper':
+            # Lumper is a deduction - ensure it's negative (subtracts from pay)
+            adjustment_amount = -abs(raw_adjustment)
+        else:
+            # Detention, layover, pickup, delivery are bonuses - ensure positive (adds to pay)
+            adjustment_amount = abs(raw_adjustment) if raw_adjustment else 0.0
 
         payroll_data[key]["gross"] += gross_amount
         payroll_data[key]["miles"] += miles_amount
@@ -161,7 +172,7 @@ async def calculate_payroll_from_loads(
             "pickup_date": load.pickup_date.isoformat() if load.pickup_date else None,
             "miles": miles_amount,
             "carrier_rate": gross_amount,  # Using rate field for payroll
-            "adjustment_type": load.adjustment_type.value if load.adjustment_type else None,
+            "adjustment_type": adjustment_type,
             "adjustment_amount": adjustment_amount
         })
 
