@@ -60,6 +60,8 @@ class LoadDetail(BaseModel):
     pickup_date: Optional[str] = None
     miles: int
     carrier_rate: float
+    adjustment_type: Optional[str] = None
+    adjustment_amount: float = 0.0
 
 
 class CalculatedPayrollResponse(BaseModel):
@@ -75,6 +77,7 @@ class CalculatedPayrollResponse(BaseModel):
     parking: float
     trailer: float
     misc: float
+    adjustments: float  # Sum of all load adjustments (positive = bonuses, negative = deductions)
     miles: int
     check_amount: float
     load_count: int

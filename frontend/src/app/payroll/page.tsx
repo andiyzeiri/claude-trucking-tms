@@ -90,6 +90,7 @@ interface DriverPayrollData {
       parking: number
       trailer: number
       misc: number
+      adjustments: number  // Load adjustments (positive = bonuses, negative = deductions)
       miles: number
       check_amount: number
     }
@@ -284,9 +285,11 @@ export default function PayrollPage() {
           const misc = miscOverride !== undefined ? miscOverride : (Number(entry.misc) || 0)
           const milesOverride = getOverride(weekNumber, driverId, 'miles')
           const miles = milesOverride !== undefined ? milesOverride : (Number(entry.miles) || 0)
+          // Load adjustments from API (positive = bonuses like detention, negative = deductions like lumper)
+          const adjustments = Number(entry.adjustments) || 0
 
-          // Check amount = gross + extra - deductions (dispatch_fee, insurance, fuel, parking, trailer, misc)
-          const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
+          // Check amount = gross + adjustments + extra - deductions (dispatch_fee, insurance, fuel, parking, trailer, misc)
+          const check_amount = gross + adjustments + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
 
           driverData.weeks[weekNumber] = {
             gross,
@@ -297,6 +300,7 @@ export default function PayrollPage() {
             parking,
             trailer,
             misc,
+            adjustments,
             miles,
             check_amount
           }
@@ -321,8 +325,9 @@ export default function PayrollPage() {
           const trailer = getOverride(weekNumber, driverId, 'trailer') ?? 0
           const misc = getOverride(weekNumber, driverId, 'misc') ?? 0
           const miles = getOverride(weekNumber, driverId, 'miles') ?? 0
+          const adjustments = 0  // No adjustments for fuel-only entries
 
-          const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
+          const check_amount = gross + adjustments + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
 
           driverData.weeks[weekNumber] = {
             gross,
@@ -333,6 +338,7 @@ export default function PayrollPage() {
             parking,
             trailer,
             misc,
+            adjustments,
             miles,
             check_amount
           }
@@ -357,8 +363,9 @@ export default function PayrollPage() {
         const trailer = overrides.trailer ?? 0
         const misc = overrides.misc ?? 0
         const miles = overrides.miles ?? 0
+        const adjustments = 0  // No adjustments for override-only entries
 
-        const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
+        const check_amount = gross + adjustments + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
 
         driverData.weeks[weekNumber] = {
           gross,
@@ -369,6 +376,7 @@ export default function PayrollPage() {
           parking,
           trailer,
           misc,
+          adjustments,
           miles,
           check_amount
         }
@@ -422,6 +430,7 @@ export default function PayrollPage() {
       parking: 0,
       trailer: 0,
       misc: 0,
+      adjustments: 0,
       miles: 0,
       check_amount: 0
     }
@@ -442,6 +451,7 @@ export default function PayrollPage() {
         totals.parking += weekData.parking
         totals.trailer += weekData.trailer
         totals.misc += weekData.misc
+        totals.adjustments += weekData.adjustments
         totals.miles += weekData.miles
         totals.check_amount += weekData.check_amount
       }
@@ -461,6 +471,7 @@ export default function PayrollPage() {
       parking: 0,
       trailer: 0,
       misc: 0,
+      adjustments: 0,
       miles: 0,
       check_amount: 0
     }
@@ -475,6 +486,7 @@ export default function PayrollPage() {
       totals.parking += weekTotals.parking
       totals.trailer += weekTotals.trailer
       totals.misc += weekTotals.misc
+      totals.adjustments += weekTotals.adjustments
       totals.miles += weekTotals.miles
       totals.check_amount += weekTotals.check_amount
     })

@@ -133,6 +133,7 @@ export interface CalculatedPayrollData {
   parking: number
   trailer: number
   misc: number
+  adjustments: number  // Sum of all load adjustments (positive = bonuses, negative = deductions)
   miles: number
   check_amount: number
   load_count: number
@@ -141,6 +142,8 @@ export interface CalculatedPayrollData {
     pickup_date: string
     miles: number
     carrier_rate: number
+    adjustment_type?: string
+    adjustment_amount: number
   }>
 }
 

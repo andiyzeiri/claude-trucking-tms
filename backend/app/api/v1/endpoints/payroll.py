@@ -142,22 +142,27 @@ async def calculate_payroll_from_loads(
                 "gross": 0.0,
                 "miles": 0,
                 "load_count": 0,
-                "loads": []
+                "loads": [],
+                "adjustments": 0.0  # Total adjustments from load details
             }
 
         # Add load data to aggregated totals
         # Use rate as the driver's gross pay
         gross_amount = float(load.rate) if load.rate else 0.0
         miles_amount = load.miles if load.miles else 0
+        adjustment_amount = float(load.adjustment_amount) if load.adjustment_amount else 0.0
 
         payroll_data[key]["gross"] += gross_amount
         payroll_data[key]["miles"] += miles_amount
+        payroll_data[key]["adjustments"] += adjustment_amount  # Sum adjustments from loads
         payroll_data[key]["load_count"] += 1
         payroll_data[key]["loads"].append({
             "load_number": load.load_number,
             "pickup_date": load.pickup_date.isoformat() if load.pickup_date else None,
             "miles": miles_amount,
-            "carrier_rate": gross_amount  # Using rate field for payroll
+            "carrier_rate": gross_amount,  # Using rate field for payroll
+            "adjustment_type": load.adjustment_type.value if load.adjustment_type else None,
+            "adjustment_amount": adjustment_amount
         })
 
     # Apply driver settings and calculate deductions
@@ -189,8 +194,10 @@ async def calculate_payroll_from_loads(
         data["misc"] = misc
         data["extra"] = 0  # Can be manually added later
 
-        # Calculate check amount: gross - deductions + extra
-        data["check_amount"] = gross - dispatch_fee - insurance - parking - trailer - misc + data["extra"]
+        # Calculate check amount: gross + adjustments - deductions + extra
+        # Adjustments can be positive (bonuses like detention) or negative (deductions like lumper fees)
+        adjustments = data["adjustments"]
+        data["check_amount"] = gross + adjustments - dispatch_fee - insurance - parking - trailer - misc + data["extra"]
 
     # Convert to list and sort by driver name and week
     result_list = sorted(
