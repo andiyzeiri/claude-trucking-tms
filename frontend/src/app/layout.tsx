@@ -24,7 +24,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <Script
-          src={`https://maps.googleapis.com/maps/api/js?key=AIzaSyDZUHavr1W8hSUnxcMUZEF3m09LTpO4Cls&libraries=places`}
+          src={`https://maps.googleapis.com/maps/api/js?key=AIzaSyA54skJJPPmDyzDfUgklqOIr7jMuXkY91E&libraries=places`}
           strategy="beforeInteractive"
         />
       </head>
