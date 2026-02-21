@@ -45,6 +45,10 @@
         {
           "name": "CORS_ORIGINS",
           "value": "http://localhost:3000,http://127.0.0.1:3000,https://absolutetms.netlify.app,https://www.absolutetms.netlify.app,https://api.absolutetms.com,http://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com,https://trucking-tms-alb-1848896522.us-east-1.elb.amazonaws.com"
+        },
+        {
+          "name": "GOOGLE_MAPS_API_KEY",
+          "value": "AIzaSyCtP37pAIa33iv0kp8mu9tl3mhlEvWY8kw"
         }
       ],
       "logConfiguration": {
