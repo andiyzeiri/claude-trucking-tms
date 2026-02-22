@@ -67,5 +67,6 @@ venv/
 *.pem
 *.key
 config.json
+task-definition*.json
 # Local Netlify folder
 .netlify

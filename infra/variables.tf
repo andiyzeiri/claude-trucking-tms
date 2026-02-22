@@ -112,6 +112,12 @@ variable "cloudwatch_log_retention_days" {
   default     = 14
 }
 
+variable "google_maps_api_key" {
+  description = "Google Maps API key for distance calculation"
+  type        = string
+  sensitive   = true
+}
+
 variable "redis_node_type" {
   description = "ElastiCache Redis node type"
   type        = string

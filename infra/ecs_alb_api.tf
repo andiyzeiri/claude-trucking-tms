@@ -302,7 +302,7 @@ resource "aws_ecs_task_definition" "api" {
         },
         {
           name  = "GOOGLE_MAPS_API_KEY"
-          value = "AIzaSyCtP37pAIa33iv0kp8mu9tl3mhlEvWY8kw"
+          value = var.google_maps_api_key
         }
       ]
 
