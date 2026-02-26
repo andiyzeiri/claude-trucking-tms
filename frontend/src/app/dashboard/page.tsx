@@ -51,7 +51,7 @@ export default function DashboardPage() {
 
   // Calculate financial summaries
   const financialSummary = React.useMemo(() => {
-    if (!loads) return { today: 0, month: 0, year: 0, todayLoads: 0, monthLoads: 0, yearLoads: 0 }
+    if (!loads) return { today: 0, month: 0, year: 0, todayLoads: 0, monthLoads: 0, yearLoads: 0, lastYearSamePeriod: 0, lastYearSamePeriodLoads: 0, yearOverYearPercent: null as number | null }
 
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -61,12 +61,19 @@ export default function DashboardPage() {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     const yearStart = new Date(now.getFullYear(), 0, 1)
 
+    // Last year same period: Jan 1 last year → same month/day last year
+    const lastYearStart = new Date(now.getFullYear() - 1, 0, 1)
+    const lastYearSameDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
+    lastYearSameDate.setDate(lastYearSameDate.getDate() + 1) // include the full day
+
     let todayRevenue = 0
     let monthRevenue = 0
     let yearRevenue = 0
     let todayLoads = 0
     let monthLoads = 0
     let yearLoads = 0
+    let lastYearSamePeriodRevenue = 0
+    let lastYearSamePeriodLoads = 0
 
     loads.forEach((load: any) => {
       const rate = Number(load.rate) || 0
@@ -89,8 +96,18 @@ export default function DashboardPage() {
           yearRevenue += rate
           yearLoads++
         }
+        // Last year same period: Jan 1 last year → same date last year
+        if (loadDate >= lastYearStart && loadDate < lastYearSameDate) {
+          lastYearSamePeriodRevenue += rate
+          lastYearSamePeriodLoads++
+        }
       }
     })
+
+    // Calculate year-over-year percentage change
+    const yearOverYearPercent = lastYearSamePeriodRevenue > 0
+      ? ((yearRevenue - lastYearSamePeriodRevenue) / lastYearSamePeriodRevenue) * 100
+      : null
 
     return {
       today: todayRevenue,
@@ -98,7 +115,10 @@ export default function DashboardPage() {
       year: yearRevenue,
       todayLoads,
       monthLoads,
-      yearLoads
+      yearLoads,
+      lastYearSamePeriod: lastYearSamePeriodRevenue,
+      lastYearSamePeriodLoads,
+      yearOverYearPercent
     }
   }, [loads])
 
@@ -201,6 +221,23 @@ export default function DashboardPage() {
                   ${financialSummary.year.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
                 <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>{financialSummary.yearLoads} loads</p>
+                {financialSummary.yearOverYearPercent !== null ? (
+                  <div className="pt-2 border-t" style={{ borderColor: 'var(--monday-border-light)' }}>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-semibold" style={{ color: financialSummary.yearOverYearPercent >= 0 ? 'var(--monday-done)' : 'var(--monday-stuck)' }}>
+                        {financialSummary.yearOverYearPercent >= 0 ? '+' : ''}{financialSummary.yearOverYearPercent.toFixed(1)}%
+                      </span>
+                      <span className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>vs last year</span>
+                    </div>
+                    <p className="text-xs mt-1" style={{ color: 'var(--monday-text-muted)' }}>
+                      Last year: ${financialSummary.lastYearSamePeriod.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({financialSummary.lastYearSamePeriodLoads} loads)
+                    </p>
+                  </div>
+                ) : financialSummary.year > 0 ? (
+                  <div className="pt-2 border-t" style={{ borderColor: 'var(--monday-border-light)' }}>
+                    <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>No data from last year to compare</p>
+                  </div>
+                ) : null}
               </div>
             </div>
           </CardContent>
