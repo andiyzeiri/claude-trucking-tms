@@ -12,38 +12,6 @@ import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
 import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
 
-// Fuel data storage key (same as fuel page)
-const FUEL_STORAGE_KEY = 'tms-fuel-data'
-// Payroll overrides storage key
-const PAYROLL_OVERRIDES_KEY = 'tms-payroll-overrides'
-
-// Type for payroll field overrides
-interface PayrollOverride {
-  gross?: number
-  extra?: number
-  dispatch_fee?: number
-  insurance?: number
-  fuel?: number
-  parking?: number
-  trailer?: number
-  misc?: number
-  miles?: number
-}
-
-// Map key is "weekNumber-driverId"
-type PayrollOverrides = Record<string, PayrollOverride>
-
-interface FuelEntry {
-  id: string
-  weekNumber: number
-  driverId: number
-  truckId: number | null
-  gallons: number
-  pricePerGallon: number
-  defGallons: number
-  defPrice: number
-  totalAmount: number
-}
 
 // Generate 52 weeks for a given year using ISO week numbering
 function generateWeeks(year: number) {
@@ -121,70 +89,7 @@ export default function PayrollPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, weekNumber: number, driverId: number} | null>(null)
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
-  const [fuelEntries, setFuelEntries] = useState<FuelEntry[]>([])
-  const [payrollOverrides, setPayrollOverrides] = useState<PayrollOverrides>({})
   const [editValue, setEditValue] = useState<string>('')
-
-  // Load fuel data from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem(FUEL_STORAGE_KEY)
-    if (stored) {
-      try {
-        setFuelEntries(JSON.parse(stored))
-      } catch (e) {
-        console.error('Failed to load fuel data:', e)
-      }
-    }
-  }, [])
-
-  // Load payroll overrides from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem(PAYROLL_OVERRIDES_KEY)
-    if (stored) {
-      try {
-        setPayrollOverrides(JSON.parse(stored))
-      } catch (e) {
-        console.error('Failed to load payroll overrides:', e)
-      }
-    }
-  }, [])
-
-  // Save payroll overrides to localStorage
-  const saveOverride = (weekNumber: number, driverId: number, field: string, value: number) => {
-    const key = `${weekNumber}-${driverId}`
-    setPayrollOverrides(prev => {
-      const newOverrides = {
-        ...prev,
-        [key]: {
-          ...prev[key],
-          [field]: value
-        }
-      }
-      localStorage.setItem(PAYROLL_OVERRIDES_KEY, JSON.stringify(newOverrides))
-      return newOverrides
-    })
-  }
-
-  // Get override value for a specific field
-  const getOverride = (weekNumber: number, driverId: number, field: keyof PayrollOverride): number | undefined => {
-    const key = `${weekNumber}-${driverId}`
-    return payrollOverrides[key]?.[field]
-  }
-
-  // Create a map of fuel totals by week and driver
-  const fuelByWeekAndDriver = useMemo(() => {
-    const map: Record<number, Record<number, number>> = {}
-    fuelEntries.forEach(entry => {
-      if (!map[entry.weekNumber]) {
-        map[entry.weekNumber] = {}
-      }
-      if (!map[entry.weekNumber][entry.driverId]) {
-        map[entry.weekNumber][entry.driverId] = 0
-      }
-      map[entry.weekNumber][entry.driverId] += entry.totalAmount || 0
-    })
-    return map
-  }, [fuelEntries])
 
   const isLoading = driversLoading || payrollLoading
 
@@ -250,7 +155,7 @@ export default function PayrollPage() {
       ])
     )
 
-    // Populate weeks data from calculated payroll
+    // Populate weeks data from calculated payroll (API data only, no localStorage)
     if (calculatedPayroll && Array.isArray(calculatedPayroll)) {
       calculatedPayroll.forEach(entry => {
         if (!entry || typeof entry.driver_id !== 'number' || typeof entry.week_number !== 'number') {
@@ -260,38 +165,20 @@ export default function PayrollPage() {
 
         const driverData = driverMap.get(entry.driver_id)
         if (driverData) {
-          const weekNumber = entry.week_number
-          const driverId = entry.driver_id
-
-          // Get fuel amount for this driver/week from localStorage
-          const fuelFromStorage = fuelByWeekAndDriver[weekNumber]?.[driverId] || 0
-
-          // Apply overrides if they exist, otherwise use calculated values
-          const grossOverride = getOverride(weekNumber, driverId, 'gross')
-          const gross = grossOverride !== undefined ? grossOverride : (Number(entry.gross) || 0)
-          const extraOverride = getOverride(weekNumber, driverId, 'extra')
-          const extra = extraOverride !== undefined ? extraOverride : (Number(entry.extra) || 0)
-          const dispatchFeeOverride = getOverride(weekNumber, driverId, 'dispatch_fee')
-          const dispatch_fee = dispatchFeeOverride !== undefined ? dispatchFeeOverride : (Number(entry.dispatch_fee) || 0)
-          const insuranceOverride = getOverride(weekNumber, driverId, 'insurance')
-          const insurance = insuranceOverride !== undefined ? insuranceOverride : (Number(entry.insurance) || 0)
-          const fuelOverride = getOverride(weekNumber, driverId, 'fuel')
-          const fuel = fuelOverride !== undefined ? fuelOverride : fuelFromStorage
-          const parkingOverride = getOverride(weekNumber, driverId, 'parking')
-          const parking = parkingOverride !== undefined ? parkingOverride : (Number(entry.parking) || 0)
-          const trailerOverride = getOverride(weekNumber, driverId, 'trailer')
-          const trailer = trailerOverride !== undefined ? trailerOverride : (Number(entry.trailer) || 0)
-          const miscOverride = getOverride(weekNumber, driverId, 'misc')
-          const misc = miscOverride !== undefined ? miscOverride : (Number(entry.misc) || 0)
-          const milesOverride = getOverride(weekNumber, driverId, 'miles')
-          const miles = milesOverride !== undefined ? milesOverride : (Number(entry.miles) || 0)
-          // Load adjustments from API (positive = bonuses like detention, negative = deductions like lumper)
+          const gross = Number(entry.gross) || 0
+          const extra = Number(entry.extra) || 0
+          const dispatch_fee = Number(entry.dispatch_fee) || 0
+          const insurance = Number(entry.insurance) || 0
+          const fuel = 0
+          const parking = Number(entry.parking) || 0
+          const trailer = Number(entry.trailer) || 0
+          const misc = Number(entry.misc) || 0
+          const miles = Number(entry.miles) || 0
           const adjustments = Number(entry.adjustments) || 0
 
-          // Check amount = gross + extra - deductions (adjustments already included in gross)
           const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
 
-          driverData.weeks[weekNumber] = {
+          driverData.weeks[entry.week_number] = {
             gross,
             extra,
             dispatch_fee,
@@ -308,83 +195,8 @@ export default function PayrollPage() {
       })
     }
 
-    // Also add fuel data for weeks/drivers that don't have payroll entries yet
-    Object.entries(fuelByWeekAndDriver).forEach(([weekNumStr, driverFuels]) => {
-      const weekNumber = parseInt(weekNumStr)
-      Object.entries(driverFuels).forEach(([driverIdStr, fuelAmount]) => {
-        const driverId = parseInt(driverIdStr)
-        const driverData = driverMap.get(driverId)
-        if (driverData && !driverData.weeks[weekNumber]) {
-          // Apply overrides if they exist
-          const gross = getOverride(weekNumber, driverId, 'gross') ?? 0
-          const extra = getOverride(weekNumber, driverId, 'extra') ?? 0
-          const dispatch_fee = getOverride(weekNumber, driverId, 'dispatch_fee') ?? 0
-          const insurance = getOverride(weekNumber, driverId, 'insurance') ?? 0
-          const fuel = getOverride(weekNumber, driverId, 'fuel') ?? fuelAmount
-          const parking = getOverride(weekNumber, driverId, 'parking') ?? 0
-          const trailer = getOverride(weekNumber, driverId, 'trailer') ?? 0
-          const misc = getOverride(weekNumber, driverId, 'misc') ?? 0
-          const miles = getOverride(weekNumber, driverId, 'miles') ?? 0
-          const adjustments = 0  // No adjustments for fuel-only entries
-
-          const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
-
-          driverData.weeks[weekNumber] = {
-            gross,
-            extra,
-            dispatch_fee,
-            insurance,
-            fuel,
-            parking,
-            trailer,
-            misc,
-            adjustments,
-            miles,
-            check_amount
-          }
-        }
-      })
-    })
-
-    // Also create entries for weeks with overrides but no calculated data
-    Object.entries(payrollOverrides).forEach(([key, overrides]) => {
-      const [weekNumStr, driverIdStr] = key.split('-')
-      const weekNumber = parseInt(weekNumStr)
-      const driverId = parseInt(driverIdStr)
-      const driverData = driverMap.get(driverId)
-
-      if (driverData && !driverData.weeks[weekNumber]) {
-        const gross = overrides.gross ?? 0
-        const extra = overrides.extra ?? 0
-        const dispatch_fee = overrides.dispatch_fee ?? 0
-        const insurance = overrides.insurance ?? 0
-        const fuel = overrides.fuel ?? 0
-        const parking = overrides.parking ?? 0
-        const trailer = overrides.trailer ?? 0
-        const misc = overrides.misc ?? 0
-        const miles = overrides.miles ?? 0
-        const adjustments = 0  // No adjustments for override-only entries
-
-        const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
-
-        driverData.weeks[weekNumber] = {
-          gross,
-          extra,
-          dispatch_fee,
-          insurance,
-          fuel,
-          parking,
-          trailer,
-          misc,
-          adjustments,
-          miles,
-          check_amount
-        }
-      }
-    })
-
     return Array.from(driverMap.values())
-  }, [drivers, calculatedPayroll, fuelByWeekAndDriver, payrollOverrides])
+  }, [drivers, calculatedPayroll])
 
   const toggleWeek = (weekNumber: number) => {
     const newExpanded = new Set(expandedWeeks)
@@ -577,10 +389,6 @@ export default function PayrollPage() {
   }
 
   const stopEdit = () => {
-    if (editingCell) {
-      const value = parseFloat(editValue) || 0
-      saveOverride(editingCell.weekNumber, editingCell.driverId, editingCell.field, value)
-    }
     setEditingCell(null)
     setEditValue('')
   }
