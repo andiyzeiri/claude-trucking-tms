@@ -152,20 +152,14 @@ async def calculate_payroll_from_loads(
         miles_amount = load.miles if load.miles else 0
         raw_adjustment = float(load.adjustment_amount) if load.adjustment_amount else 0.0
 
-        # Automatically treat certain adjustment types as deductions (subtract from pay)
-        # Lumper fees are always deducted from driver pay
-        # Detention, layover, pickup, delivery are bonuses (add to pay)
+        # Use the adjustment amount as-is (respect the sign from the load)
+        # Positive = adds to pay, Negative = deducts from pay
         adjustment_type = load.adjustment_type.value if load.adjustment_type else None
-        if adjustment_type == 'lumper':
-            # Lumper is a deduction - ensure it's negative (subtracts from pay)
-            adjustment_amount = -abs(raw_adjustment)
-        else:
-            # Detention, layover, pickup, delivery are bonuses - ensure positive (adds to pay)
-            adjustment_amount = abs(raw_adjustment) if raw_adjustment else 0.0
+        adjustment_amount = raw_adjustment
 
-        payroll_data[key]["gross"] += gross_amount
+        payroll_data[key]["gross"] += gross_amount + adjustment_amount  # Gross = rate + adjustments
         payroll_data[key]["miles"] += miles_amount
-        payroll_data[key]["adjustments"] += adjustment_amount  # Sum adjustments from loads
+        payroll_data[key]["adjustments"] += adjustment_amount  # Track adjustments separately for reference
         payroll_data[key]["load_count"] += 1
         payroll_data[key]["loads"].append({
             "load_number": load.load_number,
@@ -205,10 +199,9 @@ async def calculate_payroll_from_loads(
         data["misc"] = misc
         data["extra"] = 0  # Can be manually added later
 
-        # Calculate check amount: gross + adjustments - deductions + extra
-        # Adjustments can be positive (bonuses like detention) or negative (deductions like lumper fees)
-        adjustments = data["adjustments"]
-        data["check_amount"] = gross + adjustments - dispatch_fee - insurance - parking - trailer - misc + data["extra"]
+        # Calculate check amount: gross - deductions + extra
+        # Adjustments are already included in gross (gross = rate + adjustments)
+        data["check_amount"] = gross - dispatch_fee - insurance - parking - trailer - misc + data["extra"]
 
     # Convert to list and sort by driver name and week
     result_list = sorted(

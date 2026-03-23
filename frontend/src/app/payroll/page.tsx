@@ -288,8 +288,8 @@ export default function PayrollPage() {
           // Load adjustments from API (positive = bonuses like detention, negative = deductions like lumper)
           const adjustments = Number(entry.adjustments) || 0
 
-          // Check amount = gross + adjustments + extra - deductions (dispatch_fee, insurance, fuel, parking, trailer, misc)
-          const check_amount = gross + adjustments + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
+          // Check amount = gross + extra - deductions (adjustments already included in gross)
+          const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
 
           driverData.weeks[weekNumber] = {
             gross,
@@ -327,7 +327,7 @@ export default function PayrollPage() {
           const miles = getOverride(weekNumber, driverId, 'miles') ?? 0
           const adjustments = 0  // No adjustments for fuel-only entries
 
-          const check_amount = gross + adjustments + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
+          const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
 
           driverData.weeks[weekNumber] = {
             gross,
@@ -365,7 +365,7 @@ export default function PayrollPage() {
         const miles = overrides.miles ?? 0
         const adjustments = 0  // No adjustments for override-only entries
 
-        const check_amount = gross + adjustments + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
+        const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
 
         driverData.weeks[weekNumber] = {
           gross,
