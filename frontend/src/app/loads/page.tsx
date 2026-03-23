@@ -530,13 +530,23 @@ export default function LoadsPageInline() {
       return loadYear === selectedYear
     })
 
-    // Apply factoring card filters
-    if (factoringFilter === 'invoice') {
-      filtered = filtered.filter(load => load.status !== 'invoiced')
-    } else if (factoringFilter === 'ratecon') {
-      filtered = filtered.filter(load => !load.ratecon_url)
-    } else if (factoringFilter === 'pod') {
-      filtered = filtered.filter(load => !load.pod_url)
+    // Apply factoring card filters (past loads only: yesterday and earlier)
+    if (factoringFilter) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      filtered = filtered.filter(load => {
+        if (!load.pickup_date) return false
+        const pickupDate = new Date(normalizeDateTime(load.pickup_date))
+        pickupDate.setHours(0, 0, 0, 0)
+        return pickupDate.getTime() < today.getTime()
+      })
+      if (factoringFilter === 'invoice') {
+        filtered = filtered.filter(load => load.status !== 'invoiced')
+      } else if (factoringFilter === 'ratecon') {
+        filtered = filtered.filter(load => !load.ratecon_url)
+      } else if (factoringFilter === 'pod') {
+        filtered = filtered.filter(load => !load.pod_url)
+      }
     }
 
     // Apply brokerage filter - only show loads from "Absolute Brokerage" customer
@@ -746,16 +756,22 @@ export default function LoadsPageInline() {
     }
   }, [editableLoads])
 
-  // Factoring stats: count loads for selected year missing invoice, ratecon, or POD
+  // Factoring stats: count past loads (yesterday and earlier within selected year) missing invoice, ratecon, or POD
   const factoringStats = useMemo(() => {
-    const yearLoads = editableLoads.filter(l => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const pastYearLoads = editableLoads.filter(l => {
       if (!l.pickup_date) return false
-      return getISOWeekYear(new Date(normalizeDateTime(l.pickup_date))) === selectedYear
+      const pickupDate = new Date(normalizeDateTime(l.pickup_date))
+      pickupDate.setHours(0, 0, 0, 0)
+      // Must be in the selected year and before today (yesterday or earlier)
+      return getISOWeekYear(pickupDate) === selectedYear && pickupDate.getTime() < today.getTime()
     })
     return {
-      missingInvoice: yearLoads.filter(l => l.status !== 'invoiced').length,
-      missingRatecon: yearLoads.filter(l => !l.ratecon_url).length,
-      missingPod: yearLoads.filter(l => !l.pod_url).length,
+      missingInvoice: pastYearLoads.filter(l => l.status !== 'invoiced').length,
+      missingRatecon: pastYearLoads.filter(l => !l.ratecon_url).length,
+      missingPod: pastYearLoads.filter(l => !l.pod_url).length,
     }
   }, [editableLoads, selectedYear])
 
