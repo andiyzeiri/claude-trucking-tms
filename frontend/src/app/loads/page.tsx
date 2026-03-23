@@ -362,6 +362,8 @@ export default function LoadsPageInline() {
   const [showDedicatedPanel, setShowDedicatedPanel] = useState<boolean>(false)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [showBrokerageOnly, setShowBrokerageOnly] = useState<boolean>(false)
+  const [viewMode, setViewMode] = useState<'loads' | 'factoring'>('loads')
+  const [factoringFilter, setFactoringFilter] = useState<'invoice' | 'ratecon' | 'pod' | null>(null)
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, loadId?: number, type: 'load' | 'general'} | null>(null)
   const [pdfModal, setPdfModal] = useState<{url: string, loadId: number, type: 'pod' | 'ratecon'} | null>(null)
   const [sortField, setSortField] = useState<keyof EditableLoad>('pickup_date')
@@ -522,12 +524,23 @@ export default function LoadsPageInline() {
   const filteredLoads = useMemo(() => {
     let filtered = editableLoads
 
-    // Apply year filter using ISO week year (so Dec 30, 2024 shows in 2025 if it's Week 1 of 2025)
-    filtered = filtered.filter(load => {
-      if (!load.pickup_date) return false
-      const loadYear = getISOWeekYear(new Date(normalizeDateTime(load.pickup_date)))
-      return loadYear === selectedYear
-    })
+    // Factoring mode: apply factoring card filters across all years
+    if (viewMode === 'factoring') {
+      if (factoringFilter === 'invoice') {
+        filtered = filtered.filter(load => load.status !== 'invoiced')
+      } else if (factoringFilter === 'ratecon') {
+        filtered = filtered.filter(load => !load.ratecon_url)
+      } else if (factoringFilter === 'pod') {
+        filtered = filtered.filter(load => !load.pod_url)
+      }
+    } else {
+      // Apply year filter using ISO week year (so Dec 30, 2024 shows in 2025 if it's Week 1 of 2025)
+      filtered = filtered.filter(load => {
+        if (!load.pickup_date) return false
+        const loadYear = getISOWeekYear(new Date(normalizeDateTime(load.pickup_date)))
+        return loadYear === selectedYear
+      })
+    }
 
     // Apply brokerage filter - only show loads from "Absolute Brokerage" customer
     if (showBrokerageOnly) {
@@ -624,7 +637,7 @@ export default function LoadsPageInline() {
     })
 
     return filtered
-  }, [editableLoads, searchQuery, upcomingFilter, statusFilter, sortField, sortDirection, customers, selectedYear])
+  }, [editableLoads, searchQuery, upcomingFilter, statusFilter, sortField, sortDirection, customers, selectedYear, viewMode, factoringFilter])
 
   // Group loads - now supports multiple groupings
   const groupedLoads = useMemo(() => {
@@ -733,6 +746,15 @@ export default function LoadsPageInline() {
       available: upcomingLoads.filter(l => l.status === 'available').length,
       dispatched: upcomingLoads.filter(l => l.status === 'dispatched').length,
       invoiced: upcomingLoads.filter(l => l.status === 'invoiced').length
+    }
+  }, [editableLoads])
+
+  // Factoring stats: count loads missing invoice (not checked), ratecon, or POD
+  const factoringStats = useMemo(() => {
+    return {
+      missingInvoice: editableLoads.filter(l => l.status !== 'invoiced').length,
+      missingRatecon: editableLoads.filter(l => !l.ratecon_url).length,
+      missingPod: editableLoads.filter(l => !l.pod_url).length,
     }
   }, [editableLoads])
 
@@ -2521,16 +2543,28 @@ export default function LoadsPageInline() {
           </div>
         </div>
 
-        {/* Year Tabs */}
+        {/* View Mode + Year Tabs */}
         <div className="flex items-center gap-2 border-b" style={{ borderColor: 'var(--monday-border-light)' }}>
+          <button
+            onClick={() => { setViewMode('factoring'); setStatusFilter(null); setUpcomingFilter(false); setFactoringFilter(null) }}
+            className="px-4 py-2 text-sm font-medium transition-all relative"
+            style={{
+              color: viewMode === 'factoring' ? '#e67e22' : 'var(--monday-text-secondary)',
+              borderBottom: viewMode === 'factoring' ? '2px solid #e67e22' : '2px solid transparent',
+              marginBottom: '-1px'
+            }}
+          >
+            Factoring
+          </button>
+          <div className="w-px h-5 bg-gray-300 mx-1"></div>
           {availableYears.map(year => (
             <button
               key={year}
-              onClick={() => setSelectedYear(year)}
+              onClick={() => { setViewMode('loads'); setSelectedYear(year); setFactoringFilter(null) }}
               className="px-4 py-2 text-sm font-medium transition-all relative"
               style={{
-                color: selectedYear === year ? 'var(--monday-cornflower)' : 'var(--monday-text-secondary)',
-                borderBottom: selectedYear === year ? '2px solid var(--monday-cornflower)' : '2px solid transparent',
+                color: viewMode === 'loads' && selectedYear === year ? 'var(--monday-cornflower)' : 'var(--monday-text-secondary)',
+                borderBottom: viewMode === 'loads' && selectedYear === year ? '2px solid var(--monday-cornflower)' : '2px solid transparent',
                 marginBottom: '-1px'
               }}
             >
@@ -2542,97 +2576,143 @@ export default function LoadsPageInline() {
           ))}
         </div>
 
-        {/* Upcoming Load Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div
-            className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
-            style={{
-              backgroundColor: upcomingFilter ? 'rgba(97, 97, 255, 0.1)' : 'var(--monday-bg-primary)',
-              border: upcomingFilter ? '2px solid var(--monday-cornflower)' : '1px solid var(--monday-border-light)'
-            }}
-            onClick={() => {
-              const newUpcomingFilter = !upcomingFilter
-              setUpcomingFilter(newUpcomingFilter)
+        {/* Loads mode: Upcoming Load Statistics */}
+        {viewMode === 'loads' && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div
+                className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
+                style={{
+                  backgroundColor: upcomingFilter ? 'rgba(97, 97, 255, 0.1)' : 'var(--monday-bg-primary)',
+                  border: upcomingFilter ? '2px solid var(--monday-cornflower)' : '1px solid var(--monday-border-light)'
+                }}
+                onClick={() => {
+                  const newUpcomingFilter = !upcomingFilter
+                  setUpcomingFilter(newUpcomingFilter)
+                  if (newUpcomingFilter) {
+                    setStatusFilter(null)
+                    setActiveGroupings(new Set(['day']))
+                  } else {
+                    const newGroupings = new Set(activeGroupings)
+                    newGroupings.delete('day')
+                    setActiveGroupings(newGroupings)
+                  }
+                }}
+              >
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Upcoming Loads</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: 'var(--monday-text-primary)' }}>{upcomingStats.total}</p>
+                </div>
+              </div>
 
-              // Automatically enable day grouping when upcoming filter is turned on
-              if (newUpcomingFilter) {
-                setStatusFilter(null)
-                setActiveGroupings(new Set(['day']))
-              } else {
-                // Clear day grouping when upcoming filter is turned off
-                const newGroupings = new Set(activeGroupings)
-                newGroupings.delete('day')
-                setActiveGroupings(newGroupings)
-              }
-            }}
-          >
-            <div>
-              <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Upcoming Loads</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: 'var(--monday-text-primary)' }}>{upcomingStats.total}</p>
+              <div
+                className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
+                style={{
+                  backgroundColor: statusFilter === 'available' ? 'rgba(0, 200, 117, 0.1)' : 'var(--monday-bg-primary)',
+                  border: statusFilter === 'available' ? '2px solid var(--monday-done)' : '1px solid var(--monday-border-light)'
+                }}
+                onClick={() => setStatusFilter(statusFilter === 'available' ? null : 'available')}
+              >
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Available</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: 'var(--monday-done)' }}>{upcomingStats.available}</p>
+                </div>
+              </div>
+
+              <div
+                className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
+                style={{
+                  backgroundColor: statusFilter === 'dispatched' ? 'rgba(253, 171, 61, 0.1)' : 'var(--monday-bg-primary)',
+                  border: statusFilter === 'dispatched' ? '2px solid var(--monday-working)' : '1px solid var(--monday-border-light)'
+                }}
+                onClick={() => setStatusFilter(statusFilter === 'dispatched' ? null : 'dispatched')}
+              >
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Dispatched</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: 'var(--monday-working)' }}>{upcomingStats.dispatched}</p>
+                </div>
+              </div>
+
+              <div
+                className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
+                style={{
+                  backgroundColor: statusFilter === 'invoiced' ? 'rgba(162, 93, 220, 0.1)' : 'var(--monday-bg-primary)',
+                  border: statusFilter === 'invoiced' ? '2px solid var(--monday-purple)' : '1px solid var(--monday-border-light)'
+                }}
+                onClick={() => setStatusFilter(statusFilter === 'invoiced' ? null : 'invoiced')}
+              >
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Invoiced</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: 'var(--monday-purple)' }}>{upcomingStats.invoiced}</p>
+                </div>
+              </div>
+
+              <div
+                className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
+                style={{
+                  backgroundColor: showDedicatedPanel ? 'rgba(0, 134, 192, 0.1)' : 'var(--monday-bg-primary)',
+                  border: showDedicatedPanel ? '2px solid #0086c0' : '1px solid var(--monday-border-light)'
+                }}
+                onClick={() => setShowDedicatedPanel(!showDedicatedPanel)}
+              >
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Dedicated</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: '#0086c0' }}>{dedicatedLanes.length}</p>
+                </div>
+              </div>
+            </div>
+
+            {showDedicatedPanel && (
+              <DedicatedLanesPanel onClose={() => setShowDedicatedPanel(false)} />
+            )}
+          </>
+        )}
+
+        {/* Factoring mode: Invoice, Ratecon, POD cards */}
+        {viewMode === 'factoring' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div
+              className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
+              style={{
+                backgroundColor: factoringFilter === 'invoice' ? 'rgba(231, 76, 60, 0.1)' : 'var(--monday-bg-primary)',
+                border: factoringFilter === 'invoice' ? '2px solid #e74c3c' : '1px solid var(--monday-border-light)'
+              }}
+              onClick={() => setFactoringFilter(factoringFilter === 'invoice' ? null : 'invoice')}
+            >
+              <div>
+                <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Missing Invoice</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: '#e74c3c' }}>{factoringStats.missingInvoice}</p>
+              </div>
+            </div>
+
+            <div
+              className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
+              style={{
+                backgroundColor: factoringFilter === 'ratecon' ? 'rgba(243, 156, 18, 0.1)' : 'var(--monday-bg-primary)',
+                border: factoringFilter === 'ratecon' ? '2px solid #f39c12' : '1px solid var(--monday-border-light)'
+              }}
+              onClick={() => setFactoringFilter(factoringFilter === 'ratecon' ? null : 'ratecon')}
+            >
+              <div>
+                <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Missing Ratecon</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: '#f39c12' }}>{factoringStats.missingRatecon}</p>
+              </div>
+            </div>
+
+            <div
+              className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
+              style={{
+                backgroundColor: factoringFilter === 'pod' ? 'rgba(52, 152, 219, 0.1)' : 'var(--monday-bg-primary)',
+                border: factoringFilter === 'pod' ? '2px solid #3498db' : '1px solid var(--monday-border-light)'
+              }}
+              onClick={() => setFactoringFilter(factoringFilter === 'pod' ? null : 'pod')}
+            >
+              <div>
+                <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Missing POD</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: '#3498db' }}>{factoringStats.missingPod}</p>
+              </div>
             </div>
           </div>
-
-          <div
-            className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
-            style={{
-              backgroundColor: statusFilter === 'available' ? 'rgba(0, 200, 117, 0.1)' : 'var(--monday-bg-primary)',
-              border: statusFilter === 'available' ? '2px solid var(--monday-done)' : '1px solid var(--monday-border-light)'
-            }}
-            onClick={() => setStatusFilter(statusFilter === 'available' ? null : 'available')}
-          >
-            <div>
-              <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Available</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: 'var(--monday-done)' }}>{upcomingStats.available}</p>
-            </div>
-          </div>
-
-          <div
-            className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
-            style={{
-              backgroundColor: statusFilter === 'dispatched' ? 'rgba(253, 171, 61, 0.1)' : 'var(--monday-bg-primary)',
-              border: statusFilter === 'dispatched' ? '2px solid var(--monday-working)' : '1px solid var(--monday-border-light)'
-            }}
-            onClick={() => setStatusFilter(statusFilter === 'dispatched' ? null : 'dispatched')}
-          >
-            <div>
-              <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Dispatched</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: 'var(--monday-working)' }}>{upcomingStats.dispatched}</p>
-            </div>
-          </div>
-
-          <div
-            className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
-            style={{
-              backgroundColor: statusFilter === 'invoiced' ? 'rgba(162, 93, 220, 0.1)' : 'var(--monday-bg-primary)',
-              border: statusFilter === 'invoiced' ? '2px solid var(--monday-purple)' : '1px solid var(--monday-border-light)'
-            }}
-            onClick={() => setStatusFilter(statusFilter === 'invoiced' ? null : 'invoiced')}
-          >
-            <div>
-              <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Invoiced</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: 'var(--monday-purple)' }}>{upcomingStats.invoiced}</p>
-            </div>
-          </div>
-
-          {/* Dedicated Lanes Card */}
-          <div
-            className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
-            style={{
-              backgroundColor: showDedicatedPanel ? 'rgba(0, 134, 192, 0.1)' : 'var(--monday-bg-primary)',
-              border: showDedicatedPanel ? '2px solid #0086c0' : '1px solid var(--monday-border-light)'
-            }}
-            onClick={() => setShowDedicatedPanel(!showDedicatedPanel)}
-          >
-            <div>
-              <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Dedicated</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: '#0086c0' }}>{dedicatedLanes.length}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Dedicated Lanes Panel - shown when card is clicked */}
-        {showDedicatedPanel && (
-          <DedicatedLanesPanel onClose={() => setShowDedicatedPanel(false)} />
         )}
 
         <div className="border rounded-lg bg-white overflow-hidden shadow-sm" style={{borderColor: 'var(--monday-border-light)', marginBottom: '60px'}} onContextMenu={handleGeneralContextMenu}>
