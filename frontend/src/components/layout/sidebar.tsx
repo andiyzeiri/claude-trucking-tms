@@ -28,6 +28,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home, pageId: 'dashboard' },
   { name: 'Dispatch Board', href: '/dispatch', icon: CalendarDays, pageId: 'dispatch' },
   { name: 'Loads', href: '/loads', icon: Package, pageId: 'loads' },
+  { name: 'Brokerage', href: '/brokerage', icon: Building2, pageId: 'brokerage' },
   { name: 'Lanes', href: '/lanes', icon: Route, pageId: 'lanes' },
   { name: 'Equipment', href: '/trucks', icon: Truck, pageId: 'trucks' },
   { name: 'Drivers', href: '/drivers', icon: Users, pageId: 'drivers' },
