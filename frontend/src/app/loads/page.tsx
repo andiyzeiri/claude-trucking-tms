@@ -24,6 +24,7 @@ import { AddressAutocomplete, AddressData } from '@/components/ui/address-autoco
 import { InlineDateTimePicker } from '@/components/ui/datetime-picker'
 import { DedicatedLanesPanel } from '@/components/dedicated-lanes/dedicated-lanes-panel'
 import api from '@/lib/api'
+import { useAuth } from '@/hooks/use-auth'
 
 interface EditableLoad extends Load {
   isNew?: boolean
@@ -316,6 +317,8 @@ function parseTimeInput(timeInput: string, existingDateTime: string): string {
 }
 
 export default function LoadsPageInline() {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin' || user?.role === 'company_admin' || user?.role === 'super_admin'
   const { data: loadsData, isLoading, refetch } = useLoads(1, 10000)
   const loads = loadsData?.items || []
   const createLoad = useCreateLoad()
@@ -2241,7 +2244,8 @@ export default function LoadsPageInline() {
           )}
         </td>
 
-        {/* Adjustment */}
+        {/* Adjustment - admin only */}
+        {isAdmin && (
         <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)'}}>
           <div className="space-y-1">
             <Select
@@ -2302,6 +2306,7 @@ export default function LoadsPageInline() {
             )}
           </div>
         </td>
+        )}
 
         {/* Ratecon */}
         <td className={`px-3 py-2.5 border-r ${load.ratecon_url ? 'bg-green-50' : ''}`} style={{borderColor: 'var(--monday-border-light)', backgroundColor: load.ratecon_url ? undefined : '#fff3e0'}}>
@@ -2737,6 +2742,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
+                  {isAdmin && (
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.adjustment}px`, minWidth: `${columnWidths.adjustment}px`}}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.adjustment}
@@ -2744,6 +2750,7 @@ export default function LoadsPageInline() {
                     />
                     Adjustment
                   </th>
+                  )}
                   <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.ratecon}px`, minWidth: `${columnWidths.ratecon}px`}}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.ratecon}
