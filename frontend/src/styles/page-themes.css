@@ -18,6 +18,8 @@
   --page-hover: #D0F5E3;
   --page-text-accent: #00C875;
   --page-text-muted: #676879;
+  font-weight: 450;
+  letter-spacing: 0.015em;
 }
 
 /* Lanes - Monday Orange */
