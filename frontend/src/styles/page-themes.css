@@ -20,6 +20,7 @@
   --page-text-muted: #676879;
   font-weight: 450;
   letter-spacing: 0.015em;
+  font-size: calc(1em + 1px);
 }
 
 /* Lanes - Monday Orange */
