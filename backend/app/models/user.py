@@ -51,7 +51,12 @@ class User(Base):
         # First priority: use page_permissions if set (works for any role)
         # This allows admins to customize any user's page access
         if self.page_permissions and self.page_permissions.get("pages"):
-            return self.page_permissions.get("pages", [])
+            pages = self.page_permissions.get("pages", [])
+            # Ensure brokerage is included if loads is present
+            if "loads" in pages and "brokerage" not in pages:
+                idx = pages.index("loads") + 1
+                pages.insert(idx, "brokerage")
+            return pages
 
         # Default pages based on role - must match frontend sidebar.tsx and permissions-modal.tsx
         all_pages = [
