@@ -29,6 +29,7 @@ const ALL_PAGES = [
   { id: 'dashboard', name: 'Dashboard', icon: Home, description: 'Main dashboard overview' },
   { id: 'dispatch', name: 'Dispatch Board', icon: CalendarDays, description: 'Weekly driver schedule' },
   { id: 'loads', name: 'Loads', icon: Package, description: 'Load management & tracking' },
+  { id: 'brokerage', name: 'Brokerage', icon: Building2, description: 'Brokerage load management' },
   { id: 'lanes', name: 'Lanes', icon: Route, description: 'Freight lane management' },
   { id: 'trucks', name: 'Equipment', icon: Truck, description: 'Trucks and trailers' },
   { id: 'drivers', name: 'Drivers', icon: Users, description: 'Driver roster management' },
