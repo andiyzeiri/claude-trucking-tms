@@ -2512,13 +2512,13 @@ export default function BrokeragePage() {
 
   return (
     <Layout>
-      <div className="page-brokerage space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="page-brokerage space-y-4 md:space-y-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>Brokerage</h1>
-            <p style={{ color: 'var(--monday-text-secondary)' }}>View loads from selected brokers</p>
+            <h1 className="text-xl md:text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>Brokerage</h1>
+            <p className="text-sm md:text-base" style={{ color: 'var(--monday-text-secondary)' }}>View loads from selected brokers</p>
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center flex-wrap">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -2526,7 +2526,7 @@ export default function BrokeragePage() {
                 placeholder="Search loads..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 w-64"
+                className="pl-9 w-full md:w-64"
                 style={{ backgroundColor: 'var(--monday-bg-primary)', borderColor: 'var(--monday-border-light)' }}
               />
               {searchQuery && (
@@ -2659,7 +2659,7 @@ export default function BrokeragePage() {
         </div>
 
         {/* Year Tabs */}
-        <div className="flex items-center gap-2 border-b" style={{ borderColor: 'var(--monday-border-light)' }}>
+        <div className="flex items-center gap-2 border-b overflow-x-auto" style={{ borderColor: 'var(--monday-border-light)' }}>
           {availableYears.map(year => (
             <button
               key={year}
@@ -2985,23 +2985,22 @@ export default function BrokeragePage() {
 
         {/* Fixed Totals Footer */}
         <div
-          className="fixed bottom-0 left-0 right-0 z-40 shadow-lg border-t"
+          className="fixed bottom-0 left-0 right-0 z-40 shadow-lg border-t md:ml-[240px]"
           style={{
             backgroundColor: 'var(--monday-bg-secondary)',
             borderColor: 'var(--monday-border)',
-            marginLeft: '240px' // Account for sidebar width
           }}
         >
-          <div className="flex items-center justify-between px-6 py-3">
-            <div className="flex items-center gap-6">
-              <div className="text-sm font-medium" style={{ color: 'var(--monday-text-primary)' }}>
+          <div className="flex items-center justify-between px-3 md:px-6 py-3">
+            <div className="flex items-center gap-3 md:gap-6">
+              <div className="text-xs md:text-sm font-medium" style={{ color: 'var(--monday-text-primary)' }}>
                 {selectedYear} Totals
               </div>
-              <div className="text-sm font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
+              <div className="text-xs md:text-sm font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
                 {totals.count} Loads
               </div>
             </div>
-            <div className="flex items-center gap-6" style={{ marginRight: '300px' }}>
+            <div className="flex items-center gap-3 md:gap-6 md:mr-[300px]">
               <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--monday-done)' }}>
                 {formatCurrency(totals.rate)}
               </div>

@@ -189,8 +189,8 @@
 
 /* Google Places Autocomplete dropdown styling */
 .pac-container {
-  min-width: 400px !important;
-  max-width: 600px !important;
+  min-width: min(400px, 95vw) !important;
+  max-width: min(600px, 95vw) !important;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   border: 1px solid var(--monday-border-light);
@@ -222,4 +222,28 @@
 
 .pac-icon {
   margin-right: 8px;
+}
+
+/* Mobile responsive */
+@media (max-width: 767px) {
+  /* Ensure tables scroll horizontally */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Factoring cards stack better */
+  .grid-cols-1.md\:grid-cols-3 {
+    gap: 8px;
+  }
+
+  /* Tighter padding on page containers */
+  [class*="page-"] {
+    min-height: calc(100vh - 56px);
+  }
+
+  /* Smaller scrollbars on mobile */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
 }

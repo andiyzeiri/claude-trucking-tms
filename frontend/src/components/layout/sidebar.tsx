@@ -70,7 +70,11 @@ function getAllowedPages(user: any): string[] {
   return ROLE_PAGES[roleLower] || ROLE_PAGES.viewer
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void
+}
+
+export default function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname()
   const { user, logout } = useAuth()
 
@@ -105,6 +109,7 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              onClick={onClose}
               className={cn(
                 'group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors nav-item',
                 isActive ? 'active' : ''
