@@ -448,6 +448,7 @@ export default function BrokeragePage() {
 
       return {
         ...load,
+        notes: load.notes || (load as any).pickup_notes || '',
         weekNumber: getWeekNumber(pickupDate),
         weekLabel: getWeekLabel(pickupDate),
         weekDateRange: getWeekDateRange(pickupDate),
@@ -1086,7 +1087,7 @@ export default function BrokeragePage() {
         status: field === 'status' ? value : load.status,
         pod_url: field === 'pod_url' ? value : (load.pod_url || null),
         ratecon_url: field === 'ratecon_url' ? value : (load.ratecon_url || null),
-        notes: field === 'notes' ? value : (load.notes || null),
+        pickup_notes: field === 'notes' ? value : (load.notes || load.pickup_notes || null),
         adjustment_type: field === 'adjustment_type' ? value : (load.adjustment_type || null),
         adjustment_amount: field === 'adjustment_amount' ? value : (load.adjustment_amount || null),
         [field]: value
