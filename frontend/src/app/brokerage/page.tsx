@@ -1581,15 +1581,15 @@ export default function BrokeragePage() {
           <td className="px-2 py-2 text-sm" colSpan={6}></td>
           <td className="px-2 py-2 text-sm">
             <div className="mb-0.5">
-              <div style={{fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)'}}>
+              <div style={{fontSize: '14px', lineHeight: '20px', fontWeight: 600, color: 'var(--monday-done)'}}>
                 {formatCurrency(groupTotalRate)}
               </div>
             </div>
             <div className="flex gap-2">
-              <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: 'var(--monday-blue)'}}>
+              <div style={{fontSize: '12px', lineHeight: '17px', fontWeight: 500, color: 'var(--monday-blue)'}}>
                 {groupTotalMiles.toLocaleString()} mi
               </div>
-              <div style={{fontSize: '11px', lineHeight: '16px', fontWeight: 500, color: 'var(--monday-purple)'}}>
+              <div style={{fontSize: '12px', lineHeight: '17px', fontWeight: 500, color: 'var(--monday-purple)'}}>
                 ${groupRPM.toFixed(2)}/mi
               </div>
             </div>
@@ -1664,8 +1664,8 @@ export default function BrokeragePage() {
         {/* Week */}
         <td className="px-3 py-2.5 border-r" style={{ paddingLeft: `${paddingLeft + 12}px`, borderColor: 'var(--monday-border-light)' }}>
           <div>
-            <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)'}}>{load.weekLabel}</div>
-            <div style={{fontSize: '11px', lineHeight: '16px', color: '#fca311'}}>{load.weekDateRange}</div>
+            <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)'}}>{load.weekLabel}</div>
+            <div style={{fontSize: '12px', lineHeight: '17px', color: '#b8860b'}}>{load.weekDateRange}</div>
           </div>
         </td>
 
@@ -1687,7 +1687,7 @@ export default function BrokeragePage() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: '#3a86ff'}}>
+            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '14px', lineHeight: '20px', color: '#2563eb'}}>
               {formatDateShort(load.pickup_date)}
             </div>
           )}
@@ -1752,7 +1752,7 @@ export default function BrokeragePage() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="font-medium cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)'}}>
+            <div className="font-medium cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)'}}>
               {load.load_number}
             </div>
           )}
@@ -1782,11 +1782,11 @@ export default function BrokeragePage() {
             </Select>
           ) : (
             <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
-              <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)'}}>
+              <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)'}}>
                 {customers.find(c => c.id === load.customer_id)?.name || 'N/A'}
               </div>
               {customers.find(c => c.id === load.customer_id)?.mc && (
-                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--monday-text-secondary)'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)'}}>
                   MC: {customers.find(c => c.id === load.customer_id)?.mc}
                 </div>
               )}
@@ -1950,25 +1950,25 @@ export default function BrokeragePage() {
             <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
               {/* Top row: City, State, Zip */}
               <div className="flex gap-1 mb-0.5">
-                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', flex: 1}}>
+                <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)', flex: 1}}>
                   {parseLocation(load.pickup_location).city || 'City'}
                 </div>
-                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', width: '30px'}}>
+                <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)', width: '30px'}}>
                   {parseLocation(load.pickup_location).state || 'ST'}
                 </div>
-                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', width: '50px'}}>
+                <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)', width: '50px'}}>
                   {parseLocation(load.pickup_location).zip || 'Zip'}
                 </div>
               </div>
               {/* Bottom row: Street, Date, Time */}
               <div className="flex gap-1">
-                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--monday-text-secondary)', flex: 1}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)', flex: 1}}>
                   {parseLocation(load.pickup_location).street || 'Street'}
                 </div>
-                <div style={{fontSize: '11px', lineHeight: '16px', color: '#fb5607', width: '60px'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: '#c2410c', width: '60px'}}>
                   {formatDateShort(load.pickup_date)}
                 </div>
-                <div style={{fontSize: '11px', lineHeight: '16px', color: '#fb5607', width: '65px'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: '#c2410c', width: '65px'}}>
                   {formatTimeShort(load.pickup_date)}
                 </div>
               </div>
@@ -2102,25 +2102,25 @@ export default function BrokeragePage() {
             <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
               {/* Top row: City, State, Zip */}
               <div className="flex gap-1 mb-0.5">
-                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', flex: 1}}>
+                <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)', flex: 1}}>
                   {parseLocation(load.delivery_location).city || 'City'}
                 </div>
-                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', width: '30px'}}>
+                <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)', width: '30px'}}>
                   {parseLocation(load.delivery_location).state || 'ST'}
                 </div>
-                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', width: '50px'}}>
+                <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)', width: '50px'}}>
                   {parseLocation(load.delivery_location).zip || 'Zip'}
                 </div>
               </div>
               {/* Bottom row: Street, Date, Time */}
               <div className="flex gap-1">
-                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--monday-text-secondary)', flex: 1}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)', flex: 1}}>
                   {parseLocation(load.delivery_location).street || 'Street'}
                 </div>
-                <div style={{fontSize: '11px', lineHeight: '16px', color: '#fb5607', width: '60px'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: '#c2410c', width: '60px'}}>
                   {formatDateShort(load.delivery_date)}
                 </div>
-                <div style={{fontSize: '11px', lineHeight: '16px', color: '#fb5607', width: '65px'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: '#c2410c', width: '65px'}}>
                   {formatTimeShort(load.delivery_date)}
                 </div>
               </div>
@@ -2246,16 +2246,16 @@ export default function BrokeragePage() {
             <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1" onClick={() => startEdit(loadKey, 'rate')}>
               {/* Top row: Rate */}
               <div className="mb-0.5">
-                <div style={{fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', fontWeight: 500}}>
+                <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)', fontWeight: 500}}>
                   {formatCurrency(load.rate)}
                 </div>
               </div>
               {/* Bottom row: Miles and RPM */}
               <div className="flex gap-2">
-                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--monday-text-secondary)'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)'}}>
                   {load.miles?.toLocaleString() || 0} mi
                 </div>
-                <div style={{fontSize: '11px', lineHeight: '16px', color: 'var(--monday-text-secondary)'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)'}}>
                   ${rpm.toFixed(2)}/mi
                 </div>
               </div>
@@ -2312,7 +2312,7 @@ export default function BrokeragePage() {
                 className="h-6 flex items-center cursor-pointer hover:bg-blue-50 rounded px-1"
                 onClick={() => startEdit(loadKey, 'adjustment_amount')}
                 style={{
-                  fontSize: '11px',
+                  fontSize: '12px',
                   color: load.adjustment_amount ? (load.adjustment_amount > 0 ? '#16a34a' : load.adjustment_amount < 0 ? '#dc2626' : '#6b7280') : '#9ca3af'
                 }}
               >
@@ -2487,7 +2487,7 @@ export default function BrokeragePage() {
 
   return (
     <Layout>
-      <div className="page-loads space-y-6">
+      <div className="page-brokerage space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>Brokerage</h1>
@@ -2704,7 +2704,7 @@ export default function BrokeragePage() {
             <table className="w-full table-auto" style={{borderCollapse: 'separate', borderSpacing: 0}}>
               <thead className="sticky top-0 z-10 shadow-sm" style={{backgroundColor: 'var(--monday-bg-secondary)'}}>
                 <tr>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px`}} onClick={() => handleSort('weekNumber')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px`}} onClick={() => handleSort('weekNumber')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.week}
                       onAdjust={(delta) => adjustWidth('week', delta)}
@@ -2716,7 +2716,7 @@ export default function BrokeragePage() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.date}px`, minWidth: `${columnWidths.date}px`}} onClick={() => handleSort('pickup_date')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.date}px`, minWidth: `${columnWidths.date}px`}} onClick={() => handleSort('pickup_date')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.date}
                       onAdjust={(delta) => adjustWidth('date', delta)}
@@ -2728,10 +2728,10 @@ export default function BrokeragePage() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-1 py-2.5 text-center text-xs font-medium border-b" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: '36px', minWidth: '36px'}}>
+                  <th className="px-1 py-2.5 text-center text-[13px] font-medium border-b" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: '36px', minWidth: '36px'}}>
                     <Check className="h-3 w-3 mx-auto" style={{color: 'var(--monday-text-secondary)'}} />
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.load_number}px`, minWidth: `${columnWidths.load_number}px`}} onClick={() => handleSort('load_number')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.load_number}px`, minWidth: `${columnWidths.load_number}px`}} onClick={() => handleSort('load_number')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.load_number}
                       onAdjust={(delta) => adjustWidth('load_number', delta)}
@@ -2743,7 +2743,7 @@ export default function BrokeragePage() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.customer}px`, minWidth: `${columnWidths.customer}px`}} onClick={() => handleSort('customer_id')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.customer}px`, minWidth: `${columnWidths.customer}px`}} onClick={() => handleSort('customer_id')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.customer}
                       onAdjust={(delta) => adjustWidth('customer', delta)}
@@ -2755,7 +2755,7 @@ export default function BrokeragePage() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px`}} onClick={() => handleSort('driver_id')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px`}} onClick={() => handleSort('driver_id')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.driver}
                       onAdjust={(delta) => adjustWidth('driver', delta)}
@@ -2767,7 +2767,7 @@ export default function BrokeragePage() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.pickup}px`, minWidth: `${columnWidths.pickup}px`}} onClick={() => handleSort('pickup_location')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.pickup}px`, minWidth: `${columnWidths.pickup}px`}} onClick={() => handleSort('pickup_location')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.pickup}
                       onAdjust={(delta) => adjustWidth('pickup', delta)}
@@ -2779,7 +2779,7 @@ export default function BrokeragePage() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.delivery}px`, minWidth: `${columnWidths.delivery}px`}} onClick={() => handleSort('delivery_location')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.delivery}px`, minWidth: `${columnWidths.delivery}px`}} onClick={() => handleSort('delivery_location')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.delivery}
                       onAdjust={(delta) => adjustWidth('delivery', delta)}
@@ -2791,14 +2791,14 @@ export default function BrokeragePage() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.notes}px`, minWidth: `${columnWidths.notes}px`}}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.notes}px`, minWidth: `${columnWidths.notes}px`}}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.notes}
                       onAdjust={(delta) => adjustWidth('notes', delta)}
                     />
                     Notes
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.rate}px`, minWidth: `${columnWidths.rate}px`}} onClick={() => handleSort('rate')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.rate}px`, minWidth: `${columnWidths.rate}px`}} onClick={() => handleSort('rate')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.rate}
                       onAdjust={(delta) => adjustWidth('rate', delta)}
@@ -2810,21 +2810,21 @@ export default function BrokeragePage() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.adjustment}px`, minWidth: `${columnWidths.adjustment}px`}}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.adjustment}px`, minWidth: `${columnWidths.adjustment}px`}}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.adjustment}
                       onAdjust={(delta) => adjustWidth('adjustment', delta)}
                     />
                     Adjustment
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.ratecon}px`, minWidth: `${columnWidths.ratecon}px`}}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.ratecon}px`, minWidth: `${columnWidths.ratecon}px`}}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.ratecon}
                       onAdjust={(delta) => adjustWidth('ratecon', delta)}
                     />
                     Ratecon
                   </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.pod}px`, minWidth: `${columnWidths.pod}px`}}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.pod}px`, minWidth: `${columnWidths.pod}px`}}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.pod}
                       onAdjust={(delta) => adjustWidth('pod', delta)}
@@ -2977,13 +2977,13 @@ export default function BrokeragePage() {
               </div>
             </div>
             <div className="flex items-center gap-6" style={{ marginRight: '300px' }}>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-done)' }}>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--monday-done)' }}>
                 {formatCurrency(totals.rate)}
               </div>
-              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-blue)' }}>
+              <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--monday-blue)' }}>
                 {totals.miles.toLocaleString()} mi
               </div>
-              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-purple)' }}>
+              <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--monday-purple)' }}>
                 ${totals.rpm.toFixed(2)}/mi
               </div>
             </div>
