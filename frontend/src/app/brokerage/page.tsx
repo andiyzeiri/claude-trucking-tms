@@ -1603,7 +1603,7 @@ export default function BrokeragePage() {
               <span className="whitespace-nowrap" style={{ color: 'var(--monday-text-muted)' }}>({groupLoads.length} loads)</span>
             </div>
           </td>
-          <td className="px-2 py-2 text-sm" colSpan={5}></td>
+          <td className="px-2 py-2 text-sm" colSpan={6}></td>
           <td className="px-2 py-2 text-sm">
             <div className="mb-0.5">
               <div style={{fontSize: '14px', lineHeight: '20px', fontWeight: 600, color: 'var(--monday-done)'}}>
@@ -1619,7 +1619,7 @@ export default function BrokeragePage() {
               </div>
             </div>
           </td>
-          <td className="px-2 py-2 text-sm" colSpan={5}></td>
+          <td className="px-2 py-2 text-sm" colSpan={4}></td>
         </tr>
       )
 
@@ -1659,8 +1659,9 @@ export default function BrokeragePage() {
     const loadKey = load.isNew ? 'new' : load.id
     const rpm = load.miles && load.miles > 0 ? (load.rate || 0) / load.miles : 0
     const isEvenRow = rowIndex % 2 === 0
-    const defaultBgColor = isEvenRow ? 'var(--monday-bg-primary)' : 'rgba(0, 0, 0, 0.02)'
-    const hoverBgColor = 'var(--monday-bg-hover)'
+    const isInvoiced = load.status === 'invoiced'
+    const defaultBgColor = isInvoiced ? 'rgba(218, 165, 32, 0.10)' : (isEvenRow ? 'var(--monday-bg-primary)' : 'rgba(0, 0, 0, 0.02)')
+    const hoverBgColor = isInvoiced ? 'rgba(218, 165, 32, 0.18)' : 'var(--monday-bg-hover)'
 
     return (
       <tr
@@ -1715,6 +1716,30 @@ export default function BrokeragePage() {
               {formatDateShort(load.pickup_date)}
             </div>
           )}
+        </td>
+
+        {/* Invoice Checkbox */}
+        <td className="px-1 py-2.5 border-r text-center" style={{borderColor: 'var(--monday-border-light)', width: '50px', minWidth: '50px'}}>
+          <div
+            className="flex items-center justify-center cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation()
+              const newStatus = load.status === 'invoiced' ? 'dispatched' : 'invoiced'
+              updateField(loadKey, 'status', newStatus)
+            }}
+          >
+            <div
+              className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
+              style={{
+                borderColor: isInvoiced ? '#b8860b' : 'var(--monday-border)',
+                backgroundColor: isInvoiced ? '#b8860b' : 'transparent'
+              }}
+            >
+              {isInvoiced && (
+                <Check className="h-3 w-3 text-white" />
+              )}
+            </div>
+          </div>
         </td>
 
         {/* Load # */}
@@ -2481,30 +2506,6 @@ export default function BrokeragePage() {
           </div>
         </td>
 
-        {/* Invoice Checkbox */}
-        <td className="px-1 py-2.5 border-r text-center" style={{borderColor: 'var(--monday-border-light)', width: '50px', minWidth: '50px'}}>
-          <div
-            className="flex items-center justify-center cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation()
-              const newStatus = load.status === 'invoiced' ? 'dispatched' : 'invoiced'
-              updateField(loadKey, 'status', newStatus)
-            }}
-          >
-            <div
-              className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
-              style={{
-                borderColor: load.status === 'invoiced' ? 'var(--monday-done)' : 'var(--monday-border)',
-                backgroundColor: load.status === 'invoiced' ? 'var(--monday-done)' : 'transparent'
-              }}
-            >
-              {load.status === 'invoiced' && (
-                <Check className="h-3 w-3 text-white" />
-              )}
-            </div>
-          </div>
-        </td>
-
       </tr>
     )
   }
@@ -2752,6 +2753,9 @@ export default function BrokeragePage() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
+                  <th className="px-1 py-2.5 text-center text-[13px] font-medium border-b" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: '50px', minWidth: '50px'}}>
+                    Invoice
+                  </th>
                   <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.load_number}px`, minWidth: `${columnWidths.load_number}px`}} onClick={() => handleSort('load_number')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.load_number}
@@ -2851,9 +2855,6 @@ export default function BrokeragePage() {
                       onAdjust={(delta) => adjustWidth('pod', delta)}
                     />
                     POD
-                  </th>
-                  <th className="px-1 py-2.5 text-center text-[13px] font-medium border-b" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: '50px', minWidth: '50px'}}>
-                    Invoice
                   </th>
                 </tr>
               </thead>
