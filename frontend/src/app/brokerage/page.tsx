@@ -352,7 +352,15 @@ export default function BrokeragePage() {
   const [editableLoads, setEditableLoads] = useState<EditableLoad[]>([])
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
   // Removed locationSuggestions - autocomplete disabled
-  const [activeGroupings, setActiveGroupings] = useState<Set<'week' | 'day' | 'driver' | 'customer'>>(new Set(['week', 'driver']))
+  const [activeGroupings, setActiveGroupings] = useState<Set<'week' | 'day' | 'driver' | 'customer'>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('brokerage-groupings')
+      if (saved) {
+        try { return new Set(JSON.parse(saved)) } catch {}
+      }
+    }
+    return new Set(['week', 'driver'])
+  })
   const [groupMenuOpen, setGroupMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   // Use expandedGroups instead of collapsedGroups - everything collapsed by default
@@ -363,7 +371,15 @@ export default function BrokeragePage() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [showBrokerageOnly, setShowBrokerageOnly] = useState<boolean>(false)
   const [factoringFilter, setFactoringFilter] = useState<'invoice' | 'ratecon' | 'pod' | null>(null)
-  const [selectedBrokers, setSelectedBrokers] = useState<Set<number>>(new Set())
+  const [selectedBrokers, setSelectedBrokers] = useState<Set<number>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('brokerage-brokers')
+      if (saved) {
+        try { return new Set(JSON.parse(saved)) } catch {}
+      }
+    }
+    return new Set()
+  })
   const [brokerMenuOpen, setBrokerMenuOpen] = useState(false)
   const brokerMenuRef = useRef<HTMLDivElement>(null)
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, loadId?: number, type: 'load' | 'general'} | null>(null)
@@ -493,6 +509,15 @@ export default function BrokeragePage() {
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [editingLocation])
+
+  // Persist groupings and broker selections to localStorage
+  useEffect(() => {
+    localStorage.setItem('brokerage-groupings', JSON.stringify(Array.from(activeGroupings)))
+  }, [activeGroupings])
+
+  useEffect(() => {
+    localStorage.setItem('brokerage-brokers', JSON.stringify(Array.from(selectedBrokers)))
+  }, [selectedBrokers])
 
   // Toggle grouping
   const toggleGrouping = (groupType: 'week' | 'day' | 'driver' | 'customer') => {
