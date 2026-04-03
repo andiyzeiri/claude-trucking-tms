@@ -3,33 +3,31 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
 import { ChevronRight, ChevronDown, Trash2, Truck, BarChart3 } from 'lucide-react'
-import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
 import { useFuel, useCreateFuel, useUpdateFuel, useDeleteFuel } from '@/hooks/use-fuel'
-import toast from 'react-hot-toast'
 import { formatCurrency } from '@/lib/utils'
 import { Fuel } from '@/types'
 
 type EditingCell = {
   weekNumber: number
-  driverId: number
+  truckId: number
   field: string
 } | null
 
-// Helper to get previous entry's ending miles for a driver
+// Helper to get previous entry's ending miles for a truck
 // Looks through all entries (sorted by year/week) to find the most recent prior entry
 function getPreviousEndingMiles(
-  sortedEntriesByDriver: Map<number, Array<{ isoYear: number, weekNumber: number, odometer: number | null }>>,
+  sortedEntriesByTruck: Map<number, Array<{ isoYear: number, weekNumber: number, odometer: number | null }>>,
   currentYear: number,
   weekNum: number,
-  driverId: number
+  truckId: number
 ): number | null {
-  const driverEntries = sortedEntriesByDriver.get(driverId)
-  if (!driverEntries || driverEntries.length === 0) return null
+  const truckEntries = sortedEntriesByTruck.get(truckId)
+  if (!truckEntries || truckEntries.length === 0) return null
 
   // Find the most recent entry BEFORE the current week
   // Entries are sorted by year desc, week desc
-  for (const entry of driverEntries) {
+  for (const entry of truckEntries) {
     // Check if this entry is before the current week
     if (entry.isoYear < currentYear || (entry.isoYear === currentYear && entry.weekNumber < weekNum)) {
       return entry.odometer
@@ -97,48 +95,6 @@ function getWeekDateRange(weekNumber: number, year?: number): string {
   return `(${startMonth}/${startDay}-${endMonth}/${endDay})`
 }
 
-// Get Monday and Sunday dates for a week
-function getWeekBounds(weekNumber: number, year?: number): { monday: Date, sunday: Date } {
-  const date = getDateFromWeekNumber(weekNumber, year)
-
-  const dayOfWeek = date.getDay()
-  const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek
-  const monday = new Date(date)
-  monday.setDate(date.getDate() + diffToMonday)
-  monday.setHours(0, 0, 0, 0)
-
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  sunday.setHours(23, 59, 59, 999)
-
-  return { monday, sunday }
-}
-
-// Check if a driver was employed during a specific week
-function wasDriverEmployedDuringWeek(
-  driver: { date_hired?: string, date_terminated?: string },
-  weekNumber: number,
-  year?: number
-): boolean {
-  const { monday, sunday } = getWeekBounds(weekNumber, year)
-
-  // If no hire date, assume they were always employed (legacy data)
-  const hireDate = driver.date_hired ? new Date(driver.date_hired) : null
-  const termDate = driver.date_terminated ? new Date(driver.date_terminated) : null
-
-  // Driver must have been hired on or before the end of the week
-  if (hireDate && hireDate > sunday) {
-    return false
-  }
-
-  // Driver must not have been terminated before the start of the week
-  if (termDate && termDate < monday) {
-    return false
-  }
-
-  return true
-}
-
 // Extended fuel entry with week info for local state
 interface FuelEntryWithWeek extends Fuel {
   weekNumber: number
@@ -148,15 +104,14 @@ interface FuelEntryWithWeek extends Fuel {
 type TabType = 'summary' | number
 
 export default function FuelPage() {
-  const { data: driversData, isLoading: driversLoading } = useDrivers()
-  const { data: trucksData } = useTrucks()
+  const { data: trucksData, isLoading: trucksLoading } = useTrucks()
   const { data: fuelData, isLoading: fuelLoading } = useFuel()
   const createFuel = useCreateFuel()
   const updateFuel = useUpdateFuel()
   const deleteFuel = useDeleteFuel()
 
-  const drivers = driversData?.items || []
   const trucks = trucksData?.items || []
+  const activeTrucks = trucks.filter(t => t.type === 'truck')
 
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
   const [editValues, setEditValues] = useState<Record<string, any>>({})
@@ -294,55 +249,55 @@ export default function FuelPage() {
     return weeks
   }, [])
 
-  // Create sorted entries by driver for weekly miles calculation (uses ALL fuel data, not filtered)
-  const sortedEntriesByDriver = useMemo(() => {
-    const driverMap = new Map<number, Array<{ isoYear: number, weekNumber: number, odometer: number | null }>>()
+  // Create sorted entries by truck for weekly miles calculation (uses ALL fuel data, not filtered)
+  const sortedEntriesByTruck = useMemo(() => {
+    const truckMap = new Map<number, Array<{ isoYear: number, weekNumber: number, odometer: number | null }>>()
 
     // Process ALL fuel entries (not just filtered by year)
     fuelEntriesWithYear.forEach(entry => {
-      if (!entry.driver_id) return
+      if (!entry.truck_id) return
 
-      if (!driverMap.has(entry.driver_id)) {
-        driverMap.set(entry.driver_id, [])
+      if (!truckMap.has(entry.truck_id)) {
+        truckMap.set(entry.truck_id, [])
       }
 
-      driverMap.get(entry.driver_id)!.push({
+      truckMap.get(entry.truck_id)!.push({
         isoYear: entry.isoYear,
         weekNumber: entry.weekNumber,
         odometer: entry.odometer ? Number(entry.odometer) : null
       })
     })
 
-    // Sort each driver's entries by year desc, week desc (most recent first)
-    driverMap.forEach((entries) => {
+    // Sort each truck's entries by year desc, week desc (most recent first)
+    truckMap.forEach((entries) => {
       entries.sort((a, b) => {
         if (a.isoYear !== b.isoYear) return b.isoYear - a.isoYear
         return b.weekNumber - a.weekNumber
       })
     })
 
-    return driverMap
+    return truckMap
   }, [fuelEntriesWithYear])
 
-  // Group fuel entries by week and driver
-  const fuelByWeekAndDriver = useMemo(() => {
+  // Group fuel entries by week and truck
+  const fuelByWeekAndTruck = useMemo(() => {
     const grouped: Record<number, Record<number, FuelEntryWithWeek | null>> = {}
 
     allWeeks.forEach(weekNum => {
       grouped[weekNum] = {}
-      drivers.forEach(driver => {
-        grouped[weekNum][driver.id] = null
+      activeTrucks.forEach(truck => {
+        grouped[weekNum][truck.id] = null
       })
     })
 
     fuelEntries.forEach(entry => {
-      if (grouped[entry.weekNumber] && entry.driver_id) {
-        grouped[entry.weekNumber][entry.driver_id] = entry
+      if (grouped[entry.weekNumber] && entry.truck_id) {
+        grouped[entry.weekNumber][entry.truck_id] = entry
       }
     })
 
     return grouped
-  }, [fuelEntries, drivers, allWeeks])
+  }, [fuelEntries, activeTrucks, allWeeks])
 
   // Initially collapse all weeks
   useEffect(() => {
@@ -362,15 +317,14 @@ export default function FuelPage() {
     setCollapsedWeeks(newCollapsed)
   }
 
-  const handleCellClick = (weekNumber: number, driverId: number, field: string) => {
-    const existing = fuelByWeekAndDriver[weekNumber]?.[driverId]
-    setEditingCell({ weekNumber, driverId, field })
+  const handleCellClick = (weekNumber: number, truckId: number, field: string) => {
+    const existing = fuelByWeekAndTruck[weekNumber]?.[truckId]
+    setEditingCell({ weekNumber, truckId, field })
     if (existing) {
       setEditValues({
         id: existing.id,
         weekNumber,
-        driverId,
-        truckId: existing.truck_id || null,
+        truckId,
         odometer: existing.odometer || 0,
         gallons: existing.gallons || 0,
         pricePerGallon: existing.price_per_gallon || 0,
@@ -381,8 +335,7 @@ export default function FuelPage() {
     } else {
       setEditValues({
         weekNumber,
-        driverId,
-        truckId: null,
+        truckId,
         odometer: 0,
         gallons: 0,
         pricePerGallon: 0,
@@ -403,8 +356,8 @@ export default function FuelPage() {
   const handleCellBlur = async () => {
     if (!editingCell) return
 
-    const { weekNumber, driverId } = editingCell
-    const existing = fuelByWeekAndDriver[weekNumber]?.[driverId]
+    const { weekNumber, truckId } = editingCell
+    const existing = fuelByWeekAndTruck[weekNumber]?.[truckId]
 
     // Check if there's any meaningful data (including zero values that were explicitly set)
     const hasData =
@@ -429,8 +382,7 @@ export default function FuelPage() {
         def_price: editValues.defPrice != null && editValues.defPrice !== 0 ? editValues.defPrice : undefined,
         total_amount: editValues.totalAmount ?? 0,
         odometer: editValues.odometer != null && editValues.odometer !== 0 ? editValues.odometer : undefined,
-        driver_id: driverId,
-        truck_id: editValues.truckId != null ? editValues.truckId : undefined,
+        truck_id: truckId,
       }
 
       try {
@@ -440,8 +392,6 @@ export default function FuelPage() {
           await createFuel.mutateAsync(fuelData)
         }
       } catch (error: any) {
-        // Error is already handled by mutation's onError (shows toast)
-        // Log for debugging
         console.error('Failed to save fuel entry:', error?.response?.data || error)
       }
     }
@@ -449,8 +399,8 @@ export default function FuelPage() {
     setEditingCell(null)
   }
 
-  const handleDeleteRow = async (weekNumber: number, driverId: number) => {
-    const entry = fuelByWeekAndDriver[weekNumber]?.[driverId]
+  const handleDeleteRow = async (weekNumber: number, truckId: number) => {
+    const entry = fuelByWeekAndTruck[weekNumber]?.[truckId]
     if (entry && confirm('Delete this fuel entry?')) {
       try {
         await deleteFuel.mutateAsync(entry.id)
@@ -468,21 +418,21 @@ export default function FuelPage() {
     }
   }
 
-  if (driversLoading || fuelLoading) {
+  if (trucksLoading || fuelLoading) {
     return <Layout><div className="p-8">Loading...</div></Layout>
   }
 
-  const renderFuelRow = (weekNum: number, driver: any, rowIndex: number) => {
-    const entry = fuelByWeekAndDriver[weekNum]?.[driver.id]
+  const renderFuelRow = (weekNum: number, truck: any, rowIndex: number) => {
+    const entry = fuelByWeekAndTruck[weekNum]?.[truck.id]
 
     const isEditingField = (field: string) =>
       editingCell?.weekNumber === weekNum &&
-      editingCell?.driverId === driver.id &&
+      editingCell?.truckId === truck.id &&
       editingCell?.field === field
 
     return (
       <tr
-        key={`${weekNum}-${driver.id}`}
+        key={`${weekNum}-${truck.id}`}
         className="border-b transition-colors"
         style={{
           borderColor: 'var(--monday-border-light)',
@@ -498,40 +448,12 @@ export default function FuelPage() {
         {/* Empty cell for indent */}
         <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', width: '20px' }}></td>
 
-        {/* Driver */}
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
-          <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
-            {driver.first_name} {driver.last_name}
-          </div>
-        </td>
-
         {/* Truck */}
         <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
-          {isEditingField('truckId') ? (
-            <select
-              className="w-full px-2 py-1 border rounded text-sm"
-              style={{ borderColor: 'var(--monday-border)' }}
-              value={editValues.truckId || ''}
-              onChange={(e) => handleCellChange('truckId', parseInt(e.target.value) || null)}
-              onBlur={handleCellBlur}
-              autoFocus
-            >
-              <option value="">Select</option>
-              {trucks.map((truck) => (
-                <option key={truck.id} value={truck.id}>
-                  {truck.truck_number}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <div
-              onClick={() => handleCellClick(weekNum, driver.id, 'truckId')}
-              className="cursor-pointer rounded px-1.5 py-0.5"
-              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
-            >
-              {trucks.find(t => t.id === entry?.truck_id)?.truck_number || '-'}
-            </div>
-          )}
+          <div className="flex items-center gap-2" style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
+            <Truck className="h-3.5 w-3.5 text-gray-400" />
+            {truck.truck_number}
+          </div>
         </td>
 
         {/* Ending Miles */}
@@ -549,7 +471,7 @@ export default function FuelPage() {
             />
           ) : (
             <div
-              onClick={() => handleCellClick(weekNum, driver.id, 'odometer')}
+              onClick={() => handleCellClick(weekNum, truck.id, 'odometer')}
               className="cursor-pointer rounded px-1.5 py-0.5"
               style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
@@ -563,7 +485,7 @@ export default function FuelPage() {
           <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
             {(() => {
               const currentMiles = entry?.odometer ? Number(entry.odometer) : null
-              const prevMiles = getPreviousEndingMiles(sortedEntriesByDriver, selectedYear, weekNum, driver.id)
+              const prevMiles = getPreviousEndingMiles(sortedEntriesByTruck, selectedYear, weekNum, truck.id)
               if (currentMiles !== null && prevMiles !== null) {
                 const weeklyMiles = currentMiles - prevMiles
                 return weeklyMiles.toLocaleString()
@@ -589,7 +511,7 @@ export default function FuelPage() {
             />
           ) : (
             <div
-              onClick={() => handleCellClick(weekNum, driver.id, 'gallons')}
+              onClick={() => handleCellClick(weekNum, truck.id, 'gallons')}
               className="cursor-pointer rounded px-1.5 py-0.5"
               style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
@@ -614,7 +536,7 @@ export default function FuelPage() {
             />
           ) : (
             <div
-              onClick={() => handleCellClick(weekNum, driver.id, 'pricePerGallon')}
+              onClick={() => handleCellClick(weekNum, truck.id, 'pricePerGallon')}
               className="cursor-pointer rounded px-1.5 py-0.5"
               style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
@@ -623,7 +545,7 @@ export default function FuelPage() {
           )}
         </td>
 
-        {/* Fuel Price (was Total) */}
+        {/* Fuel Price */}
         <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
           {isEditingField('totalAmount') ? (
             <input
@@ -639,7 +561,7 @@ export default function FuelPage() {
             />
           ) : (
             <div
-              onClick={() => handleCellClick(weekNum, driver.id, 'totalAmount')}
+              onClick={() => handleCellClick(weekNum, truck.id, 'totalAmount')}
               className="cursor-pointer rounded px-1.5 py-0.5"
               style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
@@ -664,7 +586,7 @@ export default function FuelPage() {
             />
           ) : (
             <div
-              onClick={() => handleCellClick(weekNum, driver.id, 'defPrice')}
+              onClick={() => handleCellClick(weekNum, truck.id, 'defPrice')}
               className="cursor-pointer rounded px-1.5 py-0.5"
               style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
             >
@@ -689,7 +611,7 @@ export default function FuelPage() {
         <td className="px-3 py-2.5" style={{ borderColor: 'var(--monday-border-light)' }}>
           {entry && (
             <button
-              onClick={() => handleDeleteRow(weekNum, driver.id)}
+              onClick={() => handleDeleteRow(weekNum, truck.id)}
               className="p-1 rounded"
               style={{ color: 'var(--monday-stuck)' }}
             >
@@ -837,7 +759,6 @@ export default function FuelPage() {
           <thead>
             <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
               <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: '20px' }}></th>
-              <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Driver</th>
               <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Truck</th>
               <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Ending Miles</th>
               <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Weekly Miles</th>
@@ -895,11 +816,10 @@ export default function FuelPage() {
                     <td className="px-2 py-2"></td>
                   </tr>
 
-                  {/* Driver Rows - filtered by employment during this week and fuel card */}
-                  {!isCollapsed && drivers
-                    .filter(driver => driver.has_fuel_card && wasDriverEmployedDuringWeek(driver, weekNum, selectedYear))
-                    .map((driver, driverIndex) =>
-                      renderFuelRow(weekNum, driver, driverIndex)
+                  {/* Truck Rows */}
+                  {!isCollapsed && activeTrucks
+                    .map((truck, truckIndex) =>
+                      renderFuelRow(weekNum, truck, truckIndex)
                     )}
                 </React.Fragment>
               )
