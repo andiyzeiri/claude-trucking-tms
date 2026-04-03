@@ -2,8 +2,8 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
-import { ChevronRight, ChevronDown, Trash2, Truck, BarChart3, GripVertical } from 'lucide-react'
-import { useTrucks } from '@/hooks/use-trucks'
+import { ChevronRight, ChevronDown, Trash2, Truck, BarChart3, GripVertical, Plus, X } from 'lucide-react'
+import { useTrucks, useCreateTruck, useDeleteTruck } from '@/hooks/use-trucks'
 import { useFuel, useCreateFuel, useUpdateFuel, useDeleteFuel } from '@/hooks/use-fuel'
 import { formatCurrency } from '@/lib/utils'
 import { Fuel } from '@/types'
@@ -109,6 +109,8 @@ export default function FuelPage() {
   const createFuel = useCreateFuel()
   const updateFuel = useUpdateFuel()
   const deleteFuel = useDeleteFuel()
+  const createTruck = useCreateTruck()
+  const deleteTruck = useDeleteTruck()
 
   const trucks = trucksData?.items || []
   const activeTrucksUnordered = trucks.filter(t => t.type === 'truck')
@@ -162,6 +164,27 @@ export default function FuelPage() {
     localStorage.setItem('fuel-truck-order', JSON.stringify(currentOrder))
     dragTruckId.current = null
     dragOverTruckId.current = null
+  }
+
+  // Add/delete truck state
+  const [showAddTruck, setShowAddTruck] = useState(false)
+  const [newTruckNumber, setNewTruckNumber] = useState('')
+
+  const handleAddTruck = async () => {
+    const trimmed = newTruckNumber.trim()
+    if (!trimmed) return
+    await createTruck.mutateAsync({
+      truck_number: trimmed,
+      status: 'available',
+    })
+    setNewTruckNumber('')
+    setShowAddTruck(false)
+  }
+
+  const handleDeleteTruck = async (truckId: number, truckNumber: string) => {
+    if (confirm(`Delete truck ${truckNumber}? This will remove it from all fuel entries.`)) {
+      await deleteTruck.mutateAsync(truckId)
+    }
   }
 
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
@@ -506,10 +529,18 @@ export default function FuelPage() {
         </td>
 
         {/* Truck */}
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
+        <td className="px-3 py-2.5 border-r group/truck" style={{ borderColor: 'var(--monday-border-light)' }}>
           <div className="flex items-center gap-2" style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
             <Truck className="h-3.5 w-3.5 text-gray-400" />
             {truck.truck_number}
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDeleteTruck(truck.id, truck.truck_number) }}
+              className="p-0.5 rounded hover:bg-red-50 opacity-0 group-hover/truck:opacity-100 transition-opacity ml-auto"
+              style={{ color: 'var(--monday-stuck)' }}
+              title="Delete truck"
+            >
+              <X className="h-3 w-3" />
+            </button>
           </div>
         </td>
 
@@ -891,7 +922,52 @@ export default function FuelPage() {
   return (
     <Layout>
       <div className="p-4 page-fuel">
-        <h1 className="text-2xl font-semibold mb-4" style={{ color: 'var(--monday-text-primary)' }}>Fuel</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>Fuel</h1>
+          <div className="flex items-center gap-2">
+            {showAddTruck ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Truck number"
+                  className="border rounded px-3 py-1.5 text-sm"
+                  style={{ borderColor: 'var(--monday-border)', width: '140px' }}
+                  value={newTruckNumber}
+                  onChange={(e) => setNewTruckNumber(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddTruck()
+                    if (e.key === 'Escape') { setShowAddTruck(false); setNewTruckNumber('') }
+                  }}
+                  autoFocus
+                />
+                <button
+                  onClick={handleAddTruck}
+                  disabled={!newTruckNumber.trim() || createTruck.isPending}
+                  className="px-3 py-1.5 rounded text-sm font-medium text-white disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--monday-done)' }}
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => { setShowAddTruck(false); setNewTruckNumber('') }}
+                  className="p-1.5 rounded hover:bg-gray-100"
+                  style={{ color: 'var(--monday-text-secondary)' }}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAddTruck(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium text-white"
+                style={{ backgroundColor: 'var(--monday-blue)' }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Truck
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Tabs: Summary + Years */}
         <div className="flex items-center gap-2 border-b mb-4" style={{ borderColor: 'var(--monday-border-light)' }}>

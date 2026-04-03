@@ -72,3 +72,20 @@ export function useUpdateTruck() {
     },
   })
 }
+
+export function useDeleteTruck() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: number): Promise<void> => {
+      await api.delete(`/v1/trucks/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trucks'] })
+      toast.success('Truck deleted successfully')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Failed to delete truck')
+    },
+  })
+}
