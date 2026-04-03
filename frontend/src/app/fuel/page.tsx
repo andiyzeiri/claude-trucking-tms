@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
-import { ChevronRight, ChevronDown, Trash2, Truck, BarChart3, GripVertical, Plus, X } from 'lucide-react'
+import { ChevronRight, ChevronDown, Truck, BarChart3, GripVertical, Plus, X } from 'lucide-react'
 import { useTrucks, useCreateTruck, useDeleteTruck } from '@/hooks/use-trucks'
 import { useFuel, useCreateFuel, useUpdateFuel, useDeleteFuel } from '@/hooks/use-fuel'
 import { formatCurrency } from '@/lib/utils'
@@ -125,7 +125,6 @@ export default function FuelPage() {
     total: 100,
     mpg: 80,
     pricePerMile: 90,
-    actions: 50,
   })
 
   const trucks = trucksData?.items || []
@@ -530,6 +529,12 @@ export default function FuelPage() {
         onDragStart={() => handleDragStart(truck.id)}
         onDragOver={(e) => handleDragOver(e, truck.id)}
         onDrop={handleDrop}
+        onContextMenu={(e) => {
+          if (entry) {
+            e.preventDefault()
+            handleDeleteRow(weekNum, truck.id)
+          }
+        }}
         style={{
           borderColor: 'var(--monday-border-light)',
           backgroundColor: 'var(--monday-bg-primary)'
@@ -745,18 +750,6 @@ export default function FuelPage() {
           </div>
         </td>
 
-        {/* Actions */}
-        <td className="px-3 py-2.5" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.actions}px`, minWidth: `${columnWidths.actions}px` }}>
-          {entry && (
-            <button
-              onClick={() => handleDeleteRow(weekNum, truck.id)}
-              className="p-1 rounded"
-              style={{ color: 'var(--monday-stuck)' }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
-        </td>
       </tr>
     )
   }
@@ -937,7 +930,6 @@ export default function FuelPage() {
                 Total
                 <ColumnWidthControl currentWidth={columnWidths.total} onAdjust={(delta) => adjustWidth('total', delta)} />
               </th>
-              <th className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.actions}px`, minWidth: `${columnWidths.actions}px` }}></th>
             </tr>
           </thead>
           <tbody>
@@ -984,7 +976,6 @@ export default function FuelPage() {
                         {weekGallons.toFixed(1)} gal
                       </div>
                     </td>
-                    <td className="px-2 py-2"></td>
                   </tr>
 
                   {/* Truck Rows */}
