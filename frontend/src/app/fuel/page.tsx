@@ -439,7 +439,6 @@ export default function FuelPage() {
       editValues.totalAmount > 0 ||
       editValues.defGallons > 0 ||
       editValues.odometer > 0 ||
-      editValues.pricePerGallon > 0 ||
       editValues.defPrice > 0
 
     if (hasData) {
@@ -448,13 +447,16 @@ export default function FuelPage() {
       const dateStr = weekDate.toISOString().split('T')[0]
 
       // Build fuel data - use null checks instead of || to preserve zero values
+      const gallons = editValues.gallons ?? 0
+      const totalAmount = editValues.totalAmount ?? 0
+      const calculatedPpg = gallons > 0 && totalAmount > 0 ? parseFloat((totalAmount / gallons).toFixed(3)) : undefined
       const fuelData = {
         date: dateStr,
-        gallons: editValues.gallons ?? 0,
-        price_per_gallon: editValues.pricePerGallon != null && editValues.pricePerGallon !== 0 ? editValues.pricePerGallon : undefined,
+        gallons,
+        price_per_gallon: calculatedPpg,
         def_gallons: editValues.defGallons != null && editValues.defGallons !== 0 ? editValues.defGallons : undefined,
         def_price: editValues.defPrice != null && editValues.defPrice !== 0 ? editValues.defPrice : undefined,
-        total_amount: editValues.totalAmount ?? 0,
+        total_amount: totalAmount,
         odometer: editValues.odometer != null && editValues.odometer !== 0 ? editValues.odometer : undefined,
         truck_id: truckId,
       }
@@ -608,29 +610,21 @@ export default function FuelPage() {
           )}
         </td>
 
-        {/* Price/Gal */}
+        {/* Price/Gal (calculated: fuel price / gallons) */}
         <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
-          {isEditingField('pricePerGallon') ? (
-            <input
-              type="number"
-              step="0.001"
-              className="w-full px-2 py-1 border rounded text-right text-sm"
-              style={{ borderColor: 'var(--monday-border)' }}
-              value={editValues.pricePerGallon || ''}
-              onChange={(e) => handleCellChange('pricePerGallon', parseFloat(e.target.value) || 0)}
-              onBlur={handleCellBlur}
-              onKeyDown={handleKeyDown}
-              autoFocus
-            />
-          ) : (
-            <div
-              onClick={() => handleCellClick(weekNum, truck.id, 'pricePerGallon')}
-              className="cursor-pointer rounded px-1.5 py-0.5"
-              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
-            >
-              {entry?.price_per_gallon ? `$${Number(entry.price_per_gallon).toFixed(3)}` : '-'}
-            </div>
-          )}
+          <div
+            className="rounded px-1.5 py-0.5"
+            style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-secondary)' }}
+          >
+            {(() => {
+              const gallons = Number(entry?.gallons) || 0
+              const fuelPrice = Number(entry?.total_amount) || 0
+              if (gallons > 0 && fuelPrice > 0) {
+                return `$${(fuelPrice / gallons).toFixed(3)}`
+              }
+              return '-'
+            })()}
+          </div>
         </td>
 
         {/* Fuel Price */}
