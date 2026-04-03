@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
-import { ChevronRight, ChevronDown, Trash2, Truck, BarChart3 } from 'lucide-react'
+import { ChevronRight, ChevronDown, Trash2, Truck, BarChart3, GripVertical } from 'lucide-react'
 import { useTrucks } from '@/hooks/use-trucks'
 import { useFuel, useCreateFuel, useUpdateFuel, useDeleteFuel } from '@/hooks/use-fuel'
 import { formatCurrency } from '@/lib/utils'
@@ -111,7 +111,58 @@ export default function FuelPage() {
   const deleteFuel = useDeleteFuel()
 
   const trucks = trucksData?.items || []
-  const activeTrucks = trucks.filter(t => t.type === 'truck')
+  const activeTrucksUnordered = trucks.filter(t => t.type === 'truck')
+
+  // Truck ordering - persisted in localStorage
+  const [truckOrder, setTruckOrder] = useState<number[]>(() => {
+    try {
+      const saved = localStorage.getItem('fuel-truck-order')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
+
+  const activeTrucks = useMemo(() => {
+    if (truckOrder.length === 0) return activeTrucksUnordered
+    const orderMap = new Map(truckOrder.map((id, idx) => [id, idx]))
+    return [...activeTrucksUnordered].sort((a, b) => {
+      const aIdx = orderMap.get(a.id) ?? 999999
+      const bIdx = orderMap.get(b.id) ?? 999999
+      return aIdx - bIdx
+    })
+  }, [activeTrucksUnordered, truckOrder])
+
+  // Drag state for reordering
+  const dragTruckId = useRef<number | null>(null)
+  const dragOverTruckId = useRef<number | null>(null)
+
+  const handleDragStart = (truckId: number) => {
+    dragTruckId.current = truckId
+  }
+
+  const handleDragOver = (e: React.DragEvent, truckId: number) => {
+    e.preventDefault()
+    dragOverTruckId.current = truckId
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    const fromId = dragTruckId.current
+    const toId = dragOverTruckId.current
+    if (fromId == null || toId == null || fromId === toId) return
+
+    const currentOrder = activeTrucks.map(t => t.id)
+    const fromIdx = currentOrder.indexOf(fromId)
+    const toIdx = currentOrder.indexOf(toId)
+    if (fromIdx === -1 || toIdx === -1) return
+
+    currentOrder.splice(fromIdx, 1)
+    currentOrder.splice(toIdx, 0, fromId)
+
+    setTruckOrder(currentOrder)
+    localStorage.setItem('fuel-truck-order', JSON.stringify(currentOrder))
+    dragTruckId.current = null
+    dragOverTruckId.current = null
+  }
 
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
   const [editValues, setEditValues] = useState<Record<string, any>>({})
@@ -434,6 +485,10 @@ export default function FuelPage() {
       <tr
         key={`${weekNum}-${truck.id}`}
         className="border-b transition-colors"
+        draggable
+        onDragStart={() => handleDragStart(truck.id)}
+        onDragOver={(e) => handleDragOver(e, truck.id)}
+        onDrop={handleDrop}
         style={{
           borderColor: 'var(--monday-border-light)',
           backgroundColor: 'var(--monday-bg-primary)'
@@ -445,8 +500,10 @@ export default function FuelPage() {
           e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)'
         }}
       >
-        {/* Empty cell for indent */}
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', width: '20px' }}></td>
+        {/* Drag handle */}
+        <td className="px-1 py-2.5 border-r cursor-grab active:cursor-grabbing" style={{ borderColor: 'var(--monday-border-light)', width: '20px' }}>
+          <GripVertical className="h-3.5 w-3.5 text-gray-300" />
+        </td>
 
         {/* Truck */}
         <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
