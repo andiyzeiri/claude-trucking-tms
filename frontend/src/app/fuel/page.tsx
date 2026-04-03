@@ -626,17 +626,19 @@ export default function FuelPage() {
           )}
         </td>
 
-        {/* Price/Gal (calculated: fuel price / gallons) */}
-        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.pricePerGal}px`, minWidth: `${columnWidths.pricePerGal}px` }}>
+        {/* MPG (calculated: weekly miles / gallons) */}
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.mpg}px`, minWidth: `${columnWidths.mpg}px` }}>
           <div
             className="rounded px-1.5 py-0.5"
             style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-secondary)' }}
           >
             {(() => {
+              const currentMiles = entry?.odometer ? Number(entry.odometer) : null
+              const prevMiles = getPreviousEndingMiles(sortedEntriesByTruck, selectedYear, weekNum, truck.id)
               const gallons = Number(entry?.gallons) || 0
-              const fuelPrice = Number(entry?.total_amount) || 0
-              if (gallons > 0 && fuelPrice > 0) {
-                return `$${(fuelPrice / gallons).toFixed(3)}`
+              if (currentMiles !== null && prevMiles !== null && gallons > 0) {
+                const weeklyMiles = currentMiles - prevMiles
+                if (weeklyMiles > 0) return (weeklyMiles / gallons).toFixed(2)
               }
               return '-'
             })()}
@@ -668,6 +670,23 @@ export default function FuelPage() {
           )}
         </td>
 
+        {/* Price/Gal (calculated: fuel price / gallons) */}
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.pricePerGal}px`, minWidth: `${columnWidths.pricePerGal}px` }}>
+          <div
+            className="rounded px-1.5 py-0.5"
+            style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-secondary)' }}
+          >
+            {(() => {
+              const gallons = Number(entry?.gallons) || 0
+              const fuelPrice = Number(entry?.total_amount) || 0
+              if (gallons > 0 && fuelPrice > 0) {
+                return `$${(fuelPrice / gallons).toFixed(3)}`
+              }
+              return '-'
+            })()}
+          </div>
+        </td>
+
         {/* DEF Price */}
         <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.defPrice}px`, minWidth: `${columnWidths.defPrice}px` }}>
           {isEditingField('defPrice') ? (
@@ -693,37 +712,6 @@ export default function FuelPage() {
           )}
         </td>
 
-        {/* Total (Fuel Price + DEF Price) */}
-        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.total}px`, minWidth: `${columnWidths.total}px` }}>
-          <div style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)' }}>
-            {(() => {
-              const fuelPrice = Number(entry?.total_amount) || 0
-              const defPrice = Number(entry?.def_price) || 0
-              const total = fuelPrice + defPrice
-              return total > 0 ? formatCurrency(total) : '-'
-            })()}
-          </div>
-        </td>
-
-        {/* MPG (calculated: weekly miles / gallons) */}
-        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.mpg}px`, minWidth: `${columnWidths.mpg}px` }}>
-          <div
-            className="rounded px-1.5 py-0.5"
-            style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-secondary)' }}
-          >
-            {(() => {
-              const currentMiles = entry?.odometer ? Number(entry.odometer) : null
-              const prevMiles = getPreviousEndingMiles(sortedEntriesByTruck, selectedYear, weekNum, truck.id)
-              const gallons = Number(entry?.gallons) || 0
-              if (currentMiles !== null && prevMiles !== null && gallons > 0) {
-                const weeklyMiles = currentMiles - prevMiles
-                if (weeklyMiles > 0) return (weeklyMiles / gallons).toFixed(2)
-              }
-              return '-'
-            })()}
-          </div>
-        </td>
-
         {/* Price/Mile (calculated: total / weekly miles) */}
         <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.pricePerMile}px`, minWidth: `${columnWidths.pricePerMile}px` }}>
           <div
@@ -741,6 +729,18 @@ export default function FuelPage() {
                 if (weeklyMiles > 0) return `$${(total / weeklyMiles).toFixed(3)}`
               }
               return '-'
+            })()}
+          </div>
+        </td>
+
+        {/* Total (Fuel Price + DEF Price) */}
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.total}px`, minWidth: `${columnWidths.total}px` }}>
+          <div style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)' }}>
+            {(() => {
+              const fuelPrice = Number(entry?.total_amount) || 0
+              const defPrice = Number(entry?.def_price) || 0
+              const total = fuelPrice + defPrice
+              return total > 0 ? formatCurrency(total) : '-'
             })()}
           </div>
         </td>
@@ -913,29 +913,29 @@ export default function FuelPage() {
                 Gallons
                 <ColumnWidthControl currentWidth={columnWidths.gallons} onAdjust={(delta) => adjustWidth('gallons', delta)} />
               </th>
-              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.pricePerGal}px`, minWidth: `${columnWidths.pricePerGal}px` }}>
-                Price/Gal
-                <ColumnWidthControl currentWidth={columnWidths.pricePerGal} onAdjust={(delta) => adjustWidth('pricePerGal', delta)} />
+              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.mpg}px`, minWidth: `${columnWidths.mpg}px` }}>
+                MPG
+                <ColumnWidthControl currentWidth={columnWidths.mpg} onAdjust={(delta) => adjustWidth('mpg', delta)} />
               </th>
               <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.fuelPrice}px`, minWidth: `${columnWidths.fuelPrice}px` }}>
                 Fuel Price
                 <ColumnWidthControl currentWidth={columnWidths.fuelPrice} onAdjust={(delta) => adjustWidth('fuelPrice', delta)} />
               </th>
+              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.pricePerGal}px`, minWidth: `${columnWidths.pricePerGal}px` }}>
+                Price/Gal
+                <ColumnWidthControl currentWidth={columnWidths.pricePerGal} onAdjust={(delta) => adjustWidth('pricePerGal', delta)} />
+              </th>
               <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.defPrice}px`, minWidth: `${columnWidths.defPrice}px` }}>
                 DEF Price
                 <ColumnWidthControl currentWidth={columnWidths.defPrice} onAdjust={(delta) => adjustWidth('defPrice', delta)} />
               </th>
-              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.total}px`, minWidth: `${columnWidths.total}px` }}>
-                Total
-                <ColumnWidthControl currentWidth={columnWidths.total} onAdjust={(delta) => adjustWidth('total', delta)} />
-              </th>
-              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.mpg}px`, minWidth: `${columnWidths.mpg}px` }}>
-                MPG
-                <ColumnWidthControl currentWidth={columnWidths.mpg} onAdjust={(delta) => adjustWidth('mpg', delta)} />
-              </th>
               <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.pricePerMile}px`, minWidth: `${columnWidths.pricePerMile}px` }}>
                 Price/Mile
                 <ColumnWidthControl currentWidth={columnWidths.pricePerMile} onAdjust={(delta) => adjustWidth('pricePerMile', delta)} />
+              </th>
+              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.total}px`, minWidth: `${columnWidths.total}px` }}>
+                Total
+                <ColumnWidthControl currentWidth={columnWidths.total} onAdjust={(delta) => adjustWidth('total', delta)} />
               </th>
               <th className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.actions}px`, minWidth: `${columnWidths.actions}px` }}></th>
             </tr>
@@ -973,7 +973,7 @@ export default function FuelPage() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-2 py-2" colSpan={6}></td>
+                    <td className="px-2 py-2" colSpan={8}></td>
                     <td className="px-2 py-2">
                       <div className="mb-0.5">
                         <div style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)' }}>
@@ -984,7 +984,6 @@ export default function FuelPage() {
                         {weekGallons.toFixed(1)} gal
                       </div>
                     </td>
-                    <td className="px-2 py-2" colSpan={2}></td>
                     <td className="px-2 py-2"></td>
                   </tr>
 
