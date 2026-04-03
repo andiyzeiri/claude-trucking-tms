@@ -18,7 +18,7 @@ router = APIRouter()
 @router.get("/", response_model=List[FuelResponse])
 async def get_fuel_entries(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 10000,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):

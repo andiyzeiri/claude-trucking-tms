@@ -39,7 +39,7 @@ export function useFuel() {
   return useQuery<Fuel[]>({
     queryKey: ['fuel'],
     queryFn: async () => {
-      const response = await api.get('/v1/fuel/')
+      const response = await api.get('/v1/fuel/?limit=10000')
       return response.data
     }
   })
