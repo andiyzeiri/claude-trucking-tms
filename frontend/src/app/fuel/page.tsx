@@ -830,7 +830,8 @@ export default function FuelPage() {
           <tbody>
             {allWeeks.map((weekNum) => {
               const isCollapsed = collapsedWeeks.has(weekNum)
-              const weekEntries = fuelEntries.filter(e => e.weekNumber === weekNum)
+              const activeTruckIds = new Set(activeTrucks.map(t => t.id))
+              const weekEntries = fuelEntries.filter(e => e.weekNumber === weekNum && e.truck_id && activeTruckIds.has(e.truck_id))
               const weekFuelPrice = weekEntries.reduce((sum, e) => sum + (Number(e.total_amount) || 0), 0)
               const weekDefPrice = weekEntries.reduce((sum, e) => sum + (Number(e.def_price) || 0), 0)
               const weekTotal = weekFuelPrice + weekDefPrice
