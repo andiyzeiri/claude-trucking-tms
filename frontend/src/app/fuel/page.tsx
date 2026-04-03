@@ -689,6 +689,46 @@ export default function FuelPage() {
           </div>
         </td>
 
+        {/* MPG (calculated: weekly miles / gallons) */}
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
+          <div
+            className="rounded px-1.5 py-0.5"
+            style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-secondary)' }}
+          >
+            {(() => {
+              const currentMiles = entry?.odometer ? Number(entry.odometer) : null
+              const prevMiles = getPreviousEndingMiles(sortedEntriesByTruck, selectedYear, weekNum, truck.id)
+              const gallons = Number(entry?.gallons) || 0
+              if (currentMiles !== null && prevMiles !== null && gallons > 0) {
+                const weeklyMiles = currentMiles - prevMiles
+                if (weeklyMiles > 0) return (weeklyMiles / gallons).toFixed(2)
+              }
+              return '-'
+            })()}
+          </div>
+        </td>
+
+        {/* Price/Mile (calculated: total / weekly miles) */}
+        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
+          <div
+            className="rounded px-1.5 py-0.5"
+            style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-secondary)' }}
+          >
+            {(() => {
+              const fuelPrice = Number(entry?.total_amount) || 0
+              const defPrice = Number(entry?.def_price) || 0
+              const total = fuelPrice + defPrice
+              const currentMiles = entry?.odometer ? Number(entry.odometer) : null
+              const prevMiles = getPreviousEndingMiles(sortedEntriesByTruck, selectedYear, weekNum, truck.id)
+              if (currentMiles !== null && prevMiles !== null && total > 0) {
+                const weeklyMiles = currentMiles - prevMiles
+                if (weeklyMiles > 0) return `$${(total / weeklyMiles).toFixed(3)}`
+              }
+              return '-'
+            })()}
+          </div>
+        </td>
+
         {/* Actions */}
         <td className="px-3 py-2.5" style={{ borderColor: 'var(--monday-border-light)' }}>
           {entry && (
@@ -849,6 +889,8 @@ export default function FuelPage() {
               <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Fuel Price</th>
               <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>DEF Price</th>
               <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Total</th>
+              <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>MPG</th>
+              <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Price/Mile</th>
               <th className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: '50px' }}></th>
             </tr>
           </thead>
@@ -896,6 +938,7 @@ export default function FuelPage() {
                         {weekGallons.toFixed(1)} gal
                       </div>
                     </td>
+                    <td className="px-2 py-2" colSpan={2}></td>
                     <td className="px-2 py-2"></td>
                   </tr>
 
