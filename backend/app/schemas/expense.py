@@ -9,6 +9,7 @@ from app.schemas.truck import TruckResponse
 class ExpenseBase(BaseModel):
     date: date
     category: str
+    cost_type: str = 'variable'
     description: Optional[str] = None
     amount: Decimal
     vendor: Optional[str] = None
@@ -26,6 +27,7 @@ class ExpenseCreate(ExpenseBase):
 class ExpenseUpdate(BaseModel):
     date: Optional[date] = None
     category: Optional[str] = None
+    cost_type: Optional[str] = None
     description: Optional[str] = None
     amount: Optional[Decimal] = None
     vendor: Optional[str] = None

@@ -5,17 +5,11 @@ import Layout from '@/components/layout/layout'
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, ExpenseFormData } from '@/hooks/use-expenses'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
-import { useLoads } from '@/hooks/use-loads'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Plus, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { Expense } from '@/types'
+import { formatCurrency } from '@/lib/utils'
 
-type EditingCell = { id: number | 'new'; field: keyof EditableExpense } | null
-
-interface EditableExpense extends Expense {
-  isNew?: boolean
-}
+type EditingCell = { id: number; field: string } | null
 
 const EXPENSE_CATEGORIES = [
   'Fuel',
@@ -29,15 +23,11 @@ const EXPENSE_CATEGORIES = [
   'Lodging',
   'Office',
   'Supplies',
-  'Other'
-]
-
-const PAYMENT_METHODS = [
-  'Cash',
-  'Credit Card',
-  'Debit Card',
-  'Check',
-  'Bank Transfer',
+  'Truck Payment',
+  'Trailer Payment',
+  'ELD',
+  'Software',
+  'Phone',
   'Other'
 ]
 
@@ -45,7 +35,6 @@ export default function ExpensesPage() {
   const { data: expensesData, isLoading } = useExpenses(1, 1000)
   const { data: driversData } = useDrivers(1, 1000)
   const { data: trucksData } = useTrucks(1, 1000)
-  const { data: loadsData } = useLoads(1, 1000)
   const createExpense = useCreateExpense()
   const updateExpense = useUpdateExpense()
   const deleteExpense = useDeleteExpense()
@@ -53,462 +42,307 @@ export default function ExpensesPage() {
   const expenses = expensesData?.items || []
   const drivers = driversData?.items || []
   const trucks = trucksData?.items || []
-  const loads = loadsData?.items || []
 
-  const [editableExpenses, setEditableExpenses] = useState<EditableExpense[]>([])
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
-  const [groupBy, setGroupBy] = useState<'none' | 'week' | 'category' | 'driver'>('none')
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
-  React.useEffect(() => {
-    if (expenses.length > 0 && editableExpenses.length === 0) {
-      setEditableExpenses(expenses)
-    }
-  }, [expenses.length, editableExpenses.length])
+  const fixedExpenses = useMemo(() =>
+    expenses.filter(e => e.cost_type === 'fixed').sort((a, b) => b.date.localeCompare(a.date)),
+    [expenses]
+  )
 
-  const addNewExpense = async () => {
-    const newExpense: EditableExpense = {
-      id: Date.now(),
+  const variableExpenses = useMemo(() =>
+    expenses.filter(e => e.cost_type !== 'fixed').sort((a, b) => b.date.localeCompare(a.date)),
+    [expenses]
+  )
+
+  const addNewExpense = async (costType: 'fixed' | 'variable') => {
+    const data: ExpenseFormData = {
       date: new Date().toISOString().split('T')[0],
-      category: 'Fuel',
+      category: costType === 'fixed' ? 'Insurance' : 'Fuel',
+      cost_type: costType,
       description: '',
       amount: 0,
-      vendor: '',
-      payment_method: 'Cash',
-      receipt_number: '',
-      driver_id: undefined,
-      truck_id: undefined,
-      load_id: undefined,
-      company_id: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      isNew: true
     }
-
-    const backendData: ExpenseFormData = {
-      date: newExpense.date,
-      category: newExpense.category,
-      description: newExpense.description,
-      amount: newExpense.amount,
-      vendor: newExpense.vendor,
-      payment_method: newExpense.payment_method,
-      receipt_number: newExpense.receipt_number,
-      driver_id: newExpense.driver_id,
-      truck_id: newExpense.truck_id,
-      load_id: newExpense.load_id
-    }
-
-    const result = await createExpense.mutateAsync(backendData)
-    if (result) {
-      setEditableExpenses([result, ...editableExpenses])
-    }
+    await createExpense.mutateAsync(data)
   }
 
-  const updateField = async (id: number | 'new', field: keyof EditableExpense, value: any) => {
-    const updatedExpenses = editableExpenses.map(expense => {
-      if ((id === 'new' && expense.isNew) || expense.id === id) {
-        const updated = { ...expense, [field]: value }
-
-        if (field === 'driver_id') {
-          updated.driver = value ? drivers.find(d => d.id === value) : undefined
-        } else if (field === 'truck_id') {
-          updated.truck = value ? trucks.find(t => t.id === value) : undefined
-        }
-
-        return updated
-      }
-      return expense
-    })
-    setEditableExpenses(updatedExpenses)
-
-    const expense = updatedExpenses.find(e => (id === 'new' && e.isNew) || e.id === id)
-    if (expense && !expense.isNew) {
-      const backendData: Partial<ExpenseFormData> = {}
-      backendData[field as keyof ExpenseFormData] = value as any
-      await updateExpense.mutateAsync({ id: expense.id, data: backendData })
-    }
+  const updateField = async (id: number, field: string, value: any) => {
+    const data: Partial<ExpenseFormData> = {}
+    ;(data as any)[field] = value
+    await updateExpense.mutateAsync({ id, data })
+    setEditingCell(null)
   }
 
   const handleDelete = async (id: number) => {
-    if (confirm('Are you sure you want to delete this expense?')) {
+    if (confirm('Delete this expense?')) {
       await deleteExpense.mutateAsync(id)
-      setEditableExpenses(editableExpenses.filter(e => e.id !== id))
     }
   }
 
-  function getWeekNumber(date: Date): number {
-    const startOfYear = new Date(date.getFullYear(), 0, 1)
-    const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000))
-    return Math.ceil((days + startOfYear.getDay() + 1) / 7)
-  }
+  const isEditing = (id: number, field: string) =>
+    editingCell?.id === id && editingCell?.field === field
 
-  function getWeekLabel(weekNum: number, year: number): string {
-    return `Week ${weekNum}`
-  }
+  const renderEditableCell = (expense: Expense, field: string, options?: {
+    type?: 'text' | 'number' | 'date' | 'select'
+    selectOptions?: { value: string; label: string }[]
+    format?: (val: any) => string
+    align?: 'left' | 'right'
+    step?: string
+  }) => {
+    const { type = 'text', selectOptions, format, align = 'left', step } = options || {}
+    const rawValue = (expense as any)[field]
 
-  function getWeekDateRange(date: Date): string {
-    const dayOfWeek = date.getDay()
-    const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek
-    const monday = new Date(date)
-    monday.setDate(date.getDate() + diffToMonday)
-    const sunday = new Date(monday)
-    sunday.setDate(monday.getDate() + 6)
-
-    const startMonth = monday.getMonth() + 1
-    const startDay = monday.getDate()
-    const endMonth = sunday.getMonth() + 1
-    const endDay = sunday.getDate()
-
-    return `(${startMonth}/${startDay}-${endMonth}/${endDay})`
-  }
-
-  const groupedExpenses = useMemo(() => {
-    if (groupBy === 'none') return { 'all': editableExpenses }
-
-    const groups: Record<string, EditableExpense[]> = {}
-
-    editableExpenses.forEach(expense => {
-      let groupKey = ''
-
-      if (groupBy === 'week') {
-        const date = new Date(expense.date)
-        const weekNum = getWeekNumber(date)
-        const year = date.getFullYear()
-        const weekLabel = getWeekLabel(weekNum, year)
-        const weekDateRange = getWeekDateRange(date)
-        groupKey = `${weekLabel} ${weekDateRange}`
-      } else if (groupBy === 'category') {
-        groupKey = expense.category || 'Uncategorized'
-      } else if (groupBy === 'driver') {
-        groupKey = expense.driver ? `${expense.driver.first_name} ${expense.driver.last_name}` : 'Unassigned'
+    if (isEditing(expense.id, field)) {
+      if (type === 'select') {
+        return (
+          <select
+            className="w-full border rounded px-2 py-1 text-sm"
+            style={{ borderColor: 'var(--monday-border)' }}
+            value={rawValue || ''}
+            onChange={(e) => {
+              const val = e.target.value
+              if (!val) { updateField(expense.id, field, null); return }
+              // Parse as int for ID fields
+              if (field === 'driver_id' || field === 'truck_id') {
+                updateField(expense.id, field, parseInt(val))
+              } else {
+                updateField(expense.id, field, val)
+              }
+            }}
+            onBlur={() => setEditingCell(null)}
+            autoFocus
+          >
+            <option value="">-</option>
+            {selectOptions?.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        )
       }
-
-      if (!groups[groupKey]) groups[groupKey] = []
-      groups[groupKey].push(expense)
-    })
-
-    return groups
-  }, [editableExpenses, groupBy])
-
-  const toggleGroup = (groupKey: string) => {
-    const newCollapsed = new Set(collapsedGroups)
-    if (newCollapsed.has(groupKey)) {
-      newCollapsed.delete(groupKey)
-    } else {
-      newCollapsed.add(groupKey)
+      return (
+        <input
+          type={type}
+          step={step}
+          className={`w-full border rounded px-2 py-1 text-sm ${align === 'right' ? 'text-right' : ''}`}
+          style={{ borderColor: 'var(--monday-border)' }}
+          value={type === 'number' ? (rawValue || '') : (rawValue || '')}
+          onChange={(e) => {
+            const val = type === 'number' ? (parseFloat(e.target.value) || 0) : e.target.value
+            updateField(expense.id, field, val)
+          }}
+          onBlur={() => setEditingCell(null)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') setEditingCell(null)
+            if (e.key === 'Escape') setEditingCell(null)
+          }}
+          autoFocus
+        />
+      )
     }
-    setCollapsedGroups(newCollapsed)
-  }
 
-  const renderGroupHeader = (groupKey: string, expenses: EditableExpense[]) => {
-    const isCollapsed = collapsedGroups.has(groupKey)
-    const totalAmount = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0)
+    const displayValue = format ? format(rawValue) : (rawValue || '-')
 
     return (
-      <tr className="bg-gray-100 border-t-2 border-gray-300">
-        <td colSpan={9} className="px-2 py-2">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => toggleGroup(groupKey)}
-              className="flex items-center gap-2 font-semibold text-gray-900"
-            >
-              {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              {groupKey} ({expenses.length})
-            </button>
-            <div className="text-sm font-semibold text-gray-900">
-              Total: ${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-          </div>
-        </td>
-      </tr>
+      <div
+        onClick={() => setEditingCell({ id: expense.id, field })}
+        className="cursor-pointer rounded px-1.5 py-0.5 hover:bg-white hover:shadow-sm"
+        style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)', textAlign: align }}
+      >
+        {displayValue}
+      </div>
     )
   }
 
-  const renderExpenseRow = (expense: EditableExpense) => {
+  const renderTable = (title: string, data: Expense[], costType: 'fixed' | 'variable') => {
+    const totalAmount = data.reduce((sum, e) => sum + Number(e.amount || 0), 0)
+    const totalWeekly = data.reduce((sum, e) => {
+      const amt = Number(e.amount || 0)
+      return sum + (costType === 'fixed' ? amt / 4.33 : amt)
+    }, 0)
+    const totalMonthly = data.reduce((sum, e) => {
+      const amt = Number(e.amount || 0)
+      return sum + (costType === 'fixed' ? amt : amt * 4.33)
+    }, 0)
+    const totalYearly = data.reduce((sum, e) => {
+      const amt = Number(e.amount || 0)
+      return sum + (costType === 'fixed' ? amt * 12 : amt * 52)
+    }, 0)
+
     return (
-      <tr
-        key={expense.id}
-        className="border-b hover:bg-gray-50"
-        onContextMenu={(e) => {
-          e.preventDefault()
-          if (!expense.isNew) {
-            handleDelete(expense.id)
-          }
-        }}
-      >
-        <td className="px-2 py-2">
-          <div
-            className="cursor-pointer px-1 py-1 hover:bg-white hover:shadow-sm rounded"
-            onClick={() => setEditingCell({ id: expense.isNew ? 'new' : expense.id, field: 'date' })}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
+            {title}
+            <span className="ml-2 text-sm font-normal" style={{ color: 'var(--monday-text-muted)' }}>
+              ({data.length} {data.length === 1 ? 'expense' : 'expenses'})
+            </span>
+          </h2>
+          <button
+            onClick={() => addNewExpense(costType)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium text-white"
+            style={{ backgroundColor: 'var(--monday-blue)' }}
           >
-            {editingCell?.id === (expense.isNew ? 'new' : expense.id) && editingCell.field === 'date' ? (
-              <input
-                type="date"
-                className="w-full border rounded px-1 py-1 text-sm"
-                value={expense.date}
-                onChange={(e) => updateField(expense.isNew ? 'new' : expense.id, 'date', e.target.value)}
-                onBlur={() => setEditingCell(null)}
-                autoFocus
-              />
-            ) : (
-              <span className="text-sm">
-                {new Date(expense.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
-              </span>
-            )}
-          </div>
-        </td>
-        <td className="px-2 py-2">
-          <div
-            className="cursor-pointer px-1 py-1 hover:bg-white hover:shadow-sm rounded"
-            onClick={() => setEditingCell({ id: expense.isNew ? 'new' : expense.id, field: 'category' })}
-          >
-            {editingCell?.id === (expense.isNew ? 'new' : expense.id) && editingCell.field === 'category' ? (
-              <select
-                className="w-full border rounded px-1 py-1 text-sm"
-                value={expense.category}
-                onChange={(e) => updateField(expense.isNew ? 'new' : expense.id, 'category', e.target.value)}
-                onBlur={() => setEditingCell(null)}
-                autoFocus
-              >
-                {EXPENSE_CATEGORIES.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            ) : (
-              <span className="text-sm">{expense.category}</span>
-            )}
-          </div>
-        </td>
-        <td className="px-2 py-2">
-          <div
-            className="cursor-pointer px-1 py-1 hover:bg-white hover:shadow-sm rounded"
-            onClick={() => setEditingCell({ id: expense.isNew ? 'new' : expense.id, field: 'description' })}
-          >
-            {editingCell?.id === (expense.isNew ? 'new' : expense.id) && editingCell.field === 'description' ? (
-              <input
-                type="text"
-                className="w-full border rounded px-1 py-1 text-sm"
-                value={expense.description || ''}
-                onChange={(e) => updateField(expense.isNew ? 'new' : expense.id, 'description', e.target.value)}
-                onBlur={() => setEditingCell(null)}
-                autoFocus
-              />
-            ) : (
-              <span className="text-sm">{expense.description || '-'}</span>
-            )}
-          </div>
-        </td>
-        <td className="px-2 py-2">
-          <div
-            className="cursor-pointer px-1 py-1 hover:bg-white hover:shadow-sm rounded"
-            onClick={() => setEditingCell({ id: expense.isNew ? 'new' : expense.id, field: 'amount' })}
-          >
-            {editingCell?.id === (expense.isNew ? 'new' : expense.id) && editingCell.field === 'amount' ? (
-              <input
-                type="number"
-                step="0.01"
-                className="w-full border rounded px-1 py-1 text-sm"
-                value={expense.amount}
-                onChange={(e) => updateField(expense.isNew ? 'new' : expense.id, 'amount', parseFloat(e.target.value) || 0)}
-                onBlur={() => setEditingCell(null)}
-                autoFocus
-              />
-            ) : (
-              <span className="text-sm">${Number(expense.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            )}
-          </div>
-        </td>
-        <td className="px-2 py-2">
-          <div
-            className="cursor-pointer px-1 py-1 hover:bg-white hover:shadow-sm rounded"
-            onClick={() => setEditingCell({ id: expense.isNew ? 'new' : expense.id, field: 'vendor' })}
-          >
-            {editingCell?.id === (expense.isNew ? 'new' : expense.id) && editingCell.field === 'vendor' ? (
-              <input
-                type="text"
-                className="w-full border rounded px-1 py-1 text-sm"
-                value={expense.vendor || ''}
-                onChange={(e) => updateField(expense.isNew ? 'new' : expense.id, 'vendor', e.target.value)}
-                onBlur={() => setEditingCell(null)}
-                autoFocus
-              />
-            ) : (
-              <span className="text-sm">{expense.vendor || '-'}</span>
-            )}
-          </div>
-        </td>
-        <td className="px-2 py-2">
-          <div
-            className="cursor-pointer px-1 py-1 hover:bg-white hover:shadow-sm rounded"
-            onClick={() => setEditingCell({ id: expense.isNew ? 'new' : expense.id, field: 'payment_method' })}
-          >
-            {editingCell?.id === (expense.isNew ? 'new' : expense.id) && editingCell.field === 'payment_method' ? (
-              <select
-                className="w-full border rounded px-1 py-1 text-sm"
-                value={expense.payment_method || ''}
-                onChange={(e) => updateField(expense.isNew ? 'new' : expense.id, 'payment_method', e.target.value)}
-                onBlur={() => setEditingCell(null)}
-                autoFocus
-              >
-                <option value="">-</option>
-                {PAYMENT_METHODS.map(method => (
-                  <option key={method} value={method}>{method}</option>
-                ))}
-              </select>
-            ) : (
-              <span className="text-sm">{expense.payment_method || '-'}</span>
-            )}
-          </div>
-        </td>
-        <td className="px-2 py-2">
-          <div
-            className="cursor-pointer px-1 py-1 hover:bg-white hover:shadow-sm rounded"
-            onClick={() => setEditingCell({ id: expense.isNew ? 'new' : expense.id, field: 'receipt_number' })}
-          >
-            {editingCell?.id === (expense.isNew ? 'new' : expense.id) && editingCell.field === 'receipt_number' ? (
-              <input
-                type="text"
-                className="w-full border rounded px-1 py-1 text-sm"
-                value={expense.receipt_number || ''}
-                onChange={(e) => updateField(expense.isNew ? 'new' : expense.id, 'receipt_number', e.target.value)}
-                onBlur={() => setEditingCell(null)}
-                autoFocus
-              />
-            ) : (
-              <span className="text-sm">{expense.receipt_number || '-'}</span>
-            )}
-          </div>
-        </td>
-        <td className="px-2 py-2">
-          <div
-            className="cursor-pointer px-1 py-1 hover:bg-white hover:shadow-sm rounded"
-            onClick={() => setEditingCell({ id: expense.isNew ? 'new' : expense.id, field: 'driver_id' })}
-          >
-            {editingCell?.id === (expense.isNew ? 'new' : expense.id) && editingCell.field === 'driver_id' ? (
-              <select
-                className="w-full border rounded px-1 py-1 text-sm"
-                value={expense.driver_id || ''}
-                onChange={(e) => updateField(expense.isNew ? 'new' : expense.id, 'driver_id', e.target.value ? parseInt(e.target.value) : undefined)}
-                onBlur={() => setEditingCell(null)}
-                autoFocus
-              >
-                <option value="">-</option>
-                {drivers.map(driver => (
-                  <option key={driver.id} value={driver.id}>
-                    {driver.first_name} {driver.last_name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span className="text-sm">
-                {expense.driver ? `${expense.driver.first_name} ${expense.driver.last_name}` : '-'}
-              </span>
-            )}
-          </div>
-        </td>
-        <td className="px-2 py-2">
-          <div
-            className="cursor-pointer px-1 py-1 hover:bg-white hover:shadow-sm rounded"
-            onClick={() => setEditingCell({ id: expense.isNew ? 'new' : expense.id, field: 'truck_id' })}
-          >
-            {editingCell?.id === (expense.isNew ? 'new' : expense.id) && editingCell.field === 'truck_id' ? (
-              <select
-                className="w-full border rounded px-1 py-1 text-sm"
-                value={expense.truck_id || ''}
-                onChange={(e) => updateField(expense.isNew ? 'new' : expense.id, 'truck_id', e.target.value ? parseInt(e.target.value) : undefined)}
-                onBlur={() => setEditingCell(null)}
-                autoFocus
-              >
-                <option value="">-</option>
-                {trucks.map(truck => (
-                  <option key={truck.id} value={truck.id}>
-                    {truck.truck_number}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span className="text-sm">
-                {expense.truck ? expense.truck.truck_number : '-'}
-              </span>
-            )}
-          </div>
-        </td>
-      </tr>
+            <Plus className="h-3.5 w-3.5" />
+            Add {costType === 'fixed' ? 'Fixed' : 'Variable'}
+          </button>
+        </div>
+
+        <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
+          <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+            <thead>
+              <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Date</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Description</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Amount</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Vendor</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Weekly</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Monthly</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Yearly</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Driver</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Truck</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Category</th>
+                <th className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--monday-border-light)', width: '40px' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.length === 0 ? (
+                <tr>
+                  <td colSpan={11} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
+                    No {costType} expenses yet
+                  </td>
+                </tr>
+              ) : (
+                data.map(expense => {
+                  const amount = Number(expense.amount || 0)
+                  // Fixed: amount is monthly, calculate weekly/yearly from that
+                  // Variable: amount is per-occurrence, calculate weekly=amount, monthly=amount*4.33, yearly=amount*52
+                  const weekly = costType === 'fixed' ? amount / 4.33 : amount
+                  const monthly = costType === 'fixed' ? amount : amount * 4.33
+                  const yearly = costType === 'fixed' ? amount * 12 : amount * 52
+
+                  return (
+                    <tr
+                      key={expense.id}
+                      className="border-b transition-colors"
+                      style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)' }}
+                    >
+                      <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '110px' }}>
+                        {renderEditableCell(expense, 'date', {
+                          type: 'date',
+                          format: (val) => val ? new Date(val + 'T00:00:00').toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }) : '-'
+                        })}
+                      </td>
+                      <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '150px' }}>
+                        {renderEditableCell(expense, 'description')}
+                      </td>
+                      <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '100px' }}>
+                        {renderEditableCell(expense, 'amount', {
+                          type: 'number',
+                          step: '0.01',
+                          align: 'right',
+                          format: (val) => val ? formatCurrency(Number(val)) : '-'
+                        })}
+                      </td>
+                      <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
+                        {renderEditableCell(expense, 'vendor')}
+                      </td>
+                      <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
+                        <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
+                          {amount > 0 ? formatCurrency(weekly) : '-'}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
+                        <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
+                          {amount > 0 ? formatCurrency(monthly) : '-'}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
+                        <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
+                          {amount > 0 ? formatCurrency(yearly) : '-'}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
+                        {renderEditableCell(expense, 'driver_id', {
+                          type: 'select',
+                          selectOptions: drivers.map(d => ({ value: String(d.id), label: `${d.first_name} ${d.last_name}` })),
+                          format: (val) => {
+                            if (!val) return '-'
+                            const driver = drivers.find(d => d.id === val)
+                            return driver ? `${driver.first_name} ${driver.last_name}` : '-'
+                          }
+                        })}
+                      </td>
+                      <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '90px' }}>
+                        {renderEditableCell(expense, 'truck_id', {
+                          type: 'select',
+                          selectOptions: trucks.filter(t => t.type === 'truck').map(t => ({ value: String(t.id), label: t.truck_number })),
+                          format: (val) => {
+                            if (!val) return '-'
+                            const truck = trucks.find(t => t.id === val)
+                            return truck ? truck.truck_number : '-'
+                          }
+                        })}
+                      </td>
+                      <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '100px' }}>
+                        {renderEditableCell(expense, 'category', {
+                          type: 'select',
+                          selectOptions: EXPENSE_CATEGORIES.map(c => ({ value: c, label: c })),
+                        })}
+                      </td>
+                      <td className="px-3 py-2.5" style={{ borderColor: 'var(--monday-border-light)' }}>
+                        <button
+                          onClick={() => handleDelete(expense.id)}
+                          className="p-1 rounded hover:bg-red-50"
+                          style={{ color: 'var(--monday-stuck)' }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+              {/* Totals row */}
+              {data.length > 0 && (
+                <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                  <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }} colSpan={2}>
+                    Total
+                  </td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
+                    {formatCurrency(totalAmount)}
+                  </td>
+                  <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}></td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
+                    {formatCurrency(totalWeekly)}
+                  </td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
+                    {formatCurrency(totalMonthly)}
+                  </td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
+                    {formatCurrency(totalYearly)}
+                  </td>
+                  <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }} colSpan={4}></td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     )
   }
 
   if (isLoading) {
-    return (
-      <Layout>
-        <div className="p-6">
-          <div>Loading...</div>
-        </div>
-      </Layout>
-    )
+    return <Layout><div className="p-8">Loading...</div></Layout>
   }
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-semibold">Expenses</h1>
-          <div className="flex gap-4 items-center">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Group By:</label>
-              <select
-                className="border rounded px-2 py-1 text-sm"
-                value={groupBy}
-                onChange={(e) => {
-                  setGroupBy(e.target.value as any)
-                  setCollapsedGroups(new Set())
-                }}
-              >
-                <option value="none">None</option>
-                <option value="week">Week</option>
-                <option value="category">Category</option>
-                <option value="driver">Driver</option>
-              </select>
-            </div>
-            <Button onClick={addNewExpense}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Expense
-            </Button>
-          </div>
-        </div>
-
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Method</th>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt #</th>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Truck</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {groupBy === 'none' ? (
-                    editableExpenses.map(renderExpenseRow)
-                  ) : (
-                    Object.entries(groupedExpenses).map(([groupKey, groupExpenses]) => (
-                      <React.Fragment key={groupKey}>
-                        {renderGroupHeader(groupKey, groupExpenses)}
-                        {!collapsedGroups.has(groupKey) && groupExpenses.map(renderExpenseRow)}
-                      </React.Fragment>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="p-4 space-y-8 page-expenses">
+        <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>Expenses</h1>
+        {renderTable('Fixed Costs', fixedExpenses, 'fixed')}
+        {renderTable('Variable Costs', variableExpenses, 'variable')}
       </div>
     </Layout>
   )

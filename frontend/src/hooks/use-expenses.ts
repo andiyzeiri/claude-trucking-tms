@@ -8,6 +8,7 @@ import { Expense, PaginatedResponse } from '@/types'
 export interface ExpenseFormData {
   date: string
   category: string
+  cost_type: string
   description?: string
   amount: number
   vendor?: string

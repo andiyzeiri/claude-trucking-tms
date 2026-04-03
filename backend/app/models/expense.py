@@ -8,6 +8,7 @@ class Expense(Base):
 
     date = Column(Date, nullable=False)
     category = Column(String, nullable=False)
+    cost_type = Column(String, nullable=False, default='variable')  # 'fixed' or 'variable'
     description = Column(Text)
     amount = Column(Numeric(10, 2), nullable=False)
     vendor = Column(String)

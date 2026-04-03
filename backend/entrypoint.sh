@@ -89,6 +89,10 @@ python3 create_driver_attention_days_table.py || echo "⚠️  create_driver_att
 echo "🔧 Creating driver_day_notes table..."
 python3 create_driver_day_notes_table.py || echo "⚠️  create_driver_day_notes_table.py had errors, continuing..."
 
+# Add cost_type column to expenses table
+echo "🔧 Adding cost_type column to expenses table..."
+python3 add_expense_cost_type.py || echo "⚠️  add_expense_cost_type.py had errors, continuing..."
+
 # Stamp Alembic version to match current state
 echo "📦 Stamping Alembic version..."
 python3 stamp_alembic.py || echo "⚠️  stamp_alembic.py had errors, continuing..."
