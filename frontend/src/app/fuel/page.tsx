@@ -18,6 +18,7 @@ type EditingCell = {
 
 // Helper to get previous entry's ending miles for a truck
 // Looks through all entries (sorted by year/week) to find the most recent prior entry
+// that has an actual odometer reading (skips weeks where the truck didn't move)
 function getPreviousEndingMiles(
   sortedEntriesByTruck: Map<number, Array<{ isoYear: number, weekNumber: number, odometer: number | null }>>,
   currentYear: number,
@@ -27,12 +28,14 @@ function getPreviousEndingMiles(
   const truckEntries = sortedEntriesByTruck.get(truckId)
   if (!truckEntries || truckEntries.length === 0) return null
 
-  // Find the most recent entry BEFORE the current week
+  // Find the most recent entry BEFORE the current week that has an odometer reading
   // Entries are sorted by year desc, week desc
   for (const entry of truckEntries) {
     // Check if this entry is before the current week
     if (entry.isoYear < currentYear || (entry.isoYear === currentYear && entry.weekNumber < weekNum)) {
-      return entry.odometer
+      if (entry.odometer !== null && entry.odometer > 0) {
+        return entry.odometer
+      }
     }
   }
   return null
