@@ -108,6 +108,18 @@ async def delete_driver(
             detail="Cannot delete driver with assigned loads. Please unassign all loads first."
         )
 
+    # Clean up related records before deleting driver
+    from app.models.driver_payroll_settings import DriverPayrollSettings
+    from app.models.payroll_override import PayrollOverride
+    from app.models.fuel import Fuel
+    from sqlalchemy import delete as sql_delete
+
+    await db.execute(sql_delete(DriverPayrollSettings).where(DriverPayrollSettings.driver_id == driver_id))
+    await db.execute(sql_delete(PayrollOverride).where(PayrollOverride.driver_id == driver_id))
+    # Unlink fuel entries from this driver (don't delete them, they belong to trucks)
+    from sqlalchemy import update as sql_update
+    await db.execute(sql_update(Fuel).where(Fuel.driver_id == driver_id).values(driver_id=None))
+
     await db.delete(driver)
     await db.commit()
     return {"message": "Driver deleted successfully"}
