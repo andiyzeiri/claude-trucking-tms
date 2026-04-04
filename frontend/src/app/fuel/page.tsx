@@ -865,7 +865,7 @@ export default function FuelPage() {
                 </th>
                 {theoreticalMpg > 0 && (
                   <th className="px-3 py-2.5 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: '120px', minWidth: '120px' }}>
-                    Theo. Total
+                    Theo. Diff
                   </th>
                 )}
               </tr>
@@ -922,13 +922,14 @@ export default function FuelPage() {
                           {truckTotal > 0 ? formatCurrency(truckTotal) : '-'}
                         </td>
                         {theoreticalMpg > 0 && (
-                          <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
+                          <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 600 }}>
                             {(() => {
                               if (truck.totalMiles <= 0 || truck.avgPricePerGallon <= 0) return '-'
                               const theoGallons = truck.totalMiles / theoreticalMpg
                               const theoFuel = theoGallons * truck.avgPricePerGallon
                               const theoTotal = theoFuel + truck.totalDefPrice
-                              return formatCurrency(theoTotal)
+                              const diff = theoTotal - truckTotal
+                              return <span style={{ color: diff >= 0 ? '#16a34a' : '#dc2626' }}>{diff >= 0 ? '+' : ''}{formatCurrency(diff)}</span>
                             })()}
                           </td>
                         )}
@@ -965,7 +966,7 @@ export default function FuelPage() {
                       {formatCurrency(grandTotal)}
                     </td>
                     {theoreticalMpg > 0 && (
-                      <td className="px-3 py-2.5 text-right font-bold" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--monday-text-secondary)' }}>
+                      <td className="px-3 py-2.5 text-right font-bold" style={{ fontSize: '13px', fontWeight: 700 }}>
                         {(() => {
                           const theoGrandTotal = summaryByTruck.reduce((sum, truck) => {
                             if (truck.totalMiles <= 0 || truck.avgPricePerGallon <= 0) return sum
@@ -973,7 +974,9 @@ export default function FuelPage() {
                             const theoFuel = theoGallons * truck.avgPricePerGallon
                             return sum + theoFuel + truck.totalDefPrice
                           }, 0)
-                          return theoGrandTotal > 0 ? formatCurrency(theoGrandTotal) : '-'
+                          if (theoGrandTotal <= 0) return '-'
+                          const diff = theoGrandTotal - grandTotal
+                          return <span style={{ color: diff >= 0 ? '#16a34a' : '#dc2626' }}>{diff >= 0 ? '+' : ''}{formatCurrency(diff)}</span>
                         })()}
                       </td>
                     )}
