@@ -119,7 +119,6 @@ export default function PayrollPage() {
 
   // Column width management
   const { columnWidths, adjustWidth } = useColumnWidths('payroll-table', {
-    week: 300,
     driver: 200,
     truck: 100,
     gross: 100,
@@ -447,36 +446,20 @@ export default function PayrollPage() {
     }
   }
 
-  // QuickBooks-inspired color scheme
-  const qbColors = {
-    green: '#2CA01C',
-    greenDark: '#1E7A12',
-    greenLight: '#E8F5E6',
-    red: '#D92D20',
-    redLight: '#FEF3F2',
-    textPrimary: '#1A1F36',
-    textSecondary: '#6B7280',
-    textMuted: '#9CA3AF',
-    borderLight: '#E5E7EB',
-    borderMedium: '#D1D5DB',
-    bgWhite: '#FFFFFF',
-    bgGray: '#F9FAFB',
-    bgHeader: '#393A3D',
-  }
 
   return (
     <Layout>
-      <div className="page-payroll space-y-5" style={{ fontFamily: '"Avenir Next", "Avenir", "Helvetica Neue", -apple-system, BlinkMacSystemFont, sans-serif' }}>
+      <div className="page-payroll space-y-5">
         {/* Header - QuickBooks style */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 style={{ fontSize: '24px', fontWeight: 600, color: qbColors.textPrimary, letterSpacing: '-0.02em' }}>Payroll</h1>
-            <p style={{ fontSize: '14px', color: qbColors.textSecondary, marginTop: '2px' }}>52-week driver payroll overview</p>
+            <h1 style={{ fontSize: '24px', fontWeight: 600, color: 'var(--monday-text-primary)', letterSpacing: '-0.02em' }}>Payroll</h1>
+            <p style={{ fontSize: '14px', color: 'var(--monday-text-secondary)', marginTop: '2px' }}>52-week driver payroll overview</p>
           </div>
           <div className="flex gap-2">
             <Button
               onClick={() => setSettingsModalOpen(true)}
-              style={{ backgroundColor: qbColors.green, borderColor: qbColors.green, color: 'white', fontWeight: 500, fontSize: '13px' }}
+              style={{ backgroundColor: 'var(--monday-done)', borderColor: 'var(--monday-done)', color: 'white', fontWeight: 500, fontSize: '13px' }}
             >
               <Settings className="h-4 w-4 mr-2" />
               Driver Settings
@@ -498,15 +481,15 @@ export default function PayrollPage() {
         </div>
 
         {/* Year Tabs - QuickBooks style */}
-        <div className="flex items-center gap-1 border-b" style={{ borderColor: qbColors.borderLight }}>
+        <div className="flex items-center gap-1 border-b" style={{ borderColor: 'var(--monday-border-light)' }}>
           {availableYears.map(year => (
             <button
               key={year}
               onClick={() => setSelectedYear(year)}
               className="px-4 py-2 text-sm transition-all relative"
               style={{
-                color: selectedYear === year ? qbColors.green : qbColors.textSecondary,
-                borderBottom: selectedYear === year ? `3px solid ${qbColors.green}` : '3px solid transparent',
+                color: selectedYear === year ? 'var(--monday-done)' : 'var(--monday-text-secondary)',
+                borderBottom: selectedYear === year ? `3px solid ${'var(--monday-done)'}` : '3px solid transparent',
                 marginBottom: '-1px',
                 fontWeight: selectedYear === year ? 600 : 500,
                 fontSize: '14px'
@@ -520,176 +503,71 @@ export default function PayrollPage() {
           ))}
         </div>
 
-        {/* Grand Totals Summary - QuickBooks style - uses same column widths as main table */}
-        {drivers.length > 0 && (
-          <div style={{ border: `1px solid ${qbColors.borderLight}`, borderRadius: '8px', backgroundColor: qbColors.bgWhite, overflow: 'hidden' }}>
-            <div className="overflow-x-auto">
-              <table className="w-full table-auto" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
-                <thead style={{ backgroundColor: qbColors.bgHeader }}>
-                  <tr>
-                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px` }}>
-                      {selectedYear}
-                    </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px` }}>
-                      Drivers
-                    </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.truck}px`, minWidth: `${columnWidths.truck}px` }}>
-                      Truck
-                    </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.gross}px`, minWidth: `${columnWidths.gross}px` }}>
-                      Gross
-                    </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.extra}px`, minWidth: `${columnWidths.extra}px` }}>
-                      Extra
-                    </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.dispatch_fee}px`, minWidth: `${columnWidths.dispatch_fee}px` }}>
-                      Dispatch
-                    </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.insurance}px`, minWidth: `${columnWidths.insurance}px` }}>
-                      Insurance
-                    </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.fuel}px`, minWidth: `${columnWidths.fuel}px` }}>
-                      Fuel
-                    </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.parking}px`, minWidth: `${columnWidths.parking}px` }}>
-                      Parking
-                    </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.trailer}px`, minWidth: `${columnWidths.trailer}px` }}>
-                      Trailer
-                    </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.misc}px`, minWidth: `${columnWidths.misc}px` }}>
-                      Misc
-                    </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.miles}px`, minWidth: `${columnWidths.miles}px` }}>
-                      Miles
-                    </th>
-                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.pay}px`, minWidth: `${columnWidths.pay}px`, backgroundColor: 'rgba(44, 160, 28, 0.3)' }}>
-                      Net Pay
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style={{ backgroundColor: qbColors.bgGray, borderBottom: `1px solid ${qbColors.borderLight}` }}>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, color: qbColors.textPrimary }}>
-                      52 Weeks Total
-                    </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, color: qbColors.textSecondary }}>
-                      {payrollData.length} drivers
-                    </td>
-                    <td style={{ padding: '14px 12px' }}></td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, textAlign: 'left', color: qbColors.textPrimary }}>
-                      {formatCurrency(grandTotals.gross)}
-                    </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, textAlign: 'left', color: qbColors.textPrimary }}>
-                      {formatCurrency(grandTotals.extra)}
-                    </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'left', color: qbColors.red }}>
-                      ({formatCurrency(grandTotals.dispatch_fee)})
-                    </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'left', color: qbColors.red }}>
-                      ({formatCurrency(grandTotals.insurance)})
-                    </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'left', color: qbColors.red }}>
-                      ({formatCurrency(grandTotals.fuel)})
-                    </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'left', color: qbColors.red }}>
-                      ({formatCurrency(grandTotals.parking)})
-                    </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'left', color: qbColors.red }}>
-                      ({formatCurrency(grandTotals.trailer)})
-                    </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, textAlign: 'left', color: qbColors.red }}>
-                      ({formatCurrency(grandTotals.misc)})
-                    </td>
-                    <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, textAlign: 'left', color: qbColors.textPrimary }}>
-                      {grandTotals.miles.toLocaleString()}
-                    </td>
-                    <td style={{ padding: '14px 12px', fontSize: '16px', fontWeight: 700, textAlign: 'left', color: qbColors.green, backgroundColor: qbColors.greenLight }}>
-                      {formatCurrency(grandTotals.check_amount)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Payroll Table - QuickBooks style */}
+        {/* Payroll Table */}
         {drivers.length === 0 ? (
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-              <Calculator className="h-16 w-16 mx-auto mb-4" style={{ color: qbColors.textMuted }} />
-              <h2 style={{ fontSize: '18px', fontWeight: 600, color: qbColors.textPrimary, marginBottom: '8px' }}>No Drivers</h2>
-              <p style={{ fontSize: '14px', color: qbColors.textSecondary }}>Add drivers to start tracking payroll.</p>
+              <Calculator className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--monday-text-muted)' }} />
+              <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--monday-text-primary)', marginBottom: '8px' }}>No Drivers</h2>
+              <p style={{ fontSize: '14px', color: 'var(--monday-text-secondary)' }}>Add drivers to start tracking payroll.</p>
             </div>
           </div>
         ) : (
-          <div style={{ border: `1px solid ${qbColors.borderLight}`, borderRadius: '8px', backgroundColor: qbColors.bgWhite, overflow: 'hidden' }}>
-            <div className="overflow-x-auto">
-              <table className="w-full table-auto" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
-                <thead style={{ backgroundColor: qbColors.bgGray, borderBottom: `2px solid ${qbColors.borderMedium}` }}>
-                  <tr>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none sticky left-0 z-10" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', backgroundColor: qbColors.bgGray, width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px` }} onClick={() => handleSort('weekNumber')}>
-                      <ColumnWidthControl currentWidth={columnWidths.week} onAdjust={(delta) => adjustWidth('week', delta)} />
-                      <div className="flex items-center gap-1">
-                        Week
-                        {sortField === 'weekNumber' ? (sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
-                      </div>
-                    </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px` }} onClick={() => handleSort('driver')}>
+          <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
+              <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                    <th className="px-3 py-2.5 text-left border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px` }}>
                       <ColumnWidthControl currentWidth={columnWidths.driver} onAdjust={(delta) => adjustWidth('driver', delta)} />
-                      <div className="flex items-center gap-1">
-                        Driver
-                        {sortField === 'driver' ? (sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
-                      </div>
+                      Driver
                     </th>
-                    <th className="relative group px-3 py-2.5 text-left select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.truck}px`, minWidth: `${columnWidths.truck}px` }}>
+                    <th className="px-3 py-2.5 text-left border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.truck}px`, minWidth: `${columnWidths.truck}px` }}>
                       <ColumnWidthControl currentWidth={columnWidths.truck} onAdjust={(delta) => adjustWidth('truck', delta)} />
-                      <div className="flex items-center gap-1">Truck</div>
+                      Truck
                     </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.gross}px`, minWidth: `${columnWidths.gross}px` }} onClick={() => handleSort('gross')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.gross}px`, minWidth: `${columnWidths.gross}px` }} onClick={() => handleSort('gross')}>
                       <ColumnWidthControl currentWidth={columnWidths.gross} onAdjust={(delta) => adjustWidth('gross', delta)} />
                       <div className="flex items-center gap-1">Gross</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.extra}px`, minWidth: `${columnWidths.extra}px` }} onClick={() => handleSort('extra')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.extra}px`, minWidth: `${columnWidths.extra}px` }} onClick={() => handleSort('extra')}>
                       <ColumnWidthControl currentWidth={columnWidths.extra} onAdjust={(delta) => adjustWidth('extra', delta)} />
                       <div className="flex items-center gap-1">Extra</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.dispatch_fee}px`, minWidth: `${columnWidths.dispatch_fee}px` }} onClick={() => handleSort('dispatch_fee')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.dispatch_fee}px`, minWidth: `${columnWidths.dispatch_fee}px` }} onClick={() => handleSort('dispatch_fee')}>
                       <ColumnWidthControl currentWidth={columnWidths.dispatch_fee} onAdjust={(delta) => adjustWidth('dispatch_fee', delta)} />
                       <div className="flex items-center gap-1">Dispatch</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.insurance}px`, minWidth: `${columnWidths.insurance}px` }} onClick={() => handleSort('insurance')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.insurance}px`, minWidth: `${columnWidths.insurance}px` }} onClick={() => handleSort('insurance')}>
                       <ColumnWidthControl currentWidth={columnWidths.insurance} onAdjust={(delta) => adjustWidth('insurance', delta)} />
                       <div className="flex items-center gap-1">Insurance</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.fuel}px`, minWidth: `${columnWidths.fuel}px` }} onClick={() => handleSort('fuel')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.fuel}px`, minWidth: `${columnWidths.fuel}px` }} onClick={() => handleSort('fuel')}>
                       <ColumnWidthControl currentWidth={columnWidths.fuel} onAdjust={(delta) => adjustWidth('fuel', delta)} />
                       <div className="flex items-center gap-1">Fuel</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.parking}px`, minWidth: `${columnWidths.parking}px` }} onClick={() => handleSort('parking')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.parking}px`, minWidth: `${columnWidths.parking}px` }} onClick={() => handleSort('parking')}>
                       <ColumnWidthControl currentWidth={columnWidths.parking} onAdjust={(delta) => adjustWidth('parking', delta)} />
                       <div className="flex items-center gap-1">Parking</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.trailer}px`, minWidth: `${columnWidths.trailer}px` }} onClick={() => handleSort('trailer')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.trailer}px`, minWidth: `${columnWidths.trailer}px` }} onClick={() => handleSort('trailer')}>
                       <ColumnWidthControl currentWidth={columnWidths.trailer} onAdjust={(delta) => adjustWidth('trailer', delta)} />
                       <div className="flex items-center gap-1">Trailer</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.misc}px`, minWidth: `${columnWidths.misc}px` }} onClick={() => handleSort('misc')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.misc}px`, minWidth: `${columnWidths.misc}px` }} onClick={() => handleSort('misc')}>
                       <ColumnWidthControl currentWidth={columnWidths.misc} onAdjust={(delta) => adjustWidth('misc', delta)} />
                       <div className="flex items-center gap-1">Misc</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.miles}px`, minWidth: `${columnWidths.miles}px` }} onClick={() => handleSort('miles')}>
+                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.miles}px`, minWidth: `${columnWidths.miles}px` }} onClick={() => handleSort('miles')}>
                       <ColumnWidthControl currentWidth={columnWidths.miles} onAdjust={(delta) => adjustWidth('miles', delta)} />
                       <div className="flex items-center gap-1">Miles</div>
                     </th>
-                    <th className="relative group px-3 py-2.5 text-left" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.green, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.pay}px`, minWidth: `${columnWidths.pay}px`, backgroundColor: qbColors.greenLight }}>
+                    <th className="relative group px-3 py-2.5 text-left" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--monday-done)', textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.pay}px`, minWidth: `${columnWidths.pay}px`, backgroundColor: 'rgba(44, 160, 28, 0.08)' }}>
                       <ColumnWidthControl currentWidth={columnWidths.pay} onAdjust={(delta) => adjustWidth('pay', delta)} />
                       Net Pay
                     </th>
                   </tr>
                 </thead>
-                <tbody style={{ backgroundColor: qbColors.bgWhite }}>
+                <tbody style={{ backgroundColor: 'var(--monday-bg-primary)' }}>
                   {weeks.map((week, weekIndex) => {
                     const isExpanded = expandedWeeks.has(week.weekNumber)
                     const weekTotals = getWeekTotals(week.weekNumber)
@@ -700,98 +578,55 @@ export default function PayrollPage() {
 
                     return (
                       <React.Fragment key={week.weekNumber}>
-                        {/* Week Header Row - QuickBooks style */}
+                        {/* Week Header Row */}
                         <tr
                           id={`week-${week.weekNumber}`}
-                          className="cursor-pointer transition-colors"
-                          style={{
-                            borderTop: `1px solid ${qbColors.borderLight}`,
-                            backgroundColor: hasData ? qbColors.bgGray : qbColors.bgWhite
-                          }}
+                          className="border-b cursor-pointer"
+                          style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-secondary)' }}
                           onClick={() => toggleWeek(week.weekNumber)}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6' }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = hasData ? qbColors.bgGray : qbColors.bgWhite }}
                         >
-                          <td className="px-3 py-2.5 sticky left-0 z-10" style={{ backgroundColor: 'inherit', borderRight: `1px solid ${qbColors.borderLight}` }}>
+                          <td colSpan={2} className="px-2 py-2" style={{ paddingLeft: '8px' }}>
                             <div className="flex items-center gap-2">
                               {isExpanded ? (
-                                <ChevronDown className="h-4 w-4" style={{ color: qbColors.textSecondary }} />
+                                <ChevronDown className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--monday-blue)' }} />
                               ) : (
-                                <ChevronRight className="h-4 w-4" style={{ color: qbColors.textSecondary }} />
+                                <ChevronRight className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--monday-blue)' }} />
                               )}
-                              <div className="flex flex-col">
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: qbColors.textPrimary }}>
-                                  Week {week.weekNumber}
-                                </span>
-                                <span style={{ fontSize: '11px', fontWeight: 400, color: qbColors.textMuted }}>
-                                  {week.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {week.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                </span>
-                              </div>
+                              <span className="whitespace-nowrap" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>
+                                Week {week.weekNumber} {week.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {week.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                              <span style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
+                                ({employedDrivers.length} drivers)
+                              </span>
                             </div>
                           </td>
-                          <td className="px-3 py-2.5" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.textSecondary, borderRight: `1px solid ${qbColors.borderLight}` }}>
-                            {employedDrivers.length} drivers
-                          </td>
-                          <td className="px-3 py-2.5" style={{ borderRight: `1px solid ${qbColors.borderLight}` }}></td>
-                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 600, color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
-                            {formatCurrency(weekTotals.gross)}
-                          </td>
-                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 600, color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
-                            {formatCurrency(weekTotals.extra)}
-                          </td>
-                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
-                            ({formatCurrency(weekTotals.dispatch_fee)})
-                          </td>
-                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
-                            ({formatCurrency(weekTotals.insurance)})
-                          </td>
-                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
-                            ({formatCurrency(weekTotals.fuel)})
-                          </td>
-                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
-                            ({formatCurrency(weekTotals.parking)})
-                          </td>
-                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
-                            ({formatCurrency(weekTotals.trailer)})
-                          </td>
-                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }}>
-                            ({formatCurrency(weekTotals.misc)})
-                          </td>
-                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 600, color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
-                            {weekTotals.miles.toLocaleString()}
-                          </td>
-                          <td className="px-3 py-2.5 text-left" style={{ fontSize: '14px', fontWeight: 700, color: qbColors.green, backgroundColor: qbColors.greenLight }}>
-                            {formatCurrency(weekTotals.check_amount)}
+                          <td className="px-2 py-2" colSpan={9}></td>
+                          <td className="px-2 py-2">
+                            <div style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)' }}>
+                              {formatCurrency(weekTotals.check_amount)}
+                            </div>
                           </td>
                         </tr>
 
-                        {/* Driver Rows (shown when expanded) - QuickBooks style */}
+                        {/* Driver Rows */}
                         {isExpanded && payrollData
                           .filter(driverData => employedDriverIds.has(driverData.driver_id))
                           .map((driverData, driverIndex) => {
                           const weekData = driverData.weeks[week.weekNumber]
-                          const isEvenRow = driverIndex % 2 === 0
-                          const defaultBgColor = isEvenRow ? qbColors.bgWhite : '#FAFAFA'
 
                           return (
                             <tr
                               key={`${week.weekNumber}-${driverData.driver_id}`}
-                              className="transition-colors"
-                              style={{
-                                borderBottom: `1px solid ${qbColors.borderLight}`,
-                                backgroundColor: defaultBgColor
-                              }}
-                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F0F9FF' }}
-                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = defaultBgColor }}
+                              className="border-b transition-colors"
+                              style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)' }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)' }}
                               onContextMenu={(e) => handleContextMenu(e, week.weekNumber, driverData.driver_id)}
                             >
-                              <td className="px-3 py-2 sticky left-0 z-10" style={{ backgroundColor: 'inherit', borderRight: `1px solid ${qbColors.borderLight}` }}>
-                                {/* Empty for driver rows */}
-                              </td>
-                              <td className="px-3 py-2 pl-8" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
+                              <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>
                                 {driverData.driver_name}
                               </td>
-                              <td className="px-3 py-2" style={{ fontSize: '13px', color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
+                              <td className="px-3 py-2" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', borderRight: `1px solid ${'var(--monday-border-light)'}` }}>
                                 {(() => {
                                   const weekTruckOverride = getOverride(driverData.driver_id, week.weekNumber, 'truck_id')
                                   const effectiveTruckId = weekTruckOverride !== undefined ? weekTruckOverride : (driverData.truck_id || '')
@@ -799,7 +634,7 @@ export default function PayrollPage() {
                                   return (
                                     <select
                                       className="w-full bg-transparent text-sm border-0 p-0 focus:ring-0 cursor-pointer"
-                                      style={isOverridden ? { fontStyle: 'italic', color: qbColors.green } : {}}
+                                      style={isOverridden ? { fontStyle: 'italic', color: 'var(--monday-done)' } : {}}
                                       value={effectiveTruckId}
                                       onChange={(e) => {
                                         const truckId = e.target.value ? parseInt(e.target.value) : 0
@@ -820,70 +655,70 @@ export default function PayrollPage() {
                                   )
                                 })()}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'gross') && startEdit(week.weekNumber, driverData.driver_id, 'gross', weekData?.gross || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'gross') && startEdit(week.weekNumber, driverData.driver_id, 'gross', weekData?.gross || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'gross') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData ? formatCurrency(weekData.gross) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'extra') && startEdit(week.weekNumber, driverData.driver_id, 'extra', weekData?.extra || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'extra') && startEdit(week.weekNumber, driverData.driver_id, 'extra', weekData?.extra || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'extra') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData ? formatCurrency(weekData.extra) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'dispatch_fee') && startEdit(week.weekNumber, driverData.driver_id, 'dispatch_fee', weekData?.dispatch_fee || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'dispatch_fee') && startEdit(week.weekNumber, driverData.driver_id, 'dispatch_fee', weekData?.dispatch_fee || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'dispatch_fee') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.dispatch_fee > 0 ? `(${formatCurrency(weekData.dispatch_fee)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'insurance') && startEdit(week.weekNumber, driverData.driver_id, 'insurance', weekData?.insurance || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'insurance') && startEdit(week.weekNumber, driverData.driver_id, 'insurance', weekData?.insurance || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'insurance') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.insurance > 0 ? `(${formatCurrency(weekData.insurance)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'fuel') && startEdit(week.weekNumber, driverData.driver_id, 'fuel', weekData?.fuel || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'fuel') && startEdit(week.weekNumber, driverData.driver_id, 'fuel', weekData?.fuel || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'fuel') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.fuel > 0 ? `(${formatCurrency(weekData.fuel)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'parking') && startEdit(week.weekNumber, driverData.driver_id, 'parking', weekData?.parking || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'parking') && startEdit(week.weekNumber, driverData.driver_id, 'parking', weekData?.parking || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'parking') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.parking > 0 ? `(${formatCurrency(weekData.parking)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'trailer') && startEdit(week.weekNumber, driverData.driver_id, 'trailer', weekData?.trailer || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'trailer') && startEdit(week.weekNumber, driverData.driver_id, 'trailer', weekData?.trailer || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'trailer') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.trailer > 0 ? `(${formatCurrency(weekData.trailer)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.red, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'misc') && startEdit(week.weekNumber, driverData.driver_id, 'misc', weekData?.misc || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'misc') && startEdit(week.weekNumber, driverData.driver_id, 'misc', weekData?.misc || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'misc') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.misc > 0 ? `(${formatCurrency(weekData.misc)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'miles') && startEdit(week.weekNumber, driverData.driver_id, 'miles', weekData?.miles || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'miles') && startEdit(week.weekNumber, driverData.driver_id, 'miles', weekData?.miles || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'miles') ? (
                                   <Input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData ? weekData.miles.toLocaleString() : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left" style={{ fontSize: '13px', fontWeight: 600, color: qbColors.green, backgroundColor: 'rgba(232, 245, 230, 0.5)' }}>
+                              <td className="px-3 py-2 text-left" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--monday-done)', backgroundColor: 'rgba(232, 245, 230, 0.5)' }}>
                                 {weekData ? formatCurrency(weekData.check_amount) : '-'}
                               </td>
                             </tr>
@@ -893,45 +728,23 @@ export default function PayrollPage() {
                     )
                   })}
                 </tbody>
-                <tfoot className="sticky bottom-0 shadow-lg" style={{ borderTop: `2px solid ${qbColors.borderMedium}` }}>
-                  <tr style={{ backgroundColor: qbColors.bgGray }}>
-                    <td className="px-3 py-3 sticky left-0" style={{ fontSize: '13px', fontWeight: 700, color: qbColors.textPrimary, backgroundColor: qbColors.bgGray }}>Annual Total</td>
-                    <td className="px-3 py-3" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.textSecondary }}>{payrollData.length} drivers</td>
-                    <td className="px-3 py-3"></td>
-                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 700, color: qbColors.textPrimary }}>
-                      {formatCurrency(grandTotals.gross)}
-                    </td>
-                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 700, color: qbColors.textPrimary }}>
-                      {formatCurrency(grandTotals.extra)}
-                    </td>
-                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
-                      ({formatCurrency(grandTotals.dispatch_fee)})
-                    </td>
-                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
-                      ({formatCurrency(grandTotals.insurance)})
-                    </td>
-                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
-                      ({formatCurrency(grandTotals.fuel)})
-                    </td>
-                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
-                      ({formatCurrency(grandTotals.parking)})
-                    </td>
-                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
-                      ({formatCurrency(grandTotals.trailer)})
-                    </td>
-                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.red }}>
-                      ({formatCurrency(grandTotals.misc)})
-                    </td>
-                    <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 700, color: qbColors.textPrimary }}>
-                      {grandTotals.miles.toLocaleString()}
-                    </td>
-                    <td className="px-3 py-3 text-left" style={{ fontSize: '15px', fontWeight: 700, color: qbColors.green, backgroundColor: qbColors.greenLight }}>
-                      {formatCurrency(grandTotals.check_amount)}
-                    </td>
+                <tfoot>
+                  <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                    <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>Annual Total</td>
+                    <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-secondary)' }}></td>
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(grandTotals.gross)}</td>
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(grandTotals.extra)}</td>
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-stuck)' }}>({formatCurrency(grandTotals.dispatch_fee)})</td>
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-stuck)' }}>({formatCurrency(grandTotals.insurance)})</td>
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-stuck)' }}>({formatCurrency(grandTotals.fuel)})</td>
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-stuck)' }}>({formatCurrency(grandTotals.parking)})</td>
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-stuck)' }}>({formatCurrency(grandTotals.trailer)})</td>
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-stuck)' }}>({formatCurrency(grandTotals.misc)})</td>
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{grandTotals.miles.toLocaleString()}</td>
+                    <td className="px-3 py-2.5 text-right font-bold" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--monday-done)' }}>{formatCurrency(grandTotals.check_amount)}</td>
                   </tr>
                 </tfoot>
               </table>
-            </div>
           </div>
         )}
 
