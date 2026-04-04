@@ -8,6 +8,7 @@ import { formatCurrency } from '@/lib/utils'
 import { Calculator, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Edit2, Trash2, Copy, RefreshCw, Settings } from 'lucide-react'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useCalculatedPayroll } from '@/hooks/use-payroll'
+import { usePayrollOverrides, useSavePayrollOverride } from '@/hooks/use-payroll-overrides'
 import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
 import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
@@ -75,6 +76,8 @@ export default function PayrollPage() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const { data: driversData, isLoading: driversLoading } = useDrivers()
   const { data: calculatedPayroll, isLoading: payrollLoading, refetch: refetchPayroll } = useCalculatedPayroll(selectedYear)
+  const { data: payrollOverrides } = usePayrollOverrides(selectedYear)
+  const saveOverride = useSavePayrollOverride()
   const drivers = driversData?.items || []
   const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([1])) // Week 1 expanded by default
 
@@ -91,33 +94,19 @@ export default function PayrollPage() {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [editValue, setEditValue] = useState<string>('')
 
-  // Fuel overrides persisted in localStorage (key: "driverId_weekNum" -> amount)
-  const [fuelOverrides, setFuelOverrides] = useState<Record<string, number>>(() => {
-    try {
-      const saved = localStorage.getItem(`payroll-fuel-overrides-${selectedYear}`)
-      return saved ? JSON.parse(saved) : {}
-    } catch { return {} }
-  })
+  // Build overrides lookup from database
+  const overridesMap = useMemo(() => {
+    const map: Record<string, number> = {}
+    if (payrollOverrides) {
+      payrollOverrides.forEach(o => {
+        map[`${o.driver_id}_${o.week_number}_${o.field}`] = o.value
+      })
+    }
+    return map
+  }, [payrollOverrides])
 
-  // Reload overrides when year changes
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(`payroll-fuel-overrides-${selectedYear}`)
-      setFuelOverrides(saved ? JSON.parse(saved) : {})
-    } catch { setFuelOverrides({}) }
-  }, [selectedYear])
-
-  const setFuelOverride = (driverId: number, weekNum: number, value: number) => {
-    setFuelOverrides(prev => {
-      const key = `${driverId}_${weekNum}`
-      const next = { ...prev, [key]: value }
-      localStorage.setItem(`payroll-fuel-overrides-${selectedYear}`, JSON.stringify(next))
-      return next
-    })
-  }
-
-  const getFuelOverride = (driverId: number, weekNum: number): number | undefined => {
-    return fuelOverrides[`${driverId}_${weekNum}`]
+  const getOverride = (driverId: number, weekNum: number, field: string): number | undefined => {
+    return overridesMap[`${driverId}_${weekNum}_${field}`]
   }
 
   const isLoading = driversLoading || payrollLoading
@@ -194,17 +183,19 @@ export default function PayrollPage() {
 
         const driverData = driverMap.get(entry.driver_id)
         if (driverData) {
-          const gross = Number(entry.gross) || 0
-          const extra = Number(entry.extra) || 0
-          const dispatch_fee = Number(entry.dispatch_fee) || 0
-          const insurance = Number(entry.insurance) || 0
-          const apiFuel = Number(entry.fuel) || 0
-          const fuelOvr = getFuelOverride(entry.driver_id, entry.week_number)
-          const fuel = fuelOvr !== undefined ? fuelOvr : apiFuel
-          const parking = Number(entry.parking) || 0
-          const trailer = Number(entry.trailer) || 0
-          const misc = Number(entry.misc) || 0
-          const miles = Number(entry.miles) || 0
+          const ov = (field: string, apiVal: number) => {
+            const o = getOverride(entry.driver_id, entry.week_number, field)
+            return o !== undefined ? o : apiVal
+          }
+          const gross = ov('gross', Number(entry.gross) || 0)
+          const extra = ov('extra', Number(entry.extra) || 0)
+          const dispatch_fee = ov('dispatch_fee', Number(entry.dispatch_fee) || 0)
+          const insurance = ov('insurance', Number(entry.insurance) || 0)
+          const fuel = ov('fuel', Number(entry.fuel) || 0)
+          const parking = ov('parking', Number(entry.parking) || 0)
+          const trailer = ov('trailer', Number(entry.trailer) || 0)
+          const misc = ov('misc', Number(entry.misc) || 0)
+          const miles = ov('miles', Number(entry.miles) || 0)
           const adjustments = Number(entry.adjustments) || 0
 
           const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
@@ -227,7 +218,7 @@ export default function PayrollPage() {
     }
 
     return Array.from(driverMap.values())
-  }, [drivers, calculatedPayroll, fuelOverrides])
+  }, [drivers, calculatedPayroll, overridesMap])
 
   const toggleWeek = (weekNumber: number) => {
     const newExpanded = new Set(expandedWeeks)
@@ -420,8 +411,14 @@ export default function PayrollPage() {
   }
 
   const stopEdit = () => {
-    if (editingCell?.field === 'fuel' && editValue !== '') {
-      setFuelOverride(editingCell.driverId, editingCell.weekNumber, parseFloat(editValue) || 0)
+    if (editingCell && editValue !== '') {
+      saveOverride.mutate({
+        driver_id: editingCell.driverId,
+        year: selectedYear,
+        week_number: editingCell.weekNumber,
+        field: editingCell.field,
+        value: parseFloat(editValue) || 0
+      })
     }
     setEditingCell(null)
     setEditValue('')
