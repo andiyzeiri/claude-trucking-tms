@@ -97,6 +97,10 @@ python3 add_expense_cost_type.py || echo "⚠️  add_expense_cost_type.py had e
 echo "🔧 Creating payroll_overrides table..."
 python3 create_payroll_overrides_table.py || echo "⚠️  create_payroll_overrides_table.py had errors, continuing..."
 
+# Add truck_id to driver_payroll_settings
+echo "🔧 Adding truck_id to driver_payroll_settings..."
+python3 add_truck_to_payroll_settings.py || echo "⚠️  add_truck_to_payroll_settings.py had errors, continuing..."
+
 # Stamp Alembic version to match current state
 echo "📦 Stamping Alembic version..."
 python3 stamp_alembic.py || echo "⚠️  stamp_alembic.py had errors, continuing..."

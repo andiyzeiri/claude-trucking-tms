@@ -131,6 +131,7 @@ export interface CalculatedPayrollData {
   dispatch_fee: number
   insurance: number
   fuel: number
+  truck_id?: number | null
   parking: number
   trailer: number
   misc: number

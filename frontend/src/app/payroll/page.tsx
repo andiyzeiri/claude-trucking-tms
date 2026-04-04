@@ -7,8 +7,10 @@ import { Input } from '@/components/ui/input'
 import { formatCurrency } from '@/lib/utils'
 import { Calculator, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Edit2, Trash2, Copy, RefreshCw, Settings } from 'lucide-react'
 import { useDrivers } from '@/hooks/use-drivers'
+import { useTrucks } from '@/hooks/use-trucks'
 import { useCalculatedPayroll } from '@/hooks/use-payroll'
 import { usePayrollOverrides, useSavePayrollOverride } from '@/hooks/use-payroll-overrides'
+import { useDriverPayrollSettings, useCreateOrUpdateDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
 import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
 import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
@@ -49,6 +51,7 @@ function generateWeeks(year: number) {
 interface DriverPayrollData {
   driver_id: number
   driver_name: string
+  truck_id?: number | null
   weeks: {
     [weekNumber: number]: {
       gross: number
@@ -78,7 +81,11 @@ export default function PayrollPage() {
   const { data: calculatedPayroll, isLoading: payrollLoading, refetch: refetchPayroll } = useCalculatedPayroll(selectedYear)
   const { data: payrollOverrides } = usePayrollOverrides(selectedYear)
   const saveOverride = useSavePayrollOverride()
+  const { data: trucksData } = useTrucks()
+  const { data: driverSettings } = useDriverPayrollSettings()
+  const saveDriverSettings = useCreateOrUpdateDriverPayrollSettings()
   const drivers = driversData?.items || []
+  const trucks = (trucksData?.items || []).filter((t: any) => t.type === 'truck')
   const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([1])) // Week 1 expanded by default
 
   // Available years for the tabs
@@ -115,6 +122,7 @@ export default function PayrollPage() {
   const { columnWidths, adjustWidth } = useColumnWidths('payroll-table', {
     week: 300,
     driver: 200,
+    truck: 100,
     gross: 100,
     extra: 100,
     dispatch_fee: 110,
@@ -161,6 +169,12 @@ export default function PayrollPage() {
 
   // Transform calculated payroll data into the format expected by the page
   const payrollData: DriverPayrollData[] = useMemo(() => {
+    // Build settings lookup for truck assignments
+    const settingsMap = new Map<number, any>()
+    if (driverSettings) {
+      driverSettings.forEach((s: any) => settingsMap.set(s.driver_id, s))
+    }
+
     // Create a map from driver ID to driver data
     const driverMap = new Map(
       drivers.map(driver => [
@@ -168,6 +182,7 @@ export default function PayrollPage() {
         {
           driver_id: driver.id,
           driver_name: `${driver.first_name} ${driver.last_name}`,
+          truck_id: settingsMap.get(driver.id)?.truck_id || null,
           weeks: {} as DriverPayrollData['weeks']
         }
       ])
@@ -218,7 +233,7 @@ export default function PayrollPage() {
     }
 
     return Array.from(driverMap.values())
-  }, [drivers, calculatedPayroll, overridesMap])
+  }, [drivers, calculatedPayroll, overridesMap, driverSettings])
 
   const toggleWeek = (weekNumber: number) => {
     const newExpanded = new Set(expandedWeeks)
@@ -519,6 +534,9 @@ export default function PayrollPage() {
                     <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px` }}>
                       Drivers
                     </th>
+                    <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.truck}px`, minWidth: `${columnWidths.truck}px` }}>
+                      Truck
+                    </th>
                     <th style={{ padding: '12px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', width: `${columnWidths.gross}px`, minWidth: `${columnWidths.gross}px` }}>
                       Gross
                     </th>
@@ -559,6 +577,7 @@ export default function PayrollPage() {
                     <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 500, color: qbColors.textSecondary }}>
                       {payrollData.length} drivers
                     </td>
+                    <td style={{ padding: '14px 12px' }}></td>
                     <td style={{ padding: '14px 12px', fontSize: '14px', fontWeight: 600, textAlign: 'left', color: qbColors.textPrimary }}>
                       {formatCurrency(grandTotals.gross)}
                     </td>
@@ -624,6 +643,10 @@ export default function PayrollPage() {
                         Driver
                         {sortField === 'driver' ? (sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                       </div>
+                    </th>
+                    <th className="relative group px-3 py-2.5 text-left select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.truck}px`, minWidth: `${columnWidths.truck}px` }}>
+                      <ColumnWidthControl currentWidth={columnWidths.truck} onAdjust={(delta) => adjustWidth('truck', delta)} />
+                      <div className="flex items-center gap-1">Truck</div>
                     </th>
                     <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '11px', fontWeight: 600, color: qbColors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.gross}px`, minWidth: `${columnWidths.gross}px` }} onClick={() => handleSort('gross')}>
                       <ColumnWidthControl currentWidth={columnWidths.gross} onAdjust={(delta) => adjustWidth('gross', delta)} />
@@ -710,6 +733,7 @@ export default function PayrollPage() {
                           <td className="px-3 py-2.5" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.textSecondary, borderRight: `1px solid ${qbColors.borderLight}` }}>
                             {employedDrivers.length} drivers
                           </td>
+                          <td className="px-3 py-2.5" style={{ borderRight: `1px solid ${qbColors.borderLight}` }}></td>
                           <td className="px-3 py-2.5 text-left" style={{ fontSize: '13px', fontWeight: 600, color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
                             {formatCurrency(weekTotals.gross)}
                           </td>
@@ -767,6 +791,24 @@ export default function PayrollPage() {
                               </td>
                               <td className="px-3 py-2 pl-8" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
                                 {driverData.driver_name}
+                              </td>
+                              <td className="px-3 py-2" style={{ fontSize: '13px', color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
+                                <select
+                                  className="w-full bg-transparent text-sm border-0 p-0 focus:ring-0 cursor-pointer"
+                                  value={driverData.truck_id || ''}
+                                  onChange={(e) => {
+                                    const truckId = e.target.value ? parseInt(e.target.value) : null
+                                    saveDriverSettings.mutate({
+                                      driver_id: driverData.driver_id,
+                                      truck_id: truckId
+                                    })
+                                  }}
+                                >
+                                  <option value="">-</option>
+                                  {trucks.map((t: any) => (
+                                    <option key={t.id} value={t.id}>{t.truck_number}</option>
+                                  ))}
+                                </select>
                               </td>
                               <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'gross') && startEdit(week.weekNumber, driverData.driver_id, 'gross', weekData?.gross || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'gross') ? (
@@ -845,6 +887,7 @@ export default function PayrollPage() {
                   <tr style={{ backgroundColor: qbColors.bgGray }}>
                     <td className="px-3 py-3 sticky left-0" style={{ fontSize: '13px', fontWeight: 700, color: qbColors.textPrimary, backgroundColor: qbColors.bgGray }}>Annual Total</td>
                     <td className="px-3 py-3" style={{ fontSize: '13px', fontWeight: 500, color: qbColors.textSecondary }}>{payrollData.length} drivers</td>
+                    <td className="px-3 py-3"></td>
                     <td className="px-3 py-3 text-left" style={{ fontSize: '13px', fontWeight: 700, color: qbColors.textPrimary }}>
                       {formatCurrency(grandTotals.gross)}
                     </td>

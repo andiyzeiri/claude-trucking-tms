@@ -8,6 +8,7 @@ export interface DriverPayrollSettings {
   id: number
   driver_id: number
   company_id: number
+  truck_id?: number | null
   dispatch_fee_percent: number
   insurance_weekly: number
   parking_weekly: number
@@ -19,6 +20,7 @@ export interface DriverPayrollSettings {
 
 export interface DriverPayrollSettingsInput {
   driver_id: number
+  truck_id?: number | null
   dispatch_fee_percent?: number
   insurance_weekly?: number
   parking_weekly?: number

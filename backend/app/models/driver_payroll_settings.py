@@ -12,6 +12,9 @@ class DriverPayrollSettings(Base):
     # Dispatch fee as a percentage (e.g., 10.5 for 10.5%)
     dispatch_fee_percent = Column(Numeric(5, 2), default=0)
 
+    # Assigned truck for fuel tracking
+    truck_id = Column(Integer, ForeignKey("trucks.id"), nullable=True)
+
     # Weekly flat rates
     insurance_weekly = Column(Numeric(10, 2), default=0)
     parking_weekly = Column(Numeric(10, 2), default=0)
@@ -21,3 +24,4 @@ class DriverPayrollSettings(Base):
     # Relationships
     driver = relationship("Driver", backref="payroll_settings")
     company = relationship("Company")
+    truck = relationship("Truck")

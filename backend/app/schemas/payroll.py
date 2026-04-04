@@ -75,6 +75,7 @@ class CalculatedPayrollResponse(BaseModel):
     dispatch_fee: float
     insurance: float
     fuel: float = 0.0
+    truck_id: Optional[int] = None
     parking: float
     trailer: float
     misc: float
