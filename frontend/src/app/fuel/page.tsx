@@ -756,121 +756,153 @@ export default function FuelPage() {
 
   // Render Summary View
   const renderSummaryView = () => {
+    const grandTotal = summaryTotals.totalFuelPrice + summaryTotals.totalDefPrice
+    const grandMpg = summaryTotals.totalMiles > 0 && summaryTotals.totalGallons > 0 ? (summaryTotals.totalMiles / summaryTotals.totalGallons).toFixed(2) : '-'
+    const grandPpg = summaryTotals.totalGallons > 0 ? `$${(summaryTotals.totalFuelPrice / summaryTotals.totalGallons).toFixed(3)}` : '-'
+    const grandPpm = summaryTotals.totalMiles > 0 && grandTotal > 0 ? `$${(grandTotal / summaryTotals.totalMiles).toFixed(3)}` : '-'
+
     return (
-      <div className="space-y-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <div className="text-sm text-gray-600 mb-1">Total Miles</div>
-            <div className="text-2xl font-bold text-blue-600">{summaryTotals.totalMiles.toLocaleString()}</div>
+      <div className="space-y-4">
+        {/* Summary Totals Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <div className="text-xs text-gray-500 mb-0.5">Total Miles</div>
+            <div className="text-lg font-bold text-blue-600">{summaryTotals.totalMiles.toLocaleString()}</div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <div className="text-sm text-gray-600 mb-1">Total Gallons</div>
-            <div className="text-2xl font-bold text-purple-600">{summaryTotals.totalGallons.toFixed(1)}</div>
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <div className="text-xs text-gray-500 mb-0.5">Total Gallons</div>
+            <div className="text-lg font-bold text-purple-600">{summaryTotals.totalGallons.toFixed(1)}</div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <div className="text-sm text-gray-600 mb-1">Total DEF Price</div>
-            <div className="text-2xl font-bold text-orange-600">{formatCurrency(summaryTotals.totalDefPrice)}</div>
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <div className="text-xs text-gray-500 mb-0.5">Avg MPG</div>
+            <div className="text-lg font-bold text-cyan-600">{grandMpg}</div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <div className="text-sm text-gray-600 mb-1">Total Fuel Price</div>
-            <div className="text-2xl font-bold" style={{ color: '#1a5f2a' }}>{formatCurrency(summaryTotals.totalFuelPrice)}</div>
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <div className="text-xs text-gray-500 mb-0.5">Avg Price/Mile</div>
+            <div className="text-lg font-bold text-amber-600">{grandPpm}</div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <div className="text-xs text-gray-500 mb-0.5">Total</div>
+            <div className="text-lg font-bold" style={{ color: 'var(--monday-done)' }}>{formatCurrency(grandTotal)}</div>
           </div>
         </div>
 
-        {/* Truck Table */}
+        {/* Truck Table - matching weekly view column order */}
         <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
-          <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+          <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
             <thead>
               <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
-                <th className="px-4 py-3 text-left border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.truck}px`, minWidth: `${columnWidths.truck}px` }}>
                   Truck
                 </th>
-                <th className="px-4 py-3 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.weeklyMiles}px`, minWidth: `${columnWidths.weeklyMiles}px` }}>
                   Total Miles
                 </th>
-                <th className="px-4 py-3 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
-                  Total Gallons
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.gallons}px`, minWidth: `${columnWidths.gallons}px` }}>
+                  Gallons
                 </th>
-                <th className="px-4 py-3 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.mpg}px`, minWidth: `${columnWidths.mpg}px` }}>
                   MPG
                 </th>
-                <th className="px-4 py-3 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
-                  Avg Price/Gal
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.fuelPrice}px`, minWidth: `${columnWidths.fuelPrice}px` }}>
+                  Fuel Price
                 </th>
-                <th className="px-4 py-3 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
-                  Total DEF Price
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.pricePerGal}px`, minWidth: `${columnWidths.pricePerGal}px` }}>
+                  Price/Gal
                 </th>
-                <th className="px-4 py-3 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
-                  Total Fuel Price
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.defPrice}px`, minWidth: `${columnWidths.defPrice}px` }}>
+                  DEF Price
+                </th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.pricePerMile}px`, minWidth: `${columnWidths.pricePerMile}px` }}>
+                  Price/Mile
+                </th>
+                <th className="px-3 py-2.5 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.total}px`, minWidth: `${columnWidths.total}px` }}>
+                  Total
                 </th>
               </tr>
             </thead>
             <tbody>
               {summaryByTruck.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
                     No fuel data available
                   </td>
                 </tr>
               ) : (
                 <>
-                  {summaryByTruck.map((truck) => (
-                    <tr
-                      key={truck.truck_id}
-                      className="border-b transition-colors hover:bg-gray-50"
-                      style={{ borderColor: 'var(--monday-border-light)' }}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Truck className="h-4 w-4 text-gray-400" />
-                          <span className="font-medium" style={{ color: 'var(--monday-text-primary)' }}>
+                  {summaryByTruck.map((truck) => {
+                    const truckTotal = truck.totalFuelPrice + truck.totalDefPrice
+                    const truckMpg = truck.totalMiles > 0 && truck.totalGallons > 0 ? (truck.totalMiles / truck.totalGallons).toFixed(2) : '-'
+                    const truckPpm = truck.totalMiles > 0 && truckTotal > 0 ? `$${(truckTotal / truck.totalMiles).toFixed(3)}` : '-'
+                    return (
+                      <tr
+                        key={truck.truck_id}
+                        className="border-b transition-colors"
+                        style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)' }}
+                      >
+                        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
+                          <div className="flex items-center gap-2" style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
+                            <Truck className="h-3.5 w-3.5 text-gray-400" />
                             {truck.truck_number}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right" style={{ color: 'var(--monday-text-primary)' }}>
-                        {truck.totalMiles > 0 ? truck.totalMiles.toLocaleString() : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-right" style={{ color: 'var(--monday-text-primary)' }}>
-                        {truck.totalGallons > 0 ? truck.totalGallons.toFixed(1) : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-right" style={{ color: 'var(--monday-text-primary)' }}>
-                        {truck.totalMiles > 0 && truck.totalGallons > 0 ? (truck.totalMiles / truck.totalGallons).toFixed(2) : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-right" style={{ color: 'var(--monday-text-primary)' }}>
-                        {truck.avgPricePerGallon > 0 ? `$${truck.avgPricePerGallon.toFixed(3)}` : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-right" style={{ color: 'var(--monday-text-primary)' }}>
-                        {truck.totalDefPrice > 0 ? formatCurrency(truck.totalDefPrice) : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold" style={{ color: '#1a5f2a' }}>
-                        {formatCurrency(truck.totalFuelPrice)}
-                      </td>
-                    </tr>
-                  ))}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
+                          {truck.totalMiles > 0 ? truck.totalMiles.toLocaleString() : '-'}
+                        </td>
+                        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
+                          {truck.totalGallons > 0 ? truck.totalGallons.toFixed(1) : '-'}
+                        </td>
+                        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-secondary)' }}>
+                          {truckMpg}
+                        </td>
+                        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
+                          {truck.totalFuelPrice > 0 ? formatCurrency(truck.totalFuelPrice) : '-'}
+                        </td>
+                        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-secondary)' }}>
+                          {truck.avgPricePerGallon > 0 ? `$${truck.avgPricePerGallon.toFixed(3)}` : '-'}
+                        </td>
+                        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
+                          {truck.totalDefPrice > 0 ? formatCurrency(truck.totalDefPrice) : '-'}
+                        </td>
+                        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-secondary)' }}>
+                          {truckPpm}
+                        </td>
+                        <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--monday-done)' }}>
+                          {truckTotal > 0 ? formatCurrency(truckTotal) : '-'}
+                        </td>
+                      </tr>
+                    )
+                  })}
                   {/* Totals Row */}
                   <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
-                    <td className="px-4 py-3 font-bold" style={{ color: 'var(--monday-text-primary)' }}>
+                    <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
                       Total
                     </td>
-                    <td className="px-4 py-3 text-right font-bold" style={{ color: 'var(--monday-text-primary)' }}>
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
                       {summaryTotals.totalMiles.toLocaleString()}
                     </td>
-                    <td className="px-4 py-3 text-right font-bold" style={{ color: 'var(--monday-text-primary)' }}>
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
                       {summaryTotals.totalGallons.toFixed(1)}
                     </td>
-                    <td className="px-4 py-3 text-right font-bold" style={{ color: 'var(--monday-text-primary)' }}>
-                      {summaryTotals.totalMiles > 0 && summaryTotals.totalGallons > 0 ? (summaryTotals.totalMiles / summaryTotals.totalGallons).toFixed(2) : '-'}
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-secondary)' }}>
+                      {grandMpg}
                     </td>
-                    <td className="px-4 py-3 text-right font-bold" style={{ color: 'var(--monday-text-primary)' }}>
-                      {summaryTotals.totalGallons > 0 ? `$${(summaryTotals.totalFuelPrice / summaryTotals.totalGallons).toFixed(3)}` : '-'}
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
+                      {formatCurrency(summaryTotals.totalFuelPrice)}
                     </td>
-                    <td className="px-4 py-3 text-right font-bold" style={{ color: 'var(--monday-text-primary)' }}>
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-secondary)' }}>
+                      {grandPpg}
+                    </td>
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
                       {formatCurrency(summaryTotals.totalDefPrice)}
                     </td>
-                    <td className="px-4 py-3 text-right font-bold" style={{ color: '#1a5f2a' }}>
-                      {formatCurrency(summaryTotals.totalFuelPrice)}
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-secondary)' }}>
+                      {grandPpm}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-bold" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--monday-done)' }}>
+                      {formatCurrency(grandTotal)}
                     </td>
                   </tr>
                 </>
