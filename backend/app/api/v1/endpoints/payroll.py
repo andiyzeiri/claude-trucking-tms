@@ -8,6 +8,7 @@ from app.models.payroll import Payroll
 from app.models.load import Load
 from app.models.driver import Driver
 from app.models.driver_payroll_settings import DriverPayrollSettings
+from app.models.fuel import Fuel
 from app.schemas.payroll import PayrollCreate, PayrollUpdate, PayrollResponse, CalculatedPayrollResponse
 from app.core.security import get_current_active_user
 from app.models.user import User
@@ -143,7 +144,8 @@ async def calculate_payroll_from_loads(
                 "miles": 0,
                 "load_count": 0,
                 "loads": [],
-                "adjustments": 0.0  # Total adjustments from load details
+                "adjustments": 0.0,  # Total adjustments from load details
+                "fuel": 0.0  # Will be populated from fuel entries
             }
 
         # Add load data to aggregated totals
@@ -169,6 +171,53 @@ async def calculate_payroll_from_loads(
             "adjustment_type": adjustment_type,
             "adjustment_amount": adjustment_amount
         })
+
+    # Aggregate fuel data by truck+week, then map to drivers via loads
+    # Step 1: Figure out which driver drove which truck each week (from loads)
+    driver_truck_week = {}  # {(driver_id, iso_year, week_num): set of truck_ids}
+    for load in loads:
+        if not load.pickup_date or not load.truck_id or not load.driver_id:
+            continue
+        wn = get_week_number(load.pickup_date)
+        iy = get_iso_week_year(load.pickup_date)
+        if iy != year:
+            continue
+        dtw_key = (load.driver_id, iy, wn)
+        if dtw_key not in driver_truck_week:
+            driver_truck_week[dtw_key] = set()
+        driver_truck_week[dtw_key].add(load.truck_id)
+
+    # Step 2: Get all fuel entries for the company
+    fuel_query = select(Fuel).where(
+        Fuel.company_id == current_user.company_id,
+        Fuel.date.isnot(None)
+    )
+    fuel_result = await db.execute(fuel_query)
+    fuel_entries = fuel_result.scalars().all()
+
+    # Step 3: Aggregate fuel by truck+week
+    fuel_by_truck_week = {}  # {(truck_id, iso_year, week_num): total}
+    for fe in fuel_entries:
+        if not fe.date or not fe.truck_id:
+            continue
+        fe_week = get_week_number(fe.date)
+        fe_year = get_iso_week_year(fe.date)
+        if fe_year != year:
+            continue
+        ftw_key = (fe.truck_id, fe_year, fe_week)
+        fuel_amount = float(fe.total_amount) if fe.total_amount else 0.0
+        def_amount = float(fe.def_price) if fe.def_price else 0.0
+        fuel_by_truck_week[ftw_key] = fuel_by_truck_week.get(ftw_key, 0.0) + fuel_amount + def_amount
+
+    # Step 4: Map fuel costs to drivers via their truck assignments
+    for dtw_key, truck_ids in driver_truck_week.items():
+        driver_id, iy, wn = dtw_key
+        payroll_key = f"{driver_id}_{iy}_{wn}"
+        if payroll_key in payroll_data:
+            total_fuel = 0.0
+            for tid in truck_ids:
+                total_fuel += fuel_by_truck_week.get((tid, iy, wn), 0.0)
+            payroll_data[payroll_key]["fuel"] = total_fuel
 
     # Apply driver settings and calculate deductions
     for key, data in payroll_data.items():
@@ -201,7 +250,8 @@ async def calculate_payroll_from_loads(
 
         # Calculate check amount: gross - deductions + extra
         # Adjustments are already included in gross (gross = rate + adjustments)
-        data["check_amount"] = gross - dispatch_fee - insurance - parking - trailer - misc + data["extra"]
+        fuel = data.get("fuel", 0.0)
+        data["check_amount"] = gross - dispatch_fee - insurance - fuel - parking - trailer - misc + data["extra"]
 
     # Convert to list and sort by driver name and week
     result_list = sorted(

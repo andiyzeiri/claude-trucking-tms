@@ -91,6 +91,35 @@ export default function PayrollPage() {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [editValue, setEditValue] = useState<string>('')
 
+  // Fuel overrides persisted in localStorage (key: "driverId_weekNum" -> amount)
+  const [fuelOverrides, setFuelOverrides] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem(`payroll-fuel-overrides-${selectedYear}`)
+      return saved ? JSON.parse(saved) : {}
+    } catch { return {} }
+  })
+
+  // Reload overrides when year changes
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`payroll-fuel-overrides-${selectedYear}`)
+      setFuelOverrides(saved ? JSON.parse(saved) : {})
+    } catch { setFuelOverrides({}) }
+  }, [selectedYear])
+
+  const setFuelOverride = (driverId: number, weekNum: number, value: number) => {
+    setFuelOverrides(prev => {
+      const key = `${driverId}_${weekNum}`
+      const next = { ...prev, [key]: value }
+      localStorage.setItem(`payroll-fuel-overrides-${selectedYear}`, JSON.stringify(next))
+      return next
+    })
+  }
+
+  const getFuelOverride = (driverId: number, weekNum: number): number | undefined => {
+    return fuelOverrides[`${driverId}_${weekNum}`]
+  }
+
   const isLoading = driversLoading || payrollLoading
 
   // Column width management
@@ -169,7 +198,9 @@ export default function PayrollPage() {
           const extra = Number(entry.extra) || 0
           const dispatch_fee = Number(entry.dispatch_fee) || 0
           const insurance = Number(entry.insurance) || 0
-          const fuel = 0
+          const apiFuel = Number(entry.fuel) || 0
+          const fuelOvr = getFuelOverride(entry.driver_id, entry.week_number)
+          const fuel = fuelOvr !== undefined ? fuelOvr : apiFuel
           const parking = Number(entry.parking) || 0
           const trailer = Number(entry.trailer) || 0
           const misc = Number(entry.misc) || 0
@@ -196,7 +227,7 @@ export default function PayrollPage() {
     }
 
     return Array.from(driverMap.values())
-  }, [drivers, calculatedPayroll])
+  }, [drivers, calculatedPayroll, fuelOverrides])
 
   const toggleWeek = (weekNumber: number) => {
     const newExpanded = new Set(expandedWeeks)
@@ -389,6 +420,9 @@ export default function PayrollPage() {
   }
 
   const stopEdit = () => {
+    if (editingCell?.field === 'fuel' && editValue !== '') {
+      setFuelOverride(editingCell.driverId, editingCell.weekNumber, parseFloat(editValue) || 0)
+    }
     setEditingCell(null)
     setEditValue('')
   }

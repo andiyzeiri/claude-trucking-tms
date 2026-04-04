@@ -130,6 +130,7 @@ export interface CalculatedPayrollData {
   extra: number
   dispatch_fee: number
   insurance: number
+  fuel: number
   parking: number
   trailer: number
   misc: number
