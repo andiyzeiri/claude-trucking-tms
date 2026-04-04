@@ -8,6 +8,8 @@ import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
 import { DriverModal, DriverData } from '@/components/drivers/driver-modal'
 import { Plus, Users, Phone, Mail, Edit, Trash2, Check, Truck } from 'lucide-react'
 import { useDrivers, useCreateDriver, useUpdateDriver, useDeleteDriver } from '@/hooks/use-drivers'
+import { useTrucks } from '@/hooks/use-trucks'
+import { useDriverPayrollSettings, useCreateOrUpdateDriverPayrollSettings, useUpdateDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
 
 type TabType = 'drivers' | 'owners'
 
@@ -18,6 +20,16 @@ export default function DriversPage() {
   const createDriver = useCreateDriver()
   const updateDriver = useUpdateDriver()
   const deleteDriver = useDeleteDriver()
+  const { data: trucksData } = useTrucks()
+  const { data: driverSettingsData } = useDriverPayrollSettings()
+  const createDriverSettings = useCreateOrUpdateDriverPayrollSettings()
+  const updateDriverSettingsMut = useUpdateDriverPayrollSettings()
+  const activeTrucks = (trucksData?.items || []).filter((t: any) => t.type === 'truck')
+  const driverSettingsMap = useMemo(() => {
+    const map = new Map<number, any>()
+    if (driverSettingsData) driverSettingsData.forEach((s: any) => map.set(s.driver_id, s))
+    return map
+  }, [driverSettingsData])
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>('drivers')
@@ -309,6 +321,37 @@ export default function DriversPage() {
           )}
         </div>
       )
+    },
+    {
+      key: 'id',
+      label: 'Truck',
+      width: '130px',
+      render: (_value, row) => {
+        const settings = driverSettingsMap.get(row.id)
+        const currentTruckId = settings?.truck_id || ''
+        return (
+          <select
+            className="w-full bg-transparent text-sm border-0 p-0 focus:ring-0 cursor-pointer"
+            style={{ color: 'var(--monday-text-primary)' }}
+            value={currentTruckId}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              e.stopPropagation()
+              const truckId = e.target.value ? parseInt(e.target.value) : null
+              if (settings && settings.id > 0) {
+                updateDriverSettingsMut.mutate({ driverId: row.id, data: { truck_id: truckId } })
+              } else {
+                createDriverSettings.mutate({ driver_id: row.id, truck_id: truckId })
+              }
+            }}
+          >
+            <option value="">-</option>
+            {activeTrucks.map((t: any) => (
+              <option key={t.id} value={t.id}>{t.truck_number}</option>
+            ))}
+          </select>
+        )
+      }
     }
   ]
 

@@ -10,7 +10,7 @@ import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
 import { useCalculatedPayroll } from '@/hooks/use-payroll'
 import { usePayrollOverrides, useSavePayrollOverride } from '@/hooks/use-payroll-overrides'
-import { useDriverPayrollSettings, useCreateOrUpdateDriverPayrollSettings, useUpdateDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
+import { useDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
 import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
 import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
@@ -83,8 +83,6 @@ export default function PayrollPage() {
   const saveOverride = useSavePayrollOverride()
   const { data: trucksData } = useTrucks()
   const { data: driverSettings } = useDriverPayrollSettings()
-  const createDriverSettings = useCreateOrUpdateDriverPayrollSettings()
-  const updateDriverSettings = useUpdateDriverPayrollSettings()
   const drivers = driversData?.items || []
   const trucks = (trucksData?.items || []).filter((t: any) => t.type === 'truck')
   const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([1])) // Week 1 expanded by default
@@ -794,24 +792,33 @@ export default function PayrollPage() {
                                 {driverData.driver_name}
                               </td>
                               <td className="px-3 py-2" style={{ fontSize: '13px', color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }}>
-                                <select
-                                  className="w-full bg-transparent text-sm border-0 p-0 focus:ring-0 cursor-pointer"
-                                  value={driverData.truck_id || ''}
-                                  onChange={(e) => {
-                                    const truckId = e.target.value ? parseInt(e.target.value) : null
-                                    const existingSettings = driverSettings?.find((s: any) => s.driver_id === driverData.driver_id)
-                                    if (existingSettings && existingSettings.id > 0) {
-                                      updateDriverSettings.mutate({ driverId: driverData.driver_id, data: { truck_id: truckId } })
-                                    } else {
-                                      createDriverSettings.mutate({ driver_id: driverData.driver_id, truck_id: truckId })
-                                    }
-                                  }}
-                                >
-                                  <option value="">-</option>
-                                  {trucks.map((t: any) => (
-                                    <option key={t.id} value={t.id}>{t.truck_number}</option>
-                                  ))}
-                                </select>
+                                {(() => {
+                                  const weekTruckOverride = getOverride(driverData.driver_id, week.weekNumber, 'truck_id')
+                                  const effectiveTruckId = weekTruckOverride !== undefined ? weekTruckOverride : (driverData.truck_id || '')
+                                  const isOverridden = weekTruckOverride !== undefined
+                                  return (
+                                    <select
+                                      className="w-full bg-transparent text-sm border-0 p-0 focus:ring-0 cursor-pointer"
+                                      style={isOverridden ? { fontStyle: 'italic', color: qbColors.green } : {}}
+                                      value={effectiveTruckId}
+                                      onChange={(e) => {
+                                        const truckId = e.target.value ? parseInt(e.target.value) : 0
+                                        saveOverride.mutate({
+                                          driver_id: driverData.driver_id,
+                                          year: selectedYear,
+                                          week_number: week.weekNumber,
+                                          field: 'truck_id',
+                                          value: truckId
+                                        })
+                                      }}
+                                    >
+                                      <option value="">-</option>
+                                      {trucks.map((t: any) => (
+                                        <option key={t.id} value={t.id}>{t.truck_number}</option>
+                                      ))}
+                                    </select>
+                                  )
+                                })()}
                               </td>
                               <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: qbColors.textPrimary, borderRight: `1px solid ${qbColors.borderLight}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'gross') && startEdit(week.weekNumber, driverData.driver_id, 'gross', weekData?.gross || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'gross') ? (

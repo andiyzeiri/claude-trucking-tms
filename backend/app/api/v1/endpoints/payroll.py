@@ -9,6 +9,7 @@ from app.models.load import Load
 from app.models.driver import Driver
 from app.models.driver_payroll_settings import DriverPayrollSettings
 from app.models.fuel import Fuel
+from app.models.payroll_override import PayrollOverride
 from app.schemas.payroll import PayrollCreate, PayrollUpdate, PayrollResponse, CalculatedPayrollResponse
 from app.core.security import get_current_active_user
 from app.models.user import User
@@ -196,18 +197,34 @@ async def calculate_payroll_from_loads(
         def_amount = float(fe.def_price) if fe.def_price else 0.0
         fuel_by_truck_week[ftw_key] = fuel_by_truck_week.get(ftw_key, 0.0) + fuel_amount + def_amount
 
-    # Step 3: Map fuel costs to drivers via their assigned truck in payroll settings
+    # Step 3: Get per-week truck_id overrides from payroll_overrides
+    override_query = select(PayrollOverride).where(
+        PayrollOverride.company_id == current_user.company_id,
+        PayrollOverride.year == year,
+        PayrollOverride.field == "truck_id"
+    )
+    override_result = await db.execute(override_query)
+    truck_overrides = {}  # {(driver_id, week_number): truck_id}
+    for ov in override_result.scalars().all():
+        truck_overrides[(ov.driver_id, ov.week_number)] = int(ov.value) if ov.value else None
+
+    # Step 4: Map fuel costs to drivers via per-week override or default truck from settings
     for key, data in payroll_data.items():
         driver_id = data["driver_id"]
+        wn = data["week_number"]
         settings = driver_settings.get(driver_id)
-        if settings and settings.truck_id:
-            truck_id = settings.truck_id
-            wn = data["week_number"]
+
+        # Per-week override takes priority over default
+        override_truck = truck_overrides.get((driver_id, wn))
+        default_truck = settings.truck_id if settings else None
+        truck_id = override_truck if override_truck is not None else default_truck
+
+        if truck_id:
             fuel_total = fuel_by_truck_week.get((truck_id, year, wn), 0.0)
             data["fuel"] = fuel_total
             data["truck_id"] = truck_id
         else:
-            data["truck_id"] = None
+            data["truck_id"] = default_truck
 
     # Apply driver settings and calculate deductions
     for key, data in payroll_data.items():

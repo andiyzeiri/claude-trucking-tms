@@ -31,6 +31,9 @@ export function useSavePayrollOverride() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['payroll-overrides', variables.year] })
+      if (variables.field === 'truck_id') {
+        queryClient.invalidateQueries({ queryKey: ['payroll', 'calculated'] })
+      }
     }
   })
 }
