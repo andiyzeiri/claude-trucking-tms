@@ -51,6 +51,7 @@ function generateWeeks(year: number) {
 interface DriverPayrollData {
   driver_id: number
   driver_name: string
+  driver_type: string
   truck_id?: number | null
   weeks: {
     [weekNumber: number]: {
@@ -180,6 +181,7 @@ export default function PayrollPage() {
         {
           driver_id: driver.id,
           driver_name: `${driver.first_name} ${driver.last_name}`,
+          driver_type: driver.driver_type || 'company',
           truck_id: settingsMap.get(driver.id)?.truck_id || null,
           weeks: {} as DriverPayrollData['weeks']
         }
@@ -230,7 +232,13 @@ export default function PayrollPage() {
       })
     }
 
-    return Array.from(driverMap.values())
+    return Array.from(driverMap.values()).sort((a, b) => {
+      // Company drivers first, then owner operators
+      if (a.driver_type !== b.driver_type) {
+        return a.driver_type === 'company' ? -1 : 1
+      }
+      return a.driver_name.localeCompare(b.driver_name)
+    })
   }, [drivers, calculatedPayroll, overridesMap, driverSettings])
 
   const toggleWeek = (weekNumber: number) => {
@@ -613,14 +621,17 @@ export default function PayrollPage() {
                           .filter(driverData => employedDriverIds.has(driverData.driver_id))
                           .map((driverData, driverIndex) => {
                           const weekData = driverData.weeks[week.weekNumber]
+                          const isOwner = driverData.driver_type === 'owner_operator'
+                          const rowBg = isOwner ? '#FFF8E1' : '#F0F7FF'
+                          const rowHoverBg = isOwner ? '#FFF0C2' : '#E0EFFF'
 
                           return (
                             <tr
                               key={`${week.weekNumber}-${driverData.driver_id}`}
                               className="border-b transition-colors"
-                              style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}
-                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)' }}
-                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)' }}
+                              style={{ borderColor: 'var(--monday-border-light)', backgroundColor: rowBg }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = rowHoverBg }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = rowBg }}
                               onContextMenu={(e) => handleContextMenu(e, week.weekNumber, driverData.driver_id)}
                             >
                               <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>
