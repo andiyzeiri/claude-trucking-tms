@@ -523,7 +523,7 @@ export default function PayrollPage() {
         ) : (
           <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
               <table className="w-full" style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                <thead>
+                <thead className="sticky top-0 z-10">
                   <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
                     <th className="px-3 py-2.5 text-left border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px` }}>
                       <ColumnWidthControl currentWidth={columnWidths.driver} onAdjust={(delta) => adjustWidth('driver', delta)} />
