@@ -10,7 +10,7 @@ import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
 import { useCalculatedPayroll } from '@/hooks/use-payroll'
 import { usePayrollOverrides, useSavePayrollOverride } from '@/hooks/use-payroll-overrides'
-import { useDriverPayrollSettings, useCreateOrUpdateDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
+import { useDriverPayrollSettings, useCreateOrUpdateDriverPayrollSettings, useUpdateDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
 import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
 import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
@@ -83,7 +83,8 @@ export default function PayrollPage() {
   const saveOverride = useSavePayrollOverride()
   const { data: trucksData } = useTrucks()
   const { data: driverSettings } = useDriverPayrollSettings()
-  const saveDriverSettings = useCreateOrUpdateDriverPayrollSettings()
+  const createDriverSettings = useCreateOrUpdateDriverPayrollSettings()
+  const updateDriverSettings = useUpdateDriverPayrollSettings()
   const drivers = driversData?.items || []
   const trucks = (trucksData?.items || []).filter((t: any) => t.type === 'truck')
   const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([1])) // Week 1 expanded by default
@@ -798,10 +799,12 @@ export default function PayrollPage() {
                                   value={driverData.truck_id || ''}
                                   onChange={(e) => {
                                     const truckId = e.target.value ? parseInt(e.target.value) : null
-                                    saveDriverSettings.mutate({
-                                      driver_id: driverData.driver_id,
-                                      truck_id: truckId
-                                    })
+                                    const existingSettings = driverSettings?.find((s: any) => s.driver_id === driverData.driver_id)
+                                    if (existingSettings && existingSettings.id > 0) {
+                                      updateDriverSettings.mutate({ driverId: driverData.driver_id, data: { truck_id: truckId } })
+                                    } else {
+                                      createDriverSettings.mutate({ driver_id: driverData.driver_id, truck_id: truckId })
+                                    }
                                   }}
                                 >
                                   <option value="">-</option>
