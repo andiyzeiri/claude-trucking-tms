@@ -1,19 +1,24 @@
 """Add cost_type column to expenses table."""
 import asyncio
 import os
-import sys
-
-sys.path.insert(0, os.path.dirname(__file__))
-
-from app.database import get_database_url
+import json
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 
 
 async def add_cost_type():
-    engine = create_async_engine(get_database_url())
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        database_secret = os.environ.get("DATABASE_SECRET_JSON")
+        if database_secret:
+            secret = json.loads(database_secret)
+            database_url = f"postgresql+asyncpg://{secret['username']}:{secret['password']}@{secret['host']}:{secret.get('port', 5432)}/{secret['dbname']}"
+        else:
+            print("No DATABASE_URL or DATABASE_SECRET_JSON found")
+            return
+
+    engine = create_async_engine(database_url)
     async with engine.begin() as conn:
-        # Add cost_type column if it doesn't exist
         await conn.execute(text("""
             ALTER TABLE expenses ADD COLUMN IF NOT EXISTS cost_type VARCHAR DEFAULT 'variable' NOT NULL
         """))
