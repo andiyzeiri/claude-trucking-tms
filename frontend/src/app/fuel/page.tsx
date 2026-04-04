@@ -760,9 +760,24 @@ export default function FuelPage() {
   // Render Summary View
   const renderSummaryView = () => {
     const grandTotal = summaryTotals.totalFuelPrice + summaryTotals.totalDefPrice
-    const grandMpg = summaryTotals.totalMiles > 0 && summaryTotals.totalGallons > 0 ? (summaryTotals.totalMiles / summaryTotals.totalGallons).toFixed(2) : '-'
-    const grandPpg = summaryTotals.totalGallons > 0 ? `$${(summaryTotals.totalFuelPrice / summaryTotals.totalGallons).toFixed(3)}` : '-'
-    const grandPpm = summaryTotals.totalMiles > 0 && grandTotal > 0 ? `$${(grandTotal / summaryTotals.totalMiles).toFixed(3)}` : '-'
+
+    // Only include trucks that have both miles AND gallons for MPG average
+    const mpgTrucks = summaryByTruck.filter(t => t.totalMiles > 0 && t.totalGallons > 0)
+    const mpgMiles = mpgTrucks.reduce((s, t) => s + t.totalMiles, 0)
+    const mpgGallons = mpgTrucks.reduce((s, t) => s + t.totalGallons, 0)
+    const grandMpg = mpgGallons > 0 ? (mpgMiles / mpgGallons).toFixed(2) : '-'
+
+    // Only include trucks that have gallons AND fuel price for Price/Gal average
+    const ppgTrucks = summaryByTruck.filter(t => t.totalGallons > 0 && t.totalFuelPrice > 0)
+    const ppgFuel = ppgTrucks.reduce((s, t) => s + t.totalFuelPrice, 0)
+    const ppgGallons = ppgTrucks.reduce((s, t) => s + t.totalGallons, 0)
+    const grandPpg = ppgGallons > 0 ? `$${(ppgFuel / ppgGallons).toFixed(3)}` : '-'
+
+    // Only include trucks that have miles AND a total cost for Price/Mile average
+    const ppmTrucks = summaryByTruck.filter(t => t.totalMiles > 0 && (t.totalFuelPrice + t.totalDefPrice) > 0)
+    const ppmTotal = ppmTrucks.reduce((s, t) => s + t.totalFuelPrice + t.totalDefPrice, 0)
+    const ppmMiles = ppmTrucks.reduce((s, t) => s + t.totalMiles, 0)
+    const grandPpm = ppmMiles > 0 ? `$${(ppmTotal / ppmMiles).toFixed(3)}` : '-'
 
     return (
       <div className="space-y-4">
