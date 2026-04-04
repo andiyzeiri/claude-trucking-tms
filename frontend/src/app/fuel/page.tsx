@@ -210,6 +210,12 @@ export default function FuelPage() {
   const [collapsedWeeks, setCollapsedWeeks] = useState<Set<number>>(new Set())
   const hasInitiallyCollapsed = useRef(false)
   const [activeTab, setActiveTab] = useState<TabType>('summary')
+  const [theoreticalMpg, setTheoreticalMpg] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('fuel-theoretical-mpg')
+      return saved ? parseFloat(saved) : 0
+    } catch { return 0 }
+  })
 
   // Convert API fuel entries to include week numbers and year
   const fuelEntriesWithYear = useMemo(() => {
@@ -802,6 +808,69 @@ export default function FuelPage() {
           <div className="bg-white border border-gray-200 rounded-lg p-3">
             <div className="text-xs text-gray-500 mb-0.5">Total</div>
             <div className="text-lg font-bold" style={{ color: 'var(--monday-done)' }}>{formatCurrency(grandTotal)}</div>
+          </div>
+        </div>
+
+        {/* Theoretical MPG */}
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center gap-6">
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Theoretical MPG</div>
+              <input
+                type="number"
+                step="0.1"
+                className="w-24 px-2 py-1.5 border rounded text-sm text-right font-semibold"
+                style={{ borderColor: 'var(--monday-border)' }}
+                value={theoreticalMpg || ''}
+                placeholder="0"
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value) || 0
+                  setTheoreticalMpg(val)
+                  localStorage.setItem('fuel-theoretical-mpg', String(val))
+                }}
+              />
+            </div>
+            {theoreticalMpg > 0 && grandMpg !== '-' && (
+              <>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Actual MPG</div>
+                  <div className="text-sm font-semibold text-cyan-600">{grandMpg}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Difference</div>
+                  {(() => {
+                    const actual = parseFloat(grandMpg as string)
+                    const diff = actual - theoreticalMpg
+                    const pct = ((diff / theoreticalMpg) * 100).toFixed(1)
+                    const isAbove = diff >= 0
+                    return (
+                      <div className={`text-sm font-semibold ${isAbove ? 'text-green-600' : 'text-red-600'}`}>
+                        {isAbove ? '+' : ''}{diff.toFixed(2)} ({isAbove ? '+' : ''}{pct}%)
+                      </div>
+                    )
+                  })()}
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Theoretical Gallons Needed</div>
+                  <div className="text-sm font-semibold text-gray-700">
+                    {(summaryTotals.totalMiles / theoreticalMpg).toFixed(1)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Gallon Difference</div>
+                  {(() => {
+                    const theoreticalGallons = summaryTotals.totalMiles / theoreticalMpg
+                    const diff = summaryTotals.totalGallons - theoreticalGallons
+                    const isOver = diff > 0
+                    return (
+                      <div className={`text-sm font-semibold ${isOver ? 'text-red-600' : 'text-green-600'}`}>
+                        {isOver ? '+' : ''}{diff.toFixed(1)} gal
+                      </div>
+                    )
+                  })()}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
