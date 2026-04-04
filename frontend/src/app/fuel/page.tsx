@@ -813,64 +813,21 @@ export default function FuelPage() {
 
         {/* Theoretical MPG */}
         <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center gap-6">
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Theoretical MPG</div>
-              <input
-                type="number"
-                step="0.1"
-                className="w-24 px-2 py-1.5 border rounded text-sm text-right font-semibold"
-                style={{ borderColor: 'var(--monday-border)' }}
-                value={theoreticalMpg || ''}
-                placeholder="0"
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value) || 0
-                  setTheoreticalMpg(val)
-                  localStorage.setItem('fuel-theoretical-mpg', String(val))
-                }}
-              />
-            </div>
-            {theoreticalMpg > 0 && grandMpg !== '-' && (
-              <>
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">Actual MPG</div>
-                  <div className="text-sm font-semibold text-cyan-600">{grandMpg}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">Difference</div>
-                  {(() => {
-                    const actual = parseFloat(grandMpg as string)
-                    const diff = actual - theoreticalMpg
-                    const pct = ((diff / theoreticalMpg) * 100).toFixed(1)
-                    const isAbove = diff >= 0
-                    return (
-                      <div className={`text-sm font-semibold ${isAbove ? 'text-green-600' : 'text-red-600'}`}>
-                        {isAbove ? '+' : ''}{diff.toFixed(2)} ({isAbove ? '+' : ''}{pct}%)
-                      </div>
-                    )
-                  })()}
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">Theoretical Gallons Needed</div>
-                  <div className="text-sm font-semibold text-gray-700">
-                    {(summaryTotals.totalMiles / theoreticalMpg).toFixed(1)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">Gallon Difference</div>
-                  {(() => {
-                    const theoreticalGallons = summaryTotals.totalMiles / theoreticalMpg
-                    const diff = summaryTotals.totalGallons - theoreticalGallons
-                    const isOver = diff > 0
-                    return (
-                      <div className={`text-sm font-semibold ${isOver ? 'text-red-600' : 'text-green-600'}`}>
-                        {isOver ? '+' : ''}{diff.toFixed(1)} gal
-                      </div>
-                    )
-                  })()}
-                </div>
-              </>
-            )}
+          <div className="flex items-center gap-3">
+            <div className="text-sm font-medium text-gray-700">Theoretical MPG</div>
+            <input
+              type="number"
+              step="0.1"
+              className="w-24 px-2 py-1.5 border rounded text-sm text-right font-semibold"
+              style={{ borderColor: 'var(--monday-border)' }}
+              value={theoreticalMpg || ''}
+              placeholder="0"
+              onChange={(e) => {
+                const val = parseFloat(e.target.value) || 0
+                setTheoreticalMpg(val)
+                localStorage.setItem('fuel-theoretical-mpg', String(val))
+              }}
+            />
           </div>
         </div>
 
@@ -903,15 +860,20 @@ export default function FuelPage() {
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.pricePerMile}px`, minWidth: `${columnWidths.pricePerMile}px` }}>
                   Price/Mile
                 </th>
-                <th className="px-3 py-2.5 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.total}px`, minWidth: `${columnWidths.total}px` }}>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.total}px`, minWidth: `${columnWidths.total}px` }}>
                   Total
                 </th>
+                {theoreticalMpg > 0 && (
+                  <th className="px-3 py-2.5 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: '120px', minWidth: '120px' }}>
+                    Theo. Total
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
               {summaryByTruck.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={theoreticalMpg > 0 ? 10 : 9} className="px-4 py-8 text-center text-gray-500">
                     No fuel data available
                   </td>
                 </tr>
@@ -956,9 +918,20 @@ export default function FuelPage() {
                         <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-secondary)' }}>
                           {truckPpm}
                         </td>
-                        <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--monday-done)' }}>
+                        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 600, color: 'var(--monday-done)' }}>
                           {truckTotal > 0 ? formatCurrency(truckTotal) : '-'}
                         </td>
+                        {theoreticalMpg > 0 && (
+                          <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-secondary)' }}>
+                            {(() => {
+                              if (truck.totalMiles <= 0 || truck.avgPricePerGallon <= 0) return '-'
+                              const theoGallons = truck.totalMiles / theoreticalMpg
+                              const theoFuel = theoGallons * truck.avgPricePerGallon
+                              const theoTotal = theoFuel + truck.totalDefPrice
+                              return formatCurrency(theoTotal)
+                            })()}
+                          </td>
+                        )}
                       </tr>
                     )
                   })}
@@ -988,9 +961,22 @@ export default function FuelPage() {
                     <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-secondary)' }}>
                       {grandPpm}
                     </td>
-                    <td className="px-3 py-2.5 text-right font-bold" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--monday-done)' }}>
+                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 700, color: 'var(--monday-done)' }}>
                       {formatCurrency(grandTotal)}
                     </td>
+                    {theoreticalMpg > 0 && (
+                      <td className="px-3 py-2.5 text-right font-bold" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--monday-text-secondary)' }}>
+                        {(() => {
+                          const theoGrandTotal = summaryByTruck.reduce((sum, truck) => {
+                            if (truck.totalMiles <= 0 || truck.avgPricePerGallon <= 0) return sum
+                            const theoGallons = truck.totalMiles / theoreticalMpg
+                            const theoFuel = theoGallons * truck.avgPricePerGallon
+                            return sum + theoFuel + truck.totalDefPrice
+                          }, 0)
+                          return theoGrandTotal > 0 ? formatCurrency(theoGrandTotal) : '-'
+                        })()}
+                      </td>
+                    )}
                   </tr>
                 </>
               )}
