@@ -628,8 +628,8 @@ export default function PayrollPage() {
                           return (
                             <tr
                               key={`${week.weekNumber}-${driverData.driver_id}`}
-                              className="border-t border-b transition-colors"
-                              style={{ borderColor: 'var(--monday-border-light)', backgroundColor: rowBg }}
+                              className="transition-colors"
+                              style={{ borderTop: '2px solid #9CA3AF', borderBottom: '2px solid #9CA3AF', backgroundColor: rowBg }}
                               onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = rowHoverBg }}
                               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = rowBg }}
                               onContextMenu={(e) => handleContextMenu(e, week.weekNumber, driverData.driver_id)}
