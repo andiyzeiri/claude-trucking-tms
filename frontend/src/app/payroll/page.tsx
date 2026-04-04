@@ -522,7 +522,7 @@ export default function PayrollPage() {
           </div>
         ) : (
           <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
-              <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
+              <table className="w-full" style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <thead>
                   <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
                     <th className="px-3 py-2.5 text-left border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px` }}>
@@ -634,10 +634,10 @@ export default function PayrollPage() {
                               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = rowBg }}
                               onContextMenu={(e) => handleContextMenu(e, week.weekNumber, driverData.driver_id)}
                             >
-                              <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>
+                              <td className="px-3 py-2.5" style={{ border: '1px solid #D1D5DB', fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>
                                 {driverData.driver_name}
                               </td>
-                              <td className="px-3 py-2" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', borderRight: `1px solid ${'var(--monday-border-light)'}` }}>
+                              <td className="px-3 py-2" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', border: '1px solid #D1D5DB' }}>
                                 {(() => {
                                   const weekTruckOverride = getOverride(driverData.driver_id, week.weekNumber, 'truck_id')
                                   const effectiveTruckId = weekTruckOverride !== undefined ? weekTruckOverride : (driverData.truck_id || '')
@@ -666,70 +666,70 @@ export default function PayrollPage() {
                                   )
                                 })()}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'gross') && startEdit(week.weekNumber, driverData.driver_id, 'gross', weekData?.gross || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'gross') && startEdit(week.weekNumber, driverData.driver_id, 'gross', weekData?.gross || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'gross') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData ? formatCurrency(weekData.gross) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'extra') && startEdit(week.weekNumber, driverData.driver_id, 'extra', weekData?.extra || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'extra') && startEdit(week.weekNumber, driverData.driver_id, 'extra', weekData?.extra || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'extra') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData ? formatCurrency(weekData.extra) : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'dispatch_fee') && startEdit(week.weekNumber, driverData.driver_id, 'dispatch_fee', weekData?.dispatch_fee || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'dispatch_fee') && startEdit(week.weekNumber, driverData.driver_id, 'dispatch_fee', weekData?.dispatch_fee || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'dispatch_fee') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.dispatch_fee > 0 ? `(${formatCurrency(weekData.dispatch_fee)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'insurance') && startEdit(week.weekNumber, driverData.driver_id, 'insurance', weekData?.insurance || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'insurance') && startEdit(week.weekNumber, driverData.driver_id, 'insurance', weekData?.insurance || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'insurance') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.insurance > 0 ? `(${formatCurrency(weekData.insurance)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'fuel') && startEdit(week.weekNumber, driverData.driver_id, 'fuel', weekData?.fuel || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'fuel') && startEdit(week.weekNumber, driverData.driver_id, 'fuel', weekData?.fuel || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'fuel') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.fuel > 0 ? `(${formatCurrency(weekData.fuel)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'parking') && startEdit(week.weekNumber, driverData.driver_id, 'parking', weekData?.parking || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'parking') && startEdit(week.weekNumber, driverData.driver_id, 'parking', weekData?.parking || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'parking') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.parking > 0 ? `(${formatCurrency(weekData.parking)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'trailer') && startEdit(week.weekNumber, driverData.driver_id, 'trailer', weekData?.trailer || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'trailer') && startEdit(week.weekNumber, driverData.driver_id, 'trailer', weekData?.trailer || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'trailer') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.trailer > 0 ? `(${formatCurrency(weekData.trailer)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'misc') && startEdit(week.weekNumber, driverData.driver_id, 'misc', weekData?.misc || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'misc') && startEdit(week.weekNumber, driverData.driver_id, 'misc', weekData?.misc || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'misc') ? (
                                   <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData && weekData.misc > 0 ? `(${formatCurrency(weekData.misc)})` : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', borderRight: `1px solid ${'var(--monday-border-light)'}` }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'miles') && startEdit(week.weekNumber, driverData.driver_id, 'miles', weekData?.miles || 0)}>
+                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-blue-50 rounded" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'miles') && startEdit(week.weekNumber, driverData.driver_id, 'miles', weekData?.miles || 0)}>
                                 {isEditing(week.weekNumber, driverData.driver_id, 'miles') ? (
                                   <Input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                                 ) : (
                                   <span>{weekData ? weekData.miles.toLocaleString() : '-'}</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-left" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--monday-done)', backgroundColor: 'rgba(232, 245, 230, 0.5)' }}>
+                              <td className="px-3 py-2 text-left" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--monday-done)', backgroundColor: 'rgba(232, 245, 230, 0.5)', border: '1px solid #D1D5DB' }}>
                                 {weekData ? formatCurrency(weekData.check_amount) : '-'}
                               </td>
                             </tr>
