@@ -65,6 +65,7 @@ COPY add_needs_attention_column.py ./
 COPY create_driver_attention_days_table.py ./
 COPY create_driver_day_notes_table.py ./
 COPY add_expense_cost_type.py ./
+COPY create_payroll_table.py ./
 COPY create_payroll_overrides_table.py ./
 COPY add_truck_to_payroll_settings.py ./
 COPY entrypoint.sh ./
