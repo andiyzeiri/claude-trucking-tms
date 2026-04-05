@@ -119,6 +119,18 @@ interface DriverReportData {
   }
 }
 
+interface ExpenseEntry {
+  id: number
+  date: string
+  category: string
+  cost_type: string
+  description: string
+  amount: number
+  vendor: string
+  driver_id: number | null
+  truck_id: number | null
+}
+
 type TabType = 'drivers' | 'owners' | 'expenses'
 
 export default function ReportsPage() {
@@ -389,18 +401,6 @@ export default function ReportsPage() {
   }, [calculatedPayroll])
 
   // Build expense report data grouped by driver type, then by category/week
-  interface ExpenseEntry {
-    id: number
-    date: string
-    category: string
-    cost_type: string
-    description: string
-    amount: number
-    vendor: string
-    driver_id: number | null
-    truck_id: number | null
-  }
-
   const expenseReportData = useMemo(() => {
     // Group expenses by category for the selected year
     const byCategory = new Map<string, { total: number; entries: ExpenseEntry[] }>()

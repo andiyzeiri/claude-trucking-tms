@@ -2,7 +2,6 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import Script from "next/script"
 import "./globals.css"
-import "../styles/page-themes.css"
 import QueryProvider from "@/providers/query-provider"
 import { Toaster } from "react-hot-toast"
 

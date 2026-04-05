@@ -242,3 +242,312 @@
     height: 4px;
   }
 }
+/* Page themes */
+/* Page-specific color themes - Monday.com style */
+
+/* Dashboard - Monday Purple accent */
+.page-dashboard {
+  --page-bg: #F6F7FB;
+  --page-accent: #F0F0FF;
+  --page-border: #E6E9EF;
+  --page-hover: #DCDFEC;
+  --page-text-accent: #6161FF;
+  --page-text-muted: #676879;
+}
+
+/* Loads - Monday Green */
+.page-loads {
+  --page-bg: #F6F7FB;
+  --page-accent: #E6FAF0;
+  --page-border: #E6E9EF;
+  --page-hover: #D0F5E3;
+  --page-text-accent: #00C875;
+  --page-text-muted: #676879;
+  font-weight: 450;
+  letter-spacing: 0.015em;
+  font-size: calc(1em + 1px);
+}
+
+/* Brokerage - Monday Teal */
+.page-brokerage {
+  --page-bg: #F6F7FB;
+  --page-accent: #E6FAF0;
+  --page-border: #E6E9EF;
+  --page-hover: #D0F5E3;
+  --page-text-accent: #00C875;
+  --page-text-muted: #676879;
+  font-weight: 450;
+  letter-spacing: 0.015em;
+  font-size: calc(1em + 1px);
+}
+
+/* Lanes - Monday Orange */
+.page-lanes {
+  --page-bg: #F6F7FB;
+  --page-accent: #FFF4E6;
+  --page-border: #E6E9EF;
+  --page-hover: #FFE8CC;
+  --page-text-accent: #FDAB3D;
+  --page-text-muted: #676879;
+}
+
+/* Trucks - Monday Purple */
+.page-trucks {
+  --page-bg: #F6F7FB;
+  --page-accent: #F4EAFA;
+  --page-border: #E6E9EF;
+  --page-hover: #E9D5F5;
+  --page-text-accent: #A25DDC;
+  --page-text-muted: #676879;
+}
+
+/* Drivers - Monday Blue */
+.page-drivers {
+  --page-bg: #F6F7FB;
+  --page-accent: #E6F4FA;
+  --page-border: #E6E9EF;
+  --page-hover: #CCE9F5;
+  --page-text-accent: #0086C0;
+  --page-text-muted: #676879;
+}
+
+/* Customers - Monday Red/Pink */
+.page-customers {
+  --page-bg: #F6F7FB;
+  --page-accent: #FCEDEF;
+  --page-border: #E6E9EF;
+  --page-hover: #F9DBE0;
+  --page-text-accent: #E2445C;
+  --page-text-muted: #676879;
+}
+
+/* Payroll - Monday Yellow/Gold */
+.page-payroll {
+  --page-bg: #F6F7FB;
+  --page-accent: #FFF8E6;
+  --page-border: #E6E9EF;
+  --page-hover: #FFF0CC;
+  --page-text-accent: #FDAB3D;
+  --page-text-muted: #676879;
+}
+
+/* Invoices - Monday Cornflower */
+.page-invoices {
+  --page-bg: #F6F7FB;
+  --page-accent: #F0F0FF;
+  --page-border: #E6E9EF;
+  --page-hover: #DCDFEC;
+  --page-text-accent: #6161FF;
+  --page-text-muted: #676879;
+}
+
+/* Reports - Monday Aqua */
+.page-reports {
+  --page-bg: #F6F7FB;
+  --page-accent: #E6FAFA;
+  --page-border: #E6E9EF;
+  --page-hover: #CCF5F5;
+  --page-text-accent: #00C8C8;
+  --page-text-muted: #676879;
+}
+
+/* Fuel - Monday Blue */
+.page-fuel {
+  --page-bg: #F6F7FB;
+  --page-accent: #E6F4FA;
+  --page-border: #E6E9EF;
+  --page-hover: #CCE9F5;
+  --page-text-accent: #0086C0;
+  --page-text-muted: #676879;
+}
+
+/* Settings - Monday Gray */
+.page-settings {
+  --page-bg: #F6F7FB;
+  --page-accent: #ECEDF2;
+  --page-border: #E6E9EF;
+  --page-hover: #DCDFEC;
+  --page-text-accent: #676879;
+  --page-text-muted: #9699A6;
+}
+
+/* Auth - Monday Cornflower */
+.page-auth {
+  --page-bg: #F6F7FB;
+  --page-accent: #F0F0FF;
+  --page-border: #E6E9EF;
+  --page-hover: #DCDFEC;
+  --page-text-accent: #6161FF;
+  --page-text-muted: #676879;
+}
+
+/* Apply theme colors to elements */
+[class*="page-"] {
+  background-color: var(--page-bg);
+  min-height: 100vh;
+}
+
+[class*="page-"] .page-card {
+  background-color: white;
+  border: 1px solid var(--page-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04);
+}
+
+[class*="page-"] .page-card:hover {
+  background-color: var(--page-hover);
+}
+
+[class*="page-"] .page-accent {
+  background-color: var(--page-accent);
+  border-color: var(--page-border);
+}
+
+[class*="page-"] .page-text-accent {
+  color: var(--page-text-accent);
+}
+
+[class*="page-"] .page-border {
+  border-color: var(--page-border);
+}
+
+[class*="page-"] .page-bg-accent {
+  background-color: var(--page-accent);
+}
+
+[class*="page-"] .page-hover:hover {
+  background-color: var(--page-hover);
+}
+
+/* Monday.com style button variants */
+[class*="page-"] .btn-page-primary {
+  background-color: var(--page-text-accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 8px 16px;
+  transition: all 0.15s ease;
+}
+
+[class*="page-"] .btn-page-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+[class*="page-"] .btn-page-secondary {
+  background-color: var(--page-accent);
+  color: var(--page-text-accent);
+  border: 1px solid var(--page-border);
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 8px 16px;
+}
+
+[class*="page-"] .btn-page-secondary:hover {
+  background-color: var(--page-hover);
+}
+
+/* Monday.com style status badges */
+.status-done {
+  background-color: #00C875;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-working {
+  background-color: #FDAB3D;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-stuck {
+  background-color: #E2445C;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-pending {
+  background-color: #C4C4C4;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Monday.com style group headers */
+.group-header {
+  background-color: #F0F0FF;
+  border-left: 4px solid #6161FF;
+  padding: 8px 16px;
+  font-weight: 600;
+  color: #323338;
+}
+
+.group-header-green {
+  background-color: #E6FAF0;
+  border-left: 4px solid #00C875;
+}
+
+.group-header-orange {
+  background-color: #FFF4E6;
+  border-left: 4px solid #FDAB3D;
+}
+
+.group-header-red {
+  background-color: #FCEDEF;
+  border-left: 4px solid #E2445C;
+}
+
+.group-header-blue {
+  background-color: #E6F4FA;
+  border-left: 4px solid #0086C0;
+}
+
+.group-header-purple {
+  background-color: #F4EAFA;
+  border-left: 4px solid #A25DDC;
+}
+
+/* Table headers with Monday.com styling */
+[class*="page-"] .table-header {
+  background-color: #F6F7FB;
+  border-bottom: 1px solid #E6E9EF;
+  font-weight: 500;
+  color: #676879;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Navigation active state - Monday.com style */
+.sidebar .nav-item.active {
+  background-color: #F0F0FF;
+  color: #6161FF;
+  border-left: 3px solid #6161FF;
+}
+
+/* Monday.com style card hover effects */
+[class*="page-"] .monday-card {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #E6E9EF;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+[class*="page-"] .monday-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
