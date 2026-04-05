@@ -12,6 +12,7 @@ import { useExpenses } from '@/hooks/use-expenses'
 import { useFuel } from '@/hooks/use-fuel'
 import { useTrucks } from '@/hooks/use-trucks'
 import { useDriverPayrollSettings, useUpdateDriverPayrollSettings, useCreateOrUpdateDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
+import { useCalculatedPayroll } from '@/hooks/use-payroll'
 import { Driver } from '@/types'
 
 // Helper to safely convert to number, defaulting to 0 for NaN/null/undefined
@@ -130,6 +131,7 @@ export default function ReportsPage() {
   const { data: driverSettingsData } = useDriverPayrollSettings()
   const updateDriverSettings = useUpdateDriverPayrollSettings()
   const createDriverSettings = useCreateOrUpdateDriverPayrollSettings()
+  const { data: calculatedPayroll } = useCalculatedPayroll(selectedYear)
 
   const loads = loadsData?.items || []
   const drivers = driversData?.items || []
@@ -366,6 +368,25 @@ export default function ReportsPage() {
     if (driverSettingsData) driverSettingsData.forEach((s: any) => map.set(s.driver_id, s))
     return map
   }, [driverSettingsData])
+
+  // Aggregate payroll data per driver for the year (adjusted gross, deductions)
+  const payrollByDriver = useMemo(() => {
+    const map = new Map<number, { adjustedGross: number; insurance: number; parking: number; trailer: number; misc: number; dispatch: number }>()
+    if (calculatedPayroll && Array.isArray(calculatedPayroll)) {
+      calculatedPayroll.forEach((entry: any) => {
+        if (!entry?.driver_id) return
+        const existing = map.get(entry.driver_id) || { adjustedGross: 0, insurance: 0, parking: 0, trailer: 0, misc: 0, dispatch: 0 }
+        existing.adjustedGross += Number(entry.gross) || 0
+        existing.insurance += Number(entry.insurance) || 0
+        existing.parking += Number(entry.parking) || 0
+        existing.trailer += Number(entry.trailer) || 0
+        existing.misc += Number(entry.misc) || 0
+        existing.dispatch += Number(entry.dispatch_fee) || 0
+        map.set(entry.driver_id, existing)
+      })
+    }
+    return map
+  }, [calculatedPayroll])
 
   // Build expense report data grouped by driver type, then by category/week
   interface ExpenseEntry {
@@ -787,7 +808,7 @@ export default function ReportsPage() {
               </p>
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'drivers' ? (
           <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -882,7 +903,109 @@ export default function ReportsPage() {
               </table>
             </div>
           </div>
-        ))}
+        ) : activeTab === 'owners' ? (
+          <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                  <tr>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[180px]">Owner Operator</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Total Gross</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Adj. Gross</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Load Miles</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Fuel Miles</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[90px]">Fuel Total</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Fuel $/Mi</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">%</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Insurance</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Adj. Ins.</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Trailer</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Trailer Exp</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Parking</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Parking Exp</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Misc</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] bg-green-50">Profit</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  {filteredData.map((driverData) => {
+                    const fuelInfo = fuelByDriver.get(driverData.driver_id)
+                    const settings = settingsMap.get(driverData.driver_id)
+                    const payrollInfo = payrollByDriver.get(driverData.driver_id)
+                    const fuelMiles = fuelInfo?.fuelMiles || 0
+                    const fuelTotal = fuelInfo?.fuelTotal || 0
+                    const fuelPpm = fuelInfo?.pricePerMile || 0
+
+                    const totalGross = safeNumber(driverData.totals.gross)
+                    const adjGross = payrollInfo?.adjustedGross || totalGross
+                    const dispatchPct = Number(settings?.dispatch_fee_percent) || 0
+                    const dispatchAmt = adjGross * (dispatchPct / 100)
+
+                    // Weekly deductions from payroll settings * number of weeks with loads
+                    const weeksWithLoads = driverData.weeks.length
+                    const insWeekly = Number(settings?.insurance_weekly) || 0
+                    const trailerWeekly = Number(settings?.trailer_weekly) || 0
+                    const parkingWeekly = Number(settings?.parking_weekly) || 0
+                    const miscWeekly = Number(settings?.misc_weekly) || 0
+
+                    const insTotal = payrollInfo?.insurance || (insWeekly * weeksWithLoads)
+                    const trailerTotal = payrollInfo?.trailer || (trailerWeekly * weeksWithLoads)
+                    const parkingTotal = payrollInfo?.parking || (parkingWeekly * weeksWithLoads)
+                    const miscTotal = payrollInfo?.misc || (miscWeekly * weeksWithLoads)
+
+                    const profit = adjGross - dispatchAmt - fuelTotal - insTotal - trailerTotal - parkingTotal - miscTotal
+
+                    return (
+                      <tr key={driverData.driver_id} className="border-t border-gray-200 hover:bg-orange-50/30">
+                        <td className="px-3 py-3 text-sm font-semibold text-gray-900">{driverData.driver_name}</td>
+                        <td className="px-3 py-3 text-sm text-right font-semibold" style={{color: '#1a5f2a'}}>{formatCurrency(totalGross)}</td>
+                        <td className="px-3 py-3 text-sm text-right font-semibold" style={{color: '#1a5f2a'}}>{formatCurrency(adjGross)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-700">{formatNumber(driverData.totals.miles)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-700">{fuelMiles > 0 ? formatNumber(fuelMiles) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{fuelTotal > 0 ? formatCurrency(fuelTotal) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-600">{fuelPpm > 0 ? `$${fuelPpm.toFixed(3)}` : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1">
+                            <input
+                              type="number"
+                              step="0.5"
+                              className="w-14 text-xs border rounded px-1 py-0.5 text-right"
+                              value={dispatchPct || ''}
+                              placeholder="0"
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0
+                                if (settings && settings.id > 0) {
+                                  updateDriverSettings.mutate({ driverId: driverData.driver_id, data: { dispatch_fee_percent: val } })
+                                } else {
+                                  createDriverSettings.mutate({ driver_id: driverData.driver_id, dispatch_fee_percent: val })
+                                }
+                              }}
+                            />
+                            <span className="text-xs text-gray-400">%</span>
+                            <span className="text-xs text-red-600 font-semibold w-16 text-right">({formatCurrency(dispatchAmt)})</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-600">{formatCurrency(insWeekly)}/wk</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{formatCurrency(insTotal)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-600">{formatCurrency(trailerWeekly)}/wk</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{formatCurrency(trailerTotal)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-600">{formatCurrency(parkingWeekly)}/wk</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{formatCurrency(parkingTotal)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{formatCurrency(miscTotal)}</td>
+                        <td className="px-3 py-3 text-sm text-right font-bold" style={{
+                          backgroundColor: 'rgba(26, 95, 42, 0.1)',
+                          color: profit >= 0 ? '#1a5f2a' : '#b91c1c'
+                        }}>
+                          {formatCurrency(profit)}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null))}
       </div>
     </Layout>
   )
