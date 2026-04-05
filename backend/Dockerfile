@@ -68,6 +68,7 @@ COPY add_expense_cost_type.py ./
 COPY create_payroll_table.py ./
 COPY create_payroll_overrides_table.py ./
 COPY add_truck_to_payroll_settings.py ./
+COPY add_pay_type_columns.py ./
 COPY entrypoint.sh ./
 
 # Copy scripts directory

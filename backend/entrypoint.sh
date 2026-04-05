@@ -105,6 +105,10 @@ python3 create_payroll_overrides_table.py || echo "⚠️  create_payroll_overri
 echo "🔧 Adding truck_id to driver_payroll_settings..."
 python3 add_truck_to_payroll_settings.py || echo "⚠️  add_truck_to_payroll_settings.py had errors, continuing..."
 
+# Add pay_type columns to driver_payroll_settings
+echo "🔧 Adding pay_type columns..."
+python3 add_pay_type_columns.py || echo "⚠️  add_pay_type_columns.py had errors, continuing..."
+
 # Stamp Alembic version to match current state
 echo "📦 Stamping Alembic version..."
 python3 stamp_alembic.py || echo "⚠️  stamp_alembic.py had errors, continuing..."

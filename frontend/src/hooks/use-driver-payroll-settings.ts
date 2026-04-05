@@ -9,6 +9,8 @@ export interface DriverPayrollSettings {
   driver_id: number
   company_id: number
   truck_id?: number | null
+  pay_type?: string
+  pay_rate?: number
   dispatch_fee_percent: number
   insurance_weekly: number
   parking_weekly: number
@@ -21,6 +23,8 @@ export interface DriverPayrollSettings {
 export interface DriverPayrollSettingsInput {
   driver_id: number
   truck_id?: number | null
+  pay_type?: string
+  pay_rate?: number
   dispatch_fee_percent?: number
   insurance_weekly?: number
   parking_weekly?: number

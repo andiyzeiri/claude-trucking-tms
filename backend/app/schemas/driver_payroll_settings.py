@@ -5,6 +5,8 @@ from datetime import datetime
 
 class DriverPayrollSettingsBase(BaseModel):
     truck_id: Optional[int] = None
+    pay_type: Optional[str] = 'flat'
+    pay_rate: Optional[float] = 0
     dispatch_fee_percent: float = 0
     insurance_weekly: float = 0
     parking_weekly: float = 0
@@ -18,6 +20,8 @@ class DriverPayrollSettingsCreate(DriverPayrollSettingsBase):
 
 class DriverPayrollSettingsUpdate(BaseModel):
     truck_id: Optional[int] = None
+    pay_type: Optional[str] = None
+    pay_rate: Optional[float] = None
     dispatch_fee_percent: Optional[float] = None
     insurance_weekly: Optional[float] = None
     parking_weekly: Optional[float] = None

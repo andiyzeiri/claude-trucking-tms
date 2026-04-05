@@ -10,6 +10,8 @@ import { useLoads } from '@/hooks/use-loads'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useExpenses } from '@/hooks/use-expenses'
 import { useFuel } from '@/hooks/use-fuel'
+import { useTrucks } from '@/hooks/use-trucks'
+import { useDriverPayrollSettings, useUpdateDriverPayrollSettings, useCreateOrUpdateDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
 import { Driver } from '@/types'
 
 // Helper to safely convert to number, defaulting to 0 for NaN/null/undefined
@@ -124,11 +126,16 @@ export default function ReportsPage() {
   const { data: driversData, isLoading: driversLoading } = useDrivers()
   const { data: expensesData, isLoading: expensesLoading } = useExpenses(1, 10000)
   const { data: fuelData, isLoading: fuelLoading } = useFuel()
+  const { data: trucksData } = useTrucks()
+  const { data: driverSettingsData } = useDriverPayrollSettings()
+  const updateDriverSettings = useUpdateDriverPayrollSettings()
+  const createDriverSettings = useCreateOrUpdateDriverPayrollSettings()
 
   const loads = loadsData?.items || []
   const drivers = driversData?.items || []
   const expenses = expensesData?.items || []
   const fuel = fuelData || []
+  const trucks = (trucksData?.items || []).filter((t: any) => t.type === 'truck')
 
   const [activeTab, setActiveTab] = useState<TabType>('drivers')
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
@@ -295,6 +302,70 @@ export default function ReportsPage() {
 
     return Array.from(driverMap.values())
   }, [loads, drivers, expensesByDriverWeek, selectedYear])
+
+  // Build fuel data per driver (via truck assignment from settings)
+  const fuelByDriver = useMemo(() => {
+    const settingsMap = new Map<number, any>()
+    if (driverSettingsData) driverSettingsData.forEach((s: any) => settingsMap.set(s.driver_id, s))
+
+    // Aggregate fuel by truck for the year
+    const fuelByTruck = new Map<number, { totalAmount: number; totalMiles: number }>()
+    const fuelEntriesByTruck = new Map<number, Array<{ odometer: number; weekYear: number; weekNum: number }>>()
+
+    fuel.forEach((fe: any) => {
+      if (!fe.date || !fe.truck_id) return
+      const fDate = new Date(fe.date + 'T00:00:00')
+      const d = new Date(Date.UTC(fDate.getFullYear(), fDate.getMonth(), fDate.getDate()))
+      const dayNum = d.getUTCDay() || 7
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+      const fYear = d.getUTCFullYear()
+      if (fYear !== selectedYear) return
+
+      const amount = (Number(fe.total_amount) || 0) + (Number(fe.def_price) || 0)
+      const existing = fuelByTruck.get(fe.truck_id) || { totalAmount: 0, totalMiles: 0 }
+      existing.totalAmount += amount
+      fuelByTruck.set(fe.truck_id, existing)
+
+      if (fe.odometer) {
+        if (!fuelEntriesByTruck.has(fe.truck_id)) fuelEntriesByTruck.set(fe.truck_id, [])
+        fuelEntriesByTruck.get(fe.truck_id)!.push({ odometer: Number(fe.odometer), weekYear: fYear, weekNum: 0 })
+      }
+    })
+
+    // Calculate miles from odometer (max - min)
+    fuelEntriesByTruck.forEach((entries, truckId) => {
+      if (entries.length > 1) {
+        const odoms = entries.map(e => e.odometer)
+        const miles = Math.max(...odoms) - Math.min(...odoms)
+        const existing = fuelByTruck.get(truckId)
+        if (existing) existing.totalMiles = miles
+      }
+    })
+
+    // Map to drivers via settings truck assignment
+    const result = new Map<number, { fuelTotal: number; fuelMiles: number; pricePerMile: number }>()
+    drivers.forEach((driver: any) => {
+      const settings = settingsMap.get(driver.id)
+      if (settings?.truck_id) {
+        const truckData = fuelByTruck.get(settings.truck_id)
+        if (truckData) {
+          result.set(driver.id, {
+            fuelTotal: truckData.totalAmount,
+            fuelMiles: truckData.totalMiles,
+            pricePerMile: truckData.totalMiles > 0 ? truckData.totalAmount / truckData.totalMiles : 0
+          })
+        }
+      }
+    })
+    return result
+  }, [fuel, drivers, driverSettingsData, selectedYear])
+
+  // Settings lookup for pay type/rate
+  const settingsMap = useMemo(() => {
+    const map = new Map<number, any>()
+    if (driverSettingsData) driverSettingsData.forEach((s: any) => map.set(s.driver_id, s))
+    return map
+  }, [driverSettingsData])
 
   // Build expense report data grouped by driver type, then by category/week
   interface ExpenseEntry {
@@ -720,106 +791,91 @@ export default function ReportsPage() {
           <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[300px]">
-                      {activeTab === 'drivers' ? 'Driver' : 'Owner'} / Week
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                      Gross
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
-                      Miles
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                      Expenses
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] bg-green-50">
-                      Profit
-                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Driver</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Gross</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[90px]">Load Miles</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[90px]">Fuel Miles</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Fuel Total</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[90px]">Fuel $/Mi</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">Driver Pay</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Fixed Exp</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Variable Exp</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[110px] bg-green-50">Profit</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white">
                   {filteredData.map((driverData) => {
-                    const isExpanded = expandedDrivers.has(driverData.driver_id)
-                    const hasNoLoads = driverData.totals.loadCount === 0
+                    const fuelInfo = fuelByDriver.get(driverData.driver_id)
+                    const settings = settingsMap.get(driverData.driver_id)
+                    const payType = settings?.pay_type || 'flat'
+                    const payRate = Number(settings?.pay_rate) || 0
+                    const fuelMiles = fuelInfo?.fuelMiles || 0
+                    const driverPay = payType === 'per_mile' ? payRate * fuelMiles : payRate
+                    const fuelTotal = fuelInfo?.fuelTotal || 0
+                    const fuelPricePerMile = fuelInfo?.pricePerMile || 0
+
+                    // TODO: Fixed/variable expenses will come from expense tab later
+                    const fixedExp = 0
+                    const variableExp = 0
+                    const totalProfit = safeNumber(driverData.totals.gross) - driverPay - fuelTotal - fixedExp - variableExp
 
                     return (
-                      <React.Fragment key={driverData.driver_id}>
-                        {/* Driver Row */}
-                        <tr
-                          className={`border-t-2 border-gray-300 cursor-pointer hover:bg-groupDriver/80 ${hasNoLoads ? 'bg-gray-50' : 'bg-groupDriver'}`}
-                          onClick={() => toggleDriver(driverData.driver_id)}
-                        >
-                          <td className="px-4 py-3 text-sm font-bold text-gray-900">
-                            <div className="flex items-center gap-2">
-                              {driverData.weeks.length > 0 ? (
-                                isExpanded ? (
-                                  <ChevronDown className="h-4 w-4 text-gray-600" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4 text-gray-600" />
-                                )
-                              ) : (
-                                <span className="w-4" />
-                              )}
-                              <span className={hasNoLoads ? 'text-gray-500' : ''}>{driverData.driver_name}</span>
-                              {hasNoLoads ? (
-                                <span className="text-gray-400 font-normal italic">(No loads)</span>
-                              ) : (
-                                <span className="text-gray-500 font-normal">
-                                  ({driverData.totals.loadCount} loads, {driverData.weeks.length} weeks)
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right font-bold" style={{color: hasNoLoads ? '#9ca3af' : '#1a5f2a'}}>
-                            {formatCurrency(safeNumber(driverData.totals.gross))}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right font-bold" style={{color: hasNoLoads ? '#9ca3af' : undefined}}>
-                            {formatNumber(driverData.totals.miles)}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right font-bold" style={{color: hasNoLoads ? '#9ca3af' : '#dc2626'}}>
-                            {formatCurrency(safeNumber(driverData.totals.expenses))}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right font-bold" style={{
-                            backgroundColor: hasNoLoads ? 'transparent' : 'rgba(26, 95, 42, 0.1)',
-                            color: hasNoLoads ? '#9ca3af' : (safeNumber(driverData.totals.profit) >= 0 ? '#1a5f2a' : '#b91c1c')
-                          }}>
-                            {formatCurrency(safeNumber(driverData.totals.profit))}
-                          </td>
-                        </tr>
-
-                        {/* Week Rows */}
-                        {isExpanded && driverData.weeks.map((week) => (
-                          <tr
-                            key={week.weekKey}
-                            className="border-t border-gray-200 bg-groupWeek hover:bg-groupWeek/80"
-                          >
-                            <td className="px-4 py-2 text-sm text-gray-800 pl-12">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{week.weekLabel}</span>
-                                <span className="text-gray-500 text-xs">({week.weekDateRange})</span>
-                                <span className="text-gray-500">- {week.loadCount} loads</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-2 text-sm text-right font-semibold" style={{color: '#1a5f2a'}}>
-                              {formatCurrency(safeNumber(week.gross))}
-                            </td>
-                            <td className="px-4 py-2 text-sm text-right font-semibold text-gray-900">
-                              {formatNumber(week.miles)}
-                            </td>
-                            <td className="px-4 py-2 text-sm text-right font-semibold text-red-600">
-                              {formatCurrency(safeNumber(week.expenses))}
-                            </td>
-                            <td className="px-4 py-2 text-sm text-right font-semibold" style={{
-                              backgroundColor: 'rgba(26, 95, 42, 0.05)',
-                              color: safeNumber(week.profit) >= 0 ? '#1a5f2a' : '#b91c1c'
-                            }}>
-                              {formatCurrency(safeNumber(week.profit))}
-                            </td>
-                          </tr>
-                        ))}
-                      </React.Fragment>
+                      <tr
+                        key={driverData.driver_id}
+                        className="border-t border-gray-200 hover:bg-gray-50"
+                      >
+                        <td className="px-3 py-3 text-sm font-semibold text-gray-900">{driverData.driver_name}</td>
+                        <td className="px-3 py-3 text-sm text-right font-semibold" style={{color: '#1a5f2a'}}>{formatCurrency(safeNumber(driverData.totals.gross))}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-700">{formatNumber(driverData.totals.miles)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-700">{fuelMiles > 0 ? formatNumber(fuelMiles) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{fuelTotal > 0 ? formatCurrency(fuelTotal) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-600">{fuelPricePerMile > 0 ? `$${fuelPricePerMile.toFixed(3)}` : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1">
+                            <select
+                              className="text-xs border rounded px-1 py-0.5 bg-white"
+                              value={payType}
+                              onChange={(e) => {
+                                const newType = e.target.value
+                                if (settings && settings.id > 0) {
+                                  updateDriverSettings.mutate({ driverId: driverData.driver_id, data: { pay_type: newType } })
+                                } else {
+                                  createDriverSettings.mutate({ driver_id: driverData.driver_id, pay_type: newType })
+                                }
+                              }}
+                            >
+                              <option value="flat">Flat</option>
+                              <option value="per_mile">Per Mi</option>
+                            </select>
+                            <input
+                              type="number"
+                              step="0.01"
+                              className="w-16 text-xs border rounded px-1 py-0.5 text-right"
+                              value={payRate || ''}
+                              placeholder="0"
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0
+                                if (settings && settings.id > 0) {
+                                  updateDriverSettings.mutate({ driverId: driverData.driver_id, data: { pay_rate: val } })
+                                } else {
+                                  createDriverSettings.mutate({ driver_id: driverData.driver_id, pay_rate: val })
+                                }
+                              }}
+                            />
+                            <span className="text-xs text-gray-500 font-semibold w-16 text-right">{formatCurrency(driverPay)}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{fixedExp > 0 ? formatCurrency(fixedExp) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{variableExp > 0 ? formatCurrency(variableExp) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right font-bold" style={{
+                          backgroundColor: 'rgba(26, 95, 42, 0.1)',
+                          color: totalProfit >= 0 ? '#1a5f2a' : '#b91c1c'
+                        }}>
+                          {formatCurrency(totalProfit)}
+                        </td>
+                      </tr>
                     )
                   })}
                 </tbody>

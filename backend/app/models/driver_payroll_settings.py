@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Numeric, ForeignKey
+from sqlalchemy import Column, Integer, Numeric, String, ForeignKey
 from sqlalchemy.orm import relationship
 from .base import Base
 
@@ -14,6 +14,10 @@ class DriverPayrollSettings(Base):
 
     # Assigned truck for fuel tracking
     truck_id = Column(Integer, ForeignKey("trucks.id"), nullable=True)
+
+    # Driver pay settings
+    pay_type = Column(String, default='flat')  # 'flat' or 'per_mile'
+    pay_rate = Column(Numeric(10, 2), default=0)  # flat weekly amount or rate per mile
 
     # Weekly flat rates
     insurance_weekly = Column(Numeric(10, 2), default=0)
