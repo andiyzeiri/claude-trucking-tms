@@ -5,34 +5,29 @@ import Layout from '@/components/layout/layout'
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, ExpenseFormData } from '@/hooks/use-expenses'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Building2, Users, Truck, Shield, MoreHorizontal } from 'lucide-react'
 import { Expense } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 
 type EditingCell = { id: number; field: string } | null
+type ExpenseTab = 'company' | 'driver' | 'owner' | 'insurance' | 'misc'
 
 const EXPENSE_CATEGORIES = [
-  'Fuel',
-  'Maintenance',
-  'Repairs',
-  'Insurance',
-  'Registration',
-  'Tolls',
-  'Parking',
-  'Food',
-  'Lodging',
-  'Office',
-  'Supplies',
-  'Truck Payment',
-  'Trailer Payment',
-  'ELD',
-  'Software',
-  'Phone',
-  'Other'
+  'Fuel', 'Maintenance', 'Repairs', 'Insurance', 'Registration', 'Tolls',
+  'Parking', 'Food', 'Lodging', 'Office', 'Supplies', 'Truck Payment',
+  'Trailer Payment', 'ELD', 'Software', 'Phone', 'Other'
+]
+
+const TAB_CONFIG: { key: ExpenseTab; label: string; icon: any; color: string }[] = [
+  { key: 'company', label: 'Company', icon: Building2, color: 'blue' },
+  { key: 'driver', label: 'Driver', icon: Users, color: 'green' },
+  { key: 'owner', label: 'Owner Operator', icon: Truck, color: 'orange' },
+  { key: 'insurance', label: 'Insurance', icon: Shield, color: 'purple' },
+  { key: 'misc', label: 'Misc', icon: MoreHorizontal, color: 'gray' },
 ]
 
 export default function ExpensesPage() {
-  const { data: expensesData, isLoading } = useExpenses(1, 1000)
+  const { data: expensesData, isLoading } = useExpenses(1, 10000)
   const { data: driversData } = useDrivers(1, 1000)
   const { data: trucksData } = useTrucks(1, 1000)
   const createExpense = useCreateExpense()
@@ -43,16 +38,22 @@ export default function ExpensesPage() {
   const drivers = driversData?.items || []
   const trucks = trucksData?.items || []
 
+  const [activeTab, setActiveTab] = useState<ExpenseTab>('company')
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
 
+  const tabExpenses = useMemo(() =>
+    expenses.filter(e => (e.expense_group || 'company') === activeTab),
+    [expenses, activeTab]
+  )
+
   const fixedExpenses = useMemo(() =>
-    expenses.filter(e => e.cost_type === 'fixed').sort((a, b) => b.date.localeCompare(a.date)),
-    [expenses]
+    tabExpenses.filter(e => e.cost_type === 'fixed').sort((a, b) => b.date.localeCompare(a.date)),
+    [tabExpenses]
   )
 
   const variableExpenses = useMemo(() =>
-    expenses.filter(e => e.cost_type !== 'fixed').sort((a, b) => b.date.localeCompare(a.date)),
-    [expenses]
+    tabExpenses.filter(e => e.cost_type !== 'fixed').sort((a, b) => b.date.localeCompare(a.date)),
+    [tabExpenses]
   )
 
   const addNewExpense = async (costType: 'fixed' | 'variable') => {
@@ -60,6 +61,7 @@ export default function ExpensesPage() {
       date: new Date().toISOString().split('T')[0],
       category: costType === 'fixed' ? 'Insurance' : 'Fuel',
       cost_type: costType,
+      expense_group: activeTab,
       description: '',
       amount: 0,
     }
@@ -102,7 +104,6 @@ export default function ExpensesPage() {
             onChange={(e) => {
               const val = e.target.value
               if (!val) { updateField(expense.id, field, null); return }
-              // Parse as int for ID fields
               if (field === 'driver_id' || field === 'truck_id') {
                 updateField(expense.id, field, parseInt(val))
               } else {
@@ -125,23 +126,19 @@ export default function ExpensesPage() {
           step={step}
           className={`w-full border rounded px-2 py-1 text-sm ${align === 'right' ? 'text-right' : ''}`}
           style={{ borderColor: 'var(--monday-border)' }}
-          value={type === 'number' ? (rawValue || '') : (rawValue || '')}
+          value={rawValue || ''}
           onChange={(e) => {
             const val = type === 'number' ? (parseFloat(e.target.value) || 0) : e.target.value
             updateField(expense.id, field, val)
           }}
           onBlur={() => setEditingCell(null)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') setEditingCell(null)
-            if (e.key === 'Escape') setEditingCell(null)
-          }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setEditingCell(null) }}
           autoFocus
         />
       )
     }
 
     const displayValue = format ? format(rawValue) : (rawValue || '-')
-
     return (
       <div
         onClick={() => setEditingCell({ id: expense.id, field })}
@@ -198,8 +195,6 @@ export default function ExpensesPage() {
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Weekly</th>
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Monthly</th>
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Yearly</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Driver</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Truck</th>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Category</th>
                 <th className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--monday-border-light)', width: '40px' }}></th>
               </tr>
@@ -207,15 +202,13 @@ export default function ExpensesPage() {
             <tbody>
               {data.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
+                  <td colSpan={9} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
                     No {costType} expenses yet
                   </td>
                 </tr>
               ) : (
                 data.map(expense => {
                   const amount = Number(expense.amount || 0)
-                  // Fixed: amount is monthly, calculate weekly/yearly from that
-                  // Variable: amount is per-occurrence, calculate weekly=amount, monthly=amount*4.33, yearly=amount*52
                   const weekly = costType === 'fixed' ? amount / 4.33 : amount
                   const monthly = costType === 'fixed' ? amount : amount * 4.33
                   const yearly = costType === 'fixed' ? amount * 12 : amount * 52
@@ -227,6 +220,7 @@ export default function ExpensesPage() {
                       style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}
                       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)' }}
                       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)' }}
+                      onContextMenu={(e) => { e.preventDefault(); handleDelete(expense.id) }}
                     >
                       <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '110px' }}>
                         {renderEditableCell(expense, 'date', {
@@ -239,9 +233,7 @@ export default function ExpensesPage() {
                       </td>
                       <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '100px' }}>
                         {renderEditableCell(expense, 'amount', {
-                          type: 'number',
-                          step: '0.01',
-                          align: 'right',
+                          type: 'number', step: '0.01', align: 'right',
                           format: (val) => val ? formatCurrency(Number(val)) : '-'
                         })}
                       </td>
@@ -249,41 +241,13 @@ export default function ExpensesPage() {
                         {renderEditableCell(expense, 'vendor')}
                       </td>
                       <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
-                        <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
-                          {amount > 0 ? formatCurrency(weekly) : '-'}
-                        </div>
+                        <div style={{ fontSize: '13px', color: 'var(--monday-text-primary)' }}>{amount > 0 ? formatCurrency(weekly) : '-'}</div>
                       </td>
                       <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
-                        <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
-                          {amount > 0 ? formatCurrency(monthly) : '-'}
-                        </div>
+                        <div style={{ fontSize: '13px', color: 'var(--monday-text-primary)' }}>{amount > 0 ? formatCurrency(monthly) : '-'}</div>
                       </td>
                       <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
-                        <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
-                          {amount > 0 ? formatCurrency(yearly) : '-'}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
-                        {renderEditableCell(expense, 'driver_id', {
-                          type: 'select',
-                          selectOptions: drivers.map(d => ({ value: String(d.id), label: `${d.first_name} ${d.last_name}` })),
-                          format: (val) => {
-                            if (!val) return '-'
-                            const driver = drivers.find(d => d.id === val)
-                            return driver ? `${driver.first_name} ${driver.last_name}` : '-'
-                          }
-                        })}
-                      </td>
-                      <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '90px' }}>
-                        {renderEditableCell(expense, 'truck_id', {
-                          type: 'select',
-                          selectOptions: trucks.filter(t => t.type === 'truck').map(t => ({ value: String(t.id), label: t.truck_number })),
-                          format: (val) => {
-                            if (!val) return '-'
-                            const truck = trucks.find(t => t.id === val)
-                            return truck ? truck.truck_number : '-'
-                          }
-                        })}
+                        <div style={{ fontSize: '13px', color: 'var(--monday-text-primary)' }}>{amount > 0 ? formatCurrency(yearly) : '-'}</div>
                       </td>
                       <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '100px' }}>
                         {renderEditableCell(expense, 'category', {
@@ -292,11 +256,7 @@ export default function ExpensesPage() {
                         })}
                       </td>
                       <td className="px-3 py-2.5" style={{ borderColor: 'var(--monday-border-light)' }}>
-                        <button
-                          onClick={() => handleDelete(expense.id)}
-                          className="p-1 rounded hover:bg-red-50"
-                          style={{ color: 'var(--monday-stuck)' }}
-                        >
+                        <button onClick={() => handleDelete(expense.id)} className="p-1 rounded hover:bg-red-50" style={{ color: 'var(--monday-stuck)' }}>
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </td>
@@ -304,26 +264,15 @@ export default function ExpensesPage() {
                   )
                 })
               )}
-              {/* Totals row */}
               {data.length > 0 && (
                 <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
-                  <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }} colSpan={2}>
-                    Total
-                  </td>
-                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
-                    {formatCurrency(totalAmount)}
-                  </td>
+                  <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }} colSpan={2}>Total</td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalAmount)}</td>
                   <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}></td>
-                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
-                    {formatCurrency(totalWeekly)}
-                  </td>
-                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
-                    {formatCurrency(totalMonthly)}
-                  </td>
-                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
-                    {formatCurrency(totalYearly)}
-                  </td>
-                  <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }} colSpan={4}></td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalWeekly)}</td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalMonthly)}</td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalYearly)}</td>
+                  <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }} colSpan={2}></td>
                 </tr>
               )}
             </tbody>
@@ -339,8 +288,38 @@ export default function ExpensesPage() {
 
   return (
     <Layout>
-      <div className="p-4 space-y-8 page-expenses">
+      <div className="p-4 space-y-6 page-expenses">
         <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>Expenses</h1>
+
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-6">
+            {TAB_CONFIG.map(tab => {
+              const Icon = tab.icon
+              const isActive = activeTab === tab.key
+              const tabCount = expenses.filter(e => (e.expense_group || 'company') === tab.key).length
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm ${
+                    isActive
+                      ? `border-${tab.color}-500 text-${tab.color}-600`
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                  style={isActive ? { borderColor: `var(--tw-${tab.color})`, color: `var(--tw-${tab.color})` } : {}}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                  {tabCount > 0 && (
+                    <span className="text-xs bg-gray-100 rounded-full px-2 py-0.5">{tabCount}</span>
+                  )}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+
         {renderTable('Fixed Costs', fixedExpenses, 'fixed')}
         {renderTable('Variable Costs', variableExpenses, 'variable')}
       </div>

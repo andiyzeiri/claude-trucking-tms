@@ -105,6 +105,10 @@ python3 create_payroll_overrides_table.py || echo "⚠️  create_payroll_overri
 echo "🔧 Adding truck_id to driver_payroll_settings..."
 python3 add_truck_to_payroll_settings.py || echo "⚠️  add_truck_to_payroll_settings.py had errors, continuing..."
 
+# Add expense_group column to expenses
+echo "🔧 Adding expense_group column..."
+python3 add_expense_group_column.py || echo "⚠️  add_expense_group_column.py had errors, continuing..."
+
 # Add pay_type columns to driver_payroll_settings
 echo "🔧 Adding pay_type columns..."
 python3 add_pay_type_columns.py || echo "⚠️  add_pay_type_columns.py had errors, continuing..."

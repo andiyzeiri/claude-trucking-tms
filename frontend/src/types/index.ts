@@ -122,6 +122,7 @@ export interface Expense {
   date: string
   category: string
   cost_type: string
+  expense_group: string
   description?: string
   amount: number
   vendor?: string
