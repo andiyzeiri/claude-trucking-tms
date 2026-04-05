@@ -5,7 +5,7 @@ import Layout from '@/components/layout/layout'
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, ExpenseFormData } from '@/hooks/use-expenses'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
-import { Plus, Trash2, Building2, Users, Truck, Shield, MoreHorizontal } from 'lucide-react'
+import { Plus, Building2, Users, Truck, Shield, MoreHorizontal } from 'lucide-react'
 import { Expense } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 
@@ -198,13 +198,12 @@ export default function ExpensesPage() {
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Monthly</th>
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Yearly</th>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Category</th>
-                <th className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--monday-border-light)', width: '40px' }}></th>
               </tr>
             </thead>
             <tbody>
               {data.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
+                  <td colSpan={8} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
                     No {costType} expenses yet
                   </td>
                 </tr>
@@ -311,11 +310,6 @@ export default function ExpensesPage() {
                           selectOptions: EXPENSE_CATEGORIES.map(c => ({ value: c, label: c })),
                         })}
                       </td>
-                      <td className="px-3 py-2.5" style={{ borderColor: 'var(--monday-border-light)' }}>
-                        <button onClick={() => handleDelete(expense.id)} className="p-1 rounded hover:bg-red-50" style={{ color: 'var(--monday-stuck)' }}>
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
                     </tr>
                   )
                 })
@@ -328,7 +322,7 @@ export default function ExpensesPage() {
                   <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalWeekly)}</td>
                   <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalMonthly)}</td>
                   <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalYearly)}</td>
-                  <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }} colSpan={2}></td>
+                  <td className="px-3 py-2.5" style={{ borderColor: 'var(--monday-border-light)' }}></td>
                 </tr>
               )}
             </tbody>
