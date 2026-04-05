@@ -242,14 +242,68 @@ export default function ExpensesPage() {
                       <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
                         {renderEditableCell(expense, 'vendor')}
                       </td>
-                      <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
-                        <div style={{ fontSize: '13px', color: 'var(--monday-text-primary)' }}>{amount > 0 ? formatCurrency(weekly) : '-'}</div>
+                      <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', minWidth: '100px' }}>
+                        {isEditing(expense.id, '_weekly') ? (
+                          <input
+                            type="number" step="0.01"
+                            className="w-full border rounded px-2 py-1 text-sm text-right"
+                            style={{ borderColor: 'var(--monday-border)' }}
+                            defaultValue={weekly > 0 ? weekly.toFixed(2) : ''}
+                            onBlur={(e) => {
+                              const w = parseFloat(e.target.value) || 0
+                              const newAmount = costType === 'fixed' ? w * 4.33 : w
+                              updateField(expense.id, 'amount', parseFloat(newAmount.toFixed(2)))
+                            }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                            autoFocus
+                          />
+                        ) : (
+                          <div onClick={() => setEditingCell({ id: expense.id, field: '_weekly' })} className="cursor-pointer rounded px-1.5 py-0.5 hover:bg-white hover:shadow-sm" style={{ fontSize: '13px', color: 'var(--monday-text-primary)' }}>
+                            {amount > 0 ? formatCurrency(weekly) : '-'}
+                          </div>
+                        )}
                       </td>
-                      <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
-                        <div style={{ fontSize: '13px', color: 'var(--monday-text-primary)' }}>{amount > 0 ? formatCurrency(monthly) : '-'}</div>
+                      <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', minWidth: '100px' }}>
+                        {isEditing(expense.id, '_monthly') ? (
+                          <input
+                            type="number" step="0.01"
+                            className="w-full border rounded px-2 py-1 text-sm text-right"
+                            style={{ borderColor: 'var(--monday-border)' }}
+                            defaultValue={monthly > 0 ? monthly.toFixed(2) : ''}
+                            onBlur={(e) => {
+                              const m = parseFloat(e.target.value) || 0
+                              const newAmount = costType === 'fixed' ? m : m / 4.33
+                              updateField(expense.id, 'amount', parseFloat(newAmount.toFixed(2)))
+                            }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                            autoFocus
+                          />
+                        ) : (
+                          <div onClick={() => setEditingCell({ id: expense.id, field: '_monthly' })} className="cursor-pointer rounded px-1.5 py-0.5 hover:bg-white hover:shadow-sm" style={{ fontSize: '13px', color: 'var(--monday-text-primary)' }}>
+                            {amount > 0 ? formatCurrency(monthly) : '-'}
+                          </div>
+                        )}
                       </td>
-                      <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
-                        <div style={{ fontSize: '13px', color: 'var(--monday-text-primary)' }}>{amount > 0 ? formatCurrency(yearly) : '-'}</div>
+                      <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', minWidth: '100px' }}>
+                        {isEditing(expense.id, '_yearly') ? (
+                          <input
+                            type="number" step="0.01"
+                            className="w-full border rounded px-2 py-1 text-sm text-right"
+                            style={{ borderColor: 'var(--monday-border)' }}
+                            defaultValue={yearly > 0 ? yearly.toFixed(2) : ''}
+                            onBlur={(e) => {
+                              const y = parseFloat(e.target.value) || 0
+                              const newAmount = costType === 'fixed' ? y / 12 : y / 52
+                              updateField(expense.id, 'amount', parseFloat(newAmount.toFixed(2)))
+                            }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                            autoFocus
+                          />
+                        ) : (
+                          <div onClick={() => setEditingCell({ id: expense.id, field: '_yearly' })} className="cursor-pointer rounded px-1.5 py-0.5 hover:bg-white hover:shadow-sm" style={{ fontSize: '13px', color: 'var(--monday-text-primary)' }}>
+                            {amount > 0 ? formatCurrency(yearly) : '-'}
+                          </div>
+                        )}
                       </td>
                       <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '100px' }}>
                         {renderEditableCell(expense, 'category', {
