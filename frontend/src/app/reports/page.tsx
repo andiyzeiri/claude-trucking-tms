@@ -1005,7 +1005,7 @@ export default function ReportsPage() {
               </table>
             </div>
           </div>
-        ) : null))}
+        ) : null)}
       </div>
     </Layout>
   )
