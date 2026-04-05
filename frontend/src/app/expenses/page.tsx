@@ -13,9 +13,11 @@ type EditingCell = { id: number; field: string } | null
 type ExpenseTab = 'company' | 'driver' | 'owner' | 'insurance' | 'misc'
 
 const EXPENSE_CATEGORIES = [
-  'Fuel', 'Maintenance', 'Repairs', 'Insurance', 'Registration', 'Tolls',
-  'Parking', 'Food', 'Lodging', 'Office', 'Supplies', 'Truck Payment',
-  'Trailer Payment', 'ELD', 'Software', 'Phone', 'Other'
+  'Employee', 'Fuel', 'Maintenance', 'Repairs', 'Insurance', 'Registration',
+  'Tolls', 'Parking', 'Food', 'Lodging', 'Office', 'Supplies', 'Truck Payment',
+  'Trailer Payment', 'ELD', 'Software', 'Phone', 'Rent', 'Utilities',
+  'Payroll Tax', 'Workers Comp', 'Accounting', 'Legal', 'Marketing',
+  'Dispatch', 'Factoring', 'Drug Test', 'Permits', 'Escrow', 'Other'
 ]
 
 const TAB_CONFIG: { key: ExpenseTab; label: string; icon: any; activeColor: string }[] = [
