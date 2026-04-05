@@ -143,7 +143,6 @@ export default function ReportsPage() {
   const { data: driverSettingsData } = useDriverPayrollSettings()
   const updateDriverSettings = useUpdateDriverPayrollSettings()
   const createDriverSettings = useCreateOrUpdateDriverPayrollSettings()
-  const { data: calculatedPayroll } = useCalculatedPayroll(selectedYear)
 
   const loads = loadsData?.items || []
   const drivers = driversData?.items || []
@@ -153,6 +152,8 @@ export default function ReportsPage() {
 
   const [activeTab, setActiveTab] = useState<TabType>('drivers')
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+
+  const { data: calculatedPayroll } = useCalculatedPayroll(selectedYear)
   const [searchTerm, setSearchTerm] = useState('')
   const [expandedDrivers, setExpandedDrivers] = useState<Set<number>>(new Set())
 
