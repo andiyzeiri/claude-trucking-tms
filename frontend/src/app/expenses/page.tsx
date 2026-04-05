@@ -18,12 +18,12 @@ const EXPENSE_CATEGORIES = [
   'Trailer Payment', 'ELD', 'Software', 'Phone', 'Other'
 ]
 
-const TAB_CONFIG: { key: ExpenseTab; label: string; icon: any; color: string }[] = [
-  { key: 'company', label: 'Company', icon: Building2, color: 'blue' },
-  { key: 'driver', label: 'Driver', icon: Users, color: 'green' },
-  { key: 'owner', label: 'Owner Operator', icon: Truck, color: 'orange' },
-  { key: 'insurance', label: 'Insurance', icon: Shield, color: 'purple' },
-  { key: 'misc', label: 'Misc', icon: MoreHorizontal, color: 'gray' },
+const TAB_CONFIG: { key: ExpenseTab; label: string; icon: any; activeColor: string }[] = [
+  { key: 'company', label: 'Company', icon: Building2, activeColor: '#3B82F6' },
+  { key: 'driver', label: 'Driver', icon: Users, activeColor: '#16A34A' },
+  { key: 'owner', label: 'Owner Operator', icon: Truck, activeColor: '#EA580C' },
+  { key: 'insurance', label: 'Insurance', icon: Shield, activeColor: '#9333EA' },
+  { key: 'misc', label: 'Misc', icon: MoreHorizontal, activeColor: '#6B7280' },
 ]
 
 export default function ExpensesPage() {
@@ -292,32 +292,33 @@ export default function ExpensesPage() {
         <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>Expenses</h1>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-6">
-            {TAB_CONFIG.map(tab => {
-              const Icon = tab.icon
-              const isActive = activeTab === tab.key
-              const tabCount = expenses.filter(e => (e.expense_group || 'company') === tab.key).length
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm ${
-                    isActive
-                      ? `border-${tab.color}-500 text-${tab.color}-600`
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                  style={isActive ? { borderColor: `var(--tw-${tab.color})`, color: `var(--tw-${tab.color})` } : {}}
-                >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
-                  {tabCount > 0 && (
-                    <span className="text-xs bg-gray-100 rounded-full px-2 py-0.5">{tabCount}</span>
-                  )}
-                </button>
-              )
-            })}
-          </nav>
+        <div className="flex gap-2">
+          {TAB_CONFIG.map(tab => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.key
+            const tabCount = expenses.filter(e => (e.expense_group || 'company') === tab.key).length
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  backgroundColor: isActive ? tab.activeColor : '#F3F4F6',
+                  color: isActive ? 'white' : '#6B7280',
+                  boxShadow: isActive ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
+                }}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+                {tabCount > 0 && (
+                  <span className="text-xs rounded-full px-2 py-0.5" style={{
+                    backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : '#E5E7EB',
+                    color: isActive ? 'white' : '#6B7280'
+                  }}>{tabCount}</span>
+                )}
+              </button>
+            )
+          })}
         </div>
 
         {renderTable('Fixed Costs', fixedExpenses, 'fixed')}
