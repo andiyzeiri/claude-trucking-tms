@@ -116,7 +116,7 @@ interface DriverReportData {
   }
 }
 
-type TabType = 'drivers' | 'owners'
+type TabType = 'drivers' | 'owners' | 'expenses'
 
 export default function ReportsPage() {
   // Fetch ALL data - use large limit to get everything
@@ -296,10 +296,101 @@ export default function ReportsPage() {
     return Array.from(driverMap.values())
   }, [loads, drivers, expensesByDriverWeek, selectedYear])
 
+  // Build expense report data grouped by driver type, then by category/week
+  interface ExpenseEntry {
+    id: number
+    date: string
+    category: string
+    cost_type: string
+    description: string
+    amount: number
+    vendor: string
+    driver_id: number | null
+    truck_id: number | null
+  }
+
+  const expenseReportData = useMemo(() => {
+    // Group expenses by category for the selected year
+    const byCategory = new Map<string, { total: number; entries: ExpenseEntry[] }>()
+    let totalAmount = 0
+
+    expenses.forEach((exp: any) => {
+      if (!exp.date) return
+      const expDate = new Date(exp.date + 'T00:00:00')
+      const d = new Date(Date.UTC(expDate.getFullYear(), expDate.getMonth(), expDate.getDate()))
+      const dayNum = d.getUTCDay() || 7
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+      const expYear = d.getUTCFullYear()
+      if (expYear !== selectedYear) return
+
+      const cat = exp.category || 'Uncategorized'
+      const amount = Number(exp.amount) || 0
+      if (!byCategory.has(cat)) {
+        byCategory.set(cat, { total: 0, entries: [] })
+      }
+      const catData = byCategory.get(cat)!
+      catData.total += amount
+      catData.entries.push({
+        id: exp.id,
+        date: exp.date,
+        category: cat,
+        cost_type: exp.cost_type || 'variable',
+        description: exp.description || '',
+        amount,
+        vendor: exp.vendor || '',
+        driver_id: exp.driver_id,
+        truck_id: exp.truck_id
+      })
+      totalAmount += amount
+    })
+
+    // Also add fuel as a category
+    let fuelTotal = 0
+    const fuelEntries: ExpenseEntry[] = []
+    fuel.forEach((fe: any) => {
+      if (!fe.date) return
+      const fDate = new Date(fe.date + 'T00:00:00')
+      const d = new Date(Date.UTC(fDate.getFullYear(), fDate.getMonth(), fDate.getDate()))
+      const dayNum = d.getUTCDay() || 7
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+      const fYear = d.getUTCFullYear()
+      if (fYear !== selectedYear) return
+
+      const amount = (Number(fe.total_amount) || 0) + (Number(fe.def_price) || 0)
+      if (amount > 0) {
+        fuelTotal += amount
+        fuelEntries.push({
+          id: fe.id,
+          date: fe.date,
+          category: 'Fuel',
+          cost_type: 'variable',
+          description: fe.location || 'Fuel',
+          amount,
+          vendor: fe.location || '',
+          driver_id: fe.driver_id,
+          truck_id: fe.truck_id
+        })
+      }
+    })
+    if (fuelEntries.length > 0) {
+      byCategory.set('Fuel', { total: fuelTotal, entries: fuelEntries })
+      totalAmount += fuelTotal
+    }
+
+    return {
+      categories: Array.from(byCategory.entries())
+        .map(([name, data]) => ({ name, ...data }))
+        .sort((a, b) => b.total - a.total),
+      totalAmount
+    }
+  }, [expenses, fuel, selectedYear])
+
   // Filter by tab and search - show all drivers who were employed during the year
   const filteredData = useMemo(() => {
     return reportData
       .filter(d => {
+        // Expenses tab shows all drivers
+        if (activeTab === 'expenses') return false
         // Filter by tab
         if (activeTab === 'drivers' && d.driver_type !== 'company') return false
         if (activeTab === 'owners' && d.driver_type !== 'owner_operator') return false
@@ -474,6 +565,17 @@ export default function ReportsPage() {
               <Truck className="h-4 w-4" />
               Owner Operators
             </button>
+            <button
+              onClick={() => setActiveTab('expenses')}
+              className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'expenses'
+                  ? 'border-red-500 text-red-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <TrendingUp className="h-4 w-4" />
+              Expenses
+            </button>
           </nav>
         </div>
 
@@ -488,7 +590,8 @@ export default function ReportsPage() {
           />
         </div>
 
-        {/* Summary Cards */}
+        {/* Summary Cards - Driver/Owner tabs */}
+        {activeTab !== 'expenses' && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Loads ({selectedYear})</div>
@@ -509,9 +612,99 @@ export default function ReportsPage() {
             </div>
           </div>
         </div>
+        )}
 
-        {/* Data Table */}
-        {filteredData.length === 0 ? (
+        {/* Summary Cards - Expenses tab */}
+        {activeTab === 'expenses' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="text-sm text-gray-600 mb-1">Total Expenses ({selectedYear})</div>
+            <div className="text-3xl font-bold text-red-600">{formatCurrency(expenseReportData.totalAmount)}</div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="text-sm text-gray-600 mb-1">Categories</div>
+            <div className="text-3xl font-bold text-blue-600">{expenseReportData.categories.length}</div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="text-sm text-gray-600 mb-1">Total Entries</div>
+            <div className="text-3xl font-bold text-gray-700">{expenseReportData.categories.reduce((s, c) => s + c.entries.length, 0)}</div>
+          </div>
+        </div>
+        )}
+
+        {/* Expenses Table */}
+        {activeTab === 'expenses' && (
+          <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[250px]">Category</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Entries</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Total</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">% of Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expenseReportData.categories.map((cat) => {
+                    const isExpanded = expandedDrivers.has(cat.name.hashCode?.() || cat.name.length)
+                    const catKey = cat.name.split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a }, 0)
+                    const isCatExpanded = expandedDrivers.has(catKey)
+                    return (
+                      <React.Fragment key={cat.name}>
+                        <tr
+                          className="border-t-2 border-gray-300 cursor-pointer hover:bg-gray-50 bg-red-50/30"
+                          onClick={() => toggleDriver(catKey)}
+                        >
+                          <td className="px-4 py-3 text-sm font-bold text-gray-900">
+                            <div className="flex items-center gap-2">
+                              {cat.entries.length > 0 ? (
+                                isCatExpanded ? <ChevronDown className="h-4 w-4 text-gray-600" /> : <ChevronRight className="h-4 w-4 text-gray-600" />
+                              ) : <span className="w-4" />}
+                              {cat.name}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-right font-semibold text-gray-700">{cat.entries.length}</td>
+                          <td className="px-4 py-3 text-sm text-right font-bold text-red-600">{formatCurrency(cat.total)}</td>
+                          <td className="px-4 py-3 text-sm text-right font-semibold text-gray-600">
+                            {expenseReportData.totalAmount > 0 ? ((cat.total / expenseReportData.totalAmount) * 100).toFixed(1) : 0}%
+                          </td>
+                        </tr>
+                        {isCatExpanded && cat.entries
+                          .sort((a, b) => b.date.localeCompare(a.date))
+                          .map((entry) => (
+                          <tr key={entry.id} className="border-t border-gray-100 hover:bg-gray-50">
+                            <td className="px-4 py-2 text-sm text-gray-700 pl-12">
+                              {entry.description || entry.category}
+                              {entry.vendor && <span className="text-gray-400 ml-2">({entry.vendor})</span>}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-right text-gray-500">{entry.date}</td>
+                            <td className="px-4 py-2 text-sm text-right font-semibold text-red-600">{formatCurrency(entry.amount)}</td>
+                            <td className="px-4 py-2 text-sm text-right text-gray-400">
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100">{entry.cost_type}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    )
+                  })}
+                  {/* Totals Row */}
+                  <tr className="border-t-2 border-gray-400 bg-gray-100">
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900">Total</td>
+                    <td className="px-4 py-3 text-sm text-right font-bold text-gray-700">
+                      {expenseReportData.categories.reduce((s, c) => s + c.entries.length, 0)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right font-bold text-red-600">{formatCurrency(expenseReportData.totalAmount)}</td>
+                    <td className="px-4 py-3 text-sm text-right font-bold text-gray-700">100%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Data Table - Drivers/Owners */}
+        {activeTab !== 'expenses' && (filteredData.length === 0 ? (
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <TrendingUp className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -633,7 +826,7 @@ export default function ReportsPage() {
               </table>
             </div>
           </div>
-        )}
+        ))}
       </div>
     </Layout>
   )
