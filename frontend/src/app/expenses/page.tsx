@@ -128,13 +128,15 @@ export default function ExpensesPage() {
           step={step}
           className={`w-full border rounded px-2 py-1 text-sm ${align === 'right' ? 'text-right' : ''}`}
           style={{ borderColor: 'var(--monday-border)' }}
-          value={rawValue || ''}
-          onChange={(e) => {
+          defaultValue={rawValue || ''}
+          onBlur={(e) => {
             const val = type === 'number' ? (parseFloat(e.target.value) || 0) : e.target.value
             updateField(expense.id, field, val)
           }}
-          onBlur={() => setEditingCell(null)}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setEditingCell(null) }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+            if (e.key === 'Escape') setEditingCell(null)
+          }}
           autoFocus
         />
       )
