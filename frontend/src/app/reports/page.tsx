@@ -1003,7 +1003,7 @@ export default function ReportsPage() {
                     const miscTotal = payrollInfo?.misc || 0
                     const netPay = payrollInfo?.netPay || 0
 
-                    const profit = adjGross - dispatchTotal - fuelTotal - insTotal - adjInsurance - trailerTotal - parkingTotal - miscTotal
+                    const profit = totalGross - fuelTotal - adjInsurance - parkingTotal - netPay
 
                     return (
                       <tr key={driverData.driver_id} className="border-t border-gray-200 hover:bg-orange-50/30">
@@ -1051,8 +1051,9 @@ export default function ReportsPage() {
                       const trailerTotal = payrollInfo?.trailer || 0
                       const parkingTotal = payrollInfo?.parking || 0
                       const miscTotal = payrollInfo?.misc || 0
+                      const netPay = payrollInfo?.netPay || 0
                       const fuelTotal = fuelInfo?.fuelTotal || 0
-                      const profit = adjGross - dispatchTotal - fuelTotal - insTotal - adjInsurance - trailerTotal - parkingTotal - miscTotal
+                      const profit = totalGross - fuelTotal - adjInsurance - parkingTotal - netPay
 
                       totGross += totalGross
                       totAdjGross += adjGross
