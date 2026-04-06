@@ -217,6 +217,7 @@ export default function ReportsPage() {
       const isoYear = getISOWeekYear(expenseDate)
       const weekNum = getWeekNumber(expenseDate)
       if (isNaN(isoYear) || isoYear !== selectedYear) return
+      if (weekNum > lastFuelWeek) return
       const key = `${expense.driver_id}-${isoYear}-${weekNum}`
       map.set(key, (map.get(key) || 0) + safeNumber(expense.amount))
     })
@@ -229,12 +230,13 @@ export default function ReportsPage() {
       const isoYear = getISOWeekYear(fuelDate)
       const weekNum = getWeekNumber(fuelDate)
       if (isNaN(isoYear) || isoYear !== selectedYear) return
+      if (weekNum > lastFuelWeek) return
       const key = `${f.driver_id}-${isoYear}-${weekNum}`
       map.set(key, (map.get(key) || 0) + safeNumber(f.total_amount))
     })
 
     return map
-  }, [expenses, fuel, selectedYear])
+  }, [expenses, fuel, selectedYear, lastFuelWeek])
 
   // Process data grouped by driver and week (filtered by year)
   const reportData = useMemo(() => {
@@ -265,8 +267,9 @@ export default function ReportsPage() {
       const isoYear = getISOWeekYear(loadDate)
       const weekNum = getWeekNumber(loadDate)
 
-      // Filter by selected year (also check for NaN)
+      // Filter by selected year and only up to last fuel week
       if (isNaN(isoYear) || isoYear !== selectedYear) return
+      if (weekNum > lastFuelWeek) return
 
       const weekDateRange = getWeekDateRange(loadDate)
       const driverWeekKey = `${load.driver_id}-${isoYear}-${weekNum}`
@@ -316,7 +319,7 @@ export default function ReportsPage() {
     })
 
     return Array.from(driverMap.values())
-  }, [loads, drivers, expensesByDriverWeek, selectedYear])
+  }, [loads, drivers, expensesByDriverWeek, selectedYear, lastFuelWeek])
 
   // Build fuel data per driver (via truck assignment from settings)
   const fuelByDriver = useMemo(() => {
@@ -335,6 +338,8 @@ export default function ReportsPage() {
       d.setUTCDate(d.getUTCDate() + 4 - dayNum)
       const fYear = d.getUTCFullYear()
       if (fYear !== selectedYear) return
+      const fWeekNum = getWeekNumber(fDate)
+      if (fWeekNum > lastFuelWeek) return
 
       const amount = (Number(fe.total_amount) || 0) + (Number(fe.def_price) || 0)
       const existing = fuelByTruck.get(fe.truck_id) || { totalAmount: 0, totalMiles: 0 }
@@ -373,7 +378,7 @@ export default function ReportsPage() {
       }
     })
     return result
-  }, [fuel, drivers, driverSettingsData, selectedYear])
+  }, [fuel, drivers, driverSettingsData, selectedYear, lastFuelWeek])
 
   // Settings lookup for pay type/rate
   const settingsMap = useMemo(() => {
@@ -382,12 +387,26 @@ export default function ReportsPage() {
     return map
   }, [driverSettingsData])
 
+  // Find the last week number that has fuel data on the payroll tab
+  const lastFuelWeek = useMemo(() => {
+    let maxWeek = 0
+    if (calculatedPayroll && Array.isArray(calculatedPayroll)) {
+      calculatedPayroll.forEach((entry: any) => {
+        if (entry?.week_number && (Number(entry.fuel) || 0) > 0) {
+          maxWeek = Math.max(maxWeek, entry.week_number)
+        }
+      })
+    }
+    return maxWeek || 52 // fallback to 52 if no fuel data
+  }, [calculatedPayroll])
+
   // Aggregate payroll data per driver for the year (adjusted gross, deductions)
   const payrollByDriver = useMemo(() => {
     const map = new Map<number, { adjustedGross: number; insurance: number; insuranceWeeks: number; parking: number; trailer: number; misc: number; dispatch: number; netPay: number }>()
     if (calculatedPayroll && Array.isArray(calculatedPayroll)) {
       calculatedPayroll.forEach((entry: any) => {
         if (!entry?.driver_id) return
+        if (entry.week_number > lastFuelWeek) return
         const existing = map.get(entry.driver_id) || { adjustedGross: 0, insurance: 0, insuranceWeeks: 0, parking: 0, trailer: 0, misc: 0, dispatch: 0, netPay: 0 }
         existing.adjustedGross += Number(entry.gross) || 0
         const insAmt = Number(entry.insurance) || 0
@@ -402,7 +421,7 @@ export default function ReportsPage() {
       })
     }
     return map
-  }, [calculatedPayroll])
+  }, [calculatedPayroll, lastFuelWeek])
 
   // Build expense report data grouped by driver type, then by category/week
   const expenseReportData = useMemo(() => {
