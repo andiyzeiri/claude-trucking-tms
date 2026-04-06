@@ -384,11 +384,11 @@ export default function ReportsPage() {
 
   // Aggregate payroll data per driver for the year (adjusted gross, deductions)
   const payrollByDriver = useMemo(() => {
-    const map = new Map<number, { adjustedGross: number; insurance: number; insuranceWeeks: number; parking: number; trailer: number; misc: number; dispatch: number }>()
+    const map = new Map<number, { adjustedGross: number; insurance: number; insuranceWeeks: number; parking: number; trailer: number; misc: number; dispatch: number; netPay: number }>()
     if (calculatedPayroll && Array.isArray(calculatedPayroll)) {
       calculatedPayroll.forEach((entry: any) => {
         if (!entry?.driver_id) return
-        const existing = map.get(entry.driver_id) || { adjustedGross: 0, insurance: 0, insuranceWeeks: 0, parking: 0, trailer: 0, misc: 0, dispatch: 0 }
+        const existing = map.get(entry.driver_id) || { adjustedGross: 0, insurance: 0, insuranceWeeks: 0, parking: 0, trailer: 0, misc: 0, dispatch: 0, netPay: 0 }
         existing.adjustedGross += Number(entry.gross) || 0
         const insAmt = Number(entry.insurance) || 0
         existing.insurance += insAmt
@@ -397,6 +397,7 @@ export default function ReportsPage() {
         existing.trailer += Number(entry.trailer) || 0
         existing.misc += Number(entry.misc) || 0
         existing.dispatch += Number(entry.dispatch_fee) || 0
+        existing.netPay += Number(entry.check_amount) || 0
         map.set(entry.driver_id, existing)
       })
     }
@@ -973,6 +974,7 @@ export default function ReportsPage() {
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Trailer</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Parking</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Misc</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Net Pay</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] bg-green-50">Profit</th>
                   </tr>
                 </thead>
@@ -999,6 +1001,7 @@ export default function ReportsPage() {
                     const trailerTotal = payrollInfo?.trailer || 0
                     const parkingTotal = payrollInfo?.parking || 0
                     const miscTotal = payrollInfo?.misc || 0
+                    const netPay = payrollInfo?.netPay || 0
 
                     const profit = adjGross - dispatchTotal - fuelTotal - insTotal - adjInsurance - trailerTotal - parkingTotal - miscTotal
 
@@ -1017,6 +1020,7 @@ export default function ReportsPage() {
                         <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{trailerTotal > 0 ? formatCurrency(trailerTotal) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{parkingTotal > 0 ? formatCurrency(parkingTotal) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{miscTotal > 0 ? formatCurrency(miscTotal) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{netPay > 0 ? formatCurrency(netPay) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right font-bold" style={{
                           backgroundColor: 'rgba(26, 95, 42, 0.1)',
                           color: profit >= 0 ? '#1a5f2a' : '#b91c1c'
@@ -1030,7 +1034,7 @@ export default function ReportsPage() {
                 <tfoot>
                   {(() => {
                     let totGross = 0, totAdjGross = 0, totMiles = 0, totFuelMiles = 0, totFuel = 0
-                    let totDispatch = 0, totIns = 0, totAdjIns = 0, totTrailer = 0, totParking = 0, totMisc = 0, totProfit = 0
+                    let totDispatch = 0, totIns = 0, totAdjIns = 0, totTrailer = 0, totParking = 0, totMisc = 0, totNetPay = 0, totProfit = 0
                     filteredData.forEach((driverData) => {
                       const fuelInfo = fuelByDriver.get(driverData.driver_id)
                       const settings = settingsMap.get(driverData.driver_id)
@@ -1061,6 +1065,7 @@ export default function ReportsPage() {
                       totTrailer += trailerTotal
                       totParking += parkingTotal
                       totMisc += miscTotal
+                      totNetPay += payrollInfo?.netPay || 0
                       totProfit += profit
                     })
                     const totFuelPpm = totFuelMiles > 0 ? totFuel / totFuelMiles : 0
@@ -1079,6 +1084,7 @@ export default function ReportsPage() {
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totTrailer > 0 ? formatCurrency(totTrailer) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totParking > 0 ? formatCurrency(totParking) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totMisc > 0 ? formatCurrency(totMisc) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{totNetPay > 0 ? formatCurrency(totNetPay) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right" style={{
                           backgroundColor: 'rgba(26, 95, 42, 0.1)',
                           color: totProfit >= 0 ? '#1a5f2a' : '#b91c1c'
