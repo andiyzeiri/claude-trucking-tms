@@ -825,6 +825,7 @@ export default function ReportsPage() {
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Fuel Total</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[90px]">Fuel $/Mi</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">Driver Pay</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Expense %</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Fixed Exp</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Variable Exp</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[110px] bg-green-50">Profit</th>
@@ -841,10 +842,12 @@ export default function ReportsPage() {
                     const fuelTotal = fuelInfo?.fuelTotal || 0
                     const fuelPricePerMile = fuelInfo?.pricePerMile || 0
 
+                    const gross = safeNumber(driverData.totals.gross)
+                    const expensePct = gross * 0.02
                     // TODO: Fixed/variable expenses will come from expense tab later
                     const fixedExp = 0
                     const variableExp = 0
-                    const totalProfit = safeNumber(driverData.totals.gross) - driverPay - fuelTotal - fixedExp - variableExp
+                    const totalProfit = gross - driverPay - fuelTotal - expensePct - fixedExp - variableExp
 
                     return (
                       <tr
@@ -892,6 +895,7 @@ export default function ReportsPage() {
                             <span className="text-xs text-gray-500 font-semibold w-16 text-right">{formatCurrency(driverPay)}</span>
                           </div>
                         </td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{expensePct > 0 ? formatCurrency(expensePct) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{fixedExp > 0 ? formatCurrency(fixedExp) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{variableExp > 0 ? formatCurrency(variableExp) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right font-bold" style={{
@@ -907,7 +911,7 @@ export default function ReportsPage() {
                 <tfoot>
                   {(() => {
                     let totGross = 0, totMiles = 0, totFuelMiles = 0, totFuel = 0, totDriverPay = 0
-                    let totFixedExp = 0, totVariableExp = 0, totProfit = 0
+                    let totExpPct = 0, totFixedExp = 0, totVariableExp = 0, totProfit = 0
                     filteredData.forEach((driverData) => {
                       const fuelInfo = fuelByDriver.get(driverData.driver_id)
                       const settings = settingsMap.get(driverData.driver_id)
@@ -919,13 +923,15 @@ export default function ReportsPage() {
                       const fixedExp = 0
                       const variableExp = 0
                       const gross = safeNumber(driverData.totals.gross)
-                      const profit = gross - driverPay - fuelTotal - fixedExp - variableExp
+                      const expensePct = gross * 0.02
+                      const profit = gross - driverPay - fuelTotal - expensePct - fixedExp - variableExp
 
                       totGross += gross
                       totMiles += safeNumber(driverData.totals.miles)
                       totFuelMiles += fuelMiles
                       totFuel += fuelTotal
                       totDriverPay += driverPay
+                      totExpPct += expensePct
                       totFixedExp += fixedExp
                       totVariableExp += variableExp
                       totProfit += profit
@@ -940,6 +946,7 @@ export default function ReportsPage() {
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totFuel > 0 ? formatCurrency(totFuel) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-gray-600">{totFuelPpm > 0 ? `$${totFuelPpm.toFixed(3)}` : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-gray-500">{formatCurrency(totDriverPay)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{totExpPct > 0 ? formatCurrency(totExpPct) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totFixedExp > 0 ? formatCurrency(totFixedExp) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totVariableExp > 0 ? formatCurrency(totVariableExp) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right" style={{
@@ -974,6 +981,7 @@ export default function ReportsPage() {
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Trailer</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Parking</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Misc</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Expense %</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Net Pay</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] bg-green-50">Profit</th>
                   </tr>
@@ -1002,8 +1010,9 @@ export default function ReportsPage() {
                     const parkingTotal = payrollInfo?.parking || 0
                     const miscTotal = payrollInfo?.misc || 0
                     const netPay = payrollInfo?.netPay || 0
+                    const expensePct = totalGross * 0.02
 
-                    const profit = totalGross - fuelTotal - adjInsurance - parkingTotal - netPay
+                    const profit = totalGross - fuelTotal - adjInsurance - parkingTotal - expensePct - netPay
 
                     return (
                       <tr key={driverData.driver_id} className="border-t border-gray-200 hover:bg-orange-50/30">
@@ -1020,6 +1029,7 @@ export default function ReportsPage() {
                         <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{trailerTotal > 0 ? formatCurrency(trailerTotal) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{parkingTotal > 0 ? formatCurrency(parkingTotal) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{miscTotal > 0 ? formatCurrency(miscTotal) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{expensePct > 0 ? formatCurrency(expensePct) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{netPay > 0 ? formatCurrency(netPay) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right font-bold" style={{
                           backgroundColor: 'rgba(26, 95, 42, 0.1)',
@@ -1034,7 +1044,7 @@ export default function ReportsPage() {
                 <tfoot>
                   {(() => {
                     let totGross = 0, totAdjGross = 0, totMiles = 0, totFuelMiles = 0, totFuel = 0
-                    let totDispatch = 0, totIns = 0, totAdjIns = 0, totTrailer = 0, totParking = 0, totMisc = 0, totNetPay = 0, totProfit = 0
+                    let totDispatch = 0, totIns = 0, totAdjIns = 0, totTrailer = 0, totParking = 0, totMisc = 0, totExpPct = 0, totNetPay = 0, totProfit = 0
                     filteredData.forEach((driverData) => {
                       const fuelInfo = fuelByDriver.get(driverData.driver_id)
                       const settings = settingsMap.get(driverData.driver_id)
@@ -1052,8 +1062,9 @@ export default function ReportsPage() {
                       const parkingTotal = payrollInfo?.parking || 0
                       const miscTotal = payrollInfo?.misc || 0
                       const netPay = payrollInfo?.netPay || 0
+                      const expensePct = totalGross * 0.02
                       const fuelTotal = fuelInfo?.fuelTotal || 0
-                      const profit = totalGross - fuelTotal - adjInsurance - parkingTotal - netPay
+                      const profit = totalGross - fuelTotal - adjInsurance - parkingTotal - expensePct - netPay
 
                       totGross += totalGross
                       totAdjGross += adjGross
@@ -1066,7 +1077,8 @@ export default function ReportsPage() {
                       totTrailer += trailerTotal
                       totParking += parkingTotal
                       totMisc += miscTotal
-                      totNetPay += payrollInfo?.netPay || 0
+                      totExpPct += expensePct
+                      totNetPay += netPay
                       totProfit += profit
                     })
                     const totFuelPpm = totFuelMiles > 0 ? totFuel / totFuelMiles : 0
@@ -1085,6 +1097,7 @@ export default function ReportsPage() {
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totTrailer > 0 ? formatCurrency(totTrailer) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totParking > 0 ? formatCurrency(totParking) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totMisc > 0 ? formatCurrency(totMisc) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{totExpPct > 0 ? formatCurrency(totExpPct) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totNetPay > 0 ? formatCurrency(totNetPay) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right" style={{
                           backgroundColor: 'rgba(26, 95, 42, 0.1)',
