@@ -1,7 +1,9 @@
 from typing import List
+from datetime import date, timedelta
+from dateutil.relativedelta import relativedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.models.expense import Expense
@@ -112,3 +114,88 @@ async def delete_expense(
     await db.delete(expense)
     await db.commit()
     return {"message": "Expense deleted successfully"}
+
+
+@router.post("/generate-recurring")
+async def generate_recurring_expenses(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Generate any due recurring expenses from templates."""
+    today = date.today()
+
+    # Get all templates for this company
+    query = select(Expense).where(
+        Expense.company_id == current_user.company_id,
+        Expense.is_template == True,
+        Expense.frequency.isnot(None)
+    )
+    result = await db.execute(query)
+    templates = result.scalars().all()
+
+    created = 0
+    for template in templates:
+        if not template.frequency or not template.pay_day:
+            continue
+
+        # Determine the next due date
+        if template.frequency == 'weekly':
+            # pay_day = 1 (Monday) to 7 (Sunday)
+            days_ahead = template.pay_day - today.isoweekday()
+            if days_ahead < 0:
+                days_ahead += 7
+            next_due = today + timedelta(days=days_ahead)
+            # If today is the pay day, use today
+            if today.isoweekday() == template.pay_day:
+                next_due = today
+        elif template.frequency == 'monthly':
+            # pay_day = day of month (1-31)
+            try:
+                next_due = today.replace(day=template.pay_day)
+                if next_due < today:
+                    next_due = (today + relativedelta(months=1)).replace(day=template.pay_day)
+            except ValueError:
+                # Day doesn't exist in this month (e.g., 31st in February)
+                next_due = (today + relativedelta(months=1)).replace(day=template.pay_day)
+        elif template.frequency == 'yearly':
+            # pay_day = day of year (use month from template date)
+            next_due = template.date.replace(year=today.year)
+            if next_due < today:
+                next_due = template.date.replace(year=today.year + 1)
+        else:
+            continue
+
+        # Only create if due today
+        if next_due != today:
+            continue
+
+        # Check if already created today for this template
+        existing_query = select(Expense).where(
+            Expense.template_id == template.id,
+            Expense.date == today
+        )
+        existing_result = await db.execute(existing_query)
+        if existing_result.scalar_one_or_none():
+            continue
+
+        # Create the expense entry
+        new_expense = Expense(
+            date=today,
+            category=template.category,
+            cost_type=template.cost_type,
+            expense_group=template.expense_group,
+            description=template.description,
+            amount=template.amount,
+            vendor=template.vendor,
+            payment_method=template.payment_method,
+            company_id=template.company_id,
+            driver_id=template.driver_id,
+            truck_id=template.truck_id,
+            is_template=False,
+            template_id=template.id
+        )
+        db.add(new_expense)
+        created += 1
+
+    await db.commit()
+    return {"message": f"Generated {created} recurring expenses"}

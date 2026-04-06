@@ -19,6 +19,10 @@ class ExpenseBase(BaseModel):
     driver_id: Optional[int] = None
     truck_id: Optional[int] = None
     load_id: Optional[int] = None
+    frequency: Optional[str] = None
+    pay_day: Optional[int] = None
+    is_template: bool = False
+    template_id: Optional[int] = None
 
 
 class ExpenseCreate(ExpenseBase):
@@ -38,11 +42,19 @@ class ExpenseUpdate(BaseModel):
     driver_id: Optional[int] = None
     truck_id: Optional[int] = None
     load_id: Optional[int] = None
+    frequency: Optional[str] = None
+    pay_day: Optional[int] = None
+    is_template: Optional[bool] = None
+    template_id: Optional[int] = None
 
 
 class ExpenseResponse(ExpenseBase):
     id: int
     company_id: int
+    frequency: Optional[str] = None
+    pay_day: Optional[int] = None
+    is_template: bool = False
+    template_id: Optional[int] = None
     driver: Optional[DriverResponse] = None
     truck: Optional[TruckResponse] = None
     created_at: datetime

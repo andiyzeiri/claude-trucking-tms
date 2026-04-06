@@ -105,6 +105,10 @@ python3 create_payroll_overrides_table.py || echo "⚠️  create_payroll_overri
 echo "🔧 Adding truck_id to driver_payroll_settings..."
 python3 add_truck_to_payroll_settings.py || echo "⚠️  add_truck_to_payroll_settings.py had errors, continuing..."
 
+# Add recurring expense columns
+echo "🔧 Adding recurring expense columns..."
+python3 add_recurring_expense_columns.py || echo "⚠️  add_recurring_expense_columns.py had errors, continuing..."
+
 # Add expense_group column to expenses
 echo "🔧 Adding expense_group column..."
 python3 add_expense_group_column.py || echo "⚠️  add_expense_group_column.py had errors, continuing..."
@@ -112,6 +116,9 @@ python3 add_expense_group_column.py || echo "⚠️  add_expense_group_column.py
 # Add pay_type columns to driver_payroll_settings
 echo "🔧 Adding pay_type columns..."
 python3 add_pay_type_columns.py || echo "⚠️  add_pay_type_columns.py had errors, continuing..."
+
+# Note: Recurring expenses are generated via POST /api/v1/expenses/generate-recurring
+# This should be called daily via a cron job or on page load
 
 # Stamp Alembic version to match current state
 echo "📦 Stamping Alembic version..."

@@ -15,6 +15,9 @@ export interface ExpenseFormData {
   vendor?: string
   payment_method?: string
   receipt_number?: string
+  frequency?: string
+  pay_day?: number
+  is_template?: boolean
   driver_id?: number
   truck_id?: number
   load_id?: number

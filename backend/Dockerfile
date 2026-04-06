@@ -69,6 +69,7 @@ COPY create_payroll_table.py ./
 COPY create_payroll_overrides_table.py ./
 COPY add_truck_to_payroll_settings.py ./
 COPY add_pay_type_columns.py ./
+COPY add_recurring_expense_columns.py ./
 COPY add_expense_group_column.py ./
 COPY entrypoint.sh ./
 

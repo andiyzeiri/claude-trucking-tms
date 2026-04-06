@@ -65,6 +65,9 @@ export default function ExpensesPage() {
       cost_type: costType,
       expense_group: activeTab,
       description: '',
+      is_template: costType === 'fixed',
+      frequency: costType === 'fixed' ? 'monthly' : undefined,
+      pay_day: costType === 'fixed' ? 1 : undefined,
       amount: 0,
     }
     await createExpense.mutateAsync(data)
@@ -200,12 +203,15 @@ export default function ExpensesPage() {
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Monthly</th>
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Yearly</th>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Category</th>
+                {costType === 'fixed' && (
+                  <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Frequency / Pay Day</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {data.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
+                  <td colSpan={costType === 'fixed' ? 9 : 8} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
                     No {costType} expenses yet
                   </td>
                 </tr>
@@ -312,6 +318,31 @@ export default function ExpensesPage() {
                           selectOptions: EXPENSE_CATEGORIES.map(c => ({ value: c, label: c })),
                         })}
                       </td>
+                      {costType === 'fixed' && (
+                        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '160px' }}>
+                          <div className="flex items-center gap-1">
+                            <select
+                              className="border rounded px-1 py-0.5 text-xs bg-white"
+                              value={expense.frequency || 'monthly'}
+                              onChange={(e) => updateField(expense.id, 'frequency', e.target.value)}
+                            >
+                              <option value="weekly">Weekly</option>
+                              <option value="monthly">Monthly</option>
+                              <option value="yearly">Yearly</option>
+                            </select>
+                            <span className="text-xs text-gray-400">day</span>
+                            <input
+                              type="number"
+                              className="w-10 border rounded px-1 py-0.5 text-xs text-center"
+                              min={1}
+                              max={expense.frequency === 'weekly' ? 7 : expense.frequency === 'yearly' ? 365 : 31}
+                              defaultValue={expense.pay_day || 1}
+                              onBlur={(e) => updateField(expense.id, 'pay_day', parseInt(e.target.value) || 1)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                            />
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   )
                 })
@@ -324,7 +355,7 @@ export default function ExpensesPage() {
                   <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalWeekly)}</td>
                   <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalMonthly)}</td>
                   <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalYearly)}</td>
-                  <td className="px-3 py-2.5" style={{ borderColor: 'var(--monday-border-light)' }}></td>
+                  <td className="px-3 py-2.5" style={{ borderColor: 'var(--monday-border-light)' }} colSpan={costType === 'fixed' ? 2 : 1}></td>
                 </tr>
               )}
             </tbody>

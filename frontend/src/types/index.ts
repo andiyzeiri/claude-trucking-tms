@@ -133,6 +133,10 @@ export interface Expense {
   truck_id?: number
   truck?: Truck
   load_id?: number
+  frequency?: string
+  pay_day?: number
+  is_template?: boolean
+  template_id?: number
   company_id: number
   created_at: string
   updated_at: string
