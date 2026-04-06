@@ -947,11 +947,11 @@ export default function ReportsPage() {
                     const fuelPricePerMile = fuelInfo?.pricePerMile || 0
 
                     const gross = safeNumber(driverData.totals.gross)
-                    const totalInsYearly = trucks.reduce((s: number, t: any) => s + (Number(t.cargo_insurance) || 0) + (Number(t.liability_insurance) || 0) + (Number(t.physical_damage_insurance) || 0), 0)
-                    const now = new Date()
-                    const startOfYear = new Date(now.getFullYear(), 0, 1)
-                    const weeksElapsed = Math.floor((now.getTime() - startOfYear.getTime()) / (7 * 24 * 60 * 60 * 1000))
-                    const insYtd = (totalInsYearly / 52) * weeksElapsed
+                    const driverTruck = settings?.truck_id ? trucks.find((t: any) => t.id === settings.truck_id) : null
+                    const truckInsYearly = driverTruck ? (Number(driverTruck.cargo_insurance) || 0) + (Number(driverTruck.liability_insurance) || 0) + (Number(driverTruck.physical_damage_insurance) || 0) : 0
+                    const insWeekly = truckInsYearly / 52
+                    const driverWeeks = driverData.weeks.length
+                    const insYtd = insWeekly * driverWeeks
                     const expensePct = gross * 0.02
                     // TODO: Fixed/variable expenses will come from expense tab later
                     const fixedExp = 0
@@ -1023,11 +1023,6 @@ export default function ReportsPage() {
                   {(() => {
                     let totGross = 0, totMiles = 0, totFuelMiles = 0, totFuel = 0, totDriverPay = 0
                     let totInsYtd = 0, totExpPct = 0, totFixedExp = 0, totVariableExp = 0, totProfit = 0
-                    const ftTotalInsYearly = trucks.reduce((s: number, t: any) => s + (Number(t.cargo_insurance) || 0) + (Number(t.liability_insurance) || 0) + (Number(t.physical_damage_insurance) || 0), 0)
-                    const ftNow = new Date()
-                    const ftStartOfYear = new Date(ftNow.getFullYear(), 0, 1)
-                    const ftWeeksElapsed = Math.floor((ftNow.getTime() - ftStartOfYear.getTime()) / (7 * 24 * 60 * 60 * 1000))
-                    const ftInsYtd = (ftTotalInsYearly / 52) * ftWeeksElapsed
                     filteredData.forEach((driverData) => {
                       const fuelInfo = fuelByDriver.get(driverData.driver_id)
                       const settings = settingsMap.get(driverData.driver_id)
@@ -1039,15 +1034,19 @@ export default function ReportsPage() {
                       const fixedExp = 0
                       const variableExp = 0
                       const gross = safeNumber(driverData.totals.gross)
+                      const driverTruck = settings?.truck_id ? trucks.find((t: any) => t.id === settings.truck_id) : null
+                      const truckInsYearly = driverTruck ? (Number(driverTruck.cargo_insurance) || 0) + (Number(driverTruck.liability_insurance) || 0) + (Number(driverTruck.physical_damage_insurance) || 0) : 0
+                      const insWeekly = truckInsYearly / 52
+                      const insYtd = insWeekly * driverData.weeks.length
                       const expensePct = gross * 0.02
-                      const profit = gross - driverPay - fuelTotal - ftInsYtd - expensePct - fixedExp - variableExp
+                      const profit = gross - driverPay - fuelTotal - insYtd - expensePct - fixedExp - variableExp
 
                       totGross += gross
                       totMiles += safeNumber(driverData.totals.miles)
                       totFuelMiles += fuelMiles
                       totFuel += fuelTotal
                       totDriverPay += driverPay
-                      totInsYtd += ftInsYtd
+                      totInsYtd += insYtd
                       totExpPct += expensePct
                       totFixedExp += fixedExp
                       totVariableExp += variableExp
