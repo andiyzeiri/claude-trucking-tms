@@ -1,7 +1,5 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
-
 import React, { useState, useMemo, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
@@ -220,6 +218,20 @@ export default function ReportsPage() {
     return Array.from(years).filter(y => !isNaN(y)).sort((a, b) => b - a)
   }, [loads, expenses, fuel])
 
+  // Find the last week number that has fuel on the payroll tab
+  const lastFuelWeek = useMemo(() => {
+    let maxWeek = 0
+    if (calculatedPayroll && Array.isArray(calculatedPayroll)) {
+      calculatedPayroll.forEach((entry: any) => {
+        if (!entry?.driver_id || !entry?.week_number) return
+        if ((Number(entry.fuel) || 0) > 0 && entry.week_number > maxWeek) {
+          maxWeek = entry.week_number
+        }
+      })
+    }
+    return maxWeek || 52 // fallback to 52 if no fuel data
+  }, [calculatedPayroll])
+
   // Build expense lookup by driver and week (filtered by year)
   const expensesByDriverWeek = useMemo(() => {
     const map = new Map<string, number>()
@@ -401,20 +413,6 @@ export default function ReportsPage() {
     if (driverSettingsData) driverSettingsData.forEach((s: any) => map.set(s.driver_id, s))
     return map
   }, [driverSettingsData])
-
-  // Find the last week number that has fuel on the payroll tab
-  const lastFuelWeek = useMemo(() => {
-    let maxWeek = 0
-    if (calculatedPayroll && Array.isArray(calculatedPayroll)) {
-      calculatedPayroll.forEach((entry: any) => {
-        if (!entry?.driver_id || !entry?.week_number) return
-        if ((Number(entry.fuel) || 0) > 0 && entry.week_number > maxWeek) {
-          maxWeek = entry.week_number
-        }
-      })
-    }
-    return maxWeek || 52 // fallback to 52 if no fuel data
-  }, [calculatedPayroll])
 
   // Aggregate payroll data per driver for the year (adjusted gross, deductions)
   const payrollByDriver = useMemo(() => {
