@@ -318,7 +318,12 @@ export default function ExpensesPage() {
                       {costType === 'fixed' && (
                         <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
                           <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>
-                            {amount > 0 ? formatCurrency(monthly * (new Date().getMonth() + 1)) : '-'}
+                            {(() => {
+                              const now = new Date()
+                              const startOfYear = new Date(now.getFullYear(), 0, 1)
+                              const weeksElapsed = Math.floor((now.getTime() - startOfYear.getTime()) / (7 * 24 * 60 * 60 * 1000))
+                              return amount > 0 ? formatCurrency(weekly * weeksElapsed) : '-'
+                            })()}
                           </div>
                         </td>
                       )}
@@ -336,7 +341,12 @@ export default function ExpensesPage() {
                   <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalYearly)}</td>
                   {costType === 'fixed' && (
                     <td className="px-3 py-2.5 text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
-                      {formatCurrency(totalMonthly * (new Date().getMonth() + 1))}
+                      {(() => {
+                        const now = new Date()
+                        const startOfYear = new Date(now.getFullYear(), 0, 1)
+                        const weeksElapsed = Math.floor((now.getTime() - startOfYear.getTime()) / (7 * 24 * 60 * 60 * 1000))
+                        return formatCurrency(totalWeekly * weeksElapsed)
+                      })()}
                     </td>
                   )}
                 </tr>
