@@ -13,7 +13,6 @@ import { useFuel } from '@/hooks/use-fuel'
 import { useTrucks } from '@/hooks/use-trucks'
 import { useDriverPayrollSettings, useUpdateDriverPayrollSettings, useCreateOrUpdateDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
 import { useCalculatedPayroll } from '@/hooks/use-payroll'
-import { usePayrollOverrides } from '@/hooks/use-payroll-overrides'
 import { Driver } from '@/types'
 
 // Helper to safely convert to number, defaulting to 0 for NaN/null/undefined
@@ -155,7 +154,6 @@ export default function ReportsPage() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
 
   const { data: calculatedPayroll } = useCalculatedPayroll(selectedYear)
-  const { data: payrollOverrides } = usePayrollOverrides(selectedYear)
   const [searchTerm, setSearchTerm] = useState('')
   const [expandedDrivers, setExpandedDrivers] = useState<Set<number>>(new Set())
 
@@ -389,29 +387,19 @@ export default function ReportsPage() {
     return map
   }, [driverSettingsData])
 
-  // Find the last week number that has fuel on the payroll tab (respecting overrides)
+  // Find the last week number that has fuel on the payroll tab
   const lastFuelWeek = useMemo(() => {
     let maxWeek = 0
-    // Build overrides lookup
-    const overrides = new Map<string, number>()
-    if (payrollOverrides) {
-      payrollOverrides.forEach((o: any) => {
-        overrides.set(`${o.driver_id}_${o.week_number}_${o.field}`, o.value)
-      })
-    }
     if (calculatedPayroll && Array.isArray(calculatedPayroll)) {
       calculatedPayroll.forEach((entry: any) => {
         if (!entry?.driver_id || !entry?.week_number) return
-        // Check if fuel was overridden for this driver/week
-        const fuelOverride = overrides.get(`${entry.driver_id}_${entry.week_number}_fuel`)
-        const fuelVal = fuelOverride !== undefined ? fuelOverride : (Number(entry.fuel) || 0)
-        if (fuelVal > 0 && entry.week_number > maxWeek) {
+        if ((Number(entry.fuel) || 0) > 0 && entry.week_number > maxWeek) {
           maxWeek = entry.week_number
         }
       })
     }
     return maxWeek || 52 // fallback to 52 if no fuel data
-  }, [calculatedPayroll, payrollOverrides])
+  }, [calculatedPayroll])
 
   // Aggregate payroll data per driver for the year (adjusted gross, deductions)
   const payrollByDriver = useMemo(() => {
