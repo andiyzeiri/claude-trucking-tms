@@ -384,13 +384,15 @@ export default function ReportsPage() {
 
   // Aggregate payroll data per driver for the year (adjusted gross, deductions)
   const payrollByDriver = useMemo(() => {
-    const map = new Map<number, { adjustedGross: number; insurance: number; parking: number; trailer: number; misc: number; dispatch: number }>()
+    const map = new Map<number, { adjustedGross: number; insurance: number; insuranceWeeks: number; parking: number; trailer: number; misc: number; dispatch: number }>()
     if (calculatedPayroll && Array.isArray(calculatedPayroll)) {
       calculatedPayroll.forEach((entry: any) => {
         if (!entry?.driver_id) return
-        const existing = map.get(entry.driver_id) || { adjustedGross: 0, insurance: 0, parking: 0, trailer: 0, misc: 0, dispatch: 0 }
+        const existing = map.get(entry.driver_id) || { adjustedGross: 0, insurance: 0, insuranceWeeks: 0, parking: 0, trailer: 0, misc: 0, dispatch: 0 }
         existing.adjustedGross += Number(entry.gross) || 0
-        existing.insurance += Number(entry.insurance) || 0
+        const insAmt = Number(entry.insurance) || 0
+        existing.insurance += insAmt
+        if (insAmt > 0) existing.insuranceWeeks += 1
         existing.parking += Number(entry.parking) || 0
         existing.trailer += Number(entry.trailer) || 0
         existing.misc += Number(entry.misc) || 0
@@ -952,11 +954,13 @@ export default function ReportsPage() {
                     const miscWeekly = Number(settings?.misc_weekly) || 0
 
                     const insTotal = payrollInfo?.insurance || (insWeekly * weeksWithLoads)
+                    const insWeeksOnPayroll = payrollInfo?.insuranceWeeks || 0
+                    const adjInsurance = insWeeksOnPayroll > 0 ? payrollInfo!.insurance - (insWeekly * insWeeksOnPayroll) : 0
                     const trailerTotal = payrollInfo?.trailer || (trailerWeekly * weeksWithLoads)
                     const parkingTotal = payrollInfo?.parking || (parkingWeekly * weeksWithLoads)
                     const miscTotal = payrollInfo?.misc || (miscWeekly * weeksWithLoads)
 
-                    const profit = adjGross - dispatchAmt - fuelTotal - insTotal - trailerTotal - parkingTotal - miscTotal
+                    const profit = adjGross - dispatchAmt - fuelTotal - insTotal - adjInsurance - trailerTotal - parkingTotal - miscTotal
 
                     return (
                       <tr key={driverData.driver_id} className="border-t border-gray-200 hover:bg-orange-50/30">
@@ -989,7 +993,7 @@ export default function ReportsPage() {
                           </div>
                         </td>
                         <td className="px-3 py-3 text-sm text-right text-gray-600">{formatCurrency(insWeekly)}/wk</td>
-                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{formatCurrency(insTotal)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{adjInsurance !== 0 ? formatCurrency(adjInsurance) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-gray-600">{formatCurrency(trailerWeekly)}/wk</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{formatCurrency(trailerTotal)}</td>
                         <td className="px-3 py-3 text-sm text-right text-gray-600">{formatCurrency(parkingWeekly)}/wk</td>
