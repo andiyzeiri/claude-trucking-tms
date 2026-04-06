@@ -924,6 +924,7 @@ export default function ReportsPage() {
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Gross</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[90px]">Load Miles</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[90px]">Fuel Miles</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[90px]">Rate/Mi</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Fuel Total</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[90px]">Fuel $/Mi</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">Driver Pay</th>
@@ -966,6 +967,7 @@ export default function ReportsPage() {
                         <td className="px-3 py-3 text-sm text-right font-semibold" style={{color: '#1a5f2a'}}>{formatCurrency(safeNumber(driverData.totals.gross))}</td>
                         <td className="px-3 py-3 text-sm text-right text-gray-700">{formatNumber(driverData.totals.miles)}</td>
                         <td className="px-3 py-3 text-sm text-right text-gray-700">{fuelMiles > 0 ? formatNumber(fuelMiles) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-600">{fuelMiles > 0 ? `$${(gross / fuelMiles).toFixed(3)}` : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{fuelTotal > 0 ? formatCurrency(fuelTotal) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-gray-600">{fuelPricePerMile > 0 ? `$${fuelPricePerMile.toFixed(3)}` : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right" onClick={(e) => e.stopPropagation()}>
@@ -1058,6 +1060,7 @@ export default function ReportsPage() {
                         <td className="px-3 py-3 text-sm text-right" style={{color: '#1a5f2a'}}>{formatCurrency(totGross)}</td>
                         <td className="px-3 py-3 text-sm text-right text-gray-700">{formatNumber(totMiles)}</td>
                         <td className="px-3 py-3 text-sm text-right text-gray-700">{totFuelMiles > 0 ? formatNumber(totFuelMiles) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-600">{totFuelMiles > 0 ? `$${(totGross / totFuelMiles).toFixed(3)}` : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totFuel > 0 ? formatCurrency(totFuel) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-gray-600">{totFuelPpm > 0 ? `$${totFuelPpm.toFixed(3)}` : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-gray-500">{formatCurrency(totDriverPay)}</td>
