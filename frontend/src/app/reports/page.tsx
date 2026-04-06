@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -159,13 +159,11 @@ export default function ReportsPage() {
 
   // Equipment expenses state (persisted in localStorage)
   const EQUIP_CATEGORIES = ['Insurance', 'Truck', 'Trailer', 'Maintenance', 'ELD', 'Brakes', 'Tires', 'Tolls']
-  const [equipCosts, setEquipCosts] = useState<Record<string, number>>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('equipmentExpenses')
-      if (saved) return JSON.parse(saved)
-    }
-    return {}
-  })
+  const [equipCosts, setEquipCosts] = useState<Record<string, number>>({})
+  useEffect(() => {
+    const saved = localStorage.getItem('equipmentExpenses')
+    if (saved) setEquipCosts(JSON.parse(saved))
+  }, [])
   const updateEquipCost = (category: string, value: number) => {
     const updated = { ...equipCosts, [category]: value }
     setEquipCosts(updated)
