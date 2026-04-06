@@ -979,6 +979,68 @@ export default function ReportsPage() {
                     )
                   })}
                 </tbody>
+                <tfoot>
+                  {(() => {
+                    let totGross = 0, totAdjGross = 0, totMiles = 0, totFuelMiles = 0, totFuel = 0
+                    let totDispatch = 0, totIns = 0, totAdjIns = 0, totTrailer = 0, totParking = 0, totMisc = 0, totProfit = 0
+                    filteredData.forEach((driverData) => {
+                      const fuelInfo = fuelByDriver.get(driverData.driver_id)
+                      const settings = settingsMap.get(driverData.driver_id)
+                      const payrollInfo = payrollByDriver.get(driverData.driver_id)
+                      const totalGross = safeNumber(driverData.totals.gross)
+                      const adjGross = payrollInfo?.adjustedGross || totalGross
+                      const dispatchTotal = payrollInfo?.dispatch || 0
+                      const insTotal = payrollInfo?.insurance || 0
+                      const driverTruck = settings?.truck_id ? trucks.find((t: any) => t.id === settings.truck_id) : null
+                      const truckInsYearly = driverTruck ? (Number(driverTruck.cargo_insurance) || 0) + (Number(driverTruck.liability_insurance) || 0) + (Number(driverTruck.physical_damage_insurance) || 0) : 0
+                      const insWeekly = truckInsYearly / 52
+                      const insWeeksOnPayroll = payrollInfo?.insuranceWeeks || 0
+                      const adjInsurance = insWeeksOnPayroll > 0 ? insTotal - (insWeekly * insWeeksOnPayroll) : 0
+                      const trailerTotal = payrollInfo?.trailer || 0
+                      const parkingTotal = payrollInfo?.parking || 0
+                      const miscTotal = payrollInfo?.misc || 0
+                      const fuelTotal = fuelInfo?.fuelTotal || 0
+                      const profit = adjGross - dispatchTotal - fuelTotal - insTotal - adjInsurance - trailerTotal - parkingTotal - miscTotal
+
+                      totGross += totalGross
+                      totAdjGross += adjGross
+                      totMiles += safeNumber(driverData.totals.miles)
+                      totFuelMiles += fuelInfo?.fuelMiles || 0
+                      totFuel += fuelTotal
+                      totDispatch += dispatchTotal
+                      totIns += insTotal
+                      totAdjIns += adjInsurance
+                      totTrailer += trailerTotal
+                      totParking += parkingTotal
+                      totMisc += miscTotal
+                      totProfit += profit
+                    })
+                    const totFuelPpm = totFuelMiles > 0 ? totFuel / totFuelMiles : 0
+                    return (
+                      <tr className="border-t-2 border-gray-300 bg-gray-50 font-bold">
+                        <td className="px-3 py-3 text-sm">Total</td>
+                        <td className="px-3 py-3 text-sm text-right" style={{color: '#1a5f2a'}}>{formatCurrency(totGross)}</td>
+                        <td className="px-3 py-3 text-sm text-right" style={{color: '#1a5f2a'}}>{formatCurrency(totAdjGross)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-700">{formatNumber(totMiles)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-700">{totFuelMiles > 0 ? formatNumber(totFuelMiles) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{totFuel > 0 ? formatCurrency(totFuel) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-600">{totFuelPpm > 0 ? `$${totFuelPpm.toFixed(3)}` : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{totDispatch > 0 ? formatCurrency(totDispatch) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{totIns > 0 ? formatCurrency(totIns) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{totAdjIns !== 0 ? formatCurrency(totAdjIns) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{totTrailer > 0 ? formatCurrency(totTrailer) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{totParking > 0 ? formatCurrency(totParking) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{totMisc > 0 ? formatCurrency(totMisc) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right" style={{
+                          backgroundColor: 'rgba(26, 95, 42, 0.1)',
+                          color: totProfit >= 0 ? '#1a5f2a' : '#b91c1c'
+                        }}>
+                          {formatCurrency(totProfit)}
+                        </td>
+                      </tr>
+                    )
+                  })()}
+                </tfoot>
               </table>
             </div>
           </div>
