@@ -89,6 +89,13 @@ async def update_expense(
 
     update_data = expense_update.dict(exclude_unset=True)
     for field, value in update_data.items():
+        # Convert date strings to date objects
+        if field == 'date' and isinstance(value, str):
+            value = date.fromisoformat(value)
+        # Convert amount strings to Decimal
+        if field == 'amount' and value is not None:
+            from decimal import Decimal
+            value = Decimal(str(value))
         setattr(expense, field, value)
 
     await db.commit()
