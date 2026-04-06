@@ -396,7 +396,7 @@ export default function ExpensesPage() {
               </tr>
             </thead>
             <tbody>
-              {activeTrucks.map((truck: any) => {
+              {[...activeTrucks].sort((a: any, b: any) => a.truck_number.localeCompare(b.truck_number, undefined, { numeric: true })).map((truck: any) => {
                 const cargo = Number(truck.cargo_insurance) || 0
                 const liability = Number(truck.liability_insurance) || 0
                 const physical = Number(truck.physical_damage_insurance) || 0
