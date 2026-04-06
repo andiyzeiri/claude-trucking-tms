@@ -903,6 +903,54 @@ export default function ReportsPage() {
                     )
                   })}
                 </tbody>
+                <tfoot>
+                  {(() => {
+                    let totGross = 0, totMiles = 0, totFuelMiles = 0, totFuel = 0, totDriverPay = 0
+                    let totFixedExp = 0, totVariableExp = 0, totProfit = 0
+                    filteredData.forEach((driverData) => {
+                      const fuelInfo = fuelByDriver.get(driverData.driver_id)
+                      const settings = settingsMap.get(driverData.driver_id)
+                      const payType = settings?.pay_type || 'flat'
+                      const payRate = Number(settings?.pay_rate) || 0
+                      const fuelMiles = fuelInfo?.fuelMiles || 0
+                      const driverPay = payType === 'per_mile' ? payRate * fuelMiles : payRate
+                      const fuelTotal = fuelInfo?.fuelTotal || 0
+                      const fixedExp = 0
+                      const variableExp = 0
+                      const gross = safeNumber(driverData.totals.gross)
+                      const profit = gross - driverPay - fuelTotal - fixedExp - variableExp
+
+                      totGross += gross
+                      totMiles += safeNumber(driverData.totals.miles)
+                      totFuelMiles += fuelMiles
+                      totFuel += fuelTotal
+                      totDriverPay += driverPay
+                      totFixedExp += fixedExp
+                      totVariableExp += variableExp
+                      totProfit += profit
+                    })
+                    const totFuelPpm = totFuelMiles > 0 ? totFuel / totFuelMiles : 0
+                    return (
+                      <tr className="border-t-2 border-gray-300 bg-gray-50 font-bold">
+                        <td className="px-3 py-3 text-sm">Total</td>
+                        <td className="px-3 py-3 text-sm text-right" style={{color: '#1a5f2a'}}>{formatCurrency(totGross)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-700">{formatNumber(totMiles)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-700">{totFuelMiles > 0 ? formatNumber(totFuelMiles) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{totFuel > 0 ? formatCurrency(totFuel) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-600">{totFuelPpm > 0 ? `$${totFuelPpm.toFixed(3)}` : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-gray-500">{formatCurrency(totDriverPay)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{totFixedExp > 0 ? formatCurrency(totFixedExp) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{totVariableExp > 0 ? formatCurrency(totVariableExp) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right" style={{
+                          backgroundColor: 'rgba(26, 95, 42, 0.1)',
+                          color: totProfit >= 0 ? '#1a5f2a' : '#b91c1c'
+                        }}>
+                          {formatCurrency(totProfit)}
+                        </td>
+                      </tr>
+                    )
+                  })()}
+                </tfoot>
               </table>
             </div>
           </div>
