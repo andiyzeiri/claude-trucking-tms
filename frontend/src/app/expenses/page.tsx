@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, ExpenseFormData } from '@/hooks/use-expenses'
 import { useDrivers } from '@/hooks/use-drivers'
-import { useTrucks } from '@/hooks/use-trucks'
+import { useTrucks, useUpdateTruck } from '@/hooks/use-trucks'
 import { Plus, Building2, Users, Truck, Shield, MoreHorizontal } from 'lucide-react'
 import { Expense } from '@/types'
 import { formatCurrency } from '@/lib/utils'
@@ -35,10 +35,12 @@ export default function ExpensesPage() {
   const createExpense = useCreateExpense()
   const updateExpense = useUpdateExpense()
   const deleteExpense = useDeleteExpense()
+  const updateTruck = useUpdateTruck()
 
   const expenses = expensesData?.items || []
   const drivers = driversData?.items || []
   const trucks = trucksData?.items || []
+  const activeTrucks = trucks.filter((t: any) => t.type === 'truck')
 
   const [activeTab, setActiveTab] = useState<ExpenseTab>('company')
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
@@ -358,6 +360,106 @@ export default function ExpensesPage() {
     )
   }
 
+  const renderInsuranceTable = () => {
+    const totalCargo = activeTrucks.reduce((s: number, t: any) => s + (Number(t.cargo_insurance) || 0), 0)
+    const totalLiability = activeTrucks.reduce((s: number, t: any) => s + (Number(t.liability_insurance) || 0), 0)
+    const totalPhysical = activeTrucks.reduce((s: number, t: any) => s + (Number(t.physical_damage_insurance) || 0), 0)
+    const grandTotal = totalCargo + totalLiability + totalPhysical
+
+    const updateInsurance = (truckId: number, field: string, value: number) => {
+      updateTruck.mutate({ id: truckId, data: { [field]: value } })
+    }
+
+    return (
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
+          Truck Insurance
+          <span className="ml-2 text-sm font-normal" style={{ color: 'var(--monday-text-muted)' }}>
+            ({activeTrucks.length} trucks)
+          </span>
+        </h2>
+        <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
+          <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+            <thead>
+              <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Truck #</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>VIN</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Value</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Cargo</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Liability</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Physical Damage</th>
+                <th className="px-3 py-2.5 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activeTrucks.map((truck: any) => {
+                const cargo = Number(truck.cargo_insurance) || 0
+                const liability = Number(truck.liability_insurance) || 0
+                const physical = Number(truck.physical_damage_insurance) || 0
+                const total = cargo + liability + physical
+
+                return (
+                  <tr
+                    key={truck.id}
+                    className="border-b transition-colors"
+                    style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)' }}
+                  >
+                    <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>
+                      {truck.truck_number}
+                    </td>
+                    <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-secondary)', fontFamily: 'monospace' }}>
+                      {truck.vin || '-'}
+                    </td>
+                    <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
+                      {truck.value ? formatCurrency(Number(truck.value)) : '-'}
+                    </td>
+                    {['cargo_insurance', 'liability_insurance', 'physical_damage_insurance'].map(field => (
+                      <td key={field} className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', minWidth: '100px' }}>
+                        {isEditing(truck.id, field) ? (
+                          <input
+                            type="number" step="0.01"
+                            className="w-full border rounded px-2 py-1 text-sm text-right"
+                            style={{ borderColor: 'var(--monday-border)' }}
+                            defaultValue={Number((truck as any)[field]) || ''}
+                            onBlur={(e) => updateInsurance(truck.id, field, parseFloat(e.target.value) || 0)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                            autoFocus
+                          />
+                        ) : (
+                          <div
+                            onClick={() => setEditingCell({ id: truck.id, field })}
+                            className="cursor-pointer rounded px-1.5 py-0.5 hover:bg-white hover:shadow-sm"
+                            style={{ fontSize: '13px', color: 'var(--monday-text-primary)' }}
+                          >
+                            {Number((truck as any)[field]) > 0 ? formatCurrency(Number((truck as any)[field])) : '-'}
+                          </div>
+                        )}
+                      </td>
+                    ))}
+                    <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>
+                      {total > 0 ? formatCurrency(total) : '-'}
+                    </td>
+                  </tr>
+                )
+              })}
+              {activeTrucks.length > 0 && (
+                <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                  <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }} colSpan={3}>Total</td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalCargo)}</td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalLiability)}</td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalPhysical)}</td>
+                  <td className="px-3 py-2.5 text-right font-bold" style={{ fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(grandTotal)}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
+
   if (isLoading) {
     return <Layout><div className="p-8">Loading...</div></Layout>
   }
@@ -397,8 +499,14 @@ export default function ExpensesPage() {
           })}
         </div>
 
-        {renderTable('Fixed Costs', fixedExpenses, 'fixed')}
-        {renderTable('Variable Costs', variableExpenses, 'variable')}
+        {activeTab === 'insurance' ? (
+          renderInsuranceTable()
+        ) : (
+          <>
+            {renderTable('Fixed Costs', fixedExpenses, 'fixed')}
+            {renderTable('Variable Costs', variableExpenses, 'variable')}
+          </>
+        )}
       </div>
     </Layout>
   )

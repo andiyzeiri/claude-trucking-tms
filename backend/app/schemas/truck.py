@@ -18,6 +18,9 @@ class TruckBase(BaseModel):
     status: TruckStatus = TruckStatus.AVAILABLE
     current_driver_id: Optional[int] = None
     value: Optional[Decimal] = None
+    cargo_insurance: Optional[Decimal] = None
+    liability_insurance: Optional[Decimal] = None
+    physical_damage_insurance: Optional[Decimal] = None
     miles: Optional[int] = None
     mpg: Optional[Decimal] = None
 
@@ -39,6 +42,9 @@ class TruckUpdate(BaseModel):
     status: Optional[TruckStatus] = None
     current_driver_id: Optional[int] = None
     value: Optional[Decimal] = None
+    cargo_insurance: Optional[Decimal] = None
+    liability_insurance: Optional[Decimal] = None
+    physical_damage_insurance: Optional[Decimal] = None
     miles: Optional[int] = None
     mpg: Optional[Decimal] = None
 

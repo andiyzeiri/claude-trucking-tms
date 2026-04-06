@@ -29,6 +29,9 @@ class Truck(Base):
     license_plate = Column(String)
     status = Column(String, default="available")
     value = Column(Numeric(12, 2), default=0)
+    cargo_insurance = Column(Numeric(10, 2), default=0)
+    liability_insurance = Column(Numeric(10, 2), default=0)
+    physical_damage_insurance = Column(Numeric(10, 2), default=0)
     miles = Column(Integer, default=0)
     mpg = Column(Numeric(5, 1), default=0)
 
