@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, Union
 from app.schemas.driver import DriverResponse
 from app.schemas.truck import TruckResponse
 
@@ -30,21 +30,21 @@ class ExpenseCreate(ExpenseBase):
 
 
 class ExpenseUpdate(BaseModel):
-    date: Optional[date] = None
-    category: Optional[str] = None
-    cost_type: Optional[str] = None
-    expense_group: Optional[str] = None
-    description: Optional[str] = None
-    amount: Optional[Decimal] = None
-    vendor: Optional[str] = None
-    payment_method: Optional[str] = None
-    receipt_number: Optional[str] = None
-    driver_id: Optional[int] = None
-    truck_id: Optional[int] = None
-    load_id: Optional[int] = None
-    frequency: Optional[str] = None
-    pay_day: Optional[int] = None
-    is_template: Optional[bool] = None
+    date: Union[date, None] = None
+    category: Union[str, None] = None
+    cost_type: Union[str, None] = None
+    expense_group: Union[str, None] = None
+    description: Union[str, None] = None
+    amount: Union[Decimal, None] = None
+    vendor: Union[str, None] = None
+    payment_method: Union[str, None] = None
+    receipt_number: Union[str, None] = None
+    driver_id: Union[int, None] = None
+    truck_id: Union[int, None] = None
+    load_id: Union[int, None] = None
+    frequency: Union[str, None] = None
+    pay_day: Union[int, None] = None
+    is_template: Union[bool, None] = None
     template_id: Optional[int] = None
 
 
