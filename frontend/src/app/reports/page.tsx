@@ -944,7 +944,8 @@ export default function ReportsPage() {
 
                     // Weekly deductions from payroll settings * number of weeks with loads
                     const weeksWithLoads = driverData.weeks.length
-                    const insWeekly = Number(settings?.insurance_weekly) || 0
+                    const totalInsurance = trucks.reduce((s: number, t: any) => s + (Number(t.cargo_insurance) || 0) + (Number(t.liability_insurance) || 0) + (Number(t.physical_damage_insurance) || 0), 0)
+                    const insWeekly = totalInsurance / 52
                     const trailerWeekly = Number(settings?.trailer_weekly) || 0
                     const parkingWeekly = Number(settings?.parking_weekly) || 0
                     const miscWeekly = Number(settings?.misc_weekly) || 0
