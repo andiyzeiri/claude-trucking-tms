@@ -387,18 +387,22 @@ export default function ReportsPage() {
     return map
   }, [driverSettingsData])
 
-  // Find the last week number that has fuel data on the payroll tab
+  // Find the last week number that has fuel entries for the selected year
   const lastFuelWeek = useMemo(() => {
     let maxWeek = 0
-    if (calculatedPayroll && Array.isArray(calculatedPayroll)) {
-      calculatedPayroll.forEach((entry: any) => {
-        if (entry?.week_number && (Number(entry.fuel) || 0) > 0) {
-          maxWeek = Math.max(maxWeek, entry.week_number)
-        }
-      })
-    }
+    fuel.forEach((fe: any) => {
+      if (!fe.date) return
+      const fDate = new Date(fe.date + 'T00:00:00')
+      const d = new Date(Date.UTC(fDate.getFullYear(), fDate.getMonth(), fDate.getDate()))
+      const dayNum = d.getUTCDay() || 7
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+      const fYear = d.getUTCFullYear()
+      if (fYear !== selectedYear) return
+      const weekNum = getWeekNumber(fDate)
+      if (weekNum > maxWeek) maxWeek = weekNum
+    })
     return maxWeek || 52 // fallback to 52 if no fuel data
-  }, [calculatedPayroll])
+  }, [fuel, selectedYear])
 
   // Aggregate payroll data per driver for the year (adjusted gross, deductions)
   const payrollByDriver = useMemo(() => {
