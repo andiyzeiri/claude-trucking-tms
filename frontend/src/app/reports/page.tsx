@@ -131,7 +131,7 @@ interface ExpenseEntry {
   truck_id: number | null
 }
 
-type TabType = 'drivers' | 'owners' | 'expenses'
+type TabType = 'drivers' | 'owners' | 'equipment' | 'expenses'
 
 export default function ReportsPage() {
   // Fetch ALL data - use large limit to get everything
@@ -156,6 +156,21 @@ export default function ReportsPage() {
   const { data: calculatedPayroll } = useCalculatedPayroll(selectedYear)
   const [searchTerm, setSearchTerm] = useState('')
   const [expandedDrivers, setExpandedDrivers] = useState<Set<number>>(new Set())
+
+  // Equipment expenses state (persisted in localStorage)
+  const EQUIP_CATEGORIES = ['Insurance', 'Truck', 'Trailer', 'Maintenance', 'ELD', 'Brakes', 'Tires', 'Tolls']
+  const [equipCosts, setEquipCosts] = useState<Record<string, number>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('equipmentExpenses')
+      if (saved) return JSON.parse(saved)
+    }
+    return {}
+  })
+  const updateEquipCost = (category: string, value: number) => {
+    const updated = { ...equipCosts, [category]: value }
+    setEquipCosts(updated)
+    localStorage.setItem('equipmentExpenses', JSON.stringify(updated))
+  }
 
   const isLoading = loadsLoading || driversLoading || expensesLoading || fuelLoading
 
@@ -506,7 +521,7 @@ export default function ReportsPage() {
     return reportData
       .filter(d => {
         // Expenses tab shows all drivers
-        if (activeTab === 'expenses') return false
+        if (activeTab === 'expenses' || activeTab === 'equipment') return false
         // Filter by tab
         if (activeTab === 'drivers' && d.driver_type !== 'company') return false
         if (activeTab === 'owners' && d.driver_type !== 'owner_operator') return false
@@ -682,6 +697,17 @@ export default function ReportsPage() {
               Owner Operators
             </button>
             <button
+              onClick={() => setActiveTab('equipment')}
+              className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'equipment'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Truck className="h-4 w-4" />
+              Equipment Expenses
+            </button>
+            <button
               onClick={() => setActiveTab('expenses')}
               className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'expenses'
@@ -707,7 +733,7 @@ export default function ReportsPage() {
         </div>
 
         {/* Summary Cards - Driver/Owner tabs */}
-        {activeTab !== 'expenses' && (
+        {activeTab !== 'expenses' && activeTab !== 'equipment' && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Loads ({selectedYear})</div>
@@ -728,6 +754,64 @@ export default function ReportsPage() {
             </div>
           </div>
         </div>
+        )}
+
+        {/* Equipment Expenses tab */}
+        {activeTab === 'equipment' && (
+          <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Expense</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Cost</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Cost per 100k Miles</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  {EQUIP_CATEGORIES.map((cat) => {
+                    const cost = equipCosts[cat] || 0
+                    const totalMiles = Array.from(fuelByDriver.values()).reduce((s, d) => s + d.fuelMiles, 0)
+                    const costPer100k = totalMiles > 0 ? (cost / totalMiles) * 100000 : 0
+                    return (
+                      <tr key={cat} className="border-t border-gray-200 hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-900">{cat}</td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          <input
+                            type="number"
+                            step="0.01"
+                            className="w-32 text-sm border rounded px-2 py-1 text-right"
+                            value={cost || ''}
+                            placeholder="0.00"
+                            onChange={(e) => updateEquipCost(cat, parseFloat(e.target.value) || 0)}
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-700 font-semibold">
+                          {costPer100k > 0 ? formatCurrency(costPer100k) : '-'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {/* Totals Row */}
+                  {(() => {
+                    const totalCost = EQUIP_CATEGORIES.reduce((s, cat) => s + (equipCosts[cat] || 0), 0)
+                    const totalMiles = Array.from(fuelByDriver.values()).reduce((s, d) => s + d.fuelMiles, 0)
+                    const totalPer100k = totalMiles > 0 ? (totalCost / totalMiles) * 100000 : 0
+                    return (
+                      <tr className="border-t-2 border-gray-300 bg-gray-50 font-bold">
+                        <td className="px-4 py-3 text-sm">Total</td>
+                        <td className="px-4 py-3 text-sm text-right">{formatCurrency(totalCost)}</td>
+                        <td className="px-4 py-3 text-sm text-right">{totalPer100k > 0 ? formatCurrency(totalPer100k) : '-'}</td>
+                      </tr>
+                    )
+                  })()}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
+              Cost per 100k miles based on {formatNumber(Array.from(fuelByDriver.values()).reduce((s, d) => s + d.fuelMiles, 0))} total fuel miles
+            </div>
+          </div>
         )}
 
         {/* Summary Cards - Expenses tab */}
@@ -820,7 +904,7 @@ export default function ReportsPage() {
         )}
 
         {/* Data Table - Drivers/Owners */}
-        {activeTab !== 'expenses' && (filteredData.length === 0 ? (
+        {activeTab !== 'expenses' && activeTab !== 'equipment' && (filteredData.length === 0 ? (
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <TrendingUp className="h-16 w-16 text-gray-400 mx-auto mb-4" />
