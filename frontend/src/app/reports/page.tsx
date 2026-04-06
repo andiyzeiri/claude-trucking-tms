@@ -919,13 +919,11 @@ export default function ReportsPage() {
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Fuel Miles</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[90px]">Fuel Total</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Fuel $/Mi</th>
-                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">%</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Dispatch</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Insurance</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Adj. Ins.</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Trailer</th>
-                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Trailer Exp</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Parking</th>
-                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Parking Exp</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Misc</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] bg-green-50">Profit</th>
                   </tr>
@@ -941,26 +939,20 @@ export default function ReportsPage() {
 
                     const totalGross = safeNumber(driverData.totals.gross)
                     const adjGross = payrollInfo?.adjustedGross || totalGross
-                    const dispatchPct = Number(settings?.dispatch_fee_percent) || 0
-                    const dispatchAmt = adjGross * (dispatchPct / 100)
 
-                    // Weekly deductions from payroll settings * number of weeks with loads
-                    const weeksWithLoads = driverData.weeks.length
+                    // All deductions come directly from payroll tab
+                    const dispatchTotal = payrollInfo?.dispatch || 0
+                    const insTotal = payrollInfo?.insurance || 0
                     const driverTruck = settings?.truck_id ? trucks.find((t: any) => t.id === settings.truck_id) : null
                     const truckInsYearly = driverTruck ? (Number(driverTruck.cargo_insurance) || 0) + (Number(driverTruck.liability_insurance) || 0) + (Number(driverTruck.physical_damage_insurance) || 0) : 0
                     const insWeekly = truckInsYearly / 52
-                    const trailerWeekly = Number(settings?.trailer_weekly) || 0
-                    const parkingWeekly = Number(settings?.parking_weekly) || 0
-                    const miscWeekly = Number(settings?.misc_weekly) || 0
-
-                    const insTotal = payrollInfo?.insurance || (insWeekly * weeksWithLoads)
                     const insWeeksOnPayroll = payrollInfo?.insuranceWeeks || 0
-                    const adjInsurance = insWeeksOnPayroll > 0 ? payrollInfo!.insurance - (insWeekly * insWeeksOnPayroll) : 0
-                    const trailerTotal = payrollInfo?.trailer || (trailerWeekly * weeksWithLoads)
-                    const parkingTotal = payrollInfo?.parking || (parkingWeekly * weeksWithLoads)
-                    const miscTotal = payrollInfo?.misc || (miscWeekly * weeksWithLoads)
+                    const adjInsurance = insWeeksOnPayroll > 0 ? insTotal - (insWeekly * insWeeksOnPayroll) : 0
+                    const trailerTotal = payrollInfo?.trailer || 0
+                    const parkingTotal = payrollInfo?.parking || 0
+                    const miscTotal = payrollInfo?.misc || 0
 
-                    const profit = adjGross - dispatchAmt - fuelTotal - insTotal - adjInsurance - trailerTotal - parkingTotal - miscTotal
+                    const profit = adjGross - dispatchTotal - fuelTotal - insTotal - adjInsurance - trailerTotal - parkingTotal - miscTotal
 
                     return (
                       <tr key={driverData.driver_id} className="border-t border-gray-200 hover:bg-orange-50/30">
@@ -971,34 +963,12 @@ export default function ReportsPage() {
                         <td className="px-3 py-3 text-sm text-right text-gray-700">{fuelMiles > 0 ? formatNumber(fuelMiles) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{fuelTotal > 0 ? formatCurrency(fuelTotal) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-gray-600">{fuelPpm > 0 ? `$${fuelPpm.toFixed(3)}` : '-'}</td>
-                        <td className="px-3 py-3 text-sm text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1">
-                            <input
-                              type="number"
-                              step="0.5"
-                              className="w-14 text-xs border rounded px-1 py-0.5 text-right"
-                              value={dispatchPct || ''}
-                              placeholder="0"
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value) || 0
-                                if (settings && settings.id > 0) {
-                                  updateDriverSettings.mutate({ driverId: driverData.driver_id, data: { dispatch_fee_percent: val } })
-                                } else {
-                                  createDriverSettings.mutate({ driver_id: driverData.driver_id, dispatch_fee_percent: val })
-                                }
-                              }}
-                            />
-                            <span className="text-xs text-gray-400">%</span>
-                            <span className="text-xs text-red-600 font-semibold w-16 text-right">({formatCurrency(dispatchAmt)})</span>
-                          </div>
-                        </td>
-                        <td className="px-3 py-3 text-sm text-right text-gray-600">{formatCurrency(insWeekly)}/wk</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{dispatchTotal > 0 ? formatCurrency(dispatchTotal) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{insTotal > 0 ? formatCurrency(insTotal) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{adjInsurance !== 0 ? formatCurrency(adjInsurance) : '-'}</td>
-                        <td className="px-3 py-3 text-sm text-right text-gray-600">{formatCurrency(trailerWeekly)}/wk</td>
-                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{formatCurrency(trailerTotal)}</td>
-                        <td className="px-3 py-3 text-sm text-right text-gray-600">{formatCurrency(parkingWeekly)}/wk</td>
-                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{formatCurrency(parkingTotal)}</td>
-                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{formatCurrency(miscTotal)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{trailerTotal > 0 ? formatCurrency(trailerTotal) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{parkingTotal > 0 ? formatCurrency(parkingTotal) : '-'}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{miscTotal > 0 ? formatCurrency(miscTotal) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right font-bold" style={{
                           backgroundColor: 'rgba(26, 95, 42, 0.1)',
                           color: profit >= 0 ? '#1a5f2a' : '#b91c1c'
