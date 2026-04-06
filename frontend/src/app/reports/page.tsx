@@ -927,6 +927,7 @@ export default function ReportsPage() {
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Fuel Total</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[90px]">Fuel $/Mi</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">Driver Pay</th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Insurance</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Expense %</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Fixed Exp</th>
                     <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Variable Exp</th>
@@ -945,11 +946,16 @@ export default function ReportsPage() {
                     const fuelPricePerMile = fuelInfo?.pricePerMile || 0
 
                     const gross = safeNumber(driverData.totals.gross)
+                    const totalInsYearly = trucks.reduce((s: number, t: any) => s + (Number(t.cargo_insurance) || 0) + (Number(t.liability_insurance) || 0) + (Number(t.physical_damage_insurance) || 0), 0)
+                    const now = new Date()
+                    const startOfYear = new Date(now.getFullYear(), 0, 1)
+                    const weeksElapsed = Math.floor((now.getTime() - startOfYear.getTime()) / (7 * 24 * 60 * 60 * 1000))
+                    const insYtd = (totalInsYearly / 52) * weeksElapsed
                     const expensePct = gross * 0.02
                     // TODO: Fixed/variable expenses will come from expense tab later
                     const fixedExp = 0
                     const variableExp = 0
-                    const totalProfit = gross - driverPay - fuelTotal - expensePct - fixedExp - variableExp
+                    const totalProfit = gross - driverPay - fuelTotal - insYtd - expensePct - fixedExp - variableExp
 
                     return (
                       <tr
@@ -997,6 +1003,7 @@ export default function ReportsPage() {
                             <span className="text-xs text-gray-500 font-semibold w-16 text-right">{formatCurrency(driverPay)}</span>
                           </div>
                         </td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{insYtd > 0 ? formatCurrency(insYtd) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600 font-semibold">{expensePct > 0 ? formatCurrency(expensePct) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{fixedExp > 0 ? formatCurrency(fixedExp) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{variableExp > 0 ? formatCurrency(variableExp) : '-'}</td>
@@ -1013,7 +1020,12 @@ export default function ReportsPage() {
                 <tfoot>
                   {(() => {
                     let totGross = 0, totMiles = 0, totFuelMiles = 0, totFuel = 0, totDriverPay = 0
-                    let totExpPct = 0, totFixedExp = 0, totVariableExp = 0, totProfit = 0
+                    let totInsYtd = 0, totExpPct = 0, totFixedExp = 0, totVariableExp = 0, totProfit = 0
+                    const ftTotalInsYearly = trucks.reduce((s: number, t: any) => s + (Number(t.cargo_insurance) || 0) + (Number(t.liability_insurance) || 0) + (Number(t.physical_damage_insurance) || 0), 0)
+                    const ftNow = new Date()
+                    const ftStartOfYear = new Date(ftNow.getFullYear(), 0, 1)
+                    const ftWeeksElapsed = Math.floor((ftNow.getTime() - ftStartOfYear.getTime()) / (7 * 24 * 60 * 60 * 1000))
+                    const ftInsYtd = (ftTotalInsYearly / 52) * ftWeeksElapsed
                     filteredData.forEach((driverData) => {
                       const fuelInfo = fuelByDriver.get(driverData.driver_id)
                       const settings = settingsMap.get(driverData.driver_id)
@@ -1026,13 +1038,14 @@ export default function ReportsPage() {
                       const variableExp = 0
                       const gross = safeNumber(driverData.totals.gross)
                       const expensePct = gross * 0.02
-                      const profit = gross - driverPay - fuelTotal - expensePct - fixedExp - variableExp
+                      const profit = gross - driverPay - fuelTotal - ftInsYtd - expensePct - fixedExp - variableExp
 
                       totGross += gross
                       totMiles += safeNumber(driverData.totals.miles)
                       totFuelMiles += fuelMiles
                       totFuel += fuelTotal
                       totDriverPay += driverPay
+                      totInsYtd += ftInsYtd
                       totExpPct += expensePct
                       totFixedExp += fixedExp
                       totVariableExp += variableExp
@@ -1048,6 +1061,7 @@ export default function ReportsPage() {
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totFuel > 0 ? formatCurrency(totFuel) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-gray-600">{totFuelPpm > 0 ? `$${totFuelPpm.toFixed(3)}` : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-gray-500">{formatCurrency(totDriverPay)}</td>
+                        <td className="px-3 py-3 text-sm text-right text-red-600">{totInsYtd > 0 ? formatCurrency(totInsYtd) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totExpPct > 0 ? formatCurrency(totExpPct) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totFixedExp > 0 ? formatCurrency(totFixedExp) : '-'}</td>
                         <td className="px-3 py-3 text-sm text-right text-red-600">{totVariableExp > 0 ? formatCurrency(totVariableExp) : '-'}</td>
