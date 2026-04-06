@@ -199,18 +199,20 @@ export default function ExpensesPage() {
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Description</th>
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Amount</th>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Vendor</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Weekly</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Monthly</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Yearly</th>
                 {costType === 'fixed' && (
-                  <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>YTD</th>
+                  <>
+                    <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Weekly</th>
+                    <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Monthly</th>
+                    <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Yearly</th>
+                    <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>YTD</th>
+                  </>
                 )}
               </tr>
             </thead>
             <tbody>
               {data.length === 0 ? (
                 <tr>
-                  <td colSpan={costType === 'fixed' ? 9 : 8} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
+                  <td colSpan={costType === 'fixed' ? 9 : 5} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
                     No {costType} expenses yet
                   </td>
                 </tr>
@@ -254,6 +256,8 @@ export default function ExpensesPage() {
                       <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
                         {renderEditableCell(expense, 'vendor')}
                       </td>
+                      {costType === 'fixed' && (
+                        <>
                       <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', minWidth: '100px' }}>
                         {isEditing(expense.id, '_weekly') ? (
                           <input
@@ -263,7 +267,7 @@ export default function ExpensesPage() {
                             defaultValue={weekly > 0 ? weekly.toFixed(2) : ''}
                             onBlur={(e) => {
                               const w = parseFloat(e.target.value) || 0
-                              const newAmount = costType === 'fixed' ? w * 4.33 : w
+                              const newAmount = w * 4.33
                               updateField(expense.id, 'amount', parseFloat(newAmount.toFixed(2)))
                             }}
                             onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingCell(null) }}
@@ -284,8 +288,7 @@ export default function ExpensesPage() {
                             defaultValue={monthly > 0 ? monthly.toFixed(2) : ''}
                             onBlur={(e) => {
                               const m = parseFloat(e.target.value) || 0
-                              const newAmount = costType === 'fixed' ? m : m / 4.33
-                              updateField(expense.id, 'amount', parseFloat(newAmount.toFixed(2)))
+                              updateField(expense.id, 'amount', parseFloat(m.toFixed(2)))
                             }}
                             onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingCell(null) }}
                             autoFocus
@@ -305,7 +308,7 @@ export default function ExpensesPage() {
                             defaultValue={yearly > 0 ? yearly.toFixed(2) : ''}
                             onBlur={(e) => {
                               const y = parseFloat(e.target.value) || 0
-                              const newAmount = costType === 'fixed' ? y / 12 : y / 52
+                              const newAmount = y / 12
                               updateField(expense.id, 'amount', parseFloat(newAmount.toFixed(2)))
                             }}
                             onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingCell(null) }}
@@ -317,7 +320,6 @@ export default function ExpensesPage() {
                           </div>
                         )}
                       </td>
-                      {costType === 'fixed' && (
                         <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)' }}>
                           <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>
                             {(() => {
@@ -328,6 +330,7 @@ export default function ExpensesPage() {
                             })()}
                           </div>
                         </td>
+                        </>
                       )}
                     </tr>
                   )
@@ -338,18 +341,20 @@ export default function ExpensesPage() {
                   <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }} colSpan={3}>Total</td>
                   <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalAmount)}</td>
                   <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}></td>
-                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalWeekly)}</td>
-                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalMonthly)}</td>
-                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalYearly)}</td>
                   {costType === 'fixed' && (
-                    <td className="px-3 py-2.5 text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
-                      {(() => {
-                        const now = new Date()
-                        const startOfYear = new Date(now.getFullYear(), 0, 1)
-                        const weeksElapsed = Math.floor((now.getTime() - startOfYear.getTime()) / (7 * 24 * 60 * 60 * 1000))
-                        return formatCurrency(totalWeekly * weeksElapsed)
-                      })()}
-                    </td>
+                    <>
+                      <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalWeekly)}</td>
+                      <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalMonthly)}</td>
+                      <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(totalYearly)}</td>
+                      <td className="px-3 py-2.5 text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
+                        {(() => {
+                          const now = new Date()
+                          const startOfYear = new Date(now.getFullYear(), 0, 1)
+                          const weeksElapsed = Math.floor((now.getTime() - startOfYear.getTime()) / (7 * 24 * 60 * 60 * 1000))
+                          return formatCurrency(totalWeekly * weeksElapsed)
+                        })()}
+                      </td>
+                    </>
                   )}
                 </tr>
               )}
