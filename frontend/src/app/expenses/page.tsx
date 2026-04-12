@@ -5,12 +5,14 @@ import Layout from '@/components/layout/layout'
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, ExpenseFormData } from '@/hooks/use-expenses'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks, useUpdateTruck } from '@/hooks/use-trucks'
-import { Plus, Building2, Users, Truck, Shield, MoreHorizontal, BarChart3 } from 'lucide-react'
+import { Plus, Building2, Users, Truck, Shield, MoreHorizontal, BarChart3, Calculator, Trash2 } from 'lucide-react'
 import { Expense } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 
 type EditingCell = { id: number; field: string } | null
-type ExpenseTab = 'overview' | 'company' | 'driver' | 'owner' | 'insurance' | 'misc'
+type ExpenseTab = 'overview' | 'rate-to-operate' | 'company' | 'driver' | 'owner' | 'insurance' | 'misc'
+
+type RateToOperateRow = { id: number; expense: string; miles: number; ratePerMile: number }
 
 const EXPENSE_CATEGORIES = [
   'Employee', 'Fuel', 'Maintenance', 'Repairs', 'Insurance', 'Registration',
@@ -22,6 +24,7 @@ const EXPENSE_CATEGORIES = [
 
 const TAB_CONFIG: { key: ExpenseTab; label: string; icon: any; activeColor: string }[] = [
   { key: 'overview', label: 'Overview', icon: BarChart3, activeColor: '#0EA5E9' },
+  { key: 'rate-to-operate', label: 'Rate To Operate', icon: Calculator, activeColor: '#F59E0B' },
   { key: 'company', label: 'Company', icon: Building2, activeColor: '#3B82F6' },
   { key: 'driver', label: 'Driver', icon: Users, activeColor: '#16A34A' },
   { key: 'owner', label: 'Owner Operator', icon: Truck, activeColor: '#EA580C' },
@@ -45,6 +48,34 @@ export default function ExpensesPage() {
 
   const [activeTab, setActiveTab] = useState<ExpenseTab>('overview')
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
+  const [rtoRows, setRtoRows] = useState<RateToOperateRow[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('rto-theoretical')
+      if (saved) return JSON.parse(saved)
+    }
+    return [
+      { id: 1, expense: 'Fuel', miles: 0, ratePerMile: 0 },
+      { id: 2, expense: 'Insurance', miles: 0, ratePerMile: 0 },
+      { id: 3, expense: 'Maintenance', miles: 0, ratePerMile: 0 },
+      { id: 4, expense: 'Truck Payment', miles: 0, ratePerMile: 0 },
+      { id: 5, expense: 'Tires', miles: 0, ratePerMile: 0 },
+    ]
+  })
+  const [rtoNextId, setRtoNextId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('rto-theoretical')
+      if (saved) {
+        const rows = JSON.parse(saved) as RateToOperateRow[]
+        return Math.max(...rows.map(r => r.id), 0) + 1
+      }
+    }
+    return 6
+  })
+
+  const saveRtoRows = (rows: RateToOperateRow[]) => {
+    setRtoRows(rows)
+    localStorage.setItem('rto-theoretical', JSON.stringify(rows))
+  }
 
   const tabExpenses = useMemo(() =>
     expenses.filter(e => (e.expense_group || 'company') === activeTab),
@@ -524,6 +555,129 @@ export default function ExpensesPage() {
       }))
   }, [expenses])
 
+  const renderRateToOperate = () => {
+    const addRow = () => {
+      const newRow: RateToOperateRow = { id: rtoNextId, expense: '', miles: 0, ratePerMile: 0 }
+      setRtoNextId(rtoNextId + 1)
+      saveRtoRows([...rtoRows, newRow])
+    }
+
+    const updateRow = (id: number, field: keyof RateToOperateRow, value: string | number) => {
+      saveRtoRows(rtoRows.map(r => r.id === id ? { ...r, [field]: value } : r))
+    }
+
+    const deleteRow = (id: number) => {
+      saveRtoRows(rtoRows.filter(r => r.id !== id))
+    }
+
+    const grandMiles = rtoRows.length > 0 ? Math.max(...rtoRows.map(r => r.miles)) : 0
+    const grandRate = rtoRows.reduce((s, r) => s + r.ratePerMile, 0)
+    const grandTotal = rtoRows.reduce((s, r) => s + (r.miles * r.ratePerMile), 0)
+
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
+            Rate To Operate — Theoretical
+          </h2>
+          <button
+            onClick={addRow}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium text-white"
+            style={{ backgroundColor: '#F59E0B' }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Row
+          </button>
+        </div>
+        <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
+          <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+            <thead>
+              <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Expense</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Miles</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Rate Per Mile</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Total</th>
+                <th className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--monday-border-light)', width: '40px' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rtoRows.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
+                    No rows yet — click Add Row to start
+                  </td>
+                </tr>
+              ) : (
+                rtoRows.map(row => (
+                  <tr
+                    key={row.id}
+                    className="border-b transition-colors"
+                    style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)' }}
+                  >
+                    <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '180px' }}>
+                      <input
+                        type="text"
+                        className="w-full bg-transparent border-0 outline-none text-sm px-1.5 py-1"
+                        style={{ color: 'var(--monday-text-primary)' }}
+                        value={row.expense}
+                        onChange={(e) => updateRow(row.id, 'expense', e.target.value)}
+                        placeholder="Expense name"
+                      />
+                    </td>
+                    <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
+                      <input
+                        type="number"
+                        className="w-full bg-transparent border-0 outline-none text-sm text-right px-1.5 py-1"
+                        style={{ color: 'var(--monday-text-primary)' }}
+                        value={row.miles || ''}
+                        onChange={(e) => updateRow(row.id, 'miles', parseFloat(e.target.value) || 0)}
+                        placeholder="0"
+                      />
+                    </td>
+                    <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full bg-transparent border-0 outline-none text-sm text-right px-1.5 py-1"
+                        style={{ color: 'var(--monday-text-primary)' }}
+                        value={row.ratePerMile || ''}
+                        onChange={(e) => updateRow(row.id, 'ratePerMile', parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                      />
+                    </td>
+                    <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>
+                      {row.miles > 0 && row.ratePerMile > 0 ? formatCurrency(row.miles * row.ratePerMile) : '-'}
+                    </td>
+                    <td className="px-2 py-2.5 text-center">
+                      <button
+                        onClick={() => deleteRow(row.id)}
+                        className="p-1 rounded hover:bg-red-50 transition-colors"
+                        style={{ color: '#EF4444' }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+              {rtoRows.length > 0 && (
+                <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                  <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>Total</td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{grandMiles > 0 ? grandMiles.toLocaleString() : '-'}</td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>${grandRate.toFixed(2)}</td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(grandTotal)}</td>
+                  <td></td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
+
   const renderOverviewTable = () => {
     const grandFixed = monthlyOverview.reduce((s, m) => s + m.fixed, 0)
     const grandVariable = monthlyOverview.reduce((s, m) => s + m.variable, 0)
@@ -623,6 +777,8 @@ export default function ExpensesPage() {
 
         {activeTab === 'overview' ? (
           renderOverviewTable()
+        ) : activeTab === 'rate-to-operate' ? (
+          renderRateToOperate()
         ) : activeTab === 'insurance' ? (
           renderInsuranceTable()
         ) : (
