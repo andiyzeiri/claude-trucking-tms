@@ -5,12 +5,12 @@ import Layout from '@/components/layout/layout'
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, ExpenseFormData } from '@/hooks/use-expenses'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks, useUpdateTruck } from '@/hooks/use-trucks'
-import { Plus, Building2, Users, Truck, Shield, MoreHorizontal } from 'lucide-react'
+import { Plus, Building2, Users, Truck, Shield, MoreHorizontal, BarChart3 } from 'lucide-react'
 import { Expense } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 
 type EditingCell = { id: number; field: string } | null
-type ExpenseTab = 'company' | 'driver' | 'owner' | 'insurance' | 'misc'
+type ExpenseTab = 'overview' | 'company' | 'driver' | 'owner' | 'insurance' | 'misc'
 
 const EXPENSE_CATEGORIES = [
   'Employee', 'Fuel', 'Maintenance', 'Repairs', 'Insurance', 'Registration',
@@ -21,6 +21,7 @@ const EXPENSE_CATEGORIES = [
 ]
 
 const TAB_CONFIG: { key: ExpenseTab; label: string; icon: any; activeColor: string }[] = [
+  { key: 'overview', label: 'Overview', icon: BarChart3, activeColor: '#0EA5E9' },
   { key: 'company', label: 'Company', icon: Building2, activeColor: '#3B82F6' },
   { key: 'driver', label: 'Driver', icon: Users, activeColor: '#16A34A' },
   { key: 'owner', label: 'Owner Operator', icon: Truck, activeColor: '#EA580C' },
@@ -42,7 +43,7 @@ export default function ExpensesPage() {
   const trucks = trucksData?.items || []
   const activeTrucks = trucks.filter((t: any) => t.type === 'truck')
 
-  const [activeTab, setActiveTab] = useState<ExpenseTab>('company')
+  const [activeTab, setActiveTab] = useState<ExpenseTab>('overview')
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
 
   const tabExpenses = useMemo(() =>
@@ -498,6 +499,89 @@ export default function ExpensesPage() {
     )
   }
 
+  const monthlyOverview = useMemo(() => {
+    const monthMap: Record<string, { fixed: number; variable: number }> = {}
+    expenses.forEach(e => {
+      const d = e.date
+      if (!d) return
+      const key = d.substring(0, 7) // "YYYY-MM"
+      if (!monthMap[key]) monthMap[key] = { fixed: 0, variable: 0 }
+      const amt = Number(e.amount || 0)
+      if (e.cost_type === 'fixed') {
+        monthMap[key].fixed += amt
+      } else {
+        monthMap[key].variable += amt
+      }
+    })
+    return Object.entries(monthMap)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([month, vals]) => ({
+        month,
+        label: new Date(month + '-01T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+        fixed: vals.fixed,
+        variable: vals.variable,
+        total: vals.fixed + vals.variable,
+      }))
+  }, [expenses])
+
+  const renderOverviewTable = () => {
+    const grandFixed = monthlyOverview.reduce((s, m) => s + m.fixed, 0)
+    const grandVariable = monthlyOverview.reduce((s, m) => s + m.variable, 0)
+    const grandTotal = grandFixed + grandVariable
+
+    return (
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
+          Monthly Expense Summary
+        </h2>
+        <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
+          <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+            <thead>
+              <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Month</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Fixed Expenses</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Variable Expenses</th>
+                <th className="px-3 py-2.5 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {monthlyOverview.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
+                    No expenses yet
+                  </td>
+                </tr>
+              ) : (
+                monthlyOverview.map(row => (
+                  <tr
+                    key={row.month}
+                    className="border-b transition-colors"
+                    style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)' }}
+                  >
+                    <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>{row.label}</td>
+                    <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(row.fixed)}</td>
+                    <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(row.variable)}</td>
+                    <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>{formatCurrency(row.total)}</td>
+                  </tr>
+                ))
+              )}
+              {monthlyOverview.length > 0 && (
+                <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+                  <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>Grand Total</td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(grandFixed)}</td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(grandVariable)}</td>
+                  <td className="px-3 py-2.5 text-right font-bold" style={{ fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(grandTotal)}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
+
   if (isLoading) {
     return <Layout><div className="p-8">Loading...</div></Layout>
   }
@@ -537,7 +621,9 @@ export default function ExpensesPage() {
           })}
         </div>
 
-        {activeTab === 'insurance' ? (
+        {activeTab === 'overview' ? (
+          renderOverviewTable()
+        ) : activeTab === 'insurance' ? (
           renderInsuranceTable()
         ) : (
           <>
