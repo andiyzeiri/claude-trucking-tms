@@ -84,12 +84,22 @@ export default function ExpensesPage() {
   ]))
   const [rtoFixedNextId, setRtoFixedNextId] = useState(() => initNextId('rto-fixed', 6))
 
-  const [rtoSummaryMiles, setRtoSummaryMiles] = useState(() => {
+  const [rtoSummaryRows, setRtoSummaryRows] = useState<{ id: number; miles: number }[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('rto-summary-miles')
-      if (saved) return parseFloat(saved) || 0
+      const saved = localStorage.getItem('rto-summary-rows')
+      if (saved) return JSON.parse(saved)
     }
-    return 0
+    return [{ id: 1, miles: 0 }]
+  })
+  const [rtoSummaryNextId, setRtoSummaryNextId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('rto-summary-rows')
+      if (saved) {
+        const rows = JSON.parse(saved) as { id: number; miles: number }[]
+        return Math.max(...rows.map(r => r.id), 0) + 1
+      }
+    }
+    return 2
   })
 
   const saveRows = (key: string, rows: RateToOperateRow[], setter: (r: RateToOperateRow[]) => void) => {
@@ -741,14 +751,40 @@ export default function ExpensesPage() {
   const renderRtoSummary = () => {
     const variablePerMile = rtoRows.reduce((s, r) => s + r.ratePerMile, 0)
     const fixedTotal = rtoFixedRows.reduce((s, r) => s + r.total, 0)
-    const fixedPerMile = rtoSummaryMiles > 0 ? fixedTotal / rtoSummaryMiles : 0
-    const totalPerMile = variablePerMile + fixedPerMile
+
+    const saveSummaryRows = (rows: { id: number; miles: number }[]) => {
+      setRtoSummaryRows(rows)
+      localStorage.setItem('rto-summary-rows', JSON.stringify(rows))
+    }
+
+    const addSummaryRow = () => {
+      saveSummaryRows([...rtoSummaryRows, { id: rtoSummaryNextId, miles: 0 }])
+      setRtoSummaryNextId(rtoSummaryNextId + 1)
+    }
+
+    const updateSummaryMiles = (id: number, miles: number) => {
+      saveSummaryRows(rtoSummaryRows.map(r => r.id === id ? { ...r, miles } : r))
+    }
+
+    const deleteSummaryRow = (id: number) => {
+      saveSummaryRows(rtoSummaryRows.filter(r => r.id !== id))
+    }
 
     return (
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
-          Cost Per Mile Summary
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
+            Cost Per Mile Summary
+          </h2>
+          <button
+            onClick={addSummaryRow}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium text-white"
+            style={{ backgroundColor: '#F59E0B' }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Row
+          </button>
+        </div>
         <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
           <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
@@ -756,35 +792,61 @@ export default function ExpensesPage() {
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Miles</th>
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Variable</th>
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Fixed</th>
-                <th className="px-3 py-2.5 text-right border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Total</th>
+                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Total</th>
+                <th className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--monday-border-light)', width: '40px' }}></th>
               </tr>
             </thead>
             <tbody>
-              <tr style={{ backgroundColor: 'var(--monday-bg-primary)' }}>
-                <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '140px' }}>
-                  <input
-                    type="number"
-                    className="w-full bg-transparent border-0 outline-none text-sm text-right px-1.5 py-1"
-                    style={{ color: 'var(--monday-text-primary)', fontWeight: 600 }}
-                    value={rtoSummaryMiles || ''}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value) || 0
-                      setRtoSummaryMiles(val)
-                      localStorage.setItem('rto-summary-miles', String(val))
-                    }}
-                    placeholder="Enter miles"
-                  />
-                </td>
-                <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>
-                  ${variablePerMile.toFixed(4)}
-                </td>
-                <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>
-                  {rtoSummaryMiles > 0 ? '$' + fixedPerMile.toFixed(4) : '-'}
-                </td>
-                <td className="px-3 py-2.5 text-right" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--monday-text-primary)' }}>
-                  {rtoSummaryMiles > 0 ? '$' + totalPerMile.toFixed(4) : '-'}
-                </td>
-              </tr>
+              {rtoSummaryRows.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
+                    No rows yet — click Add Row to start
+                  </td>
+                </tr>
+              ) : (
+                rtoSummaryRows.map(row => {
+                  const fixedPerMile = row.miles > 0 ? fixedTotal / row.miles : 0
+                  const totalPerMile = variablePerMile + fixedPerMile
+                  return (
+                    <tr
+                      key={row.id}
+                      className="border-b transition-colors"
+                      style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)' }}
+                    >
+                      <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '140px' }}>
+                        <input
+                          type="number"
+                          className="w-full bg-transparent border-0 outline-none text-sm text-right px-1.5 py-1"
+                          style={{ color: 'var(--monday-text-primary)', fontWeight: 600 }}
+                          value={row.miles || ''}
+                          onChange={(e) => updateSummaryMiles(row.id, parseFloat(e.target.value) || 0)}
+                          placeholder="Enter miles"
+                        />
+                      </td>
+                      <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>
+                        ${variablePerMile.toFixed(4)}
+                      </td>
+                      <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>
+                        {row.miles > 0 ? '$' + fixedPerMile.toFixed(4) : '-'}
+                      </td>
+                      <td className="px-3 py-2.5 border-r text-right" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--monday-text-primary)' }}>
+                        {row.miles > 0 ? '$' + totalPerMile.toFixed(4) : '-'}
+                      </td>
+                      <td className="px-2 py-2.5 text-center">
+                        <button
+                          onClick={() => deleteSummaryRow(row.id)}
+                          className="p-1 rounded hover:bg-red-50 transition-colors"
+                          style={{ color: '#EF4444' }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
