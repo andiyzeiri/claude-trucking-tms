@@ -9,6 +9,32 @@ import { Plus, Building2, Users, Truck, Shield, MoreHorizontal, BarChart3, Calcu
 import { Expense } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 
+const fmtNum = (val: number, decimals = 2) =>
+  val ? val.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) : ''
+
+const NumInput = ({ value, onChange, placeholder, decimals = 2, bold }: {
+  value: number; onChange: (v: number) => void; placeholder?: string; decimals?: number; bold?: boolean
+}) => {
+  const [focused, setFocused] = useState(false)
+  const [raw, setRaw] = useState('')
+  return (
+    <input
+      type="text"
+      className="w-full bg-transparent border-0 outline-none text-sm text-right px-1.5 py-1"
+      style={{ color: 'var(--monday-text-primary)', fontWeight: bold ? 600 : 400 }}
+      value={focused ? raw : (value ? fmtNum(value, decimals) : '')}
+      placeholder={placeholder || '0'}
+      onFocus={() => { setFocused(true); setRaw(value ? String(value) : '') }}
+      onBlur={() => { setFocused(false); onChange(parseFloat(raw) || 0) }}
+      onChange={(e) => {
+        const v = e.target.value.replace(/[^0-9.\-]/g, '')
+        setRaw(v)
+      }}
+      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+    />
+  )
+}
+
 type EditingCell = { id: number; field: string } | null
 type ExpenseTab = 'overview' | 'rate-to-operate' | 'company' | 'driver' | 'owner' | 'insurance' | 'misc'
 
@@ -689,36 +715,13 @@ export default function ExpensesPage() {
                       />
                     </td>
                     <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
-                      <input
-                        type="number"
-                        className="w-full bg-transparent border-0 outline-none text-sm text-right px-1.5 py-1"
-                        style={{ color: 'var(--monday-text-primary)' }}
-                        value={row.miles || ''}
-                        onChange={(e) => updateRow(row.id, 'miles', parseFloat(e.target.value) || 0)}
-                        placeholder="0"
-                      />
+                      <NumInput value={row.miles} decimals={0} placeholder="0" onChange={(v) => updateRow(row.id, 'miles', v)} />
                     </td>
                     <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
-                      <input
-                        type="number"
-                        step="0.0001"
-                        className="w-full bg-transparent border-0 outline-none text-sm text-right px-1.5 py-1"
-                        style={{ color: 'var(--monday-text-primary)' }}
-                        value={row.ratePerMile || ''}
-                        onChange={(e) => updateRow(row.id, 'ratePerMile', parseFloat(e.target.value) || 0)}
-                        placeholder="0.00"
-                      />
+                      <NumInput value={row.ratePerMile} decimals={4} placeholder="0.00" onChange={(v) => updateRow(row.id, 'ratePerMile', v)} />
                     </td>
                     <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
-                      <input
-                        type="number"
-                        step="0.01"
-                        className="w-full bg-transparent border-0 outline-none text-sm text-right px-1.5 py-1"
-                        style={{ color: 'var(--monday-text-primary)', fontWeight: 600 }}
-                        value={row.total || ''}
-                        onChange={(e) => updateRow(row.id, 'total', parseFloat(e.target.value) || 0)}
-                        placeholder="0.00"
-                      />
+                      <NumInput value={row.total} decimals={2} placeholder="0.00" bold onChange={(v) => updateRow(row.id, 'total', v)} />
                     </td>
                     <td className="px-2 py-2.5 text-center">
                       <button
@@ -816,14 +819,7 @@ export default function ExpensesPage() {
                       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)' }}
                     >
                       <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '140px' }}>
-                        <input
-                          type="number"
-                          className="w-full bg-transparent border-0 outline-none text-sm text-right px-1.5 py-1"
-                          style={{ color: 'var(--monday-text-primary)', fontWeight: 600 }}
-                          value={row.miles || ''}
-                          onChange={(e) => updateSummaryMiles(row.id, parseFloat(e.target.value) || 0)}
-                          placeholder="Enter miles"
-                        />
+                        <NumInput value={row.miles} decimals={0} placeholder="Enter miles" bold onChange={(v) => updateSummaryMiles(row.id, v)} />
                       </td>
                       <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>
                         ${variablePerMile.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
