@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/utils'
 type EditingCell = { id: number; field: string } | null
 type ExpenseTab = 'overview' | 'rate-to-operate' | 'company' | 'driver' | 'owner' | 'insurance' | 'misc'
 
-type RateToOperateRow = { id: number; expense: string; miles: number; ratePerMile: number }
+type RateToOperateRow = { id: number; expense: string; miles: number; ratePerMile: number; total: number }
 
 const EXPENSE_CATEGORIES = [
   'Employee', 'Fuel', 'Maintenance', 'Repairs', 'Insurance', 'Registration',
@@ -48,33 +48,45 @@ export default function ExpensesPage() {
 
   const [activeTab, setActiveTab] = useState<ExpenseTab>('overview')
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
-  const [rtoRows, setRtoRows] = useState<RateToOperateRow[]>(() => {
+  const initRows = (key: string, defaults: RateToOperateRow[]) => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('rto-theoretical')
+      const saved = localStorage.getItem(key)
       if (saved) return JSON.parse(saved)
     }
-    return [
-      { id: 1, expense: 'Fuel', miles: 0, ratePerMile: 0 },
-      { id: 2, expense: 'Insurance', miles: 0, ratePerMile: 0 },
-      { id: 3, expense: 'Maintenance', miles: 0, ratePerMile: 0 },
-      { id: 4, expense: 'Truck Payment', miles: 0, ratePerMile: 0 },
-      { id: 5, expense: 'Tires', miles: 0, ratePerMile: 0 },
-    ]
-  })
-  const [rtoNextId, setRtoNextId] = useState(() => {
+    return defaults
+  }
+  const initNextId = (key: string, fallback: number) => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('rto-theoretical')
+      const saved = localStorage.getItem(key)
       if (saved) {
         const rows = JSON.parse(saved) as RateToOperateRow[]
         return Math.max(...rows.map(r => r.id), 0) + 1
       }
     }
-    return 6
-  })
+    return fallback
+  }
 
-  const saveRtoRows = (rows: RateToOperateRow[]) => {
-    setRtoRows(rows)
-    localStorage.setItem('rto-theoretical', JSON.stringify(rows))
+  const [rtoRows, setRtoRows] = useState<RateToOperateRow[]>(() => initRows('rto-variable', [
+    { id: 1, expense: 'Fuel', miles: 0, ratePerMile: 0, total: 0 },
+    { id: 2, expense: 'Maintenance', miles: 0, ratePerMile: 0, total: 0 },
+    { id: 3, expense: 'Tires', miles: 0, ratePerMile: 0, total: 0 },
+    { id: 4, expense: 'Tolls', miles: 0, ratePerMile: 0, total: 0 },
+    { id: 5, expense: 'DEF', miles: 0, ratePerMile: 0, total: 0 },
+  ]))
+  const [rtoNextId, setRtoNextId] = useState(() => initNextId('rto-variable', 6))
+
+  const [rtoFixedRows, setRtoFixedRows] = useState<RateToOperateRow[]>(() => initRows('rto-fixed', [
+    { id: 1, expense: 'Insurance', miles: 0, ratePerMile: 0, total: 0 },
+    { id: 2, expense: 'Truck Payment', miles: 0, ratePerMile: 0, total: 0 },
+    { id: 3, expense: 'Trailer Payment', miles: 0, ratePerMile: 0, total: 0 },
+    { id: 4, expense: 'Permits', miles: 0, ratePerMile: 0, total: 0 },
+    { id: 5, expense: 'ELD', miles: 0, ratePerMile: 0, total: 0 },
+  ]))
+  const [rtoFixedNextId, setRtoFixedNextId] = useState(() => initNextId('rto-fixed', 6))
+
+  const saveRows = (key: string, rows: RateToOperateRow[], setter: (r: RateToOperateRow[]) => void) => {
+    setter(rows)
+    localStorage.setItem(key, JSON.stringify(rows))
   }
 
   const tabExpenses = useMemo(() =>
@@ -555,30 +567,62 @@ export default function ExpensesPage() {
       }))
   }, [expenses])
 
-  const renderRateToOperate = () => {
+  const renderRtoTable = (
+    title: string,
+    rows: RateToOperateRow[],
+    setRows: (r: RateToOperateRow[]) => void,
+    storageKey: string,
+    nextId: number,
+    setNextId: (n: number) => void,
+  ) => {
     const addRow = () => {
-      const newRow: RateToOperateRow = { id: rtoNextId, expense: '', miles: 0, ratePerMile: 0 }
-      setRtoNextId(rtoNextId + 1)
-      saveRtoRows([...rtoRows, newRow])
+      const newRow: RateToOperateRow = { id: nextId, expense: '', miles: 0, ratePerMile: 0, total: 0 }
+      setNextId(nextId + 1)
+      saveRows(storageKey, [...rows, newRow], setRows)
     }
 
-    const updateRow = (id: number, field: keyof RateToOperateRow, value: string | number) => {
-      saveRtoRows(rtoRows.map(r => r.id === id ? { ...r, [field]: value } : r))
+    const updateRow = (id: number, field: 'expense' | 'miles' | 'ratePerMile' | 'total', value: string | number) => {
+      saveRows(storageKey, rows.map(r => {
+        if (r.id !== id) return r
+        const updated = { ...r, [field]: value }
+        if (field === 'miles') {
+          const miles = Number(value) || 0
+          if (miles > 0 && updated.ratePerMile > 0) {
+            updated.total = parseFloat((miles * updated.ratePerMile).toFixed(2))
+          } else if (miles > 0 && updated.total > 0) {
+            updated.ratePerMile = parseFloat((updated.total / miles).toFixed(4))
+          }
+        } else if (field === 'ratePerMile') {
+          const rpm = Number(value) || 0
+          if (updated.miles > 0 && rpm > 0) {
+            updated.total = parseFloat((updated.miles * rpm).toFixed(2))
+          } else if (rpm > 0 && updated.total > 0) {
+            updated.miles = parseFloat((updated.total / rpm).toFixed(2))
+          }
+        } else if (field === 'total') {
+          const tot = Number(value) || 0
+          if (updated.miles > 0 && tot > 0) {
+            updated.ratePerMile = parseFloat((tot / updated.miles).toFixed(4))
+          } else if (updated.ratePerMile > 0 && tot > 0) {
+            updated.miles = parseFloat((tot / updated.ratePerMile).toFixed(2))
+          }
+        }
+        return updated
+      }), setRows)
     }
 
     const deleteRow = (id: number) => {
-      saveRtoRows(rtoRows.filter(r => r.id !== id))
+      saveRows(storageKey, rows.filter(r => r.id !== id), setRows)
     }
 
-    const grandMiles = rtoRows.length > 0 ? Math.max(...rtoRows.map(r => r.miles)) : 0
-    const grandRate = rtoRows.reduce((s, r) => s + r.ratePerMile, 0)
-    const grandTotal = rtoRows.reduce((s, r) => s + (r.miles * r.ratePerMile), 0)
+    const grandRate = rows.reduce((s, r) => s + r.ratePerMile, 0)
+    const grandTotal = rows.reduce((s, r) => s + r.total, 0)
 
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
-            Rate To Operate — Theoretical
+            {title}
           </h2>
           <button
             onClick={addRow}
@@ -601,14 +645,14 @@ export default function ExpensesPage() {
               </tr>
             </thead>
             <tbody>
-              {rtoRows.length === 0 ? (
+              {rows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
                     No rows yet — click Add Row to start
                   </td>
                 </tr>
               ) : (
-                rtoRows.map(row => (
+                rows.map(row => (
                   <tr
                     key={row.id}
                     className="border-b transition-colors"
@@ -639,7 +683,7 @@ export default function ExpensesPage() {
                     <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
                       <input
                         type="number"
-                        step="0.01"
+                        step="0.0001"
                         className="w-full bg-transparent border-0 outline-none text-sm text-right px-1.5 py-1"
                         style={{ color: 'var(--monday-text-primary)' }}
                         value={row.ratePerMile || ''}
@@ -647,8 +691,16 @@ export default function ExpensesPage() {
                         placeholder="0.00"
                       />
                     </td>
-                    <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>
-                      {row.miles > 0 && row.ratePerMile > 0 ? formatCurrency(row.miles * row.ratePerMile) : '-'}
+                    <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full bg-transparent border-0 outline-none text-sm text-right px-1.5 py-1"
+                        style={{ color: 'var(--monday-text-primary)', fontWeight: 600 }}
+                        value={row.total || ''}
+                        onChange={(e) => updateRow(row.id, 'total', parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                      />
                     </td>
                     <td className="px-2 py-2.5 text-center">
                       <button
@@ -662,11 +714,11 @@ export default function ExpensesPage() {
                   </tr>
                 ))
               )}
-              {rtoRows.length > 0 && (
+              {rows.length > 0 && (
                 <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
                   <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>Total</td>
-                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{grandMiles > 0 ? grandMiles.toLocaleString() : '-'}</td>
-                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>${grandRate.toFixed(2)}</td>
+                  <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}></td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>${grandRate.toFixed(4)}</td>
                   <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(grandTotal)}</td>
                   <td></td>
                 </tr>
@@ -677,6 +729,13 @@ export default function ExpensesPage() {
       </div>
     )
   }
+
+  const renderRateToOperate = () => (
+    <div className="space-y-8">
+      {renderRtoTable('Variable Costs', rtoRows, setRtoRows, 'rto-variable', rtoNextId, setRtoNextId)}
+      {renderRtoTable('Fixed Costs', rtoFixedRows, setRtoFixedRows, 'rto-fixed', rtoFixedNextId, setRtoFixedNextId)}
+    </div>
+  )
 
   const renderOverviewTable = () => {
     const grandFixed = monthlyOverview.reduce((s, m) => s + m.fixed, 0)
