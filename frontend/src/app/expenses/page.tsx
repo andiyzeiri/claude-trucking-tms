@@ -618,6 +618,7 @@ export default function ExpensesPage() {
     storageKey: string,
     nextId: number,
     setNextId: (n: number) => void,
+    isFixed = false,
   ) => {
     const addRow = () => {
       const newRow: RateToOperateRow = { id: nextId, expense: '', miles: 0, ratePerMile: 0, total: 0 }
@@ -682,8 +683,8 @@ export default function ExpensesPage() {
             <thead>
               <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Expense</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Miles</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Rate Per Mile</th>
+                {!isFixed && <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Miles</th>}
+                {!isFixed && <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Rate Per Mile</th>}
                 <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Total</th>
                 <th className="px-3 py-2.5 border-b" style={{ borderColor: 'var(--monday-border-light)', width: '40px' }}></th>
               </tr>
@@ -691,7 +692,7 @@ export default function ExpensesPage() {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
+                  <td colSpan={isFixed ? 3 : 5} className="px-4 py-8 text-center" style={{ color: 'var(--monday-text-muted)' }}>
                     No rows yet — click Add Row to start
                   </td>
                 </tr>
@@ -714,12 +715,12 @@ export default function ExpensesPage() {
                         placeholder="Expense name"
                       />
                     </td>
-                    <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
+                    {!isFixed && <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
                       <NumInput value={row.miles} decimals={0} placeholder="0" onChange={(v) => updateRow(row.id, 'miles', v)} />
-                    </td>
-                    <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
+                    </td>}
+                    {!isFixed && <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
                       <NumInput value={row.ratePerMile} decimals={4} placeholder="0.00" onChange={(v) => updateRow(row.id, 'ratePerMile', v)} />
-                    </td>
+                    </td>}
                     <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
                       <NumInput value={row.total} decimals={2} placeholder="0.00" bold onChange={(v) => updateRow(row.id, 'total', v)} />
                     </td>
@@ -738,8 +739,8 @@ export default function ExpensesPage() {
               {rows.length > 0 && (
                 <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
                   <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>Total</td>
-                  <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}></td>
-                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>${grandRate.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</td>
+                  {!isFixed && <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}></td>}
+                  {!isFixed && <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>${grandRate.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</td>}
                   <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(grandTotal)}</td>
                   <td></td>
                 </tr>
@@ -853,7 +854,7 @@ export default function ExpensesPage() {
   const renderRateToOperate = () => (
     <div className="space-y-8">
       {renderRtoTable('Variable Costs', rtoRows, setRtoRows, 'rto-variable', rtoNextId, setRtoNextId)}
-      {renderRtoTable('Fixed Costs', rtoFixedRows, setRtoFixedRows, 'rto-fixed', rtoFixedNextId, setRtoFixedNextId)}
+      {renderRtoTable('Fixed Costs', rtoFixedRows, setRtoFixedRows, 'rto-fixed', rtoFixedNextId, setRtoFixedNextId, true)}
       {renderRtoSummary()}
     </div>
   )
