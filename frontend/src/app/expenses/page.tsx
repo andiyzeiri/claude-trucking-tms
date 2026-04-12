@@ -736,7 +736,7 @@ export default function ExpensesPage() {
                 <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
                   <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>Total</td>
                   <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}></td>
-                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>${grandRate.toFixed(4)}</td>
+                  <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>${grandRate.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</td>
                   <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(grandTotal)}</td>
                   <td></td>
                 </tr>
@@ -826,13 +826,13 @@ export default function ExpensesPage() {
                         />
                       </td>
                       <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>
-                        ${variablePerMile.toFixed(4)}
+                        ${variablePerMile.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                       </td>
                       <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>
-                        {row.miles > 0 ? '$' + fixedPerMile.toFixed(4) : '-'}
+                        {row.miles > 0 ? '$' + fixedPerMile.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : '-'}
                       </td>
                       <td className="px-3 py-2.5 border-r text-right" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--monday-text-primary)' }}>
-                        {row.miles > 0 ? '$' + totalPerMile.toFixed(4) : '-'}
+                        {row.miles > 0 ? '$' + totalPerMile.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : '-'}
                       </td>
                       <td className="px-2 py-2.5 text-center">
                         <button
