@@ -226,16 +226,14 @@ function formatDateShort(dateString: string): string {
   return `${month}/${day}/${year}`
 }
 
-// Helper to format time as HH:MM AM/PM
+// Helper to format time as HH:MM (24-hour / military)
 function formatTimeShort(dateString: string): string {
   if (!dateString) return ''
   const date = new Date(normalizeDateTime(dateString))
   // Use UTC methods to avoid timezone conversion (we store wall-clock time as UTC)
-  let hours = date.getUTCHours()
+  const hours = String(date.getUTCHours()).padStart(2, '0')
   const minutes = String(date.getUTCMinutes()).padStart(2, '0')
-  const ampm = hours >= 12 ? 'PM' : 'AM'
-  hours = hours % 12 || 12
-  return `${hours}:${minutes} ${ampm}`
+  return `${hours}:${minutes}`
 }
 
 // Helper to parse date input (MM/DD/YY) and combine with existing time

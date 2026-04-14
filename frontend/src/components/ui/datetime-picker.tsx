@@ -219,7 +219,6 @@ export function InlineDateTimePicker({
   disabled,
 }: InlineDateTimePickerProps) {
   const [dateOpen, setDateOpen] = React.useState(false)
-  const [timeOpen, setTimeOpen] = React.useState(false)
 
   // Parse the date
   const parseDate = (dateStr: string): Date | undefined => {
@@ -273,34 +272,29 @@ export function InlineDateTimePicker({
 
   const currentTimeValue = getCurrentTimeValue()
 
-  // Get display label for the current time (converts "13:30" to "1:30 PM")
-  const getTimeDisplayLabel = (): string => {
-    const timeVal = currentTimeValue || timeValue
-    if (!timeVal) return ""
-
-    // Find matching option by value
-    const option = TIME_OPTIONS.find(t => t.value === timeVal)
-    if (option) return option.label
-
-    // If timeValue is already in 12-hour format, return as-is
-    if (timeVal.includes('AM') || timeVal.includes('PM') || timeVal.includes('am') || timeVal.includes('pm')) {
-      return timeVal
+  // Normalize any typed time input to HH:mm (24-hour). Accepts:
+  //   "1430", "14:30", "14.30", "930", "9:30", "9" (assumes :00)
+  const normalizeTypedTime = (input: string): string => {
+    if (!input) return ""
+    const cleaned = input.replace(/[^0-9]/g, "")
+    if (!cleaned) return ""
+    let h = 0, m = 0
+    if (cleaned.length <= 2) {
+      h = parseInt(cleaned)
+      m = 0
+    } else if (cleaned.length === 3) {
+      h = parseInt(cleaned.slice(0, 1))
+      m = parseInt(cleaned.slice(1))
+    } else {
+      h = parseInt(cleaned.slice(0, 2))
+      m = parseInt(cleaned.slice(2, 4))
     }
-
-    // Convert HH:mm to 12-hour display format manually (no date-fns to avoid timezone issues)
-    const match = timeVal.match(/^(\d{1,2}):(\d{2})$/)
-    if (match) {
-      let hours = parseInt(match[1])
-      const minutes = match[2]
-      const ampm = hours >= 12 ? 'PM' : 'AM'
-      hours = hours % 12 || 12
-      return `${hours}:${minutes} ${ampm}`
-    }
-
-    return timeVal
+    if (isNaN(h) || isNaN(m) || h > 23 || m > 59) return ""
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
   }
 
-  const timeDisplayLabel = getTimeDisplayLabel()
+  const [timeDraft, setTimeDraft] = React.useState<string | null>(null)
+  const timeInputValue = timeDraft !== null ? timeDraft : currentTimeValue
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
@@ -314,13 +308,13 @@ export function InlineDateTimePicker({
     setDateOpen(false)
   }
 
-  const handleTimeSelect = (option: { value: string; label: string }) => {
-    // Pass 24-hour format value for reliable parsing (e.g., "13:30" instead of "1:30 PM")
-    onTimeChange(option.value)
-    setTimeOpen(false)
-    // Trigger save immediately with the new value
-    if (onSave) {
-      onSave({ time: option.value })
+  const commitTypedTime = () => {
+    if (timeDraft === null) return
+    const normalized = normalizeTypedTime(timeDraft)
+    setTimeDraft(null)
+    if (normalized && normalized !== currentTimeValue) {
+      onTimeChange(normalized)
+      if (onSave) onSave({ time: normalized })
     }
   }
 
@@ -352,40 +346,37 @@ export function InlineDateTimePicker({
         </PopoverContent>
       </Popover>
 
-      {/* Time Button */}
-      <Popover open={timeOpen} onOpenChange={setTimeOpen}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className={cn(
-              "h-6 px-1.5 text-xs border rounded bg-white hover:bg-gray-50 flex items-center gap-1",
-              !timeDisplayLabel && "text-gray-400"
-            )}
-            disabled={disabled}
-            style={{ width: "75px", fontSize: "11px" }}
-          >
-            <Clock className="h-3 w-3 flex-shrink-0 text-gray-400" />
-            <span>{timeDisplayLabel || "Time"}</span>
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start" side="bottom">
-          <div className="h-64 overflow-y-auto p-1" style={{ width: "120px" }}>
-            {TIME_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => handleTimeSelect(option)}
-                className={cn(
-                  "w-full px-2 py-1.5 text-left text-sm rounded hover:bg-accent",
-                  currentTimeValue === option.value && "bg-accent font-medium"
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </PopoverContent>
-      </Popover>
+      {/* Time Input (24-hour / military) */}
+      <div
+        className={cn(
+          "h-6 px-1.5 text-xs border rounded bg-white hover:bg-gray-50 flex items-center gap-1",
+          !timeInputValue && "text-gray-400"
+        )}
+        style={{ width: "75px", fontSize: "11px" }}
+      >
+        <Clock className="h-3 w-3 flex-shrink-0 text-gray-400" />
+        <input
+          type="text"
+          inputMode="numeric"
+          maxLength={5}
+          disabled={disabled}
+          placeholder="HH:MM"
+          className="w-full bg-transparent border-0 outline-none p-0 text-xs"
+          style={{ fontSize: "11px" }}
+          value={timeInputValue}
+          onChange={(e) => setTimeDraft(e.target.value)}
+          onBlur={commitTypedTime}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault()
+              ;(e.target as HTMLInputElement).blur()
+            } else if (e.key === "Escape") {
+              setTimeDraft(null)
+              ;(e.target as HTMLInputElement).blur()
+            }
+          }}
+        />
+      </div>
     </div>
   )
 }
