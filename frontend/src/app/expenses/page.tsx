@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense, ExpenseFormData } from '@/hooks/use-expenses'
+import { useRateToOperate, useCreateRto, useUpdateRto, useDeleteRto, RtoRow as ApiRtoRow, RtoSection } from '@/hooks/use-rate-to-operate'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks, useUpdateTruck } from '@/hooks/use-trucks'
 import { Plus, Building2, Users, Truck, Shield, MoreHorizontal, BarChart3, Calculator, Trash2 } from 'lucide-react'
@@ -38,7 +39,7 @@ const NumInput = ({ value, onChange, placeholder, decimals = 2, bold }: {
 type EditingCell = { id: number; field: string } | null
 type ExpenseTab = 'overview' | 'rate-to-operate' | 'company' | 'driver' | 'owner' | 'insurance' | 'misc'
 
-type RateToOperateRow = { id: number; expense: string; miles: number; ratePerMile: number; total: number }
+type RateToOperateRow = ApiRtoRow
 
 const EXPENSE_CATEGORIES = [
   'Employee', 'Fuel', 'Maintenance', 'Repairs', 'Insurance', 'Registration',
@@ -74,64 +75,25 @@ export default function ExpensesPage() {
 
   const [activeTab, setActiveTab] = useState<ExpenseTab>('overview')
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
-  const initRows = (key: string, defaults: RateToOperateRow[]) => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(key)
-      if (saved) return JSON.parse(saved)
-    }
-    return defaults
-  }
-  const initNextId = (key: string, fallback: number) => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(key)
-      if (saved) {
-        const rows = JSON.parse(saved) as RateToOperateRow[]
-        return Math.max(...rows.map(r => r.id), 0) + 1
-      }
-    }
-    return fallback
-  }
 
-  const [rtoRows, setRtoRows] = useState<RateToOperateRow[]>(() => initRows('rto-variable', [
-    { id: 1, expense: 'Fuel', miles: 0, ratePerMile: 0, total: 0 },
-    { id: 2, expense: 'Maintenance', miles: 0, ratePerMile: 0, total: 0 },
-    { id: 3, expense: 'Tires', miles: 0, ratePerMile: 0, total: 0 },
-    { id: 4, expense: 'Tolls', miles: 0, ratePerMile: 0, total: 0 },
-    { id: 5, expense: 'DEF', miles: 0, ratePerMile: 0, total: 0 },
-  ]))
-  const [rtoNextId, setRtoNextId] = useState(() => initNextId('rto-variable', 6))
+  // Rate To Operate — backend-synced, shared across all users in the company
+  const { data: rtoData } = useRateToOperate()
+  const createRto = useCreateRto()
+  const updateRto = useUpdateRto()
+  const deleteRto = useDeleteRto()
 
-  const [rtoFixedRows, setRtoFixedRows] = useState<RateToOperateRow[]>(() => initRows('rto-fixed', [
-    { id: 1, expense: 'Insurance', miles: 0, ratePerMile: 0, total: 0 },
-    { id: 2, expense: 'Truck Payment', miles: 0, ratePerMile: 0, total: 0 },
-    { id: 3, expense: 'Trailer Payment', miles: 0, ratePerMile: 0, total: 0 },
-    { id: 4, expense: 'Permits', miles: 0, ratePerMile: 0, total: 0 },
-    { id: 5, expense: 'ELD', miles: 0, ratePerMile: 0, total: 0 },
-  ]))
-  const [rtoFixedNextId, setRtoFixedNextId] = useState(() => initNextId('rto-fixed', 6))
-
-  const [rtoSummaryRows, setRtoSummaryRows] = useState<{ id: number; miles: number }[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('rto-summary-rows')
-      if (saved) return JSON.parse(saved)
-    }
-    return [{ id: 1, miles: 0 }]
-  })
-  const [rtoSummaryNextId, setRtoSummaryNextId] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('rto-summary-rows')
-      if (saved) {
-        const rows = JSON.parse(saved) as { id: number; miles: number }[]
-        return Math.max(...rows.map(r => r.id), 0) + 1
-      }
-    }
-    return 2
-  })
-
-  const saveRows = (key: string, rows: RateToOperateRow[], setter: (r: RateToOperateRow[]) => void) => {
-    setter(rows)
-    localStorage.setItem(key, JSON.stringify(rows))
-  }
+  const rtoRows = useMemo(
+    () => (rtoData || []).filter(r => r.section === 'variable'),
+    [rtoData]
+  )
+  const rtoFixedRows = useMemo(
+    () => (rtoData || []).filter(r => r.section === 'fixed'),
+    [rtoData]
+  )
+  const rtoSummaryRows = useMemo(
+    () => (rtoData || []).filter(r => r.section === 'summary'),
+    [rtoData]
+  )
 
   const tabExpenses = useMemo(() =>
     expenses.filter(e => (e.expense_group || 'company') === activeTab),
@@ -614,53 +576,55 @@ export default function ExpensesPage() {
   const renderRtoTable = (
     title: string,
     rows: RateToOperateRow[],
-    setRows: (r: RateToOperateRow[]) => void,
-    storageKey: string,
-    nextId: number,
-    setNextId: (n: number) => void,
+    section: RtoSection,
     isFixed = false,
   ) => {
     const addRow = () => {
-      const newRow: RateToOperateRow = { id: nextId, expense: '', miles: 0, ratePerMile: 0, total: 0 }
-      setNextId(nextId + 1)
-      saveRows(storageKey, [...rows, newRow], setRows)
+      createRto.mutate({
+        section,
+        expense: '',
+        miles: 0,
+        rate_per_mile: 0,
+        total: 0,
+        sort_order: rows.length,
+      })
     }
 
-    const updateRow = (id: number, field: 'expense' | 'miles' | 'ratePerMile' | 'total', value: string | number) => {
-      saveRows(storageKey, rows.map(r => {
-        if (r.id !== id) return r
-        const updated = { ...r, [field]: value }
-        if (field === 'miles') {
-          const miles = Number(value) || 0
-          if (miles > 0 && updated.ratePerMile > 0) {
-            updated.total = parseFloat((miles * updated.ratePerMile).toFixed(2))
-          } else if (miles > 0 && updated.total > 0) {
-            updated.ratePerMile = parseFloat((updated.total / miles).toFixed(4))
-          }
-        } else if (field === 'ratePerMile') {
-          const rpm = Number(value) || 0
-          if (updated.miles > 0 && rpm > 0) {
-            updated.total = parseFloat((updated.miles * rpm).toFixed(2))
-          } else if (rpm > 0 && updated.total > 0) {
-            updated.miles = parseFloat((updated.total / rpm).toFixed(2))
-          }
-        } else if (field === 'total') {
-          const tot = Number(value) || 0
-          if (updated.miles > 0 && tot > 0) {
-            updated.ratePerMile = parseFloat((tot / updated.miles).toFixed(4))
-          } else if (updated.ratePerMile > 0 && tot > 0) {
-            updated.miles = parseFloat((tot / updated.ratePerMile).toFixed(2))
-          }
+    const updateRow = (id: number, field: 'expense' | 'miles' | 'rate_per_mile' | 'total', value: string | number) => {
+      const row = rows.find(r => r.id === id)
+      if (!row) return
+      const data: any = { [field]: value }
+      // Auto-fill the missing field of the formula: miles × rate_per_mile = total
+      if (field === 'miles') {
+        const miles = Number(value) || 0
+        if (miles > 0 && row.rate_per_mile > 0) {
+          data.total = parseFloat((miles * row.rate_per_mile).toFixed(2))
+        } else if (miles > 0 && row.total > 0) {
+          data.rate_per_mile = parseFloat((row.total / miles).toFixed(4))
         }
-        return updated
-      }), setRows)
+      } else if (field === 'rate_per_mile') {
+        const rpm = Number(value) || 0
+        if (row.miles > 0 && rpm > 0) {
+          data.total = parseFloat((row.miles * rpm).toFixed(2))
+        } else if (rpm > 0 && row.total > 0) {
+          data.miles = parseFloat((row.total / rpm).toFixed(2))
+        }
+      } else if (field === 'total') {
+        const tot = Number(value) || 0
+        if (row.miles > 0 && tot > 0) {
+          data.rate_per_mile = parseFloat((tot / row.miles).toFixed(4))
+        } else if (row.rate_per_mile > 0 && tot > 0) {
+          data.miles = parseFloat((tot / row.rate_per_mile).toFixed(2))
+        }
+      }
+      updateRto.mutate({ id, data })
     }
 
     const deleteRow = (id: number) => {
-      saveRows(storageKey, rows.filter(r => r.id !== id), setRows)
+      deleteRto.mutate(id)
     }
 
-    const grandRate = rows.reduce((s, r) => s + r.ratePerMile, 0)
+    const grandRate = rows.reduce((s, r) => s + r.rate_per_mile, 0)
     const grandTotal = rows.reduce((s, r) => s + r.total, 0)
 
     return (
@@ -710,8 +674,12 @@ export default function ExpensesPage() {
                         type="text"
                         className="w-full bg-transparent border-0 outline-none text-sm px-1.5 py-1"
                         style={{ color: 'var(--monday-text-primary)' }}
-                        value={row.expense}
-                        onChange={(e) => updateRow(row.id, 'expense', e.target.value)}
+                        defaultValue={row.expense}
+                        key={`${row.id}-${row.expense}`}
+                        onBlur={(e) => {
+                          if (e.target.value !== row.expense) updateRow(row.id, 'expense', e.target.value)
+                        }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                         placeholder="Expense name"
                       />
                     </td>
@@ -719,7 +687,7 @@ export default function ExpensesPage() {
                       <NumInput value={row.miles} decimals={0} placeholder="0" onChange={(v) => updateRow(row.id, 'miles', v)} />
                     </td>}
                     {!isFixed && <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
-                      <NumInput value={row.ratePerMile} decimals={4} placeholder="0.00" onChange={(v) => updateRow(row.id, 'ratePerMile', v)} />
+                      <NumInput value={row.rate_per_mile} decimals={4} placeholder="0.00" onChange={(v) => updateRow(row.id, 'rate_per_mile', v)} />
                     </td>}
                     <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', minWidth: '120px' }}>
                       <NumInput value={row.total} decimals={2} placeholder="0.00" bold onChange={(v) => updateRow(row.id, 'total', v)} />
@@ -753,25 +721,19 @@ export default function ExpensesPage() {
   }
 
   const renderRtoSummary = () => {
-    const variablePerMile = rtoRows.reduce((s, r) => s + r.ratePerMile, 0)
+    const variablePerMile = rtoRows.reduce((s, r) => s + r.rate_per_mile, 0)
     const fixedTotal = rtoFixedRows.reduce((s, r) => s + r.total, 0)
 
-    const saveSummaryRows = (rows: { id: number; miles: number }[]) => {
-      setRtoSummaryRows(rows)
-      localStorage.setItem('rto-summary-rows', JSON.stringify(rows))
-    }
-
     const addSummaryRow = () => {
-      saveSummaryRows([...rtoSummaryRows, { id: rtoSummaryNextId, miles: 0 }])
-      setRtoSummaryNextId(rtoSummaryNextId + 1)
+      createRto.mutate({ section: 'summary', miles: 0, sort_order: rtoSummaryRows.length })
     }
 
     const updateSummaryMiles = (id: number, miles: number) => {
-      saveSummaryRows(rtoSummaryRows.map(r => r.id === id ? { ...r, miles } : r))
+      updateRto.mutate({ id, data: { miles } })
     }
 
     const deleteSummaryRow = (id: number) => {
-      saveSummaryRows(rtoSummaryRows.filter(r => r.id !== id))
+      deleteRto.mutate(id)
     }
 
     return (
@@ -853,8 +815,8 @@ export default function ExpensesPage() {
 
   const renderRateToOperate = () => (
     <div className="space-y-8">
-      {renderRtoTable('Variable Costs', rtoRows, setRtoRows, 'rto-variable', rtoNextId, setRtoNextId)}
-      {renderRtoTable('Fixed Costs', rtoFixedRows, setRtoFixedRows, 'rto-fixed', rtoFixedNextId, setRtoFixedNextId, true)}
+      {renderRtoTable('Variable Costs', rtoRows, 'variable')}
+      {renderRtoTable('Fixed Costs', rtoFixedRows, 'fixed', true)}
       {renderRtoSummary()}
     </div>
   )

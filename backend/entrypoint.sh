@@ -121,6 +121,10 @@ python3 add_pay_type_columns.py || echo "⚠️  add_pay_type_columns.py had err
 echo "🔧 Adding insurance columns to trucks..."
 python3 add_truck_insurance_columns.py || echo "⚠️  add_truck_insurance_columns.py had errors, continuing..."
 
+# Create rate_to_operate table for theoretical cost-per-mile tracking
+echo "🔧 Creating rate_to_operate table..."
+python3 create_rate_to_operate_table.py || echo "⚠️  create_rate_to_operate_table.py had errors, continuing..."
+
 # Note: Recurring expenses are generated via POST /api/v1/expenses/generate-recurring
 # This should be called daily via a cron job or on page load
 

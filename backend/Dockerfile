@@ -72,6 +72,7 @@ COPY add_pay_type_columns.py ./
 COPY add_recurring_expense_columns.py ./
 COPY add_truck_insurance_columns.py ./
 COPY add_expense_group_column.py ./
+COPY create_rate_to_operate_table.py ./
 COPY entrypoint.sh ./
 
 # Copy scripts directory
