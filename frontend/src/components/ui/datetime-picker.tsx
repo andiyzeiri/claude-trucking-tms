@@ -364,6 +364,7 @@ export function InlineDateTimePicker({
           className="w-full bg-transparent border-0 outline-none p-0 text-xs"
           style={{ fontSize: "11px" }}
           value={timeInputValue}
+          onFocus={(e) => e.currentTarget.select()}
           onChange={(e) => setTimeDraft(e.target.value)}
           onBlur={commitTypedTime}
           onKeyDown={(e) => {

@@ -614,10 +614,12 @@ export default function LoadsPageInline() {
         bValue = b.driver ? `${b.driver.first_name} ${b.driver.last_name}` : ''
       }
 
-      // Handle dates
+      // Handle dates - sort by date only, ignore time so loads don't re-order when time changes
       if (sortField === 'pickup_date' || sortField === 'delivery_date') {
-        aValue = new Date(normalizeDateTime(aValue)).getTime()
-        bValue = new Date(normalizeDateTime(bValue)).getTime()
+        const aDate = new Date(normalizeDateTime(aValue))
+        const bDate = new Date(normalizeDateTime(bValue))
+        aValue = Date.UTC(aDate.getUTCFullYear(), aDate.getUTCMonth(), aDate.getUTCDate())
+        bValue = Date.UTC(bDate.getUTCFullYear(), bDate.getUTCMonth(), bDate.getUTCDate())
       }
 
       let result: number
