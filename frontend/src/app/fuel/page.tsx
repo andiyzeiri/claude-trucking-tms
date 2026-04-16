@@ -995,46 +995,46 @@ export default function FuelPage() {
     return (
       <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
         <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
-          <thead>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
             <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
-              <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.drag}px`, minWidth: `${columnWidths.drag}px` }}></th>
-              <th className="px-3 py-2.5 text-left border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.truck}px`, minWidth: `${columnWidths.truck}px` }}>
+              <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.drag}px`, minWidth: `${columnWidths.drag}px`, backgroundColor: 'var(--monday-bg-secondary)' }}></th>
+              <th className="px-3 py-2.5 text-left border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.truck}px`, minWidth: `${columnWidths.truck}px`, backgroundColor: 'var(--monday-bg-secondary)' }}>
                 Truck
                 <ColumnWidthControl currentWidth={columnWidths.truck} onAdjust={(delta) => adjustWidth('truck', delta)} />
               </th>
-              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.endingMiles}px`, minWidth: `${columnWidths.endingMiles}px` }}>
+              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.endingMiles}px`, minWidth: `${columnWidths.endingMiles}px`, backgroundColor: 'var(--monday-bg-secondary)' }}>
                 Ending Miles
                 <ColumnWidthControl currentWidth={columnWidths.endingMiles} onAdjust={(delta) => adjustWidth('endingMiles', delta)} />
               </th>
-              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.weeklyMiles}px`, minWidth: `${columnWidths.weeklyMiles}px` }}>
+              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.weeklyMiles}px`, minWidth: `${columnWidths.weeklyMiles}px`, backgroundColor: 'var(--monday-bg-secondary)' }}>
                 Weekly Miles
                 <ColumnWidthControl currentWidth={columnWidths.weeklyMiles} onAdjust={(delta) => adjustWidth('weeklyMiles', delta)} />
               </th>
-              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.gallons}px`, minWidth: `${columnWidths.gallons}px` }}>
+              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.gallons}px`, minWidth: `${columnWidths.gallons}px`, backgroundColor: 'var(--monday-bg-secondary)' }}>
                 Gallons
                 <ColumnWidthControl currentWidth={columnWidths.gallons} onAdjust={(delta) => adjustWidth('gallons', delta)} />
               </th>
-              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.mpg}px`, minWidth: `${columnWidths.mpg}px` }}>
+              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.mpg}px`, minWidth: `${columnWidths.mpg}px`, backgroundColor: 'var(--monday-bg-secondary)' }}>
                 MPG
                 <ColumnWidthControl currentWidth={columnWidths.mpg} onAdjust={(delta) => adjustWidth('mpg', delta)} />
               </th>
-              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.fuelPrice}px`, minWidth: `${columnWidths.fuelPrice}px` }}>
+              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.fuelPrice}px`, minWidth: `${columnWidths.fuelPrice}px`, backgroundColor: 'var(--monday-bg-secondary)' }}>
                 Fuel Price
                 <ColumnWidthControl currentWidth={columnWidths.fuelPrice} onAdjust={(delta) => adjustWidth('fuelPrice', delta)} />
               </th>
-              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.pricePerGal}px`, minWidth: `${columnWidths.pricePerGal}px` }}>
+              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.pricePerGal}px`, minWidth: `${columnWidths.pricePerGal}px`, backgroundColor: 'var(--monday-bg-secondary)' }}>
                 Price/Gal
                 <ColumnWidthControl currentWidth={columnWidths.pricePerGal} onAdjust={(delta) => adjustWidth('pricePerGal', delta)} />
               </th>
-              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.defPrice}px`, minWidth: `${columnWidths.defPrice}px` }}>
+              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.defPrice}px`, minWidth: `${columnWidths.defPrice}px`, backgroundColor: 'var(--monday-bg-secondary)' }}>
                 DEF Price
                 <ColumnWidthControl currentWidth={columnWidths.defPrice} onAdjust={(delta) => adjustWidth('defPrice', delta)} />
               </th>
-              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.pricePerMile}px`, minWidth: `${columnWidths.pricePerMile}px` }}>
+              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.pricePerMile}px`, minWidth: `${columnWidths.pricePerMile}px`, backgroundColor: 'var(--monday-bg-secondary)' }}>
                 Price/Mile
                 <ColumnWidthControl currentWidth={columnWidths.pricePerMile} onAdjust={(delta) => adjustWidth('pricePerMile', delta)} />
               </th>
-              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.total}px`, minWidth: `${columnWidths.total}px` }}>
+              <th className="px-3 py-2.5 text-right border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.total}px`, minWidth: `${columnWidths.total}px`, backgroundColor: 'var(--monday-bg-secondary)' }}>
                 Total
                 <ColumnWidthControl currentWidth={columnWidths.total} onAdjust={(delta) => adjustWidth('total', delta)} />
               </th>
