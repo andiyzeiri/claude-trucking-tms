@@ -764,6 +764,8 @@ export default function LoadsPageInline() {
   const factoringStats = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
+    const threeDaysAgo = new Date(today)
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
 
     const pastYearLoads = editableLoads.filter(l => {
       if (!l.pickup_date) return false
@@ -773,7 +775,13 @@ export default function LoadsPageInline() {
       return getISOWeekYear(pickupDate) === selectedYear && pickupDate.getTime() < today.getTime()
     })
     return {
-      missingInvoice: pastYearLoads.filter(l => l.status !== 'invoiced').length,
+      // Only count as missing invoice if the load is at least 3 days old
+      missingInvoice: pastYearLoads.filter(l => {
+        if (l.status === 'invoiced') return false
+        const pickupDate = new Date(normalizeDateTime(l.pickup_date))
+        pickupDate.setHours(0, 0, 0, 0)
+        return pickupDate.getTime() <= threeDaysAgo.getTime()
+      }).length,
       missingRatecon: pastYearLoads.filter(l => !l.ratecon_url).length,
       missingPod: pastYearLoads.filter(l => !l.pod_url).length,
     }
