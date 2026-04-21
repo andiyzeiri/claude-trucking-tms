@@ -826,8 +826,18 @@ export default function BrokeragePage() {
         pickupDate.setHours(0, 0, 0, 0)
         return pickupDate.getTime() <= threeDaysAgo.getTime()
       }).length,
-      missingRatecon: pastYearLoads.filter(l => !l.ratecon_url).length,
-      missingPod: pastYearLoads.filter(l => !l.pod_url).length,
+      missingRatecon: pastYearLoads.filter(l => {
+        if (l.ratecon_url) return false
+        const pickupDate = new Date(normalizeDateTime(l.pickup_date))
+        pickupDate.setHours(0, 0, 0, 0)
+        return pickupDate.getTime() <= threeDaysAgo.getTime()
+      }).length,
+      missingPod: pastYearLoads.filter(l => {
+        if (l.pod_url) return false
+        const pickupDate = new Date(normalizeDateTime(l.pickup_date))
+        pickupDate.setHours(0, 0, 0, 0)
+        return pickupDate.getTime() <= threeDaysAgo.getTime()
+      }).length,
     }
   }, [editableLoads, selectedYear])
 
