@@ -37,13 +37,28 @@ async def add_accounting_permission():
     conn = await asyncpg.connect(db_url)
 
     try:
-        result = await conn.execute("""
+        # users.page_permissions is declared JSON in the model, but this has
+        # to work either way. jsonb_set only accepts jsonb, so the result
+        # must be cast back to whatever the column actually is - there is no
+        # implicit json/jsonb assignment cast in PostgreSQL.
+        col_type = await conn.fetchval("""
+            SELECT data_type FROM information_schema.columns
+            WHERE table_name = 'users' AND column_name = 'page_permissions'
+        """)
+        if col_type is None:
+            print("⚠️ users.page_permissions column not found, skipping")
+            return
+
+        cast_back = "jsonb" if col_type == "jsonb" else "json"
+        print(f"   page_permissions column is {col_type}, casting result to {cast_back}")
+
+        result = await conn.execute(f"""
             UPDATE users
             SET page_permissions = jsonb_set(
                 page_permissions::jsonb,
-                '{pages}',
+                '{{pages}}',
                 (page_permissions::jsonb->'pages') || '["accounting"]'::jsonb
-            )
+            )::{cast_back}
             WHERE page_permissions IS NOT NULL
               AND page_permissions::jsonb ? 'pages'
               AND jsonb_typeof(page_permissions::jsonb->'pages') = 'array'
