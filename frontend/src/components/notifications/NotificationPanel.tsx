@@ -138,7 +138,7 @@ export default function NotificationPanel({
               onClick={() => setNotificationType('custom')}
               className={`px-3 py-1 text-sm rounded ${
                 notificationType === 'custom'
-                  ? 'bg-blue-100 text-blue-700'
+                  ? 'bg-brand/10 text-brand'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
@@ -150,7 +150,7 @@ export default function NotificationPanel({
                   onClick={() => setNotificationType('assignment')}
                   className={`px-3 py-1 text-sm rounded ${
                     notificationType === 'assignment'
-                      ? 'bg-blue-100 text-blue-700'
+                      ? 'bg-brand/10 text-brand'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
@@ -160,7 +160,7 @@ export default function NotificationPanel({
                   onClick={() => setNotificationType('update')}
                   className={`px-3 py-1 text-sm rounded ${
                     notificationType === 'update'
-                      ? 'bg-blue-100 text-blue-700'
+                      ? 'bg-brand/10 text-brand'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
@@ -203,7 +203,7 @@ export default function NotificationPanel({
           {/* Load Assignment */}
           {notificationType === 'assignment' && (
             <>
-              <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm">
+              <div className="bg-brand/5 border border-brand/20 rounded p-3 text-sm">
                 <p className="font-medium mb-2">This will send a formatted message with:</p>
                 <ul className="list-disc list-inside space-y-1 text-gray-700">
                   <li>Load number</li>

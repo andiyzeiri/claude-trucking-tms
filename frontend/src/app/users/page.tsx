@@ -364,7 +364,7 @@ export default function UsersPage() {
       case 'super_admin':
         return 'bg-purple-100 text-purple-800'
       case 'dispatcher':
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-brand/10 text-brand'
       case 'driver':
         return 'bg-green-100 text-green-800'
       case 'customer':
@@ -430,7 +430,7 @@ export default function UsersPage() {
           <Card style={{ borderColor: 'var(--monday-border-light)' }}>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(97, 97, 255, 0.1)' }}>
+                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(27, 42, 65, 0.1)' }}>
                   <Users className="h-5 w-5" style={{ color: 'var(--monday-cornflower)' }} />
                 </div>
                 <div>
@@ -523,7 +523,7 @@ export default function UsersPage() {
                           <div className="flex items-center gap-3">
                             <div
                               className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium"
-                              style={{ backgroundColor: 'rgba(97, 97, 255, 0.1)', color: 'var(--monday-cornflower)' }}
+                              style={{ backgroundColor: 'rgba(27, 42, 65, 0.1)', color: 'var(--monday-cornflower)' }}
                             >
                               {user.first_name?.[0]?.toUpperCase()}{user.last_name?.[0]?.toUpperCase()}
                             </div>
@@ -863,13 +863,13 @@ export default function UsersPage() {
                         key={page.id}
                         className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${
                           isEnabled
-                            ? 'border-blue-200 bg-blue-50'
+                            ? 'border-brand/20 bg-brand/5'
                             : 'border-gray-200 bg-white'
                         }`}
                       >
                         <div className="flex items-center gap-2">
                           <div className={`p-1.5 rounded-md ${
-                            isEnabled ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
+                            isEnabled ? 'bg-brand/10 text-brand' : 'bg-gray-100 text-gray-500'
                           }`}>
                             <Icon className="h-3.5 w-3.5" />
                           </div>
@@ -951,13 +951,13 @@ export default function UsersPage() {
                       key={page.id}
                       className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
                         isEnabled
-                          ? 'border-blue-200 bg-blue-50'
+                          ? 'border-brand/20 bg-brand/5'
                           : 'border-gray-200 bg-white'
                       } ${!isCustomRole ? 'opacity-75' : ''}`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-md ${
-                          isEnabled ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
+                          isEnabled ? 'bg-brand/10 text-brand' : 'bg-gray-100 text-gray-500'
                         }`}>
                           <Icon className="h-4 w-4" />
                         </div>

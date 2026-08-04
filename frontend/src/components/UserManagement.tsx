@@ -166,7 +166,7 @@ export default function UserManagement() {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-brand" />
         </CardContent>
       </Card>
     )
@@ -315,7 +315,7 @@ export default function UserManagement() {
                     id="edit_role"
                     value={editForm.role}
                     onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gold-deep"
                   >
                     {ROLES.map(role => (
                       <option key={role.value} value={role.value}>
@@ -364,13 +364,13 @@ export default function UserManagement() {
 
                 {/* Show current permissions for non-custom roles */}
                 {editForm.role !== 'custom' && (
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-900 font-medium mb-2">
+                  <div className="p-4 bg-brand/5 rounded-lg">
+                    <p className="text-sm text-brand font-medium mb-2">
                       Default Pages for {ROLES.find(r => r.value === editForm.role)?.label}:
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {editForm.selectedPages.map(page => (
-                        <span key={page} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                        <span key={page} className="px-2 py-1 bg-brand/10 text-brand text-xs rounded">
                           {ALL_PAGES.find(p => p.id === page)?.label || page}
                         </span>
                       ))}

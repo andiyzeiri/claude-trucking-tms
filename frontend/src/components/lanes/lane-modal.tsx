@@ -217,7 +217,7 @@ export function LaneModal({ isOpen, onClose, onSave, lane, mode }: LaneModalProp
             </Button>
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-brand hover:bg-brand/90"
             >
               {mode === 'create' ? 'Create Lane' : 'Save Changes'}
             </Button>

@@ -107,6 +107,9 @@ export default function Sidebar({ onClose }: SidebarProps) {
           const Icon = item.icon
           const isActive = pathname === item.href
 
+          // Active state uses the gold accent rather than navy. Navy is now
+          // the body text colour, so a navy "selected" item would barely
+          // read as selected at all.
           return (
             <Link
               key={item.name}
@@ -117,14 +120,14 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 isActive ? 'active' : ''
               )}
               style={isActive ? {
-                backgroundColor: 'rgba(97, 97, 255, 0.1)',
-                color: 'var(--monday-cornflower)',
-                borderLeft: '3px solid var(--monday-cornflower)'
+                backgroundColor: 'rgba(180, 83, 9, 0.10)',
+                color: 'var(--gold-deep)',
+                borderLeft: '3px solid var(--gold-deep)'
               } : {
                 color: 'var(--monday-text-secondary)'
               }}
             >
-              <Icon className="mr-3 h-5 w-5 flex-shrink-0" style={{ color: isActive ? 'var(--monday-cornflower)' : 'var(--monday-text-muted)' }} />
+              <Icon className="mr-3 h-5 w-5 flex-shrink-0" style={{ color: isActive ? 'var(--gold-deep)' : 'var(--monday-text-muted)' }} />
               {item.name}
             </Link>
           )
@@ -136,7 +139,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
         {user && (
           <div className="flex items-center space-x-3 mb-3">
             <div className="flex-shrink-0">
-              <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(97, 97, 255, 0.1)' }}>
+              <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(27, 42, 65, 0.1)' }}>
                 <span className="text-sm font-medium" style={{ color: 'var(--monday-cornflower)' }}>
                   {user.first_name?.[0]?.toUpperCase() || ''}{user.last_name?.[0]?.toUpperCase() || ''}
                 </span>

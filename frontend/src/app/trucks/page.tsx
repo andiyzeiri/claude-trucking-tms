@@ -226,7 +226,7 @@ export default function TrucksPage() {
         <td className="px-3 py-2.5" style={{ borderColor: 'var(--monday-border-light)' }}>
           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style={{
             backgroundColor: item.status === 'available' ? 'rgba(0, 200, 117, 0.15)' :
-              item.status === 'in_use' ? 'rgba(97, 97, 255, 0.15)' :
+              item.status === 'in_use' ? 'rgba(27, 42, 65, 0.15)' :
               item.status === 'maintenance' ? 'rgba(253, 171, 61, 0.15)' :
               'rgba(226, 68, 92, 0.15)',
             color: item.status === 'available' ? 'var(--monday-done)' :

@@ -791,7 +791,7 @@ export default function FuelPage() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div className="bg-white border border-gray-200 rounded-lg p-3">
             <div className="text-xs text-gray-500 mb-0.5">Total Miles</div>
-            <div className="text-lg font-bold text-blue-600">{summaryTotals.totalMiles.toLocaleString()}</div>
+            <div className="text-lg font-bold text-brand">{summaryTotals.totalMiles.toLocaleString()}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-3">
             <div className="text-xs text-gray-500 mb-0.5">Total Gallons</div>

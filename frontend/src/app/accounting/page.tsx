@@ -450,7 +450,7 @@ function JournalEntries() {
                   {entry.status}
                 </span>
                 {entry.source !== 'manual' && (
-                  <span className="ml-2 text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+                  <span className="ml-2 text-xs px-2 py-0.5 rounded bg-brand/10 text-brand">
                     auto: {entry.source} #{entry.source_id}
                   </span>
                 )}

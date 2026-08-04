@@ -224,12 +224,12 @@ export function InvoiceModal({ isOpen, onClose, onSave, invoice, mode }: Invoice
             {formData.loads.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {formData.loads.map((load) => (
-                  <div key={load} className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
+                  <div key={load} className="flex items-center gap-1 px-2 py-1 bg-brand/10 text-brand rounded-md text-sm">
                     <span>{load}</span>
                     <button
                       type="button"
                       onClick={() => removeLoad(load)}
-                      className="hover:bg-blue-200 rounded p-0.5"
+                      className="hover:bg-brand/20 rounded p-0.5"
                     >
                       ×
                     </button>

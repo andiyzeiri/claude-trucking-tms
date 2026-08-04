@@ -80,8 +80,8 @@ function LoadDetailsTooltipContent({ load, formatDateTime }: {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800'
-      case 'assigned': return 'bg-blue-100 text-blue-800'
-      case 'dispatched': return 'bg-indigo-100 text-indigo-800'
+      case 'assigned': return 'bg-brand/10 text-brand'
+      case 'dispatched': return 'bg-brand/10 text-brand'
       case 'in_transit': return 'bg-amber-100 text-amber-800'
       case 'delivered': return 'bg-green-100 text-green-800'
       case 'cancelled': return 'bg-red-100 text-red-800'
@@ -331,7 +331,7 @@ function DragOverlayCard({ load, formatDateTime, getShortLocation }: {
   getShortLocation: (location: string) => string
 }) {
   return (
-    <div className="rounded-lg p-2.5 bg-white border-2 border-indigo-400 text-xs shadow-xl w-48">
+    <div className="rounded-lg p-2.5 bg-white border-2 border-brand text-xs shadow-xl w-48">
       <div className="font-semibold text-slate-700 mb-1.5">{load.load_number}</div>
       <div className="space-y-1.5">
         <div className="flex items-start gap-1.5 text-slate-600">
@@ -361,7 +361,7 @@ function DragOverlayCard({ load, formatDateTime, getShortLocation }: {
 function DroppableUnassignedColumn({ children, isOver }: { children: React.ReactNode, isOver: boolean }) {
   return (
     <div
-      className={`p-2 space-y-2 overflow-y-auto flex-1 transition-colors ${isOver ? 'bg-indigo-50' : ''}`}
+      className={`p-2 space-y-2 overflow-y-auto flex-1 transition-colors ${isOver ? 'bg-brand/5' : ''}`}
       style={{ minHeight: '200px' }}
     >
       {children}
@@ -1166,7 +1166,7 @@ export default function DispatchBoardPage() {
                               <span className="text-xs uppercase tracking-wide" style={{ color: 'var(--colors-foreground-muted)' }}>
                                 {format(day, 'EEE')}
                               </span>
-                              <span className={`text-lg ${isToday ? 'bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center' : ''}`}>
+                              <span className={`text-lg ${isToday ? 'bg-brand text-white rounded-full w-8 h-8 flex items-center justify-center' : ''}`}>
                                 {format(day, 'd')}
                               </span>
                             </div>
@@ -1450,7 +1450,7 @@ export default function DispatchBoardPage() {
                   </button>
                   <div className="border-t my-1" />
                   <button
-                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 text-blue-600"
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 text-brand"
                     onClick={() => {
                       openNoteDialog(contextMenu.driverId, contextMenu.date!)
                       closeContextMenu()
@@ -1530,7 +1530,7 @@ export default function DispatchBoardPage() {
                   value={newLoadForm.pickup_location}
                   onChange={(data) => setNewLoadForm({ ...newLoadForm, pickup_location: data.formatted_address })}
                   placeholder="Enter pickup address"
-                  className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gold-deep"
                 />
               </div>
 
@@ -1563,7 +1563,7 @@ export default function DispatchBoardPage() {
                   value={newLoadForm.delivery_location}
                   onChange={(data) => setNewLoadForm({ ...newLoadForm, delivery_location: data.formatted_address })}
                   placeholder="Enter delivery address"
-                  className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gold-deep"
                 />
               </div>
 

@@ -11,7 +11,7 @@ export default function PrivacyPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <Link href="/" className="flex items-center space-x-2">
-              <Truck className="h-8 w-8 text-blue-600" />
+              <Truck className="h-8 w-8 text-brand" />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">ABSOLUTE TMS</h1>
                 <p className="text-xs text-gray-500">Privacy Policy</p>
@@ -32,15 +32,15 @@ export default function PrivacyPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-3xl flex items-center">
-                <Shield className="h-8 w-8 text-blue-600 mr-3" />
+                <Shield className="h-8 w-8 text-brand mr-3" />
                 Privacy Policy
               </CardTitle>
               <p className="text-gray-600">Last updated: December 2024</p>
             </CardHeader>
             <CardContent className="prose prose-gray max-w-none">
               <div className="grid md:grid-cols-3 gap-6 mb-8 not-prose">
-                <div className="text-center p-6 bg-blue-50 rounded-lg">
-                  <Eye className="h-8 w-8 text-blue-600 mx-auto mb-3" />
+                <div className="text-center p-6 bg-brand/5 rounded-lg">
+                  <Eye className="h-8 w-8 text-brand mx-auto mb-3" />
                   <h3 className="font-semibold text-gray-900">Transparency</h3>
                   <p className="text-sm text-gray-600">Clear information about data collection and use</p>
                 </div>
@@ -143,13 +143,13 @@ export default function PrivacyPage() {
                 If you have questions about this Privacy Policy or our data practices, please contact our Data Protection Officer at privacy@absolutetms.com.
               </p>
 
-              <div className="bg-blue-50 p-6 rounded-lg mt-8">
-                <h3 className="text-lg font-semibold text-blue-900 mb-2">Your Data, Your Control</h3>
-                <p className="text-sm text-blue-800 mb-4">
+              <div className="bg-brand/5 p-6 rounded-lg mt-8">
+                <h3 className="text-lg font-semibold text-brand mb-2">Your Data, Your Control</h3>
+                <p className="text-sm text-brand mb-4">
                   We believe you should have full control over your data. Access your privacy dashboard to manage your preferences, download your data, or request deletion at any time.
                 </p>
                 <Link href="/dashboard/privacy">
-                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                  <Button size="sm" className="bg-brand hover:bg-brand/90">
                     Manage Privacy Settings
                   </Button>
                 </Link>

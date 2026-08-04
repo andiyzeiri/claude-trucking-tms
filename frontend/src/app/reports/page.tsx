@@ -644,7 +644,7 @@ export default function ReportsPage() {
             <Button onClick={collapseAll} variant="outline">
               Collapse All
             </Button>
-            <Button onClick={exportToCSV} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={exportToCSV} className="bg-brand hover:bg-brand/90">
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>
@@ -660,7 +660,7 @@ export default function ReportsPage() {
               onClick={() => setSelectedYear(year)}
               className={`px-4 py-2 rounded-md font-medium text-sm transition-colors ${
                 selectedYear === year
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-brand text-white'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
@@ -676,7 +676,7 @@ export default function ReportsPage() {
               onClick={() => setActiveTab('drivers')}
               className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'drivers'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-brand text-brand'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -735,7 +735,7 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Loads ({selectedYear})</div>
-            <div className="text-3xl font-bold text-blue-600">{grandTotals.loadCount}</div>
+            <div className="text-3xl font-bold text-brand">{grandTotals.loadCount}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Gross ({selectedYear})</div>
@@ -821,7 +821,7 @@ export default function ReportsPage() {
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Categories</div>
-            <div className="text-3xl font-bold text-blue-600">{expenseReportData.categories.length}</div>
+            <div className="text-3xl font-bold text-brand">{expenseReportData.categories.length}</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Entries</div>

@@ -48,15 +48,15 @@ export default function LoginPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex">
+    <div className="min-h-screen bg-gradient-to-br from-surface-subtle to-brand/5 flex">
       {/* Left Side - Features & Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-blue-600 text-white flex-col justify-center px-12">
+      <div className="hidden lg:flex lg:w-1/2 bg-brand text-white flex-col justify-center px-12">
         <div className="max-w-md">
           <div className="flex items-center space-x-3 mb-8">
             <Truck className="h-10 w-10" />
             <div>
               <h1 className="text-2xl font-bold">ABSOLUTE TMS</h1>
-              <p className="text-blue-200">Transportation Management System</p>
+              <p className="text-white/70">Transportation Management System</p>
             </div>
           </div>
 
@@ -64,7 +64,7 @@ export default function LoginPage() {
             Welcome Back to Your TMS Dashboard
           </h2>
 
-          <p className="text-blue-100 mb-8 leading-relaxed">
+          <p className="text-white/80 mb-8 leading-relaxed">
             Manage your fleet, optimize routes, and grow your transportation business with the most trusted TMS platform.
           </p>
 
@@ -72,14 +72,14 @@ export default function LoginPage() {
             {features.map((feature, index) => (
               <div key={index} className="flex items-start space-x-3">
                 <CheckCircle className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
-                <span className="text-blue-100 text-sm">{feature}</span>
+                <span className="text-white/80 text-sm">{feature}</span>
               </div>
             ))}
           </div>
 
-          <div className="mt-12 p-6 bg-blue-700 rounded-lg">
+          <div className="mt-12 p-6 bg-brand rounded-lg">
             <h3 className="font-semibold mb-2">New to Absolute TMS?</h3>
-            <p className="text-blue-200 text-sm mb-4">
+            <p className="text-white/70 text-sm mb-4">
               Start your free 30-day trial today and experience the difference.
             </p>
             <Link href="/register">
@@ -101,7 +101,7 @@ export default function LoginPage() {
             </Link>
 
             <div className="flex justify-center lg:hidden mb-6">
-              <Truck className="h-10 w-10 text-blue-600" />
+              <Truck className="h-10 w-10 text-brand" />
             </div>
 
             <h2 className="text-3xl font-bold text-gray-900">Sign In</h2>
@@ -179,7 +179,7 @@ export default function LoginPage() {
                       Remember me
                     </Label>
                   </div>
-                  <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
+                  <Link href="/forgot-password" className="text-sm text-brand hover:text-brand">
                     Forgot password?
                   </Link>
                 </div>
@@ -205,7 +205,7 @@ export default function LoginPage() {
           <div className="text-center space-y-4">
             <p className="text-sm text-gray-600">
               Don&apos;t have an account?{' '}
-              <Link href="/register" className="text-blue-600 hover:text-blue-500 font-medium">
+              <Link href="/register" className="text-brand hover:text-brand font-medium">
                 Start your free trial
               </Link>
             </p>

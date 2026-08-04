@@ -50,7 +50,7 @@ export default function ForgotPasswordPage() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-surface-subtle to-brand/5 flex items-center justify-center px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-6">
@@ -68,9 +68,9 @@ export default function ForgotPasswordPage() {
           <Card className="shadow-xl border-0">
             <CardContent className="pt-6">
               <div className="space-y-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="font-medium text-blue-900 mb-2">Next Steps:</h3>
-                  <ul className="text-sm text-blue-800 space-y-1">
+                <div className="bg-brand/5 p-4 rounded-lg">
+                  <h3 className="font-medium text-brand mb-2">Next Steps:</h3>
+                  <ul className="text-sm text-brand space-y-1">
                     <li>• Check your email inbox and spam folder</li>
                     <li>• Click the reset link in the email</li>
                     <li>• Create a new secure password</li>
@@ -100,7 +100,7 @@ export default function ForgotPasswordPage() {
                 </div>
 
                 <div className="text-center">
-                  <Link href="/login" className="text-sm text-blue-600 hover:text-blue-500">
+                  <Link href="/login" className="text-sm text-brand hover:text-brand">
                     ← Back to Sign In
                   </Link>
                 </div>
@@ -113,7 +113,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-surface-subtle to-brand/5 flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <Link href="/login" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-8">
@@ -122,7 +122,7 @@ export default function ForgotPasswordPage() {
           </Link>
 
           <div className="flex justify-center mb-6">
-            <Truck className="h-12 w-12 text-blue-600" />
+            <Truck className="h-12 w-12 text-brand" />
           </div>
 
           <h2 className="text-3xl font-bold text-gray-900">Reset Your Password</h2>
@@ -177,7 +177,7 @@ export default function ForgotPasswordPage() {
               <div className="text-center">
                 <p className="text-sm text-gray-600">
                   Remember your password?{' '}
-                  <Link href="/login" className="text-blue-600 hover:text-blue-500 font-medium">
+                  <Link href="/login" className="text-brand hover:text-brand font-medium">
                     Sign in
                   </Link>
                 </p>

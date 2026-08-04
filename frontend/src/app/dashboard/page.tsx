@@ -245,7 +245,7 @@ export default function DashboardPage() {
 
         {/* Getting Started Section */}
         {!isLoading && loads?.length === 0 && drivers?.length === 0 && (
-          <Card style={{ backgroundColor: 'rgba(97, 97, 255, 0.08)', borderColor: 'var(--monday-cornflower)' }}>
+          <Card style={{ backgroundColor: 'rgba(27, 42, 65, 0.08)', borderColor: 'var(--monday-cornflower)' }}>
             <CardHeader>
               <CardTitle style={{ color: 'var(--monday-text-primary)' }}>Getting Started</CardTitle>
             </CardHeader>

@@ -347,7 +347,7 @@ export function PayrollModal({ isOpen, onClose, onSave, payroll, mode }: Payroll
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Revenue Per Mile (RPM):</span>
-                <span className="text-lg font-bold text-blue-600">
+                <span className="text-lg font-bold text-brand">
                   ${formData.rpm.toFixed(2)}
                 </span>
               </div>
@@ -365,7 +365,7 @@ export function PayrollModal({ isOpen, onClose, onSave, payroll, mode }: Payroll
             </Button>
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-brand hover:bg-brand/90"
             >
               {mode === 'create' ? 'Create Payroll Entry' : 'Update Payroll Entry'}
             </Button>

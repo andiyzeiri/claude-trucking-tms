@@ -223,7 +223,7 @@ export default function LanesPage() {
             <h1 className="text-2xl font-semibold text-gray-900">Lanes</h1>
             <p className="text-gray-600">Manage your freight lanes and broker relationships</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700 opacity-50 cursor-not-allowed" disabled>
+          <Button className="bg-brand hover:bg-brand/90 opacity-50 cursor-not-allowed" disabled>
             <Plus className="mr-2 h-4 w-4" />
             New Lane
           </Button>
@@ -253,13 +253,13 @@ export default function LanesPage() {
                       <ChevronRight className="h-5 w-5 text-gray-500" />
                     )}
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-blue-500" />
+                      <MapPin className="h-4 w-4 text-brand" />
                       <span className="font-semibold text-gray-900">{group.route}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     {group.customers.size > 0 && (
-                      <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                      <span className="px-2.5 py-1 bg-brand/10 text-brand text-xs font-medium rounded-full">
                         {group.customers.size} customer{group.customers.size !== 1 ? 's' : ''}
                       </span>
                     )}
@@ -276,24 +276,24 @@ export default function LanesPage() {
                   <div className="p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Customers Box */}
-                      <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
+                      <div className="bg-brand/5 rounded-lg border border-brand/20 p-4">
                         <div className="flex items-center gap-2 mb-3">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          <h4 className="text-sm font-semibold text-blue-800 uppercase tracking-wide">Customers</h4>
+                          <div className="w-2 h-2 bg-brand rounded-full"></div>
+                          <h4 className="text-sm font-semibold text-brand uppercase tracking-wide">Customers</h4>
                         </div>
                         {group.customers.size > 0 ? (
                           <div className="space-y-2">
                             {Array.from(group.customers).map((customerName, index) => (
                               <div
                                 key={index}
-                                className="bg-white rounded-md px-3 py-2 text-sm font-medium text-gray-800 border border-blue-100"
+                                className="bg-white rounded-md px-3 py-2 text-sm font-medium text-gray-800 border border-brand/10"
                               >
                                 {customerName}
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-blue-600 italic">No customers yet</p>
+                          <p className="text-sm text-brand italic">No customers yet</p>
                         )}
                       </div>
 
@@ -356,13 +356,13 @@ export default function LanesPage() {
             </div>
             <div className="bg-white rounded-lg border shadow-sm p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="w-10 h-10 bg-brand/10 rounded-lg flex items-center justify-center">
+                  <svg className="h-5 w-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-blue-700">{totals.totalCustomers}</div>
+                  <div className="text-2xl font-bold text-brand">{totals.totalCustomers}</div>
                   <div className="text-sm text-gray-500">Customer{totals.totalCustomers !== 1 ? 's' : ''}</div>
                 </div>
               </div>

@@ -64,7 +64,7 @@ export default function SettingsPage() {
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <Loader2 className="h-8 w-8 animate-spin text-brand" />
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -306,9 +306,9 @@ export default function SettingsPage() {
                 <Button>Update Password</Button>
               </div>
               <div className="space-y-4">
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <h3 className="font-medium text-blue-900">Two-Factor Authentication</h3>
-                  <p className="text-sm text-blue-700 mt-1">Add an extra layer of security to your account</p>
+                <div className="p-4 bg-brand/5 rounded-lg">
+                  <h3 className="font-medium text-brand">Two-Factor Authentication</h3>
+                  <p className="text-sm text-brand mt-1">Add an extra layer of security to your account</p>
                   <Button variant="outline" className="mt-3" size="sm">Enable 2FA</Button>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-lg">

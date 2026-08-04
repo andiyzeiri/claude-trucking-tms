@@ -219,7 +219,7 @@ export function ExpandableLanesTable({
                   </td>
                   <td className="px-4 py-3 text-sm" style={{ width: '40%' }}>
                     <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand/10 text-brand">
                         {group.brokers.length} broker{group.brokers.length !== 1 ? 's' : ''}
                       </span>
                       <span className="text-xs text-gray-500">
@@ -239,7 +239,7 @@ export function ExpandableLanesTable({
                     <td className="px-4 py-3 text-sm border-r border-gray-100 pl-12" style={{ width: '60%' }}>
                       <div className="flex items-center space-x-3">
                         <div className="flex items-center space-x-2">
-                          <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                          <span className="w-2 h-2 bg-brand rounded-full"></span>
                           <span className="font-medium text-gray-900">{broker.broker}</span>
                         </div>
                         {broker.notes && (
@@ -255,7 +255,7 @@ export function ExpandableLanesTable({
                           <span className="text-xs text-gray-500">📧</span>
                           <a
                             href={`mailto:${broker.email}`}
-                            className="text-blue-600 hover:text-blue-800 hover:underline text-xs"
+                            className="text-brand hover:text-brand hover:underline text-xs"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {broker.email}
@@ -265,7 +265,7 @@ export function ExpandableLanesTable({
                           <span className="text-xs text-gray-500">📞</span>
                           <a
                             href={`tel:${broker.phone}`}
-                            className="text-blue-600 hover:text-blue-800 hover:underline text-xs"
+                            className="text-brand hover:text-brand hover:underline text-xs"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {broker.phone}

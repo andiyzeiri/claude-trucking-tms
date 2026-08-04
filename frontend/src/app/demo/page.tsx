@@ -32,7 +32,7 @@ export default function DemoPage() {
       icon: BarChart3,
       description: 'Real-time insights into your fleet performance, revenue, and operational metrics.',
       preview: 'View live KPIs, charts, and performance indicators',
-      color: 'bg-blue-500'
+      color: 'bg-brand'
     },
     {
       id: 'fleet',
@@ -64,7 +64,7 @@ export default function DemoPage() {
       icon: Route,
       description: 'AI-powered route planning to reduce fuel costs and improve delivery times.',
       preview: 'See optimized routes and fuel savings',
-      color: 'bg-indigo-500'
+      color: 'bg-brand'
     },
     {
       id: 'financials',
@@ -111,7 +111,7 @@ export default function DemoPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <Link href="/" className="flex items-center space-x-2">
-              <Truck className="h-8 w-8 text-blue-600" />
+              <Truck className="h-8 w-8 text-brand" />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">ABSOLUTE TMS</h1>
                 <p className="text-xs text-gray-500">Demo Experience</p>
@@ -159,8 +159,8 @@ export default function DemoPage() {
             {stats.map((stat, index) => (
               <Card key={index} className="text-center border-0 shadow-lg">
                 <CardContent className="pt-6">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <stat.icon className="h-6 w-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-brand/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <stat.icon className="h-6 w-6 text-brand" />
                   </div>
                   <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
                   <div className="text-sm text-gray-600">{stat.label}</div>
@@ -188,7 +188,7 @@ export default function DemoPage() {
               <Card
                 key={feature.id}
                 className={`cursor-pointer transition-all duration-300 hover:shadow-xl border-0 ${
-                  selectedDemo === feature.id ? 'ring-2 ring-blue-500 shadow-xl' : 'shadow-lg'
+                  selectedDemo === feature.id ? 'ring-2 ring-gold-deep shadow-xl' : 'shadow-lg'
                 }`}
                 onClick={() => setSelectedDemo(feature.id)}
               >
@@ -200,7 +200,7 @@ export default function DemoPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-gray-600 text-sm mb-4">{feature.description}</p>
-                  <div className="flex items-center text-xs text-blue-600 font-medium">
+                  <div className="flex items-center text-xs text-brand font-medium">
                     <Play className="h-3 w-3 mr-1" />
                     {feature.preview}
                   </div>
@@ -219,10 +219,10 @@ export default function DemoPage() {
                   This would show an interactive demo of the {selectedDemo} feature.
                   In the full version, you'd see screenshots, videos, or live interactions.
                 </p>
-                <div className="bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg p-12 mb-6">
+                <div className="bg-gradient-to-br from-brand/10 to-brand/5 rounded-lg p-12 mb-6">
                   <div className="flex items-center justify-center text-gray-500">
                     <div className="text-center">
-                      <BarChart3 className="h-16 w-16 mx-auto mb-4 text-blue-600" />
+                      <BarChart3 className="h-16 w-16 mx-auto mb-4 text-brand" />
                       <p className="text-lg font-medium">Interactive Demo Placeholder</p>
                       <p className="text-sm">Experience the full feature in the live demo</p>
                     </div>
@@ -265,7 +265,7 @@ export default function DemoPage() {
                   <div className="border-t pt-4">
                     <div className="font-semibold text-gray-900">{testimonial.name}</div>
                     <div className="text-sm text-gray-500">{testimonial.role}</div>
-                    <div className="text-sm font-medium text-blue-600">{testimonial.company}</div>
+                    <div className="text-sm font-medium text-brand">{testimonial.company}</div>
                   </div>
                 </CardContent>
               </Card>
@@ -275,13 +275,13 @@ export default function DemoPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-blue-600">
+      <section className="py-16 bg-brand">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h3 className="text-3xl font-bold text-white mb-6">
               Ready to See the Full System?
             </h3>
-            <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+            <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
               Experience all features with real data in our interactive demo environment.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
@@ -292,7 +292,7 @@ export default function DemoPage() {
                 </Button>
               </Link>
               <Link href="/register">
-                <Button size="lg" variant="outline" className="text-lg px-8 py-4 text-white border-white hover:bg-white hover:text-blue-600">
+                <Button size="lg" variant="outline" className="text-lg px-8 py-4 text-white border-white hover:bg-white hover:text-brand">
                   Start Free Trial
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
@@ -307,7 +307,7 @@ export default function DemoPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-4">
-              <Truck className="h-6 w-6 text-blue-400" />
+              <Truck className="h-6 w-6 text-brand" />
               <span className="font-bold text-lg">ABSOLUTE TMS</span>
             </div>
             <p className="text-gray-400 text-sm">

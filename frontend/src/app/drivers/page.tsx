@@ -208,7 +208,7 @@ export default function DriversPage() {
       render: (value) => (
         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style={{
           backgroundColor: value === 'available' ? 'rgba(0, 200, 117, 0.15)' :
-            value === 'on_trip' ? 'rgba(97, 97, 255, 0.15)' :
+            value === 'on_trip' ? 'rgba(27, 42, 65, 0.15)' :
             'rgba(196, 196, 196, 0.15)',
           color: value === 'available' ? 'var(--monday-done)' :
             value === 'on_trip' ? 'var(--monday-cornflower)' :
@@ -379,14 +379,14 @@ export default function DriversPage() {
               onClick={() => setActiveTab('drivers')}
               className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'drivers'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-brand text-brand'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
               <Users className="h-4 w-4" />
               Company Drivers
               <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                activeTab === 'drivers' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
+                activeTab === 'drivers' ? 'bg-brand/10 text-brand' : 'bg-gray-100 text-gray-600'
               }`}>
                 {companyDrivers.length}
               </span>

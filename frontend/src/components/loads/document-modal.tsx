@@ -90,7 +90,7 @@ export function DocumentModal({
                 <FileText className="h-4 w-4" />
                 <span>Rate Confirmation</span>
                 {localDocuments.ratecon.length > 0 && (
-                  <span className="ml-1 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+                  <span className="ml-1 bg-brand/10 text-brand text-xs px-2 py-0.5 rounded-full">
                     {localDocuments.ratecon.length}
                   </span>
                 )}
@@ -134,9 +134,9 @@ export function DocumentModal({
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Total Files</p>
-                        <p className="text-2xl font-bold text-blue-600">{localDocuments.ratecon.length}</p>
+                        <p className="text-2xl font-bold text-brand">{localDocuments.ratecon.length}</p>
                       </div>
-                      <FileText className="h-8 w-8 text-blue-600" />
+                      <FileText className="h-8 w-8 text-brand" />
                     </div>
                   </CardContent>
                 </Card>
@@ -145,11 +145,11 @@ export function DocumentModal({
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Total Size</p>
-                        <p className="text-2xl font-bold text-blue-600">
+                        <p className="text-2xl font-bold text-brand">
                           {(localDocuments.ratecon.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024)).toFixed(1)} MB
                         </p>
                       </div>
-                      <Package className="h-8 w-8 text-blue-600" />
+                      <Package className="h-8 w-8 text-brand" />
                     </div>
                   </CardContent>
                 </Card>

@@ -152,7 +152,7 @@ export default function ShippersPage() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="font-medium cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+            <div className="font-medium cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
               {shipper.name || 'Untitled'}
             </div>
           )}
@@ -169,7 +169,7 @@ export default function ShippersPage() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
               {shipper.address || 'N/A'}
             </div>
           )}
@@ -186,7 +186,7 @@ export default function ShippersPage() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
               {shipper.city || 'N/A'}
             </div>
           )}
@@ -203,7 +203,7 @@ export default function ShippersPage() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
               {shipper.state || 'N/A'}
             </div>
           )}
@@ -220,7 +220,7 @@ export default function ShippersPage() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
               {shipper.zip_code || 'N/A'}
             </div>
           )}
@@ -237,7 +237,7 @@ export default function ShippersPage() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
               {shipper.phone || 'N/A'}
             </div>
           )}
@@ -254,7 +254,7 @@ export default function ShippersPage() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
               {shipper.contact_person || 'N/A'}
             </div>
           )}
@@ -271,7 +271,7 @@ export default function ShippersPage() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
               {shipper.product_type || 'N/A'}
             </div>
           )}
@@ -289,7 +289,7 @@ export default function ShippersPage() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
               {shipper.average_wait_time || 'N/A'}
             </div>
           )}
@@ -307,7 +307,7 @@ export default function ShippersPage() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '13px', lineHeight: '18px', color: 'var(--colors-foreground-default)'}}>
               {shipper.appointment_type || 'N/A'}
             </div>
           )}
@@ -337,7 +337,7 @@ export default function ShippersPage() {
             <p className="text-gray-600">Manage warehouse and shipping location information</p>
           </div>
           <Button
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-brand hover:bg-brand/90"
             onClick={handleAddNew}
           >
             <Plus className="mr-2 h-4 w-4" />

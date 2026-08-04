@@ -37,7 +37,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center">
-            <Truck className="h-12 w-12 text-blue-600" />
+            <Truck className="h-12 w-12 text-brand" />
           </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             Sign in to TMS

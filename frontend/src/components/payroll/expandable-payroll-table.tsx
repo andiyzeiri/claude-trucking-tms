@@ -173,7 +173,7 @@ export function ExpandablePayrollTable({
               <div key={week}>
                 {/* Week Header Row */}
                 <div
-                  className="px-6 py-3 hover:bg-gray-50 cursor-pointer border-l-4 border-blue-500"
+                  className="px-6 py-3 hover:bg-gray-50 cursor-pointer border-l-4 border-brand"
                   onClick={() => toggleWeek(week)}
                 >
                   <div className="flex items-center space-x-2">
@@ -215,7 +215,7 @@ export function ExpandablePayrollTable({
                             <div className="col-span-1">
                               <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                                 entry.type === 'company'
-                                  ? isEmptyEntry ? 'bg-gray-100 text-gray-400' : 'bg-blue-100 text-blue-800'
+                                  ? isEmptyEntry ? 'bg-gray-100 text-gray-400' : 'bg-brand/10 text-brand'
                                   : isEmptyEntry ? 'bg-gray-100 text-gray-400' : 'bg-purple-100 text-purple-800'
                               }`}>
                                 {entry.type === 'company' ? 'Company' : 'Owner Op'}
@@ -233,7 +233,7 @@ export function ExpandablePayrollTable({
                             <div className="col-span-2 font-medium" style={{color: isEmptyEntry ? '#9ca3af' : '#1a5f2a'}}>
                               {formatCurrency(entry.check)}
                             </div>
-                            <div className={`col-span-1 font-medium ${isEmptyEntry ? 'text-gray-400' : 'text-blue-600'}`}>
+                            <div className={`col-span-1 font-medium ${isEmptyEntry ? 'text-gray-400' : 'text-brand'}`}>
                               ${entry.rpm.toFixed(2)}
                             </div>
                             <div className={`col-span-1 ${isEmptyEntry ? 'text-gray-400' : 'text-yellow-600'}`}>

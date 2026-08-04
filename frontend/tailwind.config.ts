@@ -102,18 +102,14 @@ const config = {
           working: "var(--monday-working)",
         },
 
-        // Marketing palette - landing page only, namespaced under mkt- so it
-        // can never be confused with the app tokens above. 'amber' is not used
-        // as a top-level key on purpose: that would shadow Tailwind's built-in
-        // amber scale.
-        mkt: {
-          navy: "rgb(var(--mkt-navy-rgb) / <alpha-value>)",
-          amber: "rgb(var(--mkt-amber-rgb) / <alpha-value>)",
-          "amber-deep": "rgb(var(--mkt-amber-deep-rgb) / <alpha-value>)",
-          surface: "var(--mkt-surface)",
-          subtle: "var(--mkt-subtle)",
-          muted: "var(--mkt-muted)",
-          line: "var(--mkt-line)",
+        // Amber accent, shared by the marketing site and the app.
+        // Named 'gold' rather than 'amber' on purpose: a top-level 'amber'
+        // key would shadow Tailwind's built-in amber scale.
+        //   bg-gold / text-gold        - fills on navy only (6.3:1)
+        //   text-gold-deep             - text and icons on light (4.9:1)
+        gold: {
+          DEFAULT: "rgb(var(--gold-rgb) / <alpha-value>)",
+          deep: "rgb(var(--gold-deep-rgb) / <alpha-value>)",
         },
       },
       borderRadius: {

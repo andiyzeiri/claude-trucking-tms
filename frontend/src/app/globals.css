@@ -10,33 +10,25 @@
 
     /* Monday.com Brand Colors */
     --monday-mirage: #181B34;
-    --monday-cornflower: #6161FF;
+    --monday-cornflower: #1B2A41;
     /* Same colour as --monday-cornflower, as space-separated RGB channels.
        Tailwind needs this form to support opacity modifiers (bg-brand/10).
-       Keep the two in sync: #6161FF == 97 97 255. */
-    --brand-rgb: 97 97 255;
+       Keep the two in sync: #1B2A41 == 27 42 65. */
+    --brand-rgb: 27 42 65;
 
     /* ------------------------------------------------------------------ */
-    /* Marketing palette - landing page ONLY.                              */
+    /* Accent - amber. Used across the marketing site and the app alike.   */
     /*                                                                     */
-    /* Deliberately separate from the --monday-* tokens above so the       */
-    /* signed-in app keeps its violet look untouched. Nothing behind the   */
-    /* login wall should reference these.                                  */
-    /*                                                                     */
-    /* Amber has two shades on purpose: #F59E0B only hits 2.1:1 on white,  */
-    /* which fails contrast for text. Use --mkt-amber for fills on navy    */
-    /* and --mkt-amber-deep (4.9:1) for text and icons on light.           */
+    /* Two shades on purpose. #F59E0B measures 2.1:1 on white, which fails */
+    /* contrast for text at any size, so it is only ever a fill against    */
+    /* navy (6.3:1) or a small solid dot. Text and icons on light          */
+    /* backgrounds must use --gold-deep #B45309, which reaches 4.9:1.      */
     /* ------------------------------------------------------------------ */
-    --mkt-navy: #1B2A41;
-    --mkt-navy-rgb: 27 42 65;
-    --mkt-amber: #F59E0B;
-    --mkt-amber-rgb: 245 158 11;
-    --mkt-amber-deep: #B45309;
-    --mkt-amber-deep-rgb: 180 83 9;
-    --mkt-surface: #FFFFFF;
-    --mkt-subtle: #F4F6F9;
-    --mkt-muted: #5A6B82;
-    --mkt-line: #E3E8EF;
+    --gold: #F59E0B;
+    --gold-rgb: 245 158 11;
+    --gold-deep: #B45309;
+    --gold-deep-rgb: 180 83 9;
+
     --monday-white: #FFFFFF;
 
     /* Monday.com Status Colors */
@@ -49,50 +41,58 @@
 
     /* Monday.com UI Colors */
     --monday-bg-primary: #FFFFFF;
-    --monday-bg-secondary: #F6F7FB;
-    --monday-bg-hover: #DCDFEC;
-    --monday-border: #C3C6D4;
-    --monday-border-light: #E6E9EF;
-    --monday-text-primary: #323338;
-    --monday-text-secondary: #676879;
-    --monday-text-muted: #9699A6;
+    --monday-bg-secondary: #F4F6F9;
+    --monday-bg-hover: #E7EDF4;
+    --monday-border: #C7D1DE;
+    --monday-border-light: #E3E8EF;
+    --monday-text-primary: #1B2A41;
+    --monday-text-secondary: #5A6B82;
+    --monday-text-muted: #6E8095;
 
     /* Cell Colors (Monday.com style) */
     --cell-background-base: #ffffff;
-    --cell-background-header: #F6F7FB;
-    --cell-background-selected: #E6E9EF;
-    --cell-background-highlight: rgba(97, 97, 255, 0.08);
-    --row-background-cursor: #F0F0FF;
-    --cell-background-row-number-hover: #DCDFEC;
-    --cell-borderColor: #E6E9EF;
-    --cell-borderColor-header: #C3C6D4;
+    --cell-background-header: #F4F6F9;
+    --cell-background-selected: #E3E8EF;
+    --cell-background-highlight: rgba(27, 42, 65, 0.08);
+    --row-background-cursor: #F4F7FB;
+    --cell-background-row-number-hover: #E7EDF4;
+    --cell-borderColor: #E3E8EF;
+    --cell-borderColor-header: #C7D1DE;
 
     /* Foreground colors (Monday.com style) */
-    --colors-foreground-default: #323338;
-    --colors-foreground-muted: #676879;
-    --colors-border-focus: #6161FF;
+    --colors-foreground-default: #1B2A41;
+    --colors-foreground-muted: #5A6B82;
+    /* Gold focus ring: navy focus on navy text is nearly invisible. */
+    --colors-border-focus: #B45309;
     --colors-background-default: #ffffff;
 
-    /* Original shadcn variables for compatibility */
+    /* shadcn variables, retuned to the navy palette. These drive every
+       shadcn component - Button's default variant is bg-primary, so
+       leaving --primary violet would have kept violet buttons all over
+       the app no matter what the --monday-* tokens said.
+         216 41% 18% == #1B2A41 navy
+         215 29% 97% == #F4F6F9 subtle
+         214 27% 91% == #E3E8EF hairline
+          32 94% 37% == #B45309 gold-deep (focus ring) */
     --background: 0 0% 100%;
-    --foreground: 222 15% 20%;
+    --foreground: 216 41% 18%;
     --card: 0 0% 100%;
-    --card-foreground: 222 15% 20%;
+    --card-foreground: 216 41% 18%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 15% 20%;
-    --primary: 243 100% 69%;
+    --popover-foreground: 216 41% 18%;
+    --primary: 216 41% 18%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 230 15% 97%;
-    --secondary-foreground: 222 15% 20%;
-    --muted: 230 15% 97%;
-    --muted-foreground: 230 10% 46%;
-    --accent: 230 15% 97%;
-    --accent-foreground: 222 15% 20%;
+    --secondary: 215 29% 97%;
+    --secondary-foreground: 216 41% 18%;
+    --muted: 215 29% 97%;
+    --muted-foreground: 214 19% 43%;
+    --accent: 215 29% 97%;
+    --accent-foreground: 216 41% 18%;
     --destructive: 354 70% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 228 14% 89%;
-    --input: 228 14% 89%;
-    --ring: 243 100% 69%;
+    --border: 214 27% 91%;
+    --input: 214 27% 91%;
+    --ring: 32 94% 37%;
     --radius: 0.5rem;
   }
 
@@ -173,21 +173,21 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: #F6F7FB;
+    background: #F4F6F9;
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: #C3C6D4;
+    background-color: #C7D1DE;
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: #9699A6;
+    background-color: #8A99AC;
   }
 
   ::-webkit-scrollbar-corner {
-    background-color: #F6F7FB;
+    background-color: #F4F6F9;
   }
 
   /* Monday.com style buttons */
@@ -273,22 +273,22 @@
 
 /* Dashboard - Monday Purple accent */
 .page-dashboard {
-  --page-bg: #F6F7FB;
-  --page-accent: #F0F0FF;
-  --page-border: #E6E9EF;
-  --page-hover: #DCDFEC;
-  --page-text-accent: #6161FF;
-  --page-text-muted: #676879;
+  --page-bg: #F4F6F9;
+  --page-accent: #F4F7FB;
+  --page-border: #E3E8EF;
+  --page-hover: #E7EDF4;
+  --page-text-accent: #1B2A41;
+  --page-text-muted: #5A6B82;
 }
 
 /* Loads - Monday Green */
 .page-loads {
-  --page-bg: #F6F7FB;
+  --page-bg: #F4F6F9;
   --page-accent: #E6FAF0;
-  --page-border: #E6E9EF;
+  --page-border: #E3E8EF;
   --page-hover: #D0F5E3;
   --page-text-accent: #00C875;
-  --page-text-muted: #676879;
+  --page-text-muted: #5A6B82;
   font-weight: 450;
   letter-spacing: 0.015em;
   font-size: calc(1em + 1px);
@@ -296,12 +296,12 @@
 
 /* Brokerage - Monday Teal */
 .page-brokerage {
-  --page-bg: #F6F7FB;
+  --page-bg: #F4F6F9;
   --page-accent: #E6FAF0;
-  --page-border: #E6E9EF;
+  --page-border: #E3E8EF;
   --page-hover: #D0F5E3;
   --page-text-accent: #00C875;
-  --page-text-muted: #676879;
+  --page-text-muted: #5A6B82;
   font-weight: 450;
   letter-spacing: 0.015em;
   font-size: calc(1em + 1px);
@@ -309,102 +309,102 @@
 
 /* Lanes - Monday Orange */
 .page-lanes {
-  --page-bg: #F6F7FB;
+  --page-bg: #F4F6F9;
   --page-accent: #FFF4E6;
-  --page-border: #E6E9EF;
+  --page-border: #E3E8EF;
   --page-hover: #FFE8CC;
   --page-text-accent: #FDAB3D;
-  --page-text-muted: #676879;
+  --page-text-muted: #5A6B82;
 }
 
 /* Trucks - Monday Purple */
 .page-trucks {
-  --page-bg: #F6F7FB;
+  --page-bg: #F4F6F9;
   --page-accent: #F4EAFA;
-  --page-border: #E6E9EF;
+  --page-border: #E3E8EF;
   --page-hover: #E9D5F5;
   --page-text-accent: #A25DDC;
-  --page-text-muted: #676879;
+  --page-text-muted: #5A6B82;
 }
 
 /* Drivers - Monday Blue */
 .page-drivers {
-  --page-bg: #F6F7FB;
+  --page-bg: #F4F6F9;
   --page-accent: #E6F4FA;
-  --page-border: #E6E9EF;
+  --page-border: #E3E8EF;
   --page-hover: #CCE9F5;
   --page-text-accent: #0086C0;
-  --page-text-muted: #676879;
+  --page-text-muted: #5A6B82;
 }
 
 /* Customers - Monday Red/Pink */
 .page-customers {
-  --page-bg: #F6F7FB;
+  --page-bg: #F4F6F9;
   --page-accent: #FCEDEF;
-  --page-border: #E6E9EF;
+  --page-border: #E3E8EF;
   --page-hover: #F9DBE0;
   --page-text-accent: #E2445C;
-  --page-text-muted: #676879;
+  --page-text-muted: #5A6B82;
 }
 
 /* Payroll - Monday Yellow/Gold */
 .page-payroll {
-  --page-bg: #F6F7FB;
+  --page-bg: #F4F6F9;
   --page-accent: #FFF8E6;
-  --page-border: #E6E9EF;
+  --page-border: #E3E8EF;
   --page-hover: #FFF0CC;
   --page-text-accent: #FDAB3D;
-  --page-text-muted: #676879;
+  --page-text-muted: #5A6B82;
 }
 
 /* Invoices - Monday Cornflower */
 .page-invoices {
-  --page-bg: #F6F7FB;
-  --page-accent: #F0F0FF;
-  --page-border: #E6E9EF;
-  --page-hover: #DCDFEC;
-  --page-text-accent: #6161FF;
-  --page-text-muted: #676879;
+  --page-bg: #F4F6F9;
+  --page-accent: #F4F7FB;
+  --page-border: #E3E8EF;
+  --page-hover: #E7EDF4;
+  --page-text-accent: #1B2A41;
+  --page-text-muted: #5A6B82;
 }
 
 /* Reports - Monday Aqua */
 .page-reports {
-  --page-bg: #F6F7FB;
+  --page-bg: #F4F6F9;
   --page-accent: #E6FAFA;
-  --page-border: #E6E9EF;
+  --page-border: #E3E8EF;
   --page-hover: #CCF5F5;
   --page-text-accent: #00C8C8;
-  --page-text-muted: #676879;
+  --page-text-muted: #5A6B82;
 }
 
 /* Fuel - Monday Blue */
 .page-fuel {
-  --page-bg: #F6F7FB;
+  --page-bg: #F4F6F9;
   --page-accent: #E6F4FA;
-  --page-border: #E6E9EF;
+  --page-border: #E3E8EF;
   --page-hover: #CCE9F5;
   --page-text-accent: #0086C0;
-  --page-text-muted: #676879;
+  --page-text-muted: #5A6B82;
 }
 
 /* Settings - Monday Gray */
 .page-settings {
-  --page-bg: #F6F7FB;
+  --page-bg: #F4F6F9;
   --page-accent: #ECEDF2;
-  --page-border: #E6E9EF;
-  --page-hover: #DCDFEC;
-  --page-text-accent: #676879;
-  --page-text-muted: #9699A6;
+  --page-border: #E3E8EF;
+  --page-hover: #E7EDF4;
+  --page-text-accent: #5A6B82;
+  --page-text-muted: #8A99AC;
 }
 
 /* Auth - Monday Cornflower */
 .page-auth {
-  --page-bg: #F6F7FB;
-  --page-accent: #F0F0FF;
-  --page-border: #E6E9EF;
-  --page-hover: #DCDFEC;
-  --page-text-accent: #6161FF;
-  --page-text-muted: #676879;
+  --page-bg: #F4F6F9;
+  --page-accent: #F4F7FB;
+  --page-border: #E3E8EF;
+  --page-hover: #E7EDF4;
+  --page-text-accent: #1B2A41;
+  --page-text-muted: #5A6B82;
 }
 
 /* Apply theme colors to elements */
@@ -514,11 +514,11 @@
 
 /* Monday.com style group headers */
 .group-header {
-  background-color: #F0F0FF;
-  border-left: 4px solid #6161FF;
+  background-color: #F4F7FB;
+  border-left: 4px solid #1B2A41;
   padding: 8px 16px;
   font-weight: 600;
-  color: #323338;
+  color: #1B2A41;
 }
 
 .group-header-green {
@@ -548,10 +548,10 @@
 
 /* Table headers with Monday.com styling */
 [class*="page-"] .table-header {
-  background-color: #F6F7FB;
-  border-bottom: 1px solid #E6E9EF;
+  background-color: #F4F6F9;
+  border-bottom: 1px solid #E3E8EF;
   font-weight: 500;
-  color: #676879;
+  color: #5A6B82;
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -559,16 +559,16 @@
 
 /* Navigation active state - Monday.com style */
 .sidebar .nav-item.active {
-  background-color: #F0F0FF;
-  color: #6161FF;
-  border-left: 3px solid #6161FF;
+  background-color: #F4F7FB;
+  color: #1B2A41;
+  border-left: 3px solid #1B2A41;
 }
 
 /* Monday.com style card hover effects */
 [class*="page-"] .monday-card {
   background: white;
   border-radius: 8px;
-  border: 1px solid #E6E9EF;
+  border: 1px solid #E3E8EF;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
 }

@@ -265,7 +265,7 @@ export default function LoadsPage() {
         </div>
       ),
       'miles': (
-        <span className="text-sm font-medium text-blue-700">
+        <span className="text-sm font-medium text-brand">
           {totalMiles.toLocaleString()} mi
         </span>
       ),
@@ -288,7 +288,7 @@ export default function LoadsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'delivered': return 'bg-green-100 text-green-800'
-      case 'in_transit': return 'bg-blue-100 text-blue-800'
+      case 'in_transit': return 'bg-brand/10 text-brand'
       case 'assigned': return 'bg-yellow-100 text-yellow-800'
       default: return 'bg-gray-100 text-gray-800'
     }
@@ -511,7 +511,7 @@ export default function LoadsPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 hover:bg-blue-50"
+              className="h-8 px-2 hover:bg-brand/5"
               onClick={(e) => {
                 e.stopPropagation()
                 handleManageDocuments(row)
@@ -525,7 +525,7 @@ export default function LoadsPage() {
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center text-gray-400 hover:text-blue-600">
+                <div className="flex items-center text-gray-400 hover:text-brand">
                   <Upload className="h-4 w-4 mr-1" />
                   <span className="text-xs">Add</span>
                 </div>
@@ -546,7 +546,7 @@ export default function LoadsPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 hover:bg-blue-50"
+              className="h-8 px-2 hover:bg-brand/5"
               onClick={(e) => {
                 e.stopPropagation()
                 handleManageDocuments(row)
@@ -560,7 +560,7 @@ export default function LoadsPage() {
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center text-gray-400 hover:text-blue-600">
+                <div className="flex items-center text-gray-400 hover:text-brand">
                   <Upload className="h-4 w-4 mr-1" />
                   <span className="text-xs">Add</span>
                 </div>
@@ -593,7 +593,7 @@ export default function LoadsPage() {
             <h1 className="text-2xl font-semibold text-gray-900">Loads</h1>
             <p className="text-gray-600">Manage your shipments and deliveries</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCreateLoad}>
+          <Button className="bg-brand hover:bg-brand/90" onClick={handleCreateLoad}>
             <Plus className="mr-2 h-4 w-4" />
             New Load
           </Button>
@@ -640,7 +640,7 @@ export default function LoadsPage() {
           <ContextMenuItem
             onClick={() => contextMenu.row && handleManageDocuments(contextMenu.row)}
             icon={<FolderOpen className="h-4 w-4" />}
-            className="text-blue-600 hover:bg-blue-50"
+            className="text-brand hover:bg-brand/5"
           >
             Manage Documents
           </ContextMenuItem>
@@ -693,7 +693,7 @@ export default function LoadsPage() {
                   </td>
                   {/* Miles column - show total miles */}
                   <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '100px', minWidth: '100px' }}>
-                    <span className="text-blue-700">{totals.totalMiles.toLocaleString()} mi</span>
+                    <span className="text-brand">{totals.totalMiles.toLocaleString()} mi</span>
                   </td>
                   {/* RPM column - show average RPM */}
                   <td className="px-3 py-2 text-sm border-r border-gray-100" style={{ width: '100px', minWidth: '100px' }}>

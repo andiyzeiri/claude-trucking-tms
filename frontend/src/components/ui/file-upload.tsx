@@ -215,7 +215,7 @@ export function FileUpload({
         onDragLeave={handleDragLeave}
         className={cn(
           'border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer',
-          isDragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400',
+          isDragOver ? 'border-brand bg-brand/5' : 'border-gray-300 hover:border-gray-400',
           disabled && 'opacity-50 cursor-not-allowed'
         )}
         onClick={() => !disabled && !isUploading && fileInputRef.current?.click()}
@@ -236,13 +236,13 @@ export function FileUpload({
             <div>
               <p className="text-sm text-gray-600">Uploading...</p>
               <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                <div className="bg-brand h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
               </div>
             </div>
           ) : (
             <>
               <p className="text-sm text-gray-600">
-                Drop PDF files here or <span className="text-blue-600 underline">browse</span>
+                Drop PDF files here or <span className="text-brand underline">browse</span>
               </p>
               <p className="text-xs text-gray-500">
                 Maximum file size: {maxSize}MB

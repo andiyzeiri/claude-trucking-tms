@@ -106,10 +106,10 @@ export function LoadDocumentsPanel({ load }: LoadDocumentsPanelProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <FileText className="h-5 w-5 text-blue-600" />
+              <FileText className="h-5 w-5 text-brand" />
               <span>Rate Confirmation</span>
               {rateconFiles.length > 0 && (
-                <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+                <span className="ml-2 bg-brand/10 text-brand text-xs px-2 py-0.5 rounded-full">
                   {rateconFiles.length}
                 </span>
               )}
@@ -159,7 +159,7 @@ export function LoadDocumentsPanel({ load }: LoadDocumentsPanelProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-600">Rate Confirmation Files</p>
-              <p className="text-2xl font-bold text-blue-600">{rateconFiles.length}</p>
+              <p className="text-2xl font-bold text-brand">{rateconFiles.length}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">POD Files</p>

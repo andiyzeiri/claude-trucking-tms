@@ -90,7 +90,7 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand mx-auto mb-4"></div>
           <p className="text-gray-600">Loading PDF...</p>
         </div>
       </div>
@@ -105,7 +105,7 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
           <p className="text-sm">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="mt-4 px-4 py-2 bg-brand text-white rounded hover:bg-brand/90"
           >
             Retry
           </button>

@@ -907,7 +907,7 @@ export default function LoadsPageInline() {
                     toast.error(`Failed to restore load: ${error.response?.data?.detail || error.message}`)
                   }
                 }}
-                className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-500 focus:outline-none"
+                className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-brand hover:text-brand focus:outline-none"
               >
                 <Undo2 className="h-5 w-5 mr-2" />
                 Undo
@@ -1687,7 +1687,7 @@ export default function LoadsPageInline() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '14px', lineHeight: '20px', color: '#2563eb'}}>
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '14px', lineHeight: '20px', color: '#2563eb'}}>
               {formatDateShort(load.pickup_date)}
             </div>
           )}
@@ -1752,7 +1752,7 @@ export default function LoadsPageInline() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="font-medium cursor-pointer hover:bg-blue-50 rounded px-1.5 py-0.5" style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)'}}>
+            <div className="font-medium cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)'}}>
               {load.load_number}
             </div>
           )}
@@ -1781,7 +1781,7 @@ export default function LoadsPageInline() {
               </SelectContent>
             </Select>
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1 py-1">
               <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)'}}>
                 {customers.find(c => c.id === load.customer_id)?.name || 'N/A'}
               </div>
@@ -1818,7 +1818,7 @@ export default function LoadsPageInline() {
               </SelectContent>
             </Select>
           ) : (
-            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+            <div className="text-sm cursor-pointer hover:bg-brand/5 rounded px-1 py-1">
               {load.driver ? `${load.driver.first_name} ${load.driver.last_name}` : 'Unassigned'}
             </div>
           )}
@@ -1947,7 +1947,7 @@ export default function LoadsPageInline() {
               </div>
             </div>
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1 py-1">
               {/* Top row: City, State, Zip */}
               <div className="flex gap-1 mb-0.5">
                 <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)', flex: 1}}>
@@ -2099,7 +2099,7 @@ export default function LoadsPageInline() {
               </div>
             </div>
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1">
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1 py-1">
               {/* Top row: City, State, Zip */}
               <div className="flex gap-1 mb-0.5">
                 <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)', flex: 1}}>
@@ -2165,7 +2165,7 @@ export default function LoadsPageInline() {
               className="text-sm min-h-[60px]"
             />
           ) : (
-            <div className="text-sm cursor-pointer hover:bg-blue-50 rounded px-1 py-1 whitespace-pre-wrap">
+            <div className="text-sm cursor-pointer hover:bg-brand/5 rounded px-1 py-1 whitespace-pre-wrap">
               {load.notes || 'N/A'}
             </div>
           )}
@@ -2243,7 +2243,7 @@ export default function LoadsPageInline() {
               />
             </div>
           ) : (
-            <div className="cursor-pointer hover:bg-blue-50 rounded px-1 py-1" onClick={() => startEdit(loadKey, 'rate')}>
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1 py-1" onClick={() => startEdit(loadKey, 'rate')}>
               {/* Top row: Rate */}
               <div className="mb-0.5">
                 <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)', fontWeight: 500}}>
@@ -2310,7 +2310,7 @@ export default function LoadsPageInline() {
               />
             ) : (
               <div
-                className="h-6 flex items-center cursor-pointer hover:bg-blue-50 rounded px-1"
+                className="h-6 flex items-center cursor-pointer hover:bg-brand/5 rounded px-1"
                 onClick={() => startEdit(loadKey, 'adjustment_amount')}
                 style={{
                   fontSize: '12px',
@@ -2364,7 +2364,7 @@ export default function LoadsPageInline() {
                       type: 'ratecon'
                     })
                   }}
-                  className="text-blue-600 hover:underline text-sm"
+                  className="text-brand hover:underline text-sm"
                 >
                   View
                 </button>
@@ -2394,7 +2394,7 @@ export default function LoadsPageInline() {
                 />
                 <label
                   htmlFor={`ratecon-upload-${loadKey}`}
-                  className="text-sm text-blue-600 hover:underline cursor-pointer"
+                  className="text-sm text-brand hover:underline cursor-pointer"
                   onClick={(e) => e.stopPropagation()}
                 >
                   Upload
@@ -2443,7 +2443,7 @@ export default function LoadsPageInline() {
                       type: 'pod'
                     })
                   }}
-                  className="text-blue-600 hover:underline text-sm"
+                  className="text-brand hover:underline text-sm"
                 >
                   View
                 </button>
@@ -2473,7 +2473,7 @@ export default function LoadsPageInline() {
                 />
                 <label
                   htmlFor={`pod-upload-${loadKey}`}
-                  className="text-sm text-blue-600 hover:underline cursor-pointer"
+                  className="text-sm text-brand hover:underline cursor-pointer"
                   onClick={(e) => e.stopPropagation()}
                 >
                   Upload
@@ -2523,7 +2523,7 @@ export default function LoadsPageInline() {
               >
                 Group by...
                 {activeGroupings.size > 0 && (
-                  <span className="ml-2 bg-blue-500 text-white rounded-full px-2 py-0.5 text-xs">
+                  <span className="ml-2 bg-brand text-white rounded-full px-2 py-0.5 text-xs">
                     {activeGroupings.size}
                   </span>
                 )}
@@ -2537,7 +2537,7 @@ export default function LoadsPageInline() {
                     >
                       <span>Week</span>
                       {activeGroupings.has('week') && (
-                        <Check className="h-4 w-4 text-blue-600" />
+                        <Check className="h-4 w-4 text-brand" />
                       )}
                     </button>
                     <button
@@ -2546,7 +2546,7 @@ export default function LoadsPageInline() {
                     >
                       <span>Driver</span>
                       {activeGroupings.has('driver') && (
-                        <Check className="h-4 w-4 text-blue-600" />
+                        <Check className="h-4 w-4 text-brand" />
                       )}
                     </button>
                     <button
@@ -2555,7 +2555,7 @@ export default function LoadsPageInline() {
                     >
                       <span>Customer</span>
                       {activeGroupings.has('customer') && (
-                        <Check className="h-4 w-4 text-blue-600" />
+                        <Check className="h-4 w-4 text-brand" />
                       )}
                     </button>
                     {activeGroupings.size > 0 && (
@@ -2817,7 +2817,7 @@ export default function LoadsPageInline() {
                     setContextMenu(null)
                   }}
                 >
-                  <Edit2 className="h-4 w-4 text-blue-600" />
+                  <Edit2 className="h-4 w-4 text-brand" />
                   <span>Edit Load</span>
                 </button>
                 <button
@@ -2848,14 +2848,14 @@ export default function LoadsPageInline() {
                   className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                   onClick={expandAllGroups}
                 >
-                  <ChevronDown className="h-4 w-4 text-blue-600" />
+                  <ChevronDown className="h-4 w-4 text-brand" />
                   <span>Expand All</span>
                 </button>
                 <button
                   className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                   onClick={collapseAllGroups}
                 >
-                  <ChevronRight className="h-4 w-4 text-blue-600" />
+                  <ChevronRight className="h-4 w-4 text-brand" />
                   <span>Collapse All</span>
                 </button>
               </>

@@ -386,7 +386,7 @@ export default function RateconsPage() {
                 onClick={() => setTimePeriod('1month')}
                 className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                   timePeriod === '1month'
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-brand text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -396,7 +396,7 @@ export default function RateconsPage() {
                 onClick={() => setTimePeriod('3months')}
                 className={`px-3 py-1.5 text-sm font-medium border-l transition-colors ${
                   timePeriod === '3months'
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-brand text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50'
                 }`}
                 style={{ borderColor: 'var(--monday-border)' }}
@@ -407,7 +407,7 @@ export default function RateconsPage() {
                 onClick={() => setTimePeriod('6months')}
                 className={`px-3 py-1.5 text-sm font-medium border-l transition-colors ${
                   timePeriod === '6months'
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-brand text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50'
                 }`}
                 style={{ borderColor: 'var(--monday-border)' }}
@@ -527,7 +527,7 @@ export default function RateconsPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => openPDFDialog(load)}
-                              className="h-8 px-3 hover:bg-blue-50 hover:text-blue-600"
+                              className="h-8 px-3 hover:bg-brand/5 hover:text-brand"
                             >
                               <FileDown className="h-4 w-4 mr-1" />
                               PDF
@@ -655,7 +655,7 @@ export default function RateconsPage() {
                 </Button>
                 <Button
                   onClick={handleDialogSubmit}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-brand hover:bg-brand/90 text-white"
                 >
                   <FileDown className="h-4 w-4 mr-2" />
                   Generate PDF

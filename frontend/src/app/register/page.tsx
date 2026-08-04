@@ -104,15 +104,15 @@ export default function RegisterPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex">
+    <div className="min-h-screen bg-gradient-to-br from-surface-subtle to-brand/5 flex">
       {/* Left Side - Benefits */}
-      <div className="hidden lg:flex lg:w-1/2 bg-blue-600 text-white flex-col justify-center px-12">
+      <div className="hidden lg:flex lg:w-1/2 bg-brand text-white flex-col justify-center px-12">
         <div className="max-w-md">
           <div className="flex items-center space-x-3 mb-8">
             <Truck className="h-10 w-10" />
             <div>
               <h1 className="text-2xl font-bold">ABSOLUTE TMS</h1>
-              <p className="text-blue-200">Transportation Management System</p>
+              <p className="text-white/70">Transportation Management System</p>
             </div>
           </div>
 
@@ -124,14 +124,14 @@ export default function RegisterPage() {
             {benefits.map((benefit, index) => (
               <div key={index} className="flex items-start space-x-3">
                 <CheckCircle className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
-                <span className="text-blue-100">{benefit}</span>
+                <span className="text-white/80">{benefit}</span>
               </div>
             ))}
           </div>
 
-          <div className="mt-12 p-6 bg-blue-700 rounded-lg">
+          <div className="mt-12 p-6 bg-brand rounded-lg">
             <h3 className="font-semibold mb-2">Need Help Getting Started?</h3>
-            <p className="text-blue-200 text-sm mb-4">
+            <p className="text-white/70 text-sm mb-4">
               Our team is ready to help you migrate from your current system and get up and running quickly.
             </p>
             <Button variant="secondary" size="sm">
@@ -151,13 +151,13 @@ export default function RegisterPage() {
             </Link>
 
             <div className="flex justify-center lg:hidden mb-6">
-              <Truck className="h-10 w-10 text-blue-600" />
+              <Truck className="h-10 w-10 text-brand" />
             </div>
 
             <h2 className="text-3xl font-bold text-gray-900">Create Your Account</h2>
             <p className="mt-2 text-sm text-gray-600">
               Already have an account?{' '}
-              <Link href="/login" className="text-blue-600 hover:text-blue-500 font-medium">
+              <Link href="/login" className="text-brand hover:text-brand font-medium">
                 Sign in
               </Link>
             </p>
@@ -174,8 +174,8 @@ export default function RegisterPage() {
                 </div>
               </div>
               <div className="flex space-x-2">
-                <div className={`h-1 flex-1 rounded-full ${step >= 1 ? 'bg-blue-600' : 'bg-gray-200'}`} />
-                <div className={`h-1 flex-1 rounded-full ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`} />
+                <div className={`h-1 flex-1 rounded-full ${step >= 1 ? 'bg-brand' : 'bg-gray-200'}`} />
+                <div className={`h-1 flex-1 rounded-full ${step >= 2 ? 'bg-brand' : 'bg-gray-200'}`} />
               </div>
             </CardHeader>
 
@@ -315,11 +315,11 @@ export default function RegisterPage() {
                         <div className="text-sm">
                           <Label htmlFor="agreeToTerms" className="cursor-pointer">
                             I agree to the{' '}
-                            <Link href="/terms" className="text-blue-600 hover:underline">
+                            <Link href="/terms" className="text-brand hover:underline">
                               Terms of Service
                             </Link>{' '}
                             and{' '}
-                            <Link href="/privacy" className="text-blue-600 hover:underline">
+                            <Link href="/privacy" className="text-brand hover:underline">
                               Privacy Policy
                             </Link>
                           </Label>

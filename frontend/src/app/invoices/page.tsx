@@ -167,7 +167,7 @@ export default function InvoicesPage() {
             <h1 className="text-2xl font-semibold text-gray-900">Invoices</h1>
             <p className="text-gray-600">Manage billing and payments</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCreateInvoice}>
+          <Button className="bg-brand hover:bg-brand/90" onClick={handleCreateInvoice}>
             <Plus className="mr-2 h-4 w-4" />
             New Invoice
           </Button>
@@ -182,8 +182,8 @@ export default function InvoicesPage() {
                   <p className="text-sm font-medium text-gray-600">Total Revenue</p>
                   <p className="text-2xl font-bold text-gray-900">${totals.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
-                <div className="p-3 rounded-full bg-blue-100">
-                  <DollarSign className="h-6 w-6 text-blue-600" />
+                <div className="p-3 rounded-full bg-brand/10">
+                  <DollarSign className="h-6 w-6 text-brand" />
                 </div>
               </div>
             </CardContent>

@@ -341,7 +341,7 @@ export function DataTable<T>({
                 {groupBy.map((group, index) => {
                   const column = columns.find(c => c.key === group)
                   return (
-                    <div key={String(group)} className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: 'rgba(97, 97, 255, 0.1)', color: 'var(--monday-cornflower)' }}>
+                    <div key={String(group)} className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: 'rgba(27, 42, 65, 0.1)', color: 'var(--monday-cornflower)' }}>
                       <span>{index + 1}. {column?.label}</span>
                       <button
                         onClick={() => removeGroupLevel(group)}

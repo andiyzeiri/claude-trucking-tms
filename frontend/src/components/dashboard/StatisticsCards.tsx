@@ -45,8 +45,8 @@ export default function StatisticsCards({
       title: 'Total Loads',
       value: loads,
       icon: Package,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-500',
+      color: 'text-brand',
+      bgColor: 'bg-brand',
       format: 'number'
     },
     {

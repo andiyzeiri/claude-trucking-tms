@@ -11,7 +11,7 @@ export default function TermsPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <Link href="/" className="flex items-center space-x-2">
-              <Truck className="h-8 w-8 text-blue-600" />
+              <Truck className="h-8 w-8 text-brand" />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">ABSOLUTE TMS</h1>
                 <p className="text-xs text-gray-500">Terms of Service</p>

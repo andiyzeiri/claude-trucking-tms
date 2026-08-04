@@ -292,7 +292,7 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
                 id="has_fuel_card"
                 checked={formData.has_fuel_card || false}
                 onChange={(e) => setFormData({ ...formData, has_fuel_card: e.target.checked })}
-                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-gold-deep"
               />
               Has Fuel Card
             </Label>
