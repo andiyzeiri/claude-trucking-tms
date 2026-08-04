@@ -11,6 +11,10 @@
     /* Monday.com Brand Colors */
     --monday-mirage: #181B34;
     --monday-cornflower: #6161FF;
+    /* Same colour as --monday-cornflower, as space-separated RGB channels.
+       Tailwind needs this form to support opacity modifiers (bg-brand/10).
+       Keep the two in sync: #6161FF == 97 97 255. */
+    --brand-rgb: 97 97 255;
     --monday-white: #FFFFFF;
 
     /* Monday.com Status Colors */

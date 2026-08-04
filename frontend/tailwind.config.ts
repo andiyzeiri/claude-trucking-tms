@@ -89,7 +89,9 @@ const config = {
           light: "var(--monday-border-light)",
         },
         brand: {
-          DEFAULT: "var(--monday-cornflower)",
+          // Channel form so opacity modifiers work: bg-brand/10, ring-brand/30.
+          // Mirrors --monday-cornflower; see the note in globals.css.
+          DEFAULT: "rgb(var(--brand-rgb) / <alpha-value>)",
           blue: "var(--monday-blue)",
           purple: "var(--monday-purple)",
           mirage: "var(--monday-mirage)",
