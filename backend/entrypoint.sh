@@ -125,6 +125,14 @@ python3 add_truck_insurance_columns.py || echo "⚠️  add_truck_insurance_colu
 echo "🔧 Creating rate_to_operate table..."
 python3 create_rate_to_operate_table.py || echo "⚠️  create_rate_to_operate_table.py had errors, continuing..."
 
+# Create general ledger tables (accounts, journal entries/lines, auto-post mappings)
+echo "🔧 Creating accounting tables..."
+python3 create_accounting_tables.py || echo "⚠️  create_accounting_tables.py had errors, continuing..."
+
+# Grant accounting page to existing admins with explicit page_permissions
+echo "🔧 Adding accounting to admin permissions..."
+python3 add_accounting_permission.py || echo "⚠️  add_accounting_permission.py had errors, continuing..."
+
 # Note: Recurring expenses are generated via POST /api/v1/expenses/generate-recurring
 # This should be called daily via a cron job or on page load
 

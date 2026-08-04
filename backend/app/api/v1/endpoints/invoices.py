@@ -9,6 +9,7 @@ from app.models.load import Load
 from app.schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceResponse
 from app.core.security import get_current_active_user
 from app.models.user import User
+from app.services import accounting as gl
 
 router = APIRouter()
 
@@ -53,6 +54,18 @@ async def create_invoice(
     db.add(db_invoice)
     await db.commit()
     await db.refresh(db_invoice)
+
+    # Ledger: debit A/R, credit Revenue. Runs after the commit in its own
+    # transaction and cannot fail the invoice.
+    await gl.auto_post_safe(
+        company_id=current_user.company_id,
+        event_key="invoice",
+        source_id=db_invoice.id,
+        amount=db_invoice.total_amount,
+        entry_date=db_invoice.issue_date,
+        memo=f"Invoice {db_invoice.invoice_number}",
+        user_id=current_user.id,
+    )
     return db_invoice
 
 
@@ -113,6 +126,18 @@ async def update_invoice(
 
     await db.commit()
     await db.refresh(invoice)
+
+    # Ledger: if the amount or date moved, the old entry is reversed and a
+    # corrected one posted. Unchanged invoices are a no-op.
+    await gl.auto_post_safe(
+        company_id=current_user.company_id,
+        event_key="invoice",
+        source_id=invoice.id,
+        amount=invoice.total_amount,
+        entry_date=invoice.issue_date,
+        memo=f"Invoice {invoice.invoice_number}",
+        user_id=current_user.id,
+    )
     return invoice
 
 
@@ -135,6 +160,22 @@ async def delete_invoice(
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
+    # Capture before the row is gone.
+    deleted_id = invoice.id
+    issue_date = invoice.issue_date
+
     await db.delete(invoice)
     await db.commit()
+
+    # Ledger: reverse the entry rather than deleting it. The original
+    # posting stays on the books; the reversal cancels it.
+    await gl.auto_post_safe(
+        company_id=current_user.company_id,
+        event_key="invoice",
+        source_id=deleted_id,
+        amount=None,
+        entry_date=issue_date,
+        memo=f"Invoice #{deleted_id} deleted",
+        user_id=current_user.id,
+    )
     return {"message": "Invoice deleted successfully"}

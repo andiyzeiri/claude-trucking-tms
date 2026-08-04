@@ -9,6 +9,7 @@ from app.models.fuel import Fuel
 from app.schemas.fuel import FuelCreate, FuelUpdate, FuelResponse
 from app.core.security import get_current_active_user
 from app.models.user import User
+from app.services import accounting as gl
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,17 @@ async def create_fuel_entry(
     db.add(db_fuel)
     await db.commit()
     await db.refresh(db_fuel)
+
+    # Ledger: debit Fuel Expense, credit Cash/AP. Cannot fail the receipt.
+    await gl.auto_post_safe(
+        company_id=current_user.company_id,
+        event_key="fuel",
+        source_id=db_fuel.id,
+        amount=db_fuel.total_amount,
+        entry_date=db_fuel.date,
+        memo=f"Fuel purchase #{db_fuel.id}",
+        user_id=current_user.id,
+    )
 
     # Re-query with eager loading for relationships
     query = (
@@ -104,6 +116,17 @@ async def update_fuel_entry(
 
     await db.commit()
 
+    # Ledger: reverse and repost if the amount or date changed.
+    await gl.auto_post_safe(
+        company_id=current_user.company_id,
+        event_key="fuel",
+        source_id=fuel.id,
+        amount=fuel.total_amount,
+        entry_date=fuel.date,
+        memo=f"Fuel purchase #{fuel.id}",
+        user_id=current_user.id,
+    )
+
     # Re-query with eager loading for relationships
     query = (
         select(Fuel)
@@ -129,6 +152,21 @@ async def delete_fuel_entry(
     if not fuel:
         raise HTTPException(status_code=404, detail="Fuel entry not found")
 
+    # Capture before the row is gone.
+    deleted_id = fuel.id
+    fuel_date = fuel.date
+
     await db.delete(fuel)
     await db.commit()
+
+    # Ledger: reverse the posting, don't erase it.
+    await gl.auto_post_safe(
+        company_id=current_user.company_id,
+        event_key="fuel",
+        source_id=deleted_id,
+        amount=None,
+        entry_date=fuel_date,
+        memo=f"Fuel purchase #{deleted_id} deleted",
+        user_id=current_user.id,
+    )
     return {"message": "Fuel entry deleted successfully"}

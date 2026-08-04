@@ -84,6 +84,40 @@ async def get_current_active_user(
     return current_user
 
 
+def _role_value(user: User) -> str:
+    """
+    Normalize the user's role to a plain lowercase string.
+
+    users.role is a String column, but UserRole is a plain enum.Enum, so
+    `user.role == UserRole.COMPANY_ADMIN` compares str to enum member and
+    is always False. Comparing on .value avoids that trap.
+    """
+    role = getattr(user, "role", None)
+    if role is None:
+        return ""
+    return str(getattr(role, "value", role)).lower()
+
+
+ADMIN_ROLES = {"super_admin", "company_admin"}
+
+
+async def get_current_admin_user(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """
+    Guard for admin-only routes such as the general ledger.
+
+    Financial records are restricted to company and super admins;
+    dispatchers, drivers, customers, and viewers are refused.
+    """
+    if current_user.is_superuser or _role_value(current_user) in ADMIN_ROLES:
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Administrator access is required for accounting",
+    )
+
+
 async def get_security_context(
     current_user: User = Depends(get_current_active_user)
 ) -> SecurityContext:

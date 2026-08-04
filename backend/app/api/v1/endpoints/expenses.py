@@ -10,8 +10,35 @@ from app.models.expense import Expense
 from app.schemas.expense import ExpenseCreate, ExpenseUpdate, ExpenseResponse
 from app.core.security import get_current_active_user
 from app.models.user import User
+from app.services import accounting as gl
 
 router = APIRouter()
+
+
+async def _post_expense_to_ledger(expense: Expense, user: User, deleted: bool = False) -> None:
+    """
+    Mirror one expense into the ledger.
+
+    Recurring templates are skipped: is_template rows are the schedule
+    definition, not money actually spent. Only the generated entries are
+    real costs, and those post on their own.
+    """
+    if getattr(expense, "is_template", False):
+        return
+
+    await gl.auto_post_safe(
+        company_id=user.company_id,
+        event_key="expense",
+        source_id=expense.id,
+        amount=None if deleted else expense.amount,
+        entry_date=expense.date,
+        memo=(
+            f"Expense #{expense.id} deleted"
+            if deleted
+            else f"{expense.category or 'Expense'} #{expense.id}"
+        ),
+        user_id=user.id,
+    )
 
 
 @router.get("/", response_model=List[ExpenseResponse])
@@ -43,6 +70,8 @@ async def create_expense(
     db.add(db_expense)
     await db.commit()
     await db.refresh(db_expense)
+
+    await _post_expense_to_ledger(db_expense, current_user)
     return db_expense
 
 
@@ -100,6 +129,8 @@ async def update_expense(
 
     await db.commit()
     await db.refresh(expense)
+
+    await _post_expense_to_ledger(expense, current_user)
     return expense
 
 
@@ -118,8 +149,24 @@ async def delete_expense(
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
 
+    # Capture before the row is gone.
+    deleted_id = expense.id
+    expense_date = expense.date
+    was_template = expense.is_template
+
     await db.delete(expense)
     await db.commit()
+
+    if not was_template:
+        await gl.auto_post_safe(
+            company_id=current_user.company_id,
+            event_key="expense",
+            source_id=deleted_id,
+            amount=None,
+            entry_date=expense_date,
+            memo=f"Expense #{deleted_id} deleted",
+            user_id=current_user.id,
+        )
     return {"message": "Expense deleted successfully"}
 
 
@@ -141,6 +188,7 @@ async def generate_recurring_expenses(
     templates = result.scalars().all()
 
     created = 0
+    generated: List[Expense] = []
     for template in templates:
         if not template.frequency or not template.pay_day:
             continue
@@ -202,7 +250,23 @@ async def generate_recurring_expenses(
             template_id=template.id
         )
         db.add(new_expense)
+        generated.append(new_expense)
         created += 1
 
     await db.commit()
+
+    # Generated entries are real costs (unlike their templates), so each
+    # one posts to the ledger. Guarded individually - one bad mapping
+    # must not stop the rest of the batch.
+    for expense in generated:
+        await gl.auto_post_safe(
+            company_id=expense.company_id,
+            event_key="expense",
+            source_id=expense.id,
+            amount=expense.amount,
+            entry_date=expense.date,
+            memo=f"{expense.category or 'Expense'} #{expense.id} (recurring)",
+            user_id=current_user.id,
+        )
+
     return {"message": f"Generated {created} recurring expenses"}

@@ -77,6 +77,9 @@ class User(Base):
             "invoices",
             "ratecons",
             "reports",
+            # Admin-only: the general ledger. Deliberately absent from the
+            # dispatcher and viewer lists below.
+            "accounting",
             "users",
             "settings"
         ]
