@@ -73,6 +73,8 @@ COPY add_recurring_expense_columns.py ./
 COPY add_truck_insurance_columns.py ./
 COPY add_expense_group_column.py ./
 COPY create_rate_to_operate_table.py ./
+COPY create_accounting_tables.py ./
+COPY add_accounting_permission.py ./
 COPY entrypoint.sh ./
 
 # Copy scripts directory

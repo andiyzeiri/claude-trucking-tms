@@ -16,6 +16,9 @@ from .dedicated_lane import DedicatedLane
 from .ifta import IFTA
 from .driver_day_off import DriverDayOff
 from .rate_to_operate import RateToOperate
+from .account import Account
+from .journal_entry import JournalEntry, JournalLine
+from .accounting_mapping import AccountingMapping
 
 __all__ = [
     "Base",
@@ -36,4 +39,8 @@ __all__ = [
     "IFTA",
     "DriverDayOff",
     "RateToOperate",
+    "Account",
+    "JournalEntry",
+    "JournalLine",
+    "AccountingMapping",
 ]

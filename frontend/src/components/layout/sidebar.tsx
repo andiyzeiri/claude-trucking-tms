@@ -20,7 +20,8 @@ import {
   Warehouse,
   Fuel as FuelIcon,
   Shield,
-  CalendarDays
+  CalendarDays,
+  BookOpen
 } from 'lucide-react'
 
 // Navigation items with page IDs that match the permissions system
@@ -41,6 +42,7 @@ const navigation = [
   { name: 'Invoices', href: '/invoices', icon: FileText, pageId: 'invoices' },
   { name: 'Ratecons', href: '/ratecons', icon: Receipt, pageId: 'ratecons' },
   { name: 'Reports', href: '/reports', icon: DollarSign, pageId: 'reports' },
+  { name: 'Accounting', href: '/accounting', icon: BookOpen, pageId: 'accounting' },
   { name: 'Users', href: '/users', icon: Shield, pageId: 'users' },
   { name: 'Settings', href: '/settings', icon: Settings, pageId: 'settings' },
 ]

@@ -13,8 +13,38 @@ from app.models.payroll_override import PayrollOverride
 from app.schemas.payroll import PayrollCreate, PayrollUpdate, PayrollResponse, CalculatedPayrollResponse
 from app.core.security import get_current_active_user
 from app.models.user import User
+from app.services import accounting as gl
 
 router = APIRouter()
+
+
+async def _post_payroll_to_ledger(payroll: Payroll, user: User, deleted: bool = False) -> None:
+    """
+    Mirror a payroll settlement into the ledger.
+
+    Posts check_amount - the cash that actually leaves - dated to the end
+    of the pay week. Deductions (dispatch fee, insurance, escrow, fuel
+    recovery) are netted into that single figure rather than broken out
+    to their own accounts; splitting them needs one mapping per deduction
+    type, which the single debit/credit mapping does not model yet.
+
+    A settlement whose deductions exceed gross yields a negative
+    check_amount. The posting service skips negatives rather than
+    guessing at which side to flip - post those by hand.
+    """
+    await gl.auto_post_safe(
+        company_id=user.company_id,
+        event_key="payroll",
+        source_id=payroll.id,
+        amount=None if deleted else payroll.check_amount,
+        entry_date=payroll.week_end,
+        memo=(
+            f"Payroll #{payroll.id} deleted"
+            if deleted
+            else f"Driver settlement #{payroll.id} week ending {payroll.week_end}"
+        ),
+        user_id=user.id,
+    )
 
 
 @router.get("/", response_model=List[PayrollResponse])
@@ -282,6 +312,8 @@ async def create_payroll_entry(
     db.add(db_payroll)
     await db.commit()
     await db.refresh(db_payroll)
+
+    await _post_payroll_to_ledger(db_payroll, current_user)
     return db_payroll
 
 
@@ -323,6 +355,8 @@ async def update_payroll_entry(
 
     await db.commit()
     await db.refresh(payroll)
+
+    await _post_payroll_to_ledger(payroll, current_user)
     return payroll
 
 
@@ -341,6 +375,20 @@ async def delete_payroll_entry(
     if not payroll:
         raise HTTPException(status_code=404, detail="Payroll entry not found")
 
+    # Capture before the row is gone.
+    deleted_id = payroll.id
+    week_end = payroll.week_end
+
     await db.delete(payroll)
     await db.commit()
+
+    await gl.auto_post_safe(
+        company_id=current_user.company_id,
+        event_key="payroll",
+        source_id=deleted_id,
+        amount=None,
+        entry_date=week_end,
+        memo=f"Payroll #{deleted_id} deleted",
+        user_id=current_user.id,
+    )
     return {"message": "Payroll entry deleted successfully"}
