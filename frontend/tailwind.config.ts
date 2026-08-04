@@ -54,6 +54,51 @@ const config = {
         },
         groupWeek: "#caf0f8",
         groupDriver: "#f3d5b5",
+
+        // ------------------------------------------------------------------
+        // Monday-style design tokens, exposed to Tailwind.
+        //
+        // These point at the CSS variables already defined in globals.css -
+        // no new colours are introduced here. Editing a --monday-* value in
+        // globals.css still drives both these classes and every existing
+        // inline style={{ }}, so the two approaches stay in sync.
+        //
+        // Names are deliberately NOT 'muted', 'border', 'background' etc:
+        // those keys are already taken by shadcn above, and overwriting them
+        // would silently restyle every shadcn component (tabs.tsx uses
+        // bg-muted / text-muted-foreground, for instance).
+        //
+        //   bg-surface  bg-surface-subtle  bg-surface-hover
+        //   text-content  text-content-secondary  text-content-muted
+        //   border-line  border-line-light
+        //   text-brand  bg-brand  text-brand-blue  text-brand-purple
+        //   text-status-done  text-status-stuck  text-status-working
+        // ------------------------------------------------------------------
+        surface: {
+          DEFAULT: "var(--monday-bg-primary)",
+          subtle: "var(--monday-bg-secondary)",
+          hover: "var(--monday-bg-hover)",
+        },
+        content: {
+          DEFAULT: "var(--monday-text-primary)",
+          secondary: "var(--monday-text-secondary)",
+          muted: "var(--monday-text-muted)",
+        },
+        line: {
+          DEFAULT: "var(--monday-border)",
+          light: "var(--monday-border-light)",
+        },
+        brand: {
+          DEFAULT: "var(--monday-cornflower)",
+          blue: "var(--monday-blue)",
+          purple: "var(--monday-purple)",
+          mirage: "var(--monday-mirage)",
+        },
+        status: {
+          done: "var(--monday-done)",
+          stuck: "var(--monday-stuck)",
+          working: "var(--monday-working)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
