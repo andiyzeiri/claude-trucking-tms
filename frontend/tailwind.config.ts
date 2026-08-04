@@ -101,6 +101,20 @@ const config = {
           stuck: "var(--monday-stuck)",
           working: "var(--monday-working)",
         },
+
+        // Marketing palette - landing page only, namespaced under mkt- so it
+        // can never be confused with the app tokens above. 'amber' is not used
+        // as a top-level key on purpose: that would shadow Tailwind's built-in
+        // amber scale.
+        mkt: {
+          navy: "rgb(var(--mkt-navy-rgb) / <alpha-value>)",
+          amber: "rgb(var(--mkt-amber-rgb) / <alpha-value>)",
+          "amber-deep": "rgb(var(--mkt-amber-deep-rgb) / <alpha-value>)",
+          surface: "var(--mkt-surface)",
+          subtle: "var(--mkt-subtle)",
+          muted: "var(--mkt-muted)",
+          line: "var(--mkt-line)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

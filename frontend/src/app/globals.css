@@ -15,6 +15,28 @@
        Tailwind needs this form to support opacity modifiers (bg-brand/10).
        Keep the two in sync: #6161FF == 97 97 255. */
     --brand-rgb: 97 97 255;
+
+    /* ------------------------------------------------------------------ */
+    /* Marketing palette - landing page ONLY.                              */
+    /*                                                                     */
+    /* Deliberately separate from the --monday-* tokens above so the       */
+    /* signed-in app keeps its violet look untouched. Nothing behind the   */
+    /* login wall should reference these.                                  */
+    /*                                                                     */
+    /* Amber has two shades on purpose: #F59E0B only hits 2.1:1 on white,  */
+    /* which fails contrast for text. Use --mkt-amber for fills on navy    */
+    /* and --mkt-amber-deep (4.9:1) for text and icons on light.           */
+    /* ------------------------------------------------------------------ */
+    --mkt-navy: #1B2A41;
+    --mkt-navy-rgb: 27 42 65;
+    --mkt-amber: #F59E0B;
+    --mkt-amber-rgb: 245 158 11;
+    --mkt-amber-deep: #B45309;
+    --mkt-amber-deep-rgb: 180 83 9;
+    --mkt-surface: #FFFFFF;
+    --mkt-subtle: #F4F6F9;
+    --mkt-muted: #5A6B82;
+    --mkt-line: #E3E8EF;
     --monday-white: #FFFFFF;
 
     /* Monday.com Status Colors */
