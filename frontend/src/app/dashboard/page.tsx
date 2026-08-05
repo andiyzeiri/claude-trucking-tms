@@ -49,6 +49,76 @@ export default function DashboardPage() {
 
   const isLoading = loadsLoading || driversLoading || trucksLoading || customersLoading
 
+  // Per-period accumulator for the driver-average and rate-per-mile cards.
+  //
+  // Two deliberate exclusions, both to keep the figures honest:
+  //  - Only loads with a driver assigned count toward revenue-per-driver.
+  //    Counting unassigned freight in the numerator while dividing by the
+  //    number of drivers who hauled would overstate every driver.
+  //  - A load only contributes to RPM if it has BOTH revenue and miles.
+  //    Taking the revenue of a load with no odometer figure while ignoring
+  //    its distance inflates the rate. Those loads are counted separately
+  //    and reported, so a low mileage-capture rate is visible rather than
+  //    quietly skewing the number.
+  const emptyPeriod = () => ({
+    driverRevenue: 0,
+    driverIds: new Set<number>(),
+    rpmRevenue: 0,
+    rpmMiles: 0,
+    rpmLoads: 0,
+    missingMiles: 0,
+  })
+
+  const perDriverAndRpm = React.useMemo(() => {
+    const week = emptyPeriod()
+    const month = emptyPeriod()
+    const year = emptyPeriod()
+
+    if (!loads) return { week, month, year }
+
+    const now = new Date()
+    // Monday-start week, matching how payroll settlements are bucketed.
+    const dow = now.getDay() // 0 = Sunday
+    const weekStart = new Date(
+      now.getFullYear(), now.getMonth(), now.getDate() + (dow === 0 ? -6 : 1 - dow)
+    )
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const yearStart = new Date(now.getFullYear(), 0, 1)
+
+    loads.forEach((load: any) => {
+      const rate = Number(load.rate) || 0
+      const miles = Number(load.miles) || 0
+      const driverId = load.driver_id
+      const loadDate = load.pickup_date
+        ? new Date(load.pickup_date)
+        : (load.created_at ? new Date(load.created_at) : null)
+      if (!loadDate) return
+
+      const buckets = [
+        loadDate >= weekStart ? week : null,
+        loadDate >= monthStart ? month : null,
+        loadDate >= yearStart ? year : null,
+      ]
+
+      buckets.forEach((b) => {
+        if (!b) return
+        if (driverId) {
+          b.driverRevenue += rate
+          b.driverIds.add(driverId)
+        }
+        if (rate > 0 && miles > 0) {
+          b.rpmRevenue += rate
+          b.rpmMiles += miles
+          b.rpmLoads++
+        } else if (rate > 0) {
+          b.missingMiles++
+        }
+      })
+    })
+
+    return { week, month, year }
+  }, [loads])
+
   // Calculate financial summaries
   const financialSummary = React.useMemo(() => {
     if (!loads) return { today: 0, month: 0, year: 0, todayLoads: 0, monthLoads: 0, yearLoads: 0, lastYearSamePeriod: 0, lastYearSamePeriodLoads: 0, yearOverYearPercent: null as number | null }
@@ -239,6 +309,86 @@ export default function DashboardPage() {
                   </div>
                 ) : null}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Revenue per Driver */}
+        <Card style={{ borderColor: 'var(--monday-border-light)' }}>
+          <CardHeader>
+            <CardTitle style={{ color: 'var(--monday-text-primary)' }}>Revenue per Driver</CardTitle>
+            <p className="text-sm" style={{ color: 'var(--monday-text-secondary)' }}>
+              Average across drivers who hauled at least one load in the period
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {([
+                { label: 'This Week', period: perDriverAndRpm.week, note: 'Mon–Sun' },
+                { label: 'This Month', period: perDriverAndRpm.month, note: 'Calendar month' },
+                { label: 'This Year', period: perDriverAndRpm.year, note: 'Calendar year' },
+              ] as const).map(({ label, period, note }) => {
+                const count = period.driverIds.size
+                const avg = count > 0 ? period.driverRevenue / count : 0
+                return (
+                  <div key={label} className="space-y-2">
+                    <p className="text-sm" style={{ color: 'var(--monday-text-secondary)' }}>{label}</p>
+                    <p className="text-3xl font-bold" style={{ color: 'var(--monday-text-primary)' }}>
+                      {isLoading
+                        ? '...'
+                        : `$${avg.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>
+                      {count > 0
+                        ? `${count} driver${count === 1 ? '' : 's'} · $${period.driverRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })} total`
+                        : 'No driver-assigned loads yet'}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>{note}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Rate Per Mile */}
+        <Card style={{ borderColor: 'var(--monday-border-light)' }}>
+          <CardHeader>
+            <CardTitle style={{ color: 'var(--monday-text-primary)' }}>Rate Per Mile</CardTitle>
+            <p className="text-sm" style={{ color: 'var(--monday-text-secondary)' }}>
+              Blended linehaul rate &mdash; total revenue divided by total miles
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {([
+                { label: 'This Week', period: perDriverAndRpm.week },
+                { label: 'This Month', period: perDriverAndRpm.month },
+                { label: 'This Year', period: perDriverAndRpm.year },
+              ] as const).map(({ label, period }) => {
+                const rpm = period.rpmMiles > 0 ? period.rpmRevenue / period.rpmMiles : null
+                return (
+                  <div key={label} className="space-y-2">
+                    <p className="text-sm" style={{ color: 'var(--monday-text-secondary)' }}>{label}</p>
+                    <p className="text-3xl font-bold" style={{ color: 'var(--gold-deep)' }}>
+                      {isLoading ? '...' : rpm !== null ? `$${rpm.toFixed(2)}` : '—'}
+                      {rpm !== null && (
+                        <span className="text-base font-medium" style={{ color: 'var(--monday-text-muted)' }}> /mi</span>
+                      )}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>
+                      {rpm !== null
+                        ? `${period.rpmLoads} load${period.rpmLoads === 1 ? '' : 's'} · ${period.rpmMiles.toLocaleString('en-US')} mi`
+                        : 'No loads with mileage recorded'}
+                    </p>
+                    {period.missingMiles > 0 && (
+                      <p className="text-xs" style={{ color: 'var(--monday-working)' }}>
+                        {period.missingMiles} load{period.missingMiles === 1 ? '' : 's'} excluded &mdash; no miles recorded
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </CardContent>
         </Card>
