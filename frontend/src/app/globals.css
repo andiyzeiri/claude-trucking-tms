@@ -5,7 +5,11 @@
 @layer base {
   :root {
     /* Monday.com Font System */
-    --font-family-body: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    /* Inter, loaded and self-hosted by next/font in layout.tsx, is what
+       actually renders for body text - its class on <body> outranks this
+       rule. Naming it here so the token matches reality rather than
+       claiming a font that never loads. */
+    --font-family-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     --font-family-heading: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 
     /* Monday.com Brand Colors */
@@ -281,17 +285,50 @@
   --page-text-muted: #5A6B82;
 }
 
-/* Loads - Monday Green */
+/* Loads - dense data table */
 .page-loads {
   --page-bg: #F4F6F9;
-  --page-accent: #E6FAF0;
+  --page-accent: #F4F7FB;
   --page-border: #E3E8EF;
-  --page-hover: #D0F5E3;
-  --page-text-accent: #00C875;
+  --page-hover: #E7EDF4;
+  --page-text-accent: #1B2A41;
   --page-text-muted: #5A6B82;
-  font-weight: 450;
-  letter-spacing: 0.015em;
-  font-size: calc(1em + 1px);
+
+  /* Previously: font-weight 450, letter-spacing 0.015em, font-size
+     calc(1em + 1px). All three worked against a dense table.
+       - 450 is not a real weight for a non-variable face, so it snapped
+         unpredictably between 400 and 500.
+       - POSITIVE tracking widens every row and slows column scanning.
+         Body text elsewhere uses -0.01em; this was fighting it.
+       - calc(1em + 1px) on a container compounds through nested elements. */
+  letter-spacing: -0.008em;
+}
+
+/* Tabular figures. Without these, digits are proportionally spaced, so
+   $1,111.00 and $8,888.00 render at different widths and the decimal
+   points wander down the column - the single biggest readability problem
+   on a money-heavy table. */
+.page-loads table {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Column header rules. The <th> elements carry inline colour and weight,
+   which beat any class, so these are scoped and marked important rather
+   than editing every header in a 2,900-line file. */
+.page-loads thead th {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.045em !important;
+  text-transform: uppercase;
+  color: var(--monday-text-secondary) !important;
+  white-space: nowrap;
+}
+
+/* Vertical rhythm: a slightly firmer line under the header separates it
+   from the first data row without adding a heavy border everywhere. */
+.page-loads thead th {
+  border-bottom-color: var(--monday-border) !important;
 }
 
 /* Brokerage - Monday Teal */

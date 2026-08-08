@@ -33,7 +33,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" />
+        {/* Figtree was requested here but never rendered: next/font puts an
+            Inter class on <body>, and a class selector beats the
+            `body { font-family: var(--font-family-body) }` element rule in
+            globals.css. So every page paid for a render-blocking font it
+            never used. Poppins stays - the h1-h6 rule targets those elements
+            directly, so headings really do use it. */}
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" />
         <Script
           src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
           strategy="beforeInteractive"

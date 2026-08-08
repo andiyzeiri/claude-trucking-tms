@@ -1552,11 +1552,11 @@ export default function LoadsPageInline() {
       let borderColor = 'var(--monday-border-light)'
       if (currentGroupType === 'week') {
         iconColor = 'var(--monday-blue)'
-        bgColor = '#F3F6F6'
+        bgColor = 'var(--monday-bg-secondary)'
         borderColor = '#ffffff'
       } else if (currentGroupType === 'driver') {
         iconColor = 'var(--monday-working)'
-        bgColor = '#d0e1f9'
+        bgColor = 'rgba(27, 42, 65, 0.08)'
         borderColor = '#ffffff'
       } else if (currentGroupType === 'customer') {
         iconColor = 'var(--monday-stuck)'
@@ -1635,8 +1635,8 @@ export default function LoadsPageInline() {
     const rpm = load.miles && load.miles > 0 ? (load.rate || 0) / load.miles : 0
     const isEvenRow = rowIndex % 2 === 0
     const isInvoiced = load.status === 'invoiced'
-    const defaultBgColor = isInvoiced ? 'rgba(0, 200, 117, 0.08)' : (isEvenRow ? 'var(--monday-bg-primary)' : 'rgba(0, 0, 0, 0.02)')
-    const hoverBgColor = isInvoiced ? 'rgba(0, 200, 117, 0.15)' : 'var(--monday-bg-hover)'
+    const defaultBgColor = isInvoiced ? 'rgba(26, 95, 42, 0.07)' : (isEvenRow ? 'var(--monday-bg-primary)' : 'rgba(27, 42, 65, 0.025)')
+    const hoverBgColor = isInvoiced ? 'rgba(26, 95, 42, 0.13)' : 'var(--monday-bg-hover)'
 
     return (
       <tr
@@ -1665,7 +1665,7 @@ export default function LoadsPageInline() {
         <td className="px-3 py-2.5 border-r" style={{ paddingLeft: `${paddingLeft + 12}px`, borderColor: 'var(--monday-border-light)' }}>
           <div>
             <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)'}}>{load.weekLabel}</div>
-            <div style={{fontSize: '12px', lineHeight: '17px', color: '#b8860b'}}>{load.weekDateRange}</div>
+            <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-muted)'}}>{load.weekDateRange}</div>
           </div>
         </td>
 
@@ -1687,7 +1687,7 @@ export default function LoadsPageInline() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '14px', lineHeight: '20px', color: '#2563eb'}}>
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '14px', lineHeight: '20px', color: 'var(--gold-deep)'}}>
               {formatDateShort(load.pickup_date)}
             </div>
           )}
@@ -1965,10 +1965,10 @@ export default function LoadsPageInline() {
                 <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)', flex: 1}}>
                   {parseLocation(load.pickup_location).street || 'Street'}
                 </div>
-                <div style={{fontSize: '12px', lineHeight: '17px', color: '#c2410c', width: '60px'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--gold-deep)', width: '60px'}}>
                   {formatDateShort(load.pickup_date)}
                 </div>
-                <div style={{fontSize: '12px', lineHeight: '17px', color: '#c2410c', width: '65px'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--gold-deep)', width: '65px'}}>
                   {formatTimeShort(load.pickup_date)}
                 </div>
               </div>
@@ -2117,10 +2117,10 @@ export default function LoadsPageInline() {
                 <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)', flex: 1}}>
                   {parseLocation(load.delivery_location).street || 'Street'}
                 </div>
-                <div style={{fontSize: '12px', lineHeight: '17px', color: '#c2410c', width: '60px'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--gold-deep)', width: '60px'}}>
                   {formatDateShort(load.delivery_date)}
                 </div>
-                <div style={{fontSize: '12px', lineHeight: '17px', color: '#c2410c', width: '65px'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--gold-deep)', width: '65px'}}>
                   {formatTimeShort(load.delivery_date)}
                 </div>
               </div>
@@ -2314,7 +2314,7 @@ export default function LoadsPageInline() {
                 onClick={() => startEdit(loadKey, 'adjustment_amount')}
                 style={{
                   fontSize: '12px',
-                  color: load.adjustment_amount ? (load.adjustment_amount > 0 ? '#16a34a' : load.adjustment_amount < 0 ? '#dc2626' : '#6b7280') : '#9ca3af'
+                  color: load.adjustment_amount ? (load.adjustment_amount > 0 ? '#15803D' : load.adjustment_amount < 0 ? '#B91C1C' : 'var(--monday-text-secondary)') : 'var(--monday-text-muted)'
                 }}
               >
                 {load.adjustment_amount != null
@@ -2532,7 +2532,7 @@ export default function LoadsPageInline() {
                 <div className="absolute top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                   <div className="py-1">
                     <button
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center justify-between"
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-surface-hover flex items-center justify-between"
                       onClick={() => toggleGrouping('week')}
                     >
                       <span>Week</span>
@@ -2541,7 +2541,7 @@ export default function LoadsPageInline() {
                       )}
                     </button>
                     <button
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center justify-between"
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-surface-hover flex items-center justify-between"
                       onClick={() => toggleGrouping('driver')}
                     >
                       <span>Driver</span>
@@ -2550,7 +2550,7 @@ export default function LoadsPageInline() {
                       )}
                     </button>
                     <button
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center justify-between"
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-surface-hover flex items-center justify-between"
                       onClick={() => toggleGrouping('customer')}
                     >
                       <span>Customer</span>
@@ -2562,7 +2562,7 @@ export default function LoadsPageInline() {
                       <>
                         <div className="border-t border-gray-200 my-1"></div>
                         <button
-                          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600"
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-surface-hover text-red-600"
                           onClick={() => setActiveGroupings(new Set())}
                         >
                           Clear all
@@ -2611,13 +2611,13 @@ export default function LoadsPageInline() {
             className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
             style={{
               backgroundColor: factoringFilter === 'invoice' ? 'rgba(231, 76, 60, 0.1)' : 'var(--monday-bg-primary)',
-              border: factoringFilter === 'invoice' ? '2px solid #e74c3c' : '1px solid var(--monday-border-light)'
+              border: factoringFilter === 'invoice' ? '2px solid #B91C1C' : '1px solid var(--monday-border-light)'
             }}
             onClick={() => setFactoringFilter(factoringFilter === 'invoice' ? null : 'invoice')}
           >
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Missing Invoice</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: '#e74c3c' }}>{factoringStats.missingInvoice}</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: '#B91C1C' }}>{factoringStats.missingInvoice}</p>
             </div>
           </div>
 
@@ -2625,13 +2625,13 @@ export default function LoadsPageInline() {
             className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
             style={{
               backgroundColor: factoringFilter === 'ratecon' ? 'rgba(243, 156, 18, 0.1)' : 'var(--monday-bg-primary)',
-              border: factoringFilter === 'ratecon' ? '2px solid #f39c12' : '1px solid var(--monday-border-light)'
+              border: factoringFilter === 'ratecon' ? '2px solid #B45309' : '1px solid var(--monday-border-light)'
             }}
             onClick={() => setFactoringFilter(factoringFilter === 'ratecon' ? null : 'ratecon')}
           >
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Missing Ratecon</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: '#f39c12' }}>{factoringStats.missingRatecon}</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: '#B45309' }}>{factoringStats.missingRatecon}</p>
             </div>
           </div>
 
@@ -2639,13 +2639,13 @@ export default function LoadsPageInline() {
             className="cursor-pointer transition-all rounded-lg p-4 hover:shadow-md"
             style={{
               backgroundColor: factoringFilter === 'pod' ? 'rgba(52, 152, 219, 0.1)' : 'var(--monday-bg-primary)',
-              border: factoringFilter === 'pod' ? '2px solid #3498db' : '1px solid var(--monday-border-light)'
+              border: factoringFilter === 'pod' ? '2px solid #0E7490' : '1px solid var(--monday-border-light)'
             }}
             onClick={() => setFactoringFilter(factoringFilter === 'pod' ? null : 'pod')}
           >
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--monday-text-secondary)' }}>Missing POD</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: '#3498db' }}>{factoringStats.missingPod}</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: '#0E7490' }}>{factoringStats.missingPod}</p>
             </div>
           </div>
         </div>
@@ -2655,7 +2655,7 @@ export default function LoadsPageInline() {
             <table className="w-full table-auto" style={{borderCollapse: 'separate', borderSpacing: 0}}>
               <thead className="sticky top-0 z-10 shadow-sm" style={{backgroundColor: 'var(--monday-bg-secondary)'}}>
                 <tr>
-                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px`}} onClick={() => handleSort('weekNumber')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-surface-hover select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.week}px`, minWidth: `${columnWidths.week}px`}} onClick={() => handleSort('weekNumber')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.week}
                       onAdjust={(delta) => adjustWidth('week', delta)}
@@ -2667,7 +2667,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.date}px`, minWidth: `${columnWidths.date}px`}} onClick={() => handleSort('pickup_date')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-surface-hover select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.date}px`, minWidth: `${columnWidths.date}px`}} onClick={() => handleSort('pickup_date')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.date}
                       onAdjust={(delta) => adjustWidth('date', delta)}
@@ -2682,7 +2682,7 @@ export default function LoadsPageInline() {
                   <th className="px-1 py-2.5 text-center text-[13px] font-medium border-b" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: '36px', minWidth: '36px'}}>
                     <Check className="h-3 w-3 mx-auto" style={{color: 'var(--monday-text-secondary)'}} />
                   </th>
-                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.load_number}px`, minWidth: `${columnWidths.load_number}px`}} onClick={() => handleSort('load_number')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-surface-hover select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.load_number}px`, minWidth: `${columnWidths.load_number}px`}} onClick={() => handleSort('load_number')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.load_number}
                       onAdjust={(delta) => adjustWidth('load_number', delta)}
@@ -2694,7 +2694,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.customer}px`, minWidth: `${columnWidths.customer}px`}} onClick={() => handleSort('customer_id')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-surface-hover select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.customer}px`, minWidth: `${columnWidths.customer}px`}} onClick={() => handleSort('customer_id')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.customer}
                       onAdjust={(delta) => adjustWidth('customer', delta)}
@@ -2706,7 +2706,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px`}} onClick={() => handleSort('driver_id')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-surface-hover select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px`}} onClick={() => handleSort('driver_id')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.driver}
                       onAdjust={(delta) => adjustWidth('driver', delta)}
@@ -2718,7 +2718,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.pickup}px`, minWidth: `${columnWidths.pickup}px`}} onClick={() => handleSort('pickup_location')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-surface-hover select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.pickup}px`, minWidth: `${columnWidths.pickup}px`}} onClick={() => handleSort('pickup_location')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.pickup}
                       onAdjust={(delta) => adjustWidth('pickup', delta)}
@@ -2730,7 +2730,7 @@ export default function LoadsPageInline() {
                       ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                     </div>
                   </th>
-                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.delivery}px`, minWidth: `${columnWidths.delivery}px`}} onClick={() => handleSort('delivery_location')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-surface-hover select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.delivery}px`, minWidth: `${columnWidths.delivery}px`}} onClick={() => handleSort('delivery_location')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.delivery}
                       onAdjust={(delta) => adjustWidth('delivery', delta)}
@@ -2749,7 +2749,7 @@ export default function LoadsPageInline() {
                     />
                     Notes
                   </th>
-                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-gray-100 select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.rate}px`, minWidth: `${columnWidths.rate}px`}} onClick={() => handleSort('rate')}>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b cursor-pointer hover:bg-surface-hover select-none relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.rate}px`, minWidth: `${columnWidths.rate}px`}} onClick={() => handleSort('rate')}>
                     <ColumnWidthControl
                       currentWidth={columnWidths.rate}
                       onAdjust={(delta) => adjustWidth('rate', delta)}
@@ -2810,7 +2810,7 @@ export default function LoadsPageInline() {
             {contextMenu.type === 'load' && contextMenu.loadId && (
               <>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-surface-hover flex items-center gap-2"
                   onClick={() => {
                     // Start editing the first editable field (load_number)
                     startEdit(contextMenu.loadId!, 'load_number')
@@ -2821,7 +2821,7 @@ export default function LoadsPageInline() {
                   <span>Edit Load</span>
                 </button>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-surface-hover flex items-center gap-2"
                   onClick={() => {
                     handleDuplicate(contextMenu.loadId!)
                   }}
@@ -2845,14 +2845,14 @@ export default function LoadsPageInline() {
             {contextMenu.type === 'general' && (
               <>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-surface-hover flex items-center gap-2"
                   onClick={expandAllGroups}
                 >
                   <ChevronDown className="h-4 w-4 text-brand" />
                   <span>Expand All</span>
                 </button>
                 <button
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-surface-hover flex items-center gap-2"
                   onClick={collapseAllGroups}
                 >
                   <ChevronRight className="h-4 w-4 text-brand" />
@@ -2893,7 +2893,7 @@ export default function LoadsPageInline() {
                   </Button>
                   <button
                     onClick={() => setPdfModal(null)}
-                    className="p-2 hover:bg-gray-100 rounded-full"
+                    className="p-2 hover:bg-surface-hover rounded-full"
                   >
                     <X className="h-5 w-5" />
                   </button>
