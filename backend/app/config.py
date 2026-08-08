@@ -58,6 +58,16 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: Optional[str] = None
     FROM_EMAIL: Optional[str] = None
     FROM_NAME: str = "Andi's Trucking TMS"
+
+    # Email transport selection.
+    #   "auto"    - SES if SES_FROM_EMAIL is set, else SMTP if credentials
+    #               are present, else console (logs instead of sending)
+    #   "ses"     - force AWS SES
+    #   "smtp"    - force SMTP
+    #   "console" - never send, just log. Useful locally.
+    EMAIL_TRANSPORT: str = "auto"
+    SES_REGION: Optional[str] = None       # falls back to AWS_REGION
+    SES_FROM_EMAIL: Optional[str] = None   # must be a verified SES identity
     REQUIRE_EMAIL_VERIFICATION: bool = False  # Set to True when email service is configured
 
     # Frontend URL

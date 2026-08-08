@@ -10,6 +10,7 @@ import { Settings, User, Building2, Bell, Shield, Loader2 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useCompany } from '@/hooks/use-company'
 import UserManagement from '@/components/UserManagement'
+import EmailReportsCard from '@/components/settings/email-reports-card'
 
 export default function SettingsPage() {
   const { user, isLoading: userLoading } = useAuth()
@@ -321,6 +322,9 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
         )}
+
+        {/* Emailed reports - admin only, matching the endpoints' guard */}
+        {!isLoading && isAdmin && <EmailReportsCard />}
       </div>
     </Layout>
   )

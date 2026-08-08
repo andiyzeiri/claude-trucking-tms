@@ -18,10 +18,12 @@ class TwilioService:
         self.phone_number = settings.TWILIO_PHONE_NUMBER
         self.email_from = settings.TWILIO_EMAIL_FROM
 
-        if not all([self.account_sid, self.auth_token]):
-            raise ValueError("Twilio credentials not configured. Please set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN")
-
-        self.client = Client(self.account_sid, self.auth_token)
+        # Previously this raised, which meant every /notifications/sms/*
+        # endpoint returned a 500 on any deployment without Twilio credentials
+        # - which is currently all of them. Degrade the way EmailService does
+        # instead: report as unconfigured and let callers handle it.
+        self.configured = bool(self.account_sid and self.auth_token and self.phone_number)
+        self.client = Client(self.account_sid, self.auth_token) if self.configured else None
 
     async def send_sms(
         self,
@@ -40,6 +42,15 @@ class TwilioService:
         Returns:
             Dictionary with status and message_sid or error
         """
+        if not self.configured:
+            return {
+                'success': False,
+                'error': 'SMS is not configured. Set TWILIO_ACCOUNT_SID, '
+                         'TWILIO_AUTH_TOKEN and TWILIO_PHONE_NUMBER.',
+                'unconfigured': True,
+                'to': to_phone,
+            }
+
         try:
             # Ensure phone number is in E.164 format
             if not to_phone.startswith('+'):

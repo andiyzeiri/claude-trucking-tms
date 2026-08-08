@@ -133,6 +133,10 @@ python3 create_accounting_tables.py || echo "⚠️  create_accounting_tables.py
 echo "🔧 Adding accounting to admin permissions..."
 python3 add_accounting_permission.py || echo "⚠️  add_accounting_permission.py had errors, continuing..."
 
+# Create report_recipients table (emailed report distribution lists)
+echo "🔧 Creating report_recipients table..."
+python3 create_report_recipients_table.py || echo "⚠️  create_report_recipients_table.py had errors, continuing..."
+
 # Note: Recurring expenses are generated via POST /api/v1/expenses/generate-recurring
 # This should be called daily via a cron job or on page load
 

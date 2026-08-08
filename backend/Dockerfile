@@ -75,6 +75,7 @@ COPY add_expense_group_column.py ./
 COPY create_rate_to_operate_table.py ./
 COPY create_accounting_tables.py ./
 COPY add_accounting_permission.py ./
+COPY create_report_recipients_table.py ./
 COPY entrypoint.sh ./
 
 # Copy scripts directory

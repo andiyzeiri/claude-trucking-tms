@@ -1,8 +1,11 @@
 from typing import Optional
+import logging
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class EmailService:
@@ -13,8 +16,55 @@ class EmailService:
         self.smtp_port = getattr(settings, 'SMTP_PORT', 587)
         self.smtp_user = getattr(settings, 'SMTP_USER', None)
         self.smtp_password = getattr(settings, 'SMTP_PASSWORD', None)
-        self.from_email = getattr(settings, 'FROM_EMAIL', self.smtp_user)
+        self.ses_region = getattr(settings, 'SES_REGION', None) or getattr(settings, 'AWS_REGION', 'us-east-1')
+        self.ses_from_email = getattr(settings, 'SES_FROM_EMAIL', None)
+        self.from_email = self.ses_from_email or getattr(settings, 'FROM_EMAIL', None) or self.smtp_user
         self.from_name = getattr(settings, 'FROM_NAME', 'Claude Trucking TMS')
+
+    def resolve_transport(self) -> str:
+        """
+        Decide how mail actually leaves the box.
+
+        Returns one of 'ses', 'smtp' or 'console'. 'console' means nothing is
+        sent - the message is logged instead. That is the safe default: an
+        unconfigured deployment should never silently appear to be emailing
+        people when it is not.
+        """
+        configured = (getattr(settings, 'EMAIL_TRANSPORT', 'auto') or 'auto').lower()
+
+        if configured == 'ses':
+            return 'ses'
+        if configured == 'smtp':
+            return 'smtp'
+        if configured == 'console':
+            return 'console'
+
+        # auto
+        if self.ses_from_email:
+            return 'ses'
+        if self.smtp_user and self.smtp_password:
+            return 'smtp'
+        return 'console'
+
+    def _send_via_ses(self, to_email: str, subject: str, html_content: str,
+                      text_content: Optional[str]) -> bool:
+        """Send through AWS SES. boto3 is already a dependency."""
+        import boto3
+
+        client = boto3.client('ses', region_name=self.ses_region)
+        body: dict = {'Html': {'Data': html_content, 'Charset': 'UTF-8'}}
+        if text_content:
+            body['Text'] = {'Data': text_content, 'Charset': 'UTF-8'}
+
+        client.send_email(
+            Source=f"{self.from_name} <{self.from_email}>",
+            Destination={'ToAddresses': [to_email]},
+            Message={
+                'Subject': {'Data': subject, 'Charset': 'UTF-8'},
+                'Body': body,
+            },
+        )
+        return True
 
     async def send_email(
         self,
@@ -23,10 +73,17 @@ class EmailService:
         html_content: str,
         text_content: Optional[str] = None
     ) -> bool:
-        """Send an email"""
+        """Send an email via whichever transport is configured."""
         try:
+            transport = self.resolve_transport()
+
+            if transport == 'ses':
+                self._send_via_ses(to_email, subject, html_content, text_content)
+                logger.info("email: sent to %s via SES (%s)", to_email, subject)
+                return True
+
             # If SMTP is not configured, log the email instead
-            if not self.smtp_user or not self.smtp_password:
+            if transport == 'console' or not self.smtp_user or not self.smtp_password:
                 print(f"\n{'='*60}")
                 print(f"EMAIL SERVICE (Development Mode - SMTP not configured)")
                 print(f"{'='*60}")
@@ -60,9 +117,10 @@ class EmailService:
                 server.login(self.smtp_user, self.smtp_password)
                 server.send_message(msg)
 
+            logger.info("email: sent to %s via SMTP (%s)", to_email, subject)
             return True
         except Exception as e:
-            print(f"Error sending email: {str(e)}")
+            logger.exception("email: failed sending to %s (%s): %s", to_email, subject, e)
             return False
 
     async def send_verification_email(

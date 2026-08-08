@@ -19,6 +19,7 @@ from .rate_to_operate import RateToOperate
 from .account import Account
 from .journal_entry import JournalEntry, JournalLine
 from .accounting_mapping import AccountingMapping
+from .report_recipient import ReportRecipient
 
 __all__ = [
     "Base",
@@ -43,4 +44,5 @@ __all__ = [
     "JournalEntry",
     "JournalLine",
     "AccountingMapping",
+    "ReportRecipient",
 ]
