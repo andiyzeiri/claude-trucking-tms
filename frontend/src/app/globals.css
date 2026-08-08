@@ -343,7 +343,116 @@
 /* Vertical rhythm: a slightly firmer line under the header separates it
    from the first data row without adding a heavy border everywhere. */
 .page-loads thead th {
-  border-bottom-color: var(--monday-border) !important;
+  border-bottom-color: var(--tbl-sep) !important;
+  background: #FFFFFF;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Loads table - dispatch readability pass                                 */
+/*                                                                         */
+/* The table's cells carry inline style={{color: var(--monday-text-*)}},   */
+/* which no class can beat. Rather than rewriting hundreds of inline       */
+/* styles, the tokens themselves are redefined for this page: every one    */
+/* of those inline colours re-resolves to the palette below, with no       */
+/* !important and no markup churn.                                         */
+/* ---------------------------------------------------------------------- */
+.page-loads {
+  --monday-text-primary: #0F172A;
+  --monday-text-secondary: #334155;
+  --monday-text-muted: #64748B;
+  --monday-border-light: #E5E7EB;
+
+  --tbl-sep: #E5E7EB;
+  --tbl-arrow: #94A3B8;
+  --tbl-row-alt: #FAFBFD;
+  --tbl-row-hover: #EFF6FF;
+  --tbl-revenue: #16A34A;
+  --tbl-action: #64748B;
+  --tbl-action-hover: #2563EB;
+}
+
+/* Drop the vertical grid. Column dividers on every cell were the main
+   source of visual noise; horizontal separators alone are enough to
+   track a row. */
+.page-loads tbody tr[data-load-row] td {
+  border-right: 0;
+  border-bottom: 1px solid var(--tbl-sep);
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+
+/* Taller rows. Trade-off worth naming: at ~60px roughly a third fewer
+   loads fit on screen than before, in exchange for far easier scanning. */
+.page-loads tbody tr[data-load-row] {
+  height: 60px;
+}
+
+/* Alignment: text left, status and dropdown centred, money right. */
+.page-loads tbody tr[data-load-row] td:nth-child(3),
+.page-loads thead th:nth-child(3),
+.page-loads tbody tr[data-load-row] td:nth-child(11),
+.page-loads thead th:nth-child(11),
+.page-loads tbody tr[data-load-row] td:nth-child(12),
+.page-loads tbody tr[data-load-row] td:nth-child(13) {
+  text-align: center;
+}
+
+.page-loads tbody tr[data-load-row] td:nth-child(10),
+.page-loads thead th:nth-child(10) {
+  text-align: right;
+}
+
+/* Revenue is the number the eye should land on. */
+.page-loads tbody tr[data-load-row] td:nth-child(10) {
+  color: var(--tbl-revenue);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Cities carry the route; give them the weight. Column 7 is pickup and
+   column 8 is delivery - the first row inside each is city / state / zip. */
+.page-loads tbody tr[data-load-row] td:nth-child(7) > div > div:first-child > div,
+.page-loads tbody tr[data-load-row] td:nth-child(8) > div > div:first-child > div {
+  font-weight: 600;
+}
+
+/* ZIP is the least useful thing in the route cell - keep it visible but
+   let it recede, per the clean-up rule. */
+.page-loads tbody tr[data-load-row] td:nth-child(7) > div > div:first-child > div:last-child,
+.page-loads tbody tr[data-load-row] td:nth-child(8) > div > div:first-child > div:last-child {
+  font-weight: 400;
+  color: var(--monday-text-muted);
+}
+
+/* Pickup and delivery read as one route unit: no divider between them,
+   and an arrow leading the delivery side. */
+.page-loads tbody tr[data-load-row] td:nth-child(8)::before {
+  content: "→";
+  float: left;
+  margin: 0 8px 0 -4px;
+  color: var(--tbl-arrow);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* Action icons: muted until you reach for them. */
+.page-loads tbody tr[data-load-row] td:nth-child(12) svg,
+.page-loads tbody tr[data-load-row] td:nth-child(13) svg {
+  color: var(--tbl-action);
+  transition: color 120ms ease;
+}
+.page-loads tbody tr[data-load-row] td:nth-child(12):hover svg,
+.page-loads tbody tr[data-load-row] td:nth-child(13):hover svg {
+  color: var(--tbl-action-hover);
+}
+
+/* Compact dropdown in the adjustment column. */
+.page-loads tbody tr[data-load-row] td:nth-child(11) select {
+  border: 1px solid var(--tbl-sep);
+  border-radius: 7px;
+  padding: 4px 8px;
+  font-size: 13px;
+  background: #FFFFFF;
 }
 
 /* Brokerage - Monday Teal */

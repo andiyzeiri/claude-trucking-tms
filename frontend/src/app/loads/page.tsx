@@ -1635,8 +1635,12 @@ export default function LoadsPageInline() {
     const rpm = load.miles && load.miles > 0 ? (load.rate || 0) / load.miles : 0
     const isEvenRow = rowIndex % 2 === 0
     const isInvoiced = load.status === 'invoiced'
-    const defaultBgColor = isInvoiced ? 'rgba(26, 95, 42, 0.07)' : (isEvenRow ? 'var(--monday-bg-primary)' : 'rgba(27, 42, 65, 0.025)')
-    const hoverBgColor = isInvoiced ? 'rgba(26, 95, 42, 0.13)' : 'var(--monday-bg-hover)'
+    // Row backgrounds are applied inline and swapped by onMouseEnter, so CSS
+    // cannot reach them - the values have to live here.
+    const defaultBgColor = isInvoiced
+      ? 'rgba(22, 163, 74, 0.07)'          // invoiced keeps a green tint
+      : (isEvenRow ? '#FFFFFF' : '#FAFBFD') // zebra
+    const hoverBgColor = '#EFF6FF'
 
     return (
       <tr
@@ -1965,10 +1969,10 @@ export default function LoadsPageInline() {
                 <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)', flex: 1}}>
                   {parseLocation(load.pickup_location).street || 'Street'}
                 </div>
-                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--gold-deep)', width: '60px'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-muted)', width: '60px'}}>
                   {formatDateShort(load.pickup_date)}
                 </div>
-                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--gold-deep)', width: '65px'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-muted)', width: '65px'}}>
                   {formatTimeShort(load.pickup_date)}
                 </div>
               </div>
@@ -2117,10 +2121,10 @@ export default function LoadsPageInline() {
                 <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)', flex: 1}}>
                   {parseLocation(load.delivery_location).street || 'Street'}
                 </div>
-                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--gold-deep)', width: '60px'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-muted)', width: '60px'}}>
                   {formatDateShort(load.delivery_date)}
                 </div>
-                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--gold-deep)', width: '65px'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-muted)', width: '65px'}}>
                   {formatTimeShort(load.delivery_date)}
                 </div>
               </div>
@@ -2246,12 +2250,12 @@ export default function LoadsPageInline() {
             <div className="cursor-pointer hover:bg-brand/5 rounded px-1 py-1" onClick={() => startEdit(loadKey, 'rate')}>
               {/* Top row: Rate */}
               <div className="mb-0.5">
-                <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)', fontWeight: 500}}>
+                <div style={{fontSize: '15px', lineHeight: '20px', color: 'var(--tbl-revenue)', fontWeight: 600}}>
                   {formatCurrency(load.rate)}
                 </div>
               </div>
               {/* Bottom row: Miles and RPM */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 justify-end">
                 <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)'}}>
                   {load.miles?.toLocaleString() || 0} mi
                 </div>
