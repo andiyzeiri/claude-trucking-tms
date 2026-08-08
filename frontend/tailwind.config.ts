@@ -88,9 +88,14 @@ const config = {
           DEFAULT: "var(--monday-border)",
           light: "var(--monday-border-light)",
         },
+        // Navy: marketing site only. The landing page stays navy + amber
+        // while the app moved to blue, so these must not share a token.
+        navy: {
+          DEFAULT: "rgb(var(--navy-rgb) / <alpha-value>)",
+        },
         brand: {
-          // Channel form so opacity modifiers work: bg-brand/10, ring-brand/30.
-          // Mirrors --monday-cornflower; see the note in globals.css.
+          // App accent, now blue. Channel form so opacity modifiers work:
+          // bg-brand/10, ring-brand/30. Mirrors --monday-cornflower.
           DEFAULT: "rgb(var(--brand-rgb) / <alpha-value>)",
           blue: "var(--monday-blue)",
           purple: "var(--monday-purple)",

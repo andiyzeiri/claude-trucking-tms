@@ -33,13 +33,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Figtree was requested here but never rendered: next/font puts an
-            Inter class on <body>, and a class selector beats the
-            `body { font-family: var(--font-family-body) }` element rule in
-            globals.css. So every page paid for a render-blocking font it
-            never used. Poppins stays - the h1-h6 rule targets those elements
-            directly, so headings really do use it. */}
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" />
+        {/* No web-font <link> at all now. Body and headings both use Inter,
+            which next/font self-hosts and preloads - so there is no
+            render-blocking request to fonts.googleapis.com on any page.
+            Figtree was removed earlier (it never rendered); Poppins went
+            with the move to a single family. */}
         <Script
           src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
           strategy="beforeInteractive"

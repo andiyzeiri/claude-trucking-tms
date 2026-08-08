@@ -10,15 +10,30 @@
        rule. Naming it here so the token matches reality rather than
        claiming a font that never loads. */
     --font-family-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-    --font-family-heading: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    /* Single family for body and headings, like the reference design.
+       Was Poppins, which was the last render-blocking font request. */
+    --font-family-heading: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 
     /* Monday.com Brand Colors */
     --monday-mirage: #181B34;
-    --monday-cornflower: #1B2A41;
+    /* App accent - blue. Drives buttons, links and the sidebar's active
+       item. 5.17:1 against white in both directions. */
+    --monday-cornflower: #2563EB;
     /* Same colour as --monday-cornflower, as space-separated RGB channels.
        Tailwind needs this form to support opacity modifiers (bg-brand/10).
-       Keep the two in sync: #1B2A41 == 27 42 65. */
-    --brand-rgb: 27 42 65;
+       Keep the two in sync: #2563EB == 37 99 235. */
+    --brand-rgb: 37 99 235;
+
+    /* Navy is now the MARKETING palette only. The landing page keeps
+       navy + amber; the signed-in app uses blue. Split deliberately -
+       before this, both read from --brand-rgb, so turning the app blue
+       would have turned absolutetms.com blue with it. */
+    --navy: #1B2A41;
+    --navy-rgb: 27 42 65;
+
+    /* Sidebar chrome - near-black navy, per the reference design. */
+    --sidebar-bg: #0F172A;
+    --sidebar-border: #1E293B;
 
     /* ------------------------------------------------------------------ */
     /* Accent - amber. Used across the marketing site and the app alike.   */
@@ -66,25 +81,25 @@
     /* Foreground colors (Monday.com style) */
     --colors-foreground-default: #1B2A41;
     --colors-foreground-muted: #5A6B82;
-    /* Gold focus ring: navy focus on navy text is nearly invisible. */
-    --colors-border-focus: #B45309;
+    /* Focus ring uses the blue accent - visible against navy body text. */
+    --colors-border-focus: #2563EB;
     --colors-background-default: #ffffff;
 
     /* shadcn variables, retuned to the navy palette. These drive every
        shadcn component - Button's default variant is bg-primary, so
        leaving --primary violet would have kept violet buttons all over
        the app no matter what the --monday-* tokens said.
-         216 41% 18% == #1B2A41 navy
+         221 83% 53% == #2563EB blue (primary + focus ring)
+         216 41% 18% == #1B2A41 navy (text)
          215 29% 97% == #F4F6F9 subtle
-         214 27% 91% == #E3E8EF hairline
-          32 94% 37% == #B45309 gold-deep (focus ring) */
+         214 27% 91% == #E3E8EF hairline */
     --background: 0 0% 100%;
     --foreground: 216 41% 18%;
     --card: 0 0% 100%;
     --card-foreground: 216 41% 18%;
     --popover: 0 0% 100%;
     --popover-foreground: 216 41% 18%;
-    --primary: 216 41% 18%;
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
     --secondary: 215 29% 97%;
     --secondary-foreground: 216 41% 18%;
@@ -96,7 +111,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 214 27% 91%;
     --input: 214 27% 91%;
-    --ring: 32 94% 37%;
+    --ring: 221 83% 53%;
     --radius: 0.5rem;
   }
 
@@ -594,11 +609,13 @@
   letter-spacing: 0.5px;
 }
 
-/* Navigation active state - Monday.com style */
+/* Navigation active state.
+   The sidebar is dark now and the active item is a solid blue pill set
+   inline on the element. This rule previously forced a light background,
+   navy text and a 3px navy left border - the border in particular was not
+   overridden inline, so it would have striped the pill. */
 .sidebar .nav-item.active {
-  background-color: #F4F7FB;
-  color: #1B2A41;
-  border-left: 3px solid #1B2A41;
+  border-left: none;
 }
 
 /* Monday.com style card hover effects */

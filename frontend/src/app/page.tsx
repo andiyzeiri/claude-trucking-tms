@@ -68,7 +68,7 @@ export default function LandingPage() {
           <div className="flex h-[72px] items-center justify-between">
             <Link
               href="/"
-              className="text-[15px] font-semibold tracking-[0.14em] text-brand"
+              className="text-[15px] font-semibold tracking-[0.14em] text-navy"
             >
               ABSOLUTE TMS
             </Link>
@@ -76,13 +76,13 @@ export default function LandingPage() {
               <Link href="/login">
                 <Button
                   variant="ghost"
-                  className="text-content-secondary hover:bg-surface-subtle hover:text-brand"
+                  className="text-content-secondary hover:bg-surface-subtle hover:text-navy"
                 >
                   Sign In
                 </Button>
               </Link>
               <Link href="/register">
-                <Button className="bg-brand px-5 text-white hover:bg-brand/90">
+                <Button className="bg-navy px-5 text-white hover:bg-navy/90">
                   Get Started
                 </Button>
               </Link>
@@ -97,7 +97,7 @@ export default function LandingPage() {
       <section className="relative overflow-hidden">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgb(var(--brand-rgb)/0.07)_1px,transparent_0)] [background-size:24px_24px] [mask-image:linear-gradient(to_bottom,black,transparent_80%)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgb(var(--navy-rgb)/0.07)_1px,transparent_0)] [background-size:24px_24px] [mask-image:linear-gradient(to_bottom,black,transparent_80%)]"
         />
 
         <div className="relative mx-auto max-w-6xl px-6 pb-16 pt-20 lg:pt-28">
@@ -108,7 +108,7 @@ export default function LandingPage() {
               Built for freight operations
             </div>
 
-            <h2 className="text-balance text-4xl font-semibold leading-[1.05] tracking-tight text-brand sm:text-5xl lg:text-[3.75rem]">
+            <h2 className="text-balance text-4xl font-semibold leading-[1.05] tracking-tight text-navy sm:text-5xl lg:text-[3.75rem]">
               Streamline Your
               <span className="text-gold-deep"> Transportation</span>
               <br />Business
@@ -124,7 +124,7 @@ export default function LandingPage() {
               <Link href="/register" className="w-full sm:w-auto">
                 <Button
                   size="lg"
-                  className="w-full bg-brand px-7 text-white hover:bg-brand/90 sm:w-auto"
+                  className="w-full bg-navy px-7 text-white hover:bg-navy/90 sm:w-auto"
                 >
                   Start Free Trial
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -134,7 +134,7 @@ export default function LandingPage() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="w-full border-line-light px-7 text-brand hover:bg-surface-subtle sm:w-auto"
+                  className="w-full border-line-light px-7 text-navy hover:bg-surface-subtle sm:w-auto"
                 >
                   View Demo
                 </Button>
@@ -146,7 +146,7 @@ export default function LandingPage() {
           {/* Product preview, built from divs so it can't go stale.           */}
           {/* ---------------------------------------------------------------- */}
           <div className="relative mx-auto mt-16 max-w-5xl">
-            <div className="overflow-hidden rounded-xl border border-line-light bg-surface shadow-[0_24px_70px_-28px_rgb(var(--brand-rgb)/0.35)]">
+            <div className="overflow-hidden rounded-xl border border-line-light bg-surface shadow-[0_24px_70px_-28px_rgb(var(--navy-rgb)/0.35)]">
               <div className="flex items-center gap-2 border-b border-line-light bg-surface-subtle px-4 py-2.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
                 <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
@@ -158,19 +158,19 @@ export default function LandingPage() {
 
               <div className="flex">
                 <div className="hidden w-40 shrink-0 border-r border-line-light p-3 sm:block">
-                  <div className="mb-3 h-2 w-16 rounded bg-brand/20" />
+                  <div className="mb-3 h-2 w-16 rounded bg-navy/20" />
                   {['Dashboard', 'Loads', 'Drivers', 'Invoices', 'Accounting'].map((label, i) => (
                     <div
                       key={label}
                       className={`mb-1 flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] ${
                         i === 0
-                          ? 'bg-brand/[0.07] font-medium text-brand'
+                          ? 'bg-navy/[0.07] font-medium text-navy'
                           : 'text-content-secondary'
                       }`}
                     >
                       <span
                         className={`h-1.5 w-1.5 rounded-full ${
-                          i === 0 ? 'bg-gold' : 'bg-brand/25'
+                          i === 0 ? 'bg-gold' : 'bg-navy/25'
                         }`}
                       />
                       {label}
@@ -192,7 +192,7 @@ export default function LandingPage() {
                         <div className="text-[10px] uppercase tracking-wide text-content-secondary">
                           {stat.label}
                         </div>
-                        <div className="mt-1 text-lg font-semibold tracking-tight text-brand">
+                        <div className="mt-1 text-lg font-semibold tracking-tight text-navy">
                           {stat.value}
                         </div>
                       </div>
@@ -201,9 +201,9 @@ export default function LandingPage() {
 
                   <div className="overflow-hidden rounded-lg border border-line-light">
                     <div className="flex items-center gap-3 border-b border-line-light bg-surface-subtle px-3 py-2">
-                      <div className="h-1.5 w-14 rounded bg-brand/20" />
-                      <div className="h-1.5 w-20 rounded bg-brand/20" />
-                      <div className="ml-auto h-1.5 w-10 rounded bg-brand/20" />
+                      <div className="h-1.5 w-14 rounded bg-navy/20" />
+                      <div className="h-1.5 w-20 rounded bg-navy/20" />
+                      <div className="ml-auto h-1.5 w-10 rounded bg-navy/20" />
                     </div>
                     {[
                       { w: 'w-24', status: 'bg-status-done' },
@@ -217,9 +217,9 @@ export default function LandingPage() {
                         className="flex items-center gap-3 border-b border-line-light px-3 py-2.5 last:border-0"
                       >
                         <span className={`h-2 w-2 shrink-0 rounded-full ${row.status}`} />
-                        <div className={`h-1.5 ${row.w} rounded bg-brand/20`} />
-                        <div className="h-1.5 w-16 rounded bg-brand/10" />
-                        <div className="ml-auto h-1.5 w-12 rounded bg-brand/10" />
+                        <div className={`h-1.5 ${row.w} rounded bg-navy/20`} />
+                        <div className="h-1.5 w-16 rounded bg-navy/10" />
+                        <div className="ml-auto h-1.5 w-12 rounded bg-navy/10" />
                       </div>
                     ))}
                   </div>
@@ -236,7 +236,7 @@ export default function LandingPage() {
       <section id="features" className="border-t border-line-light bg-surface-subtle py-24">
         <div className="mx-auto max-w-6xl px-6">
           <div className="mx-auto mb-14 max-w-2xl text-center">
-            <h3 className="text-balance text-3xl font-semibold tracking-tight text-brand sm:text-4xl">
+            <h3 className="text-balance text-3xl font-semibold tracking-tight text-navy sm:text-4xl">
               Everything You Need to Run Your Transportation Business
             </h3>
             <p className="mt-4 text-pretty text-lg text-content-secondary">
@@ -248,12 +248,12 @@ export default function LandingPage() {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="group rounded-xl border border-line-light bg-surface p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/25 hover:shadow-[0_14px_36px_-14px_rgb(var(--brand-rgb)/0.28)]"
+                className="group rounded-xl border border-line-light bg-surface p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-navy/25 hover:shadow-[0_14px_36px_-14px_rgb(var(--navy-rgb)/0.28)]"
               >
                 <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-gold/10 transition-colors group-hover:bg-gold/20">
                   <feature.icon className="h-5 w-5 text-gold-deep" />
                 </div>
-                <h4 className="mb-2 text-base font-semibold tracking-tight text-brand">
+                <h4 className="mb-2 text-base font-semibold tracking-tight text-navy">
                   {feature.title}
                 </h4>
                 <p className="text-sm leading-relaxed text-content-secondary">
@@ -272,7 +272,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-6">
           <div className="grid items-center gap-14 lg:grid-cols-2">
             <div>
-              <h3 className="text-balance text-3xl font-semibold tracking-tight text-brand sm:text-4xl">
+              <h3 className="text-balance text-3xl font-semibold tracking-tight text-navy sm:text-4xl">
                 Why Choose Absolute TMS?
               </h3>
               <p className="mt-4 text-lg text-content-secondary">
@@ -292,7 +292,7 @@ export default function LandingPage() {
             {/* Navy card - this is where amber gets to be loud, because it */}
             {/* hits 6.3:1 against the navy field.                          */}
             <div className="lg:pl-6">
-              <div className="relative overflow-hidden rounded-2xl bg-brand p-8 shadow-[0_28px_80px_-32px_rgb(var(--brand-rgb)/0.55)]">
+              <div className="relative overflow-hidden rounded-2xl bg-navy p-8 shadow-[0_28px_80px_-32px_rgb(var(--navy-rgb)/0.55)]">
                 <div
                   aria-hidden
                   className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-gold/20 blur-3xl"
@@ -325,7 +325,7 @@ export default function LandingPage() {
                   <Link href="/register" className="mt-7 block">
                     <Button
                       size="lg"
-                      className="w-full bg-gold text-brand hover:bg-gold/90"
+                      className="w-full bg-gold text-navy hover:bg-gold/90"
                     >
                       Get Started Now
                     </Button>
@@ -340,7 +340,7 @@ export default function LandingPage() {
       {/* ------------------------------------------------------------------ */}
       {/* Closing CTA                                                         */}
       {/* ------------------------------------------------------------------ */}
-      <section className="relative overflow-hidden bg-brand py-20">
+      <section className="relative overflow-hidden bg-navy py-20">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgb(var(--gold-rgb)/0.16)_1px,transparent_0)] [background-size:24px_24px]"
@@ -355,7 +355,7 @@ export default function LandingPage() {
           <Link href="/register" className="mt-8 inline-block">
             <Button
               size="lg"
-              className="bg-gold px-8 text-brand hover:bg-gold/90"
+              className="bg-gold px-8 text-navy hover:bg-gold/90"
             >
               Start Free Trial Today
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -371,7 +371,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-6">
           <div className="grid gap-10 md:grid-cols-4">
             <div className="md:col-span-2">
-              <div className="mb-3 text-[15px] font-semibold tracking-[0.14em] text-brand">
+              <div className="mb-3 text-[15px] font-semibold tracking-[0.14em] text-navy">
                 ABSOLUTE TMS
               </div>
               <p className="max-w-xs text-sm leading-relaxed text-content-secondary">
@@ -380,7 +380,7 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand">
+              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-navy">
                 Product
               </h4>
               <ul className="space-y-2 text-sm">
@@ -403,7 +403,7 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand">
+              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-navy">
                 Support
               </h4>
               <ul className="space-y-2 text-sm">

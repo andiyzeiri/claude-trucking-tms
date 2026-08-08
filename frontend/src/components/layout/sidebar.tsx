@@ -90,12 +90,23 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const filteredNavigation = navigation.filter(item => allowedPages.includes(item.pageId))
 
   return (
-    <div className="sidebar flex h-full w-60 flex-col" style={{ backgroundColor: 'var(--monday-bg-primary)', borderRight: '1px solid var(--monday-border-light)' }}>
+    <div
+      className="sidebar flex h-full w-60 flex-col"
+      style={{ backgroundColor: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-border)' }}
+    >
       {/* Logo/Brand */}
-      <div className="flex h-16 items-center justify-start px-4" style={{ borderBottom: '1px solid var(--monday-border-light)' }}>
-        <div className="text-left">
-          <div className="text-xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>ABSOLUTE</div>
-          <div className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>Transportation Management System</div>
+      <div className="flex h-16 items-center justify-start px-4" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
+        <div className="flex items-center gap-2.5">
+          <div
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+            style={{ backgroundColor: 'var(--monday-cornflower)' }}
+          >
+            <Truck className="h-4 w-4 text-white" />
+          </div>
+          <div className="text-left leading-tight">
+            <div className="text-[15px] font-semibold tracking-wide text-white">ABSOLUTE</div>
+            <div className="text-[10px] text-white/45">Transportation Management</div>
+          </div>
         </div>
       </div>
 
@@ -105,27 +116,29 @@ export default function Sidebar({ onClose }: SidebarProps) {
           const Icon = item.icon
           const isActive = pathname === item.href
 
-          // Active state uses the gold accent rather than navy. Navy is now
-          // the body text colour, so a navy "selected" item would barely
-          // read as selected at all.
+          // Active item is a solid blue pill, per the reference design.
+          // White on that blue is 5.17:1; inactive labels sit at 70% white
+          // on the dark chrome, which is 9.1:1.
           return (
             <Link
               key={item.name}
               href={item.href}
               onClick={onClose}
               className={cn(
-                'group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors nav-item',
-                isActive ? 'active' : ''
+                'group flex items-center px-3 py-2 text-sm rounded-lg transition-colors nav-item',
+                isActive ? 'active font-medium' : 'font-normal hover:bg-white/[0.07]'
               )}
               style={isActive ? {
-                backgroundColor: 'rgba(180, 83, 9, 0.10)',
-                color: 'var(--gold-deep)',
-                borderLeft: '3px solid var(--gold-deep)'
+                backgroundColor: 'var(--monday-cornflower)',
+                color: '#FFFFFF'
               } : {
-                color: 'var(--monday-text-secondary)'
+                color: 'rgba(255,255,255,0.70)'
               }}
             >
-              <Icon className="mr-3 h-5 w-5 flex-shrink-0" style={{ color: isActive ? 'var(--gold-deep)' : 'var(--monday-text-muted)' }} />
+              <Icon
+                className="mr-3 h-[18px] w-[18px] flex-shrink-0"
+                style={{ color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.55)' }}
+              />
               {item.name}
             </Link>
           )
@@ -133,29 +146,33 @@ export default function Sidebar({ onClose }: SidebarProps) {
       </nav>
 
       {/* User & Logout */}
-      <div className="flex-shrink-0 p-4" style={{ borderTop: '1px solid var(--monday-border-light)' }}>
+      <div className="flex-shrink-0 p-3" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
         {user && (
-          <div className="flex items-center space-x-3 mb-3">
+          <div className="flex items-center gap-3 mb-2 px-1">
             <div className="flex-shrink-0">
-              <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(27, 42, 65, 0.1)' }}>
-                <span className="text-sm font-medium" style={{ color: 'var(--monday-cornflower)' }}>
+              <div
+                className="h-9 w-9 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: 'var(--monday-cornflower)' }}
+              >
+                <span className="text-xs font-semibold text-white">
                   {user.first_name?.[0]?.toUpperCase() || ''}{user.last_name?.[0]?.toUpperCase() || ''}
                 </span>
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium" style={{ color: 'var(--monday-text-primary)' }}>
+              <p className="truncate text-sm font-medium text-white">
                 {user.first_name ? user.first_name.charAt(0).toUpperCase() + user.first_name.slice(1).toLowerCase() : ''} {user.last_name ? user.last_name.charAt(0).toUpperCase() + user.last_name.slice(1).toLowerCase() : ''}
               </p>
-              <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>{user.email || ''}</p>
-              <p className="text-xs capitalize" style={{ color: 'var(--monday-cornflower)' }}>{user.role?.replace('_', ' ') || ''}</p>
+              <p className="truncate text-xs capitalize text-white/45">
+                {user.role?.replace('_', ' ') || ''}
+              </p>
             </div>
           </div>
         )}
         <button
           onClick={handleLogout}
-          className="flex w-full items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors"
-          style={{ color: 'var(--monday-text-secondary)' }}
+          className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-normal transition-colors hover:bg-white/[0.07]"
+          style={{ color: 'rgba(255,255,255,0.70)' }}
         >
           <LogOut className="mr-3 h-4 w-4" />
           Sign out
