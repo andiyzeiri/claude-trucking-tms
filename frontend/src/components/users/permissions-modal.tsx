@@ -9,7 +9,6 @@ import { User } from '@/types'
 import {
   Home,
   Package,
-  Route,
   Truck,
   Users,
   Building2,
@@ -30,7 +29,6 @@ const ALL_PAGES = [
   { id: 'dispatch', name: 'Dispatch Board', icon: CalendarDays, description: 'Weekly driver schedule' },
   { id: 'loads', name: 'Loads', icon: Package, description: 'Load management & tracking' },
   { id: 'brokerage', name: 'Brokerage', icon: Building2, description: 'Brokerage load management' },
-  { id: 'lanes', name: 'Lanes', icon: Route, description: 'Freight lane management' },
   { id: 'trucks', name: 'Equipment', icon: Truck, description: 'Trucks and trailers' },
   { id: 'drivers', name: 'Drivers', icon: Users, description: 'Driver roster management' },
   { id: 'customers', name: 'Customers', icon: Building2, description: 'Customer relationships' },
@@ -50,10 +48,10 @@ const ALL_PAGES = [
 const ROLE_PAGES: Record<string, string[]> = {
   company_admin: ALL_PAGES.map(p => p.id),
   super_admin: ALL_PAGES.map(p => p.id),
-  dispatcher: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'payroll', 'invoices', 'reports'],
+  dispatcher: ['dashboard', 'dispatch', 'loads', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'payroll', 'invoices', 'reports'],
   driver: ['dashboard', 'loads'],
   customer: ['dashboard', 'loads', 'invoices'],
-  viewer: ['dashboard', 'dispatch', 'loads', 'lanes', 'trucks', 'drivers', 'customers', 'fuel', 'invoices', 'reports'],
+  viewer: ['dashboard', 'dispatch', 'loads', 'trucks', 'drivers', 'customers', 'fuel', 'invoices', 'reports'],
   custom: [],
 }
 

@@ -34,7 +34,6 @@ const ALL_PAGES = [
   { id: 'invoices', label: 'Invoices' },
   { id: 'reports', label: 'Reports' },
   { id: 'payroll', label: 'Payroll' },
-  { id: 'lanes', label: 'Lanes' },
   { id: 'settings', label: 'Settings' }
 ]
 

@@ -7,7 +7,6 @@ import { useAuth } from '@/hooks/use-auth'
 import {
   Home,
   Package,
-  Route,
   Truck,
   Users,
   Building2,
@@ -30,7 +29,6 @@ const navigation = [
   { name: 'Dispatch Board', href: '/dispatch', icon: CalendarDays, pageId: 'dispatch' },
   { name: 'Loads', href: '/loads', icon: Package, pageId: 'loads' },
   { name: 'Brokerage', href: '/brokerage', icon: Building2, pageId: 'brokerage' },
-  { name: 'Lanes', href: '/lanes', icon: Route, pageId: 'lanes' },
   { name: 'Equipment', href: '/trucks', icon: Truck, pageId: 'trucks' },
   { name: 'Drivers', href: '/drivers', icon: Users, pageId: 'drivers' },
   { name: 'Customers', href: '/customers', icon: Building2, pageId: 'customers' },
@@ -51,10 +49,10 @@ const navigation = [
 const ROLE_PAGES: Record<string, string[]> = {
   company_admin: navigation.map(n => n.pageId),
   super_admin: navigation.map(n => n.pageId),
-  dispatcher: ['dashboard', 'dispatch', 'loads', 'brokerage', 'lanes', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'payroll', 'invoices', 'reports'],
+  dispatcher: ['dashboard', 'dispatch', 'loads', 'brokerage', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'payroll', 'invoices', 'reports'],
   driver: ['dashboard', 'loads'],
   customer: ['dashboard', 'loads', 'invoices'],
-  viewer: ['dashboard', 'dispatch', 'loads', 'brokerage', 'lanes', 'trucks', 'drivers', 'customers', 'fuel', 'invoices', 'reports'],
+  viewer: ['dashboard', 'dispatch', 'loads', 'brokerage', 'trucks', 'drivers', 'customers', 'fuel', 'invoices', 'reports'],
   custom: [],
 }
 
