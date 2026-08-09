@@ -2257,10 +2257,10 @@ export default function LoadsPageInline() {
               </div>
               {/* Bottom row: Miles and RPM */}
               <div className="flex gap-2 justify-end">
-                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', fontWeight: 500, color: 'var(--monday-blue)'}}>
                   {load.miles?.toLocaleString() || 0} mi
                 </div>
-                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)'}}>
+                <div style={{fontSize: '12px', lineHeight: '17px', fontWeight: 500, color: 'var(--monday-purple)'}}>
                   ${rpm.toFixed(2)}/mi
                 </div>
               </div>
