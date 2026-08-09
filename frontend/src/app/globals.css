@@ -52,11 +52,11 @@
     --monday-white: #FFFFFF;
 
     /* Monday.com Status Colors */
-    --monday-stuck: #E2445C;
-    --monday-working: #FDAB3D;
-    --monday-done: #1a5f2a;
-    --monday-blue: #0086C0;
-    --monday-purple: #A25DDC;
+    --monday-stuck: #DC2626;
+    --monday-working: #C2410C;
+    --monday-done: #15803D;
+    --monday-blue: #0369A1;
+    --monday-purple: #7E22CE;
     --monday-gray: #C4C4C4;
 
     /* Monday.com UI Colors */
@@ -65,9 +65,9 @@
     --monday-bg-hover: #E7EDF4;
     --monday-border: #C7D1DE;
     --monday-border-light: #E3E8EF;
-    --monday-text-primary: #1B2A41;
-    --monday-text-secondary: #5A6B82;
-    --monday-text-muted: #6E8095;
+    --monday-text-primary: #0F172A;
+    --monday-text-secondary: #334155;
+    --monday-text-muted: #64748B;
 
     /* Cell Colors (Monday.com style) */
     --cell-background-base: #ffffff;
@@ -80,8 +80,8 @@
     --cell-borderColor-header: #C7D1DE;
 
     /* Foreground colors (Monday.com style) */
-    --colors-foreground-default: #1B2A41;
-    --colors-foreground-muted: #5A6B82;
+    --colors-foreground-default: #0F172A;
+    --colors-foreground-muted: #334155;
     /* Focus ring uses the blue accent - visible against navy body text. */
     --colors-border-focus: #2563EB;
     --colors-background-default: #ffffff;
@@ -95,19 +95,19 @@
          215 29% 97% == #F4F6F9 subtle
          214 27% 91% == #E3E8EF hairline */
     --background: 0 0% 100%;
-    --foreground: 216 41% 18%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 216 41% 18%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 216 41% 18%;
+    --popover-foreground: 222 47% 11%;
     --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
     --secondary: 215 29% 97%;
-    --secondary-foreground: 216 41% 18%;
+    --secondary-foreground: 222 47% 11%;
     --muted: 215 29% 97%;
-    --muted-foreground: 214 19% 43%;
+    --muted-foreground: 215 16% 47%;
     --accent: 215 29% 97%;
-    --accent-foreground: 216 41% 18%;
+    --accent-foreground: 222 47% 11%;
     --destructive: 354 70% 55%;
     --destructive-foreground: 0 0% 100%;
     --border: 214 27% 91%;
@@ -358,16 +358,15 @@
 /* !important and no markup churn.                                         */
 /* ---------------------------------------------------------------------- */
 .page-loads {
-  --monday-text-primary: #0F172A;
-  --monday-text-secondary: #334155;
-  --monday-text-muted: #64748B;
+  /* Text tokens are now these values globally, so no override needed.
+     Only the separator stays page-specific. */
   --monday-border-light: #E5E7EB;
 
   --tbl-sep: #E5E7EB;
-  --tbl-arrow: #94A3B8;
+  --tbl-arrow: #7B8CA0;
   --tbl-row-alt: #FAFBFD;
   --tbl-row-hover: #EFF6FF;
-  --tbl-revenue: #16A34A;
+  --tbl-revenue: #15803D;
   --tbl-action: #64748B;
   --tbl-action-hover: #2563EB;
 }

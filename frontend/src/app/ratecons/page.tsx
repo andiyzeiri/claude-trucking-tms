@@ -572,7 +572,7 @@ export default function RateconsPage() {
                 <h2 className="text-lg font-semibold text-gray-900">Rate Confirmation Details</h2>
                 <button
                   onClick={() => setDialogOpen(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-500 hover:text-gray-600"
                 >
                   <X className="h-5 w-5" />
                 </button>

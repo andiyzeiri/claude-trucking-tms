@@ -310,7 +310,7 @@ export default function DemoPage() {
               <Truck className="h-6 w-6 text-brand" />
               <span className="font-bold text-lg">ABSOLUTE TMS</span>
             </div>
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-500 text-sm">
               &copy; 2024 Absolute TMS. All rights reserved.
             </p>
           </div>

@@ -557,13 +557,13 @@ export default function FuelPage() {
       >
         {/* Drag handle */}
         <td className="px-1 py-2.5 border-r cursor-grab active:cursor-grabbing" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.drag}px`, minWidth: `${columnWidths.drag}px` }}>
-          <GripVertical className="h-3.5 w-3.5 text-gray-300" />
+          <GripVertical className="h-3.5 w-3.5 text-gray-500" />
         </td>
 
         {/* Truck */}
         <td className="px-3 py-2.5 border-r group/truck" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.truck}px`, minWidth: `${columnWidths.truck}px` }}>
           <div className="flex items-center gap-2" style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
-            <Truck className="h-3.5 w-3.5 text-gray-400" />
+            <Truck className="h-3.5 w-3.5 text-gray-500" />
             {truck.truck_number}
             <button
               onClick={(e) => { e.stopPropagation(); handleDeleteTruck(truck.id, truck.truck_number) }}
@@ -893,7 +893,7 @@ export default function FuelPage() {
                       >
                         <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
                           <div className="flex items-center gap-2" style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
-                            <Truck className="h-3.5 w-3.5 text-gray-400" />
+                            <Truck className="h-3.5 w-3.5 text-gray-500" />
                             {truck.truck_number}
                           </div>
                         </td>

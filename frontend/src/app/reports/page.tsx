@@ -619,7 +619,7 @@ export default function ReportsPage() {
         <div className="page-reports space-y-6">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-              <TrendingUp className="h-16 w-16 text-gray-400 mx-auto mb-4 animate-pulse" />
+              <TrendingUp className="h-16 w-16 text-gray-500 mx-auto mb-4 animate-pulse" />
               <p className="text-gray-600">Loading reports...</p>
             </div>
           </div>
@@ -653,7 +653,7 @@ export default function ReportsPage() {
 
         {/* Year Tabs */}
         <div className="bg-white border border-gray-200 rounded-lg p-1 inline-flex gap-1">
-          <Calendar className="h-5 w-5 text-gray-400 my-auto mx-2" />
+          <Calendar className="h-5 w-5 text-gray-500 my-auto mx-2" />
           {availableYears.map(year => (
             <button
               key={year}
@@ -721,7 +721,7 @@ export default function ReportsPage() {
 
         {/* Search */}
         <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
           <Input
             placeholder="Search by name..."
             value={searchTerm}
@@ -874,11 +874,11 @@ export default function ReportsPage() {
                           <tr key={entry.id} className="border-t border-gray-100 hover:bg-gray-50">
                             <td className="px-4 py-2 text-sm text-gray-700 pl-12">
                               {entry.description || entry.category}
-                              {entry.vendor && <span className="text-gray-400 ml-2">({entry.vendor})</span>}
+                              {entry.vendor && <span className="text-gray-500 ml-2">({entry.vendor})</span>}
                             </td>
                             <td className="px-4 py-2 text-sm text-right text-gray-500">{entry.date}</td>
                             <td className="px-4 py-2 text-sm text-right font-semibold text-red-600">{formatCurrency(entry.amount)}</td>
-                            <td className="px-4 py-2 text-sm text-right text-gray-400">
+                            <td className="px-4 py-2 text-sm text-right text-gray-500">
                               <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100">{entry.cost_type}</span>
                             </td>
                           </tr>
@@ -905,7 +905,7 @@ export default function ReportsPage() {
         {activeTab !== 'expenses' && activeTab !== 'equipment' && (filteredData.length === 0 ? (
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-              <TrendingUp className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <TrendingUp className="h-16 w-16 text-gray-500 mx-auto mb-4" />
               <h2 className="text-xl font-semibold text-gray-900 mb-2">No Drivers Found</h2>
               <p className="text-gray-600">
                 {activeTab === 'drivers'

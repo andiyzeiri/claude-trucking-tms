@@ -334,7 +334,7 @@ export default function LoadsPage() {
       groupable: true,
       render: (value) => (
         <div className="flex items-center text-sm">
-          <User className="h-3 w-3 mr-1 text-gray-400" />
+          <User className="h-3 w-3 mr-1 text-gray-500" />
           {value ? (driverMap[value] || `Driver #${value}`) : 'Unassigned'}
         </div>
       )
@@ -525,7 +525,7 @@ export default function LoadsPage() {
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center text-gray-400 hover:text-brand">
+                <div className="flex items-center text-gray-500 hover:text-brand">
                   <Upload className="h-4 w-4 mr-1" />
                   <span className="text-xs">Add</span>
                 </div>
@@ -560,7 +560,7 @@ export default function LoadsPage() {
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center text-gray-400 hover:text-brand">
+                <div className="flex items-center text-gray-500 hover:text-brand">
                   <Upload className="h-4 w-4 mr-1" />
                   <span className="text-xs">Add</span>
                 </div>

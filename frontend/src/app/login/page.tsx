@@ -123,7 +123,7 @@ export default function LoginPage() {
                   <Label htmlFor="email">Email Address</Label>
                   <div className="relative mt-1">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Mail className="h-4 w-4 text-gray-400" />
+                      <Mail className="h-4 w-4 text-gray-500" />
                     </div>
                     <Input
                       id="email"
@@ -142,7 +142,7 @@ export default function LoginPage() {
                   <Label htmlFor="password">Password</Label>
                   <div className="relative mt-1">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-4 w-4 text-gray-400" />
+                      <Lock className="h-4 w-4 text-gray-500" />
                     </div>
                     <Input
                       id="password"
@@ -157,9 +157,9 @@ export default function LoginPage() {
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                        <EyeOff className="h-4 w-4 text-gray-500 hover:text-gray-600" />
                       ) : (
-                        <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                        <Eye className="h-4 w-4 text-gray-500 hover:text-gray-600" />
                       )}
                     </button>
                   </div>

@@ -130,7 +130,7 @@ export function ExpandablePayrollTable({
       {showSearch && (
         <div className="flex items-center justify-between space-x-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
             <Input
               placeholder={searchPlaceholder}
               value={searchTerm}
@@ -178,9 +178,9 @@ export function ExpandablePayrollTable({
                 >
                   <div className="flex items-center space-x-2">
                     {expandedWeeks.has(week) ? (
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                      <ChevronRight className="h-4 w-4 text-gray-500" />
                     )}
                     <span className="font-medium text-gray-900">{week}</span>
                     <span className="text-sm text-gray-500">({entries.length} drivers)</span>
@@ -202,21 +202,21 @@ export function ExpandablePayrollTable({
                           key={`${entry.week}-${entry.driver}`}
                           className={`px-12 py-3 cursor-pointer border-l-4 border-transparent ${
                             isEmptyEntry
-                              ? 'hover:bg-gray-100 text-gray-400'
+                              ? 'hover:bg-gray-100 text-gray-500'
                               : 'hover:bg-white hover:border-gray-300'
                           }`}
                           onContextMenu={(e) => onRowRightClick?.(entry, e)}
                         >
                           <div className="grid grid-cols-12 gap-4 text-sm">
                             <div className="col-span-2"></div>
-                            <div className={`col-span-2 font-medium ${isEmptyEntry ? 'text-gray-400' : 'text-gray-900'}`}>
+                            <div className={`col-span-2 font-medium ${isEmptyEntry ? 'text-gray-500' : 'text-gray-900'}`}>
                               {entry.driver}
                             </div>
                             <div className="col-span-1">
                               <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                                 entry.type === 'company'
-                                  ? isEmptyEntry ? 'bg-gray-100 text-gray-400' : 'bg-brand/10 text-brand'
-                                  : isEmptyEntry ? 'bg-gray-100 text-gray-400' : 'bg-purple-100 text-purple-800'
+                                  ? isEmptyEntry ? 'bg-gray-100 text-gray-500' : 'bg-brand/10 text-brand'
+                                  : isEmptyEntry ? 'bg-gray-100 text-gray-500' : 'bg-purple-100 text-purple-800'
                               }`}>
                                 {entry.type === 'company' ? 'Company' : 'Owner Op'}
                               </span>
@@ -224,19 +224,19 @@ export function ExpandablePayrollTable({
                             <div className="col-span-1 font-medium" style={{color: isEmptyEntry ? '#9ca3af' : '#1a5f2a'}}>
                               {formatCurrency(entry.gross)}
                             </div>
-                            <div className={`col-span-1 ${isEmptyEntry ? 'text-gray-400' : 'text-red-600'}`}>
+                            <div className={`col-span-1 ${isEmptyEntry ? 'text-gray-500' : 'text-red-600'}`}>
                               {formatCurrency(totalDeductions)}
                             </div>
-                            <div className={`col-span-1 font-medium ${isEmptyEntry ? 'text-gray-400' : 'text-gray-900'}`}>
+                            <div className={`col-span-1 font-medium ${isEmptyEntry ? 'text-gray-500' : 'text-gray-900'}`}>
                               {entry.miles.toLocaleString()}
                             </div>
                             <div className="col-span-2 font-medium" style={{color: isEmptyEntry ? '#9ca3af' : '#1a5f2a'}}>
                               {formatCurrency(entry.check)}
                             </div>
-                            <div className={`col-span-1 font-medium ${isEmptyEntry ? 'text-gray-400' : 'text-brand'}`}>
+                            <div className={`col-span-1 font-medium ${isEmptyEntry ? 'text-gray-500' : 'text-brand'}`}>
                               ${entry.rpm.toFixed(2)}
                             </div>
-                            <div className={`col-span-1 ${isEmptyEntry ? 'text-gray-400' : 'text-yellow-600'}`}>
+                            <div className={`col-span-1 ${isEmptyEntry ? 'text-gray-500' : 'text-yellow-600'}`}>
                               {formatCurrency(entry.escrow)}
                             </div>
                           </div>

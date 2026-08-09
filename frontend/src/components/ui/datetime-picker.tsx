@@ -327,12 +327,12 @@ export function InlineDateTimePicker({
             type="button"
             className={cn(
               "h-6 px-1.5 text-xs border rounded bg-white hover:bg-gray-50 flex items-center gap-1",
-              !date && "text-gray-400"
+              !date && "text-gray-500"
             )}
             disabled={disabled}
             style={{ width: "75px", fontSize: "11px" }}
           >
-            <CalendarIcon className="h-3 w-3 flex-shrink-0 text-gray-400" />
+            <CalendarIcon className="h-3 w-3 flex-shrink-0 text-gray-500" />
             <span>{date ? format(date, "M/d/yy") : "Date"}</span>
           </button>
         </PopoverTrigger>
@@ -350,11 +350,11 @@ export function InlineDateTimePicker({
       <div
         className={cn(
           "h-6 px-1.5 text-xs border rounded bg-white hover:bg-gray-50 flex items-center gap-1",
-          !timeInputValue && "text-gray-400"
+          !timeInputValue && "text-gray-500"
         )}
         style={{ width: "75px", fontSize: "11px" }}
       >
-        <Clock className="h-3 w-3 flex-shrink-0 text-gray-400" />
+        <Clock className="h-3 w-3 flex-shrink-0 text-gray-500" />
         <input
           type="text"
           inputMode="numeric"

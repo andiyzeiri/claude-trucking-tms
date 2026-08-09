@@ -394,7 +394,7 @@ export default function PayrollPage() {
           </div>
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-              <Calculator className="h-16 w-16 text-gray-400 mx-auto mb-4 animate-pulse" />
+              <Calculator className="h-16 w-16 text-gray-500 mx-auto mb-4 animate-pulse" />
               <p className="text-gray-600">Loading payroll data...</p>
             </div>
           </div>

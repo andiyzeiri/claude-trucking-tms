@@ -231,7 +231,7 @@ export function FileUpload({
         />
 
         <div className="space-y-2">
-          <Upload className="h-8 w-8 text-gray-400 mx-auto" />
+          <Upload className="h-8 w-8 text-gray-500 mx-auto" />
           {isUploading ? (
             <div>
               <p className="text-sm text-gray-600">Uploading...</p>

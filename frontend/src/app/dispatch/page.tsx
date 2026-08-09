@@ -1650,7 +1650,7 @@ export default function DispatchBoardPage() {
                 maxLength={500}
                 className="resize-none"
               />
-              <div className="text-xs text-gray-400 mt-1 text-right">
+              <div className="text-xs text-gray-500 mt-1 text-right">
                 {noteText.length}/500
               </div>
             </div>
