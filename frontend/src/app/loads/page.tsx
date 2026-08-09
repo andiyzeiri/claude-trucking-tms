@@ -1640,8 +1640,8 @@ export default function LoadsPageInline() {
     // isInvoiced is the checkbox state - the box toggles status between
     // 'invoiced' and 'dispatched'. Checked rows get the mint background,
     // unchecked stay white.
-    const defaultBgColor = isInvoiced ? '#D0F4DE' : '#FFFFFF'
-    const hoverBgColor = isInvoiced ? '#B5E8CB' : '#EFF6FF'
+    const defaultBgColor = isInvoiced ? '#D8F3DC' : '#FFFFFF'
+    const hoverBgColor = isInvoiced ? '#C2EACD' : '#EFF6FF'
 
     return (
       <tr
