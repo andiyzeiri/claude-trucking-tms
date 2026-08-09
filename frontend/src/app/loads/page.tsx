@@ -1637,10 +1637,11 @@ export default function LoadsPageInline() {
     const isInvoiced = load.status === 'invoiced'
     // Row backgrounds are applied inline and swapped by onMouseEnter, so CSS
     // cannot reach them - the values have to live here.
-    // Every load row sits on #D0F4DE; invoiced goes a shade deeper so it is
-    // still distinguishable, and hover stays blue so it reads against the mint.
-    const defaultBgColor = isInvoiced ? '#A8E6C1' : '#D0F4DE'
-    const hoverBgColor = isInvoiced ? '#94DEB1' : '#B5E8CB'
+    // isInvoiced is the checkbox state - the box toggles status between
+    // 'invoiced' and 'dispatched'. Checked rows get the mint background,
+    // unchecked stay white.
+    const defaultBgColor = isInvoiced ? '#D0F4DE' : '#FFFFFF'
+    const hoverBgColor = isInvoiced ? '#B5E8CB' : '#EFF6FF'
 
     return (
       <tr
