@@ -376,14 +376,17 @@
      the global muted #64748B drops to 3.86:1 on the darkest of them.
      #546274 clears 4.5:1 against every band while staying clearly
      lighter than secondary. */
-  --monday-text-muted: #546274;
+  /* The mint / periwinkle row bands are darker than the old slate ones,
+     so muted has to come down again: #546274 fell to 3.28:1 on the week
+     band. #3E4C5E clears 4.5:1 on every band on this page. */
+  --monday-text-muted: #3E4C5E;
   --monday-border-light: #E2E8F0;
 
   --tbl-sep: #E2E8F0;
   --tbl-arrow: #7B8CA0;
   --tbl-row-alt: #FAFBFD;
   --tbl-row-hover: #EFF6FF;
-  --tbl-revenue: #166534;
+  --tbl-revenue: #70E000;
   --tbl-action: #64748B;
   --tbl-action-hover: #2563EB;
 }
@@ -420,9 +423,9 @@
 }
 
 /* Revenue is the number the eye should land on. */
+/* Revenue renders as a filled pill, so the cell itself carries no colour -
+   only the alignment above. */
 .page-loads tbody tr[data-load-row] td:nth-child(10) {
-  color: var(--tbl-revenue);
-  font-size: 15px;
   font-weight: 600;
 }
 
