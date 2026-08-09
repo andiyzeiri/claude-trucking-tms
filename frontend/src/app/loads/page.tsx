@@ -1583,7 +1583,7 @@ export default function LoadsPageInline() {
           <td className="px-2 py-2 text-sm" colSpan={7}></td>
           <td className="px-2 py-2 text-sm text-right">
             <div className="mb-0.5">
-              <div style={{fontSize: '14px', lineHeight: '20px', fontWeight: 600, color: 'var(--monday-done)'}}>
+              <div style={{fontSize: '14px', lineHeight: '20px', fontWeight: 600, color: 'var(--tbl-revenue)'}}>
                 {formatCurrency(groupTotalRate)}
               </div>
             </div>
@@ -2936,7 +2936,7 @@ export default function LoadsPageInline() {
               </div>
             </div>
             <div className="flex items-center gap-3 md:gap-6 md:mr-[300px]">
-              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--monday-done)' }}>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--tbl-revenue)' }}>
                 {formatCurrency(totals.rate)}
               </div>
               <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--monday-blue)' }}>
