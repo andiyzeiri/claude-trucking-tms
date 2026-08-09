@@ -415,6 +415,16 @@ export default function DriversPage() {
           columns={columns}
           onRowRightClick={handleRowRightClick}
           tableId={`${activeTab}-table`}
+          // A driver is terminated when date_terminated is set. There is no
+          // 'terminated' status value - status only holds available /
+          // on_trip / off_duty.
+          pinLast={(d: any) => Boolean(d.date_terminated)}
+          rowStyle={(d: any) =>
+            d.date_terminated ? { backgroundColor: '#FEF2F2' } : undefined
+          }
+          rowHoverBackground={(d: any) =>
+            d.date_terminated ? '#FEE2E2' : undefined
+          }
         />
 
         <DriverModal

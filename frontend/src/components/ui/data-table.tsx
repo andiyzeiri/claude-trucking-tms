@@ -36,6 +36,16 @@ interface DataTableProps<T> {
   onRowRightClick?: (row: T, event: React.MouseEvent) => void
   calculateGroupTotals?: (rows: T[]) => { [key: string]: any }
   tableId?: string
+  /**
+   * Rows matching this predicate are always pushed to the bottom, even when
+   * the user sorts by a column. Used to keep terminated drivers below active
+   * ones regardless of how the table is ordered.
+   */
+  pinLast?: (row: T) => boolean
+  /** Base style for a row, e.g. a highlight background. */
+  rowStyle?: (row: T) => React.CSSProperties | undefined
+  /** Background applied while hovering. Falls back to the standard hover. */
+  rowHoverBackground?: (row: T) => string | undefined
 }
 
 export function DataTable<T>({
@@ -46,7 +56,10 @@ export function DataTable<T>({
   onRowClick,
   onRowRightClick,
   calculateGroupTotals,
-  tableId = 'data-table'
+  tableId = 'data-table',
+  pinLast,
+  rowStyle,
+  rowHoverBackground
 }: DataTableProps<T>) {
   const [sortColumn, setSortColumn] = useState<keyof T | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
@@ -162,9 +175,19 @@ export function DataTable<T>({
       }
     })
 
-    // Sorting
-    if (sortColumn) {
+    // Sorting. Runs whenever there is a sort column OR a pin predicate, so
+    // pinned rows stay at the bottom even with no column sort active.
+    if (sortColumn || pinLast) {
       filtered.sort((a, b) => {
+        // Pin wins over the column sort - pinned rows sink regardless.
+        if (pinLast) {
+          const aPinned = pinLast(a) ? 1 : 0
+          const bPinned = pinLast(b) ? 1 : 0
+          if (aPinned !== bPinned) return aPinned - bPinned
+        }
+
+        if (!sortColumn) return 0  // Array.sort is stable, so order is kept
+
         const aVal = (a as any)[sortColumn]
         const bVal = (b as any)[sortColumn]
 
@@ -180,7 +203,7 @@ export function DataTable<T>({
     }
 
     return filtered
-  }, [data, sortColumn, sortDirection, searchTerm, columnFilters, groupBy, columns])
+  }, [data, sortColumn, sortDirection, searchTerm, columnFilters, groupBy, columns, pinLast])
 
   const groupableColumns = columns.filter(col => col.groupable)
 
@@ -466,16 +489,23 @@ export function DataTable<T>({
               renderNestedGroups(processedData as any[])
             ) : (
               // Regular view
-              (processedData as T[]).map((row, index) => (
+              (processedData as T[]).map((row, index) => {
+                // Captured so onMouseLeave can restore the row's own colour.
+                // It previously reset to 'transparent', which would have
+                // permanently wiped any row highlight after the first hover.
+                const base = rowStyle?.(row)
+                const baseBg = (base?.backgroundColor as string) ?? 'transparent'
+                const hoverBg = rowHoverBackground?.(row) ?? 'var(--monday-bg-hover)'
+                return (
                 <tr
                   key={index}
                   className={cn(
                     "group border-b transition-colors",
                     (onRowClick || onRowRightClick) && "cursor-pointer"
                   )}
-                  style={{ borderColor: 'var(--monday-border-light)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  style={{ borderColor: 'var(--monday-border-light)', ...base }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = hoverBg}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = baseBg}
                   onClick={() => onRowClick?.(row)}
                   onContextMenu={(e) => {
                     e.preventDefault()
@@ -509,7 +539,8 @@ export function DataTable<T>({
                     )
                   })}
                 </tr>
-              ))
+                )
+              })
             )}
           </tbody>
         </table>
