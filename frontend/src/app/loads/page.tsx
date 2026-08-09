@@ -1552,7 +1552,7 @@ export default function LoadsPageInline() {
       let borderColor = 'var(--monday-border-light)'
       if (currentGroupType === 'week') {
         iconColor = 'var(--monday-blue)'
-        bgColor = '#AEB8FE'
+        bgColor = '#E2E8F0'
         borderColor = '#ffffff'
       } else if (currentGroupType === 'driver') {
         iconColor = 'var(--monday-working)'
@@ -1637,8 +1637,10 @@ export default function LoadsPageInline() {
     const isInvoiced = load.status === 'invoiced'
     // Row backgrounds are applied inline and swapped by onMouseEnter, so CSS
     // cannot reach them - the values have to live here.
-    const defaultBgColor = isInvoiced ? '#8FD9AC' : '#B7E4C7'
-    const hoverBgColor = isInvoiced ? '#7ACF9B' : '#9DD9B4'
+    // Every load row sits on #D0F4DE; invoiced goes a shade deeper so it is
+    // still distinguishable, and hover stays blue so it reads against the mint.
+    const defaultBgColor = isInvoiced ? '#A8E6C1' : '#D0F4DE'
+    const hoverBgColor = isInvoiced ? '#94DEB1' : '#B5E8CB'
 
     return (
       <tr
@@ -1689,16 +1691,7 @@ export default function LoadsPageInline() {
               className="h-8 text-sm"
             />
           ) : (
-            <div className="cursor-pointer" style={{
-              display: 'inline-block',
-              backgroundColor: '#FFBA08',
-              color: '#0F172A',
-              fontSize: '13px',
-              lineHeight: '18px',
-              fontWeight: 600,
-              padding: '2px 8px',
-              borderRadius: '6px'
-            }}>
+            <div className="cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '14px', lineHeight: '20px', color: 'var(--gold-deep)'}}>
               {formatDateShort(load.pickup_date)}
             </div>
           )}
@@ -1793,7 +1786,7 @@ export default function LoadsPageInline() {
             </Select>
           ) : (
             <div className="cursor-pointer hover:bg-brand/5 rounded px-1 py-1">
-              <div style={{fontSize: '14px', lineHeight: '20px', color: '#27187E', fontWeight: 500}}>
+              <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)'}}>
                 {customers.find(c => c.id === load.customer_id)?.name || 'N/A'}
               </div>
               {customers.find(c => c.id === load.customer_id)?.mc && (
@@ -2257,16 +2250,7 @@ export default function LoadsPageInline() {
             <div className="cursor-pointer hover:bg-brand/5 rounded px-1 py-1" onClick={() => startEdit(loadKey, 'rate')}>
               {/* Top row: Rate */}
               <div className="mb-0.5">
-                <div style={{
-                  display: 'inline-block',
-                  backgroundColor: 'var(--tbl-revenue)',
-                  color: '#0F172A',
-                  fontSize: '14px',
-                  lineHeight: '18px',
-                  fontWeight: 600,
-                  padding: '2px 8px',
-                  borderRadius: '6px'
-                }}>
+                <div style={{fontSize: '15px', lineHeight: '20px', color: 'var(--tbl-revenue)', fontWeight: 600}}>
                   {formatCurrency(load.rate)}
                 </div>
               </div>
