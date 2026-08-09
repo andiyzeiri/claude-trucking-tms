@@ -1789,7 +1789,7 @@ export default function LoadsPageInline() {
             </Select>
           ) : (
             <div className="cursor-pointer hover:bg-brand/5 rounded px-1 py-1">
-              <div style={{fontSize: '14px', lineHeight: '20px', color: '#F3722C', fontWeight: 600}}>
+              <div style={{fontSize: '14px', lineHeight: '20px', color: '#69140E', fontWeight: 600}}>
                 {customers.find(c => c.id === load.customer_id)?.name || 'N/A'}
               </div>
               {customers.find(c => c.id === load.customer_id)?.mc && (
