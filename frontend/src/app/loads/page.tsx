@@ -1640,8 +1640,8 @@ export default function LoadsPageInline() {
     // isInvoiced is the checkbox state - the box toggles status between
     // 'invoiced' and 'dispatched'. Checked rows get the mint background,
     // unchecked stay white.
-    const defaultBgColor = isInvoiced ? '#F0FFF1' : '#FFFFFF'
-    const hoverBgColor = isInvoiced ? '#DCF7E1' : '#EFF6FF'
+    const defaultBgColor = isInvoiced ? '#F1FFFA' : '#FFFFFF'
+    const hoverBgColor = isInvoiced ? '#DBF8EC' : '#EFF6FF'
 
     return (
       <tr
@@ -2333,7 +2333,7 @@ export default function LoadsPageInline() {
         )}
 
         {/* Ratecon */}
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)', backgroundColor: load.ratecon_url ? '#F0FFF1' : '#FEF3C7'}}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)', backgroundColor: load.ratecon_url ? '#F1FFFA' : '#FEF3C7'}}>
           <div className="flex items-center gap-2">
             {!load.ratecon_url && (
               <span className="text-orange-600 font-bold text-lg">!</span>
@@ -2410,7 +2410,7 @@ export default function LoadsPageInline() {
         </td>
 
         {/* POD */}
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)', backgroundColor: load.pod_url ? '#F0FFF1' : '#FEF3C7'}}>
+        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)', backgroundColor: load.pod_url ? '#F1FFFA' : '#FEF3C7'}}>
           <div className="flex items-center gap-2">
             {!load.pod_url && (
               <span className="text-orange-600 font-bold text-lg">!</span>
