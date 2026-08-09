@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next"
-import { Inter } from "next/font/google"
+import { Roboto } from "next/font/google"
 import Script from "next/script"
 import "./globals.css"
 import QueryProvider from "@/providers/query-provider"
 import { Toaster } from "react-hot-toast"
 
-const inter = Inter({ subsets: ["latin"] })
+const roboto = Roboto({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Absolute TMS — Transportation Management System",
@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* No web-font <link> at all now. Body and headings both use Inter,
+        {/* No web-font <link> at all. Body and headings both use Roboto,
             which next/font self-hosts and preloads - so there is no
             render-blocking request to fonts.googleapis.com on any page.
             Figtree was removed earlier (it never rendered); Poppins went
@@ -43,7 +43,7 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
       </head>
-      <body className={inter.className}>
+      <body className={roboto.className}>
         <QueryProvider>
           {children}
           <Toaster position="top-right" />
