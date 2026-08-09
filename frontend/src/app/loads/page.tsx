@@ -1578,14 +1578,16 @@ export default function LoadsPageInline() {
               <span className="whitespace-nowrap" style={{ color: 'var(--monday-text-muted)' }}>({groupLoads.length} loads)</span>
             </div>
           </td>
-          <td className="px-2 py-2 text-sm" colSpan={6}></td>
-          <td className="px-2 py-2 text-sm">
+          {/* Spans checkbox -> notes (cols 3-9) so the aggregate below lands on
+              column 10, the Rate column. Was colSpan 6, which put it under Notes. */}
+          <td className="px-2 py-2 text-sm" colSpan={7}></td>
+          <td className="px-2 py-2 text-sm text-right">
             <div className="mb-0.5">
               <div style={{fontSize: '14px', lineHeight: '20px', fontWeight: 600, color: 'var(--monday-done)'}}>
                 {formatCurrency(groupTotalRate)}
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 justify-end">
               <div style={{fontSize: '12px', lineHeight: '17px', fontWeight: 500, color: 'var(--monday-blue)'}}>
                 {groupTotalMiles.toLocaleString()} mi
               </div>
@@ -1594,7 +1596,7 @@ export default function LoadsPageInline() {
               </div>
             </div>
           </td>
-          <td className="px-2 py-2 text-sm" colSpan={4}></td>
+          <td className="px-2 py-2 text-sm" colSpan={3}></td>
         </tr>
       )
 
