@@ -1548,15 +1548,15 @@ export default function LoadsPageInline() {
 
       // Determine icon color, background color, and border color based on group type
       let iconColor = 'var(--monday-cornflower)'
-      let bgColor = 'var(--monday-bg-secondary)'
+      let bgColor = '#E2E8F0'
       let borderColor = 'var(--monday-border-light)'
       if (currentGroupType === 'week') {
         iconColor = 'var(--monday-blue)'
-        bgColor = 'var(--monday-bg-secondary)'
+        bgColor = '#E2E8F0'
         borderColor = '#ffffff'
       } else if (currentGroupType === 'driver') {
         iconColor = 'var(--monday-working)'
-        bgColor = 'rgba(27, 42, 65, 0.08)'
+        bgColor = '#D8DFE9'
         borderColor = '#ffffff'
       } else if (currentGroupType === 'customer') {
         iconColor = 'var(--monday-stuck)'
@@ -1638,9 +1638,9 @@ export default function LoadsPageInline() {
     // Row backgrounds are applied inline and swapped by onMouseEnter, so CSS
     // cannot reach them - the values have to live here.
     const defaultBgColor = isInvoiced
-      ? 'rgba(22, 163, 74, 0.07)'          // invoiced keeps a green tint
-      : (isEvenRow ? '#FFFFFF' : '#FAFBFD') // zebra
-    const hoverBgColor = '#EFF6FF'
+      ? '#DCFCE7'                           // invoiced: green-100
+      : (isEvenRow ? '#FFFFFF' : '#F1F5F9') // zebra: white / slate-100
+    const hoverBgColor = isInvoiced ? '#BBF7D0' : '#DBEAFE'
 
     return (
       <tr
@@ -2332,7 +2332,7 @@ export default function LoadsPageInline() {
         )}
 
         {/* Ratecon */}
-        <td className={`px-3 py-2.5 border-r ${load.ratecon_url ? 'bg-green-50' : ''}`} style={{borderColor: 'var(--monday-border-light)', backgroundColor: load.ratecon_url ? undefined : '#fff3e0'}}>
+        <td className={`px-3 py-2.5 border-r ${load.ratecon_url ? 'bg-green-100' : ''}`} style={{borderColor: 'var(--monday-border-light)', backgroundColor: load.ratecon_url ? undefined : '#FEF3C7'}}>
           <div className="flex items-center gap-2">
             {!load.ratecon_url && (
               <span className="text-orange-600 font-bold text-lg">!</span>
@@ -2409,7 +2409,7 @@ export default function LoadsPageInline() {
         </td>
 
         {/* POD */}
-        <td className={`px-3 py-2.5 border-r ${load.pod_url ? 'bg-green-50' : ''}`} style={{borderColor: 'var(--monday-border-light)', backgroundColor: load.pod_url ? undefined : '#fff3e0'}}>
+        <td className={`px-3 py-2.5 border-r ${load.pod_url ? 'bg-green-100' : ''}`} style={{borderColor: 'var(--monday-border-light)', backgroundColor: load.pod_url ? undefined : '#FEF3C7'}}>
           <div className="flex items-center gap-2">
             {!load.pod_url && (
               <span className="text-orange-600 font-bold text-lg">!</span>

@@ -344,8 +344,22 @@
 /* Vertical rhythm: a slightly firmer line under the header separates it
    from the first data row without adding a heavy border everywhere. */
 .page-loads thead th {
-  border-bottom-color: var(--tbl-sep) !important;
-  background: #FFFFFF;
+  /* Dark header band. Anchors the table and matches the sidebar, and
+     white on #0F172A is 17.85:1 - the strongest contrast on the page. */
+  background: #0F172A !important;
+  color: #FFFFFF !important;
+  border-bottom-color: #0F172A !important;
+}
+
+/* Sortable headers carry a Tailwind hover:bg-* class that would flash pale
+   on the dark band. */
+.page-loads thead th:hover {
+  background: #1E293B !important;
+}
+
+/* Sort chevrons need to be visible on the dark band too. */
+.page-loads thead th svg {
+  color: rgba(255, 255, 255, 0.75);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -358,15 +372,18 @@
 /* !important and no markup churn.                                         */
 /* ---------------------------------------------------------------------- */
 .page-loads {
-  /* Text tokens are now these values globally, so no override needed.
-     Only the separator stays page-specific. */
-  --monday-border-light: #E5E7EB;
+  /* This page tints its rows (zebra, hover, group bands, invoiced), and
+     the global muted #64748B drops to 3.86:1 on the darkest of them.
+     #546274 clears 4.5:1 against every band while staying clearly
+     lighter than secondary. */
+  --monday-text-muted: #546274;
+  --monday-border-light: #E2E8F0;
 
-  --tbl-sep: #E5E7EB;
+  --tbl-sep: #E2E8F0;
   --tbl-arrow: #7B8CA0;
   --tbl-row-alt: #FAFBFD;
   --tbl-row-hover: #EFF6FF;
-  --tbl-revenue: #15803D;
+  --tbl-revenue: #166534;
   --tbl-action: #64748B;
   --tbl-action-hover: #2563EB;
 }
