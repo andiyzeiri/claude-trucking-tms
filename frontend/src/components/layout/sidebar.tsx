@@ -1,9 +1,11 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
+import { useAccountingYear } from '@/contexts/accounting-year'
 import {
   Home,
   Package,
@@ -20,7 +22,8 @@ import {
   Fuel as FuelIcon,
   Shield,
   CalendarDays,
-  BookOpen
+  BookOpen,
+  ChevronDown,
 } from 'lucide-react'
 
 // Navigation items with page IDs that match the permissions system
@@ -77,6 +80,15 @@ interface SidebarProps {
 export default function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname()
   const { user, logout } = useAuth()
+  const { year, setYear, years } = useAccountingYear()
+
+  // The year menu springs open when you land on Accounting, but stays
+  // collapsible from there so it does not crowd the nav on other pages.
+  const onAccounting = pathname === '/accounting'
+  const [yearsOpen, setYearsOpen] = useState(onAccounting)
+  useEffect(() => {
+    if (onAccounting) setYearsOpen(true)
+  }, [onAccounting])
 
   const handleLogout = async () => {
     await logout()
@@ -115,6 +127,79 @@ export default function Sidebar({ onClose }: SidebarProps) {
         {filteredNavigation.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href
+
+          // Accounting carries a year menu. The label still navigates; the
+          // chevron only expands. Picking a year both sets it and takes you
+          // to the page, so it works from anywhere in the app.
+          if (item.pageId === 'accounting') {
+            return (
+              <div key={item.name}>
+                <div
+                  className={cn(
+                    'group flex items-center rounded-lg transition-colors nav-item',
+                    isActive ? 'active font-medium' : 'font-normal hover:bg-white/[0.07]'
+                  )}
+                  style={isActive ? {
+                    backgroundColor: 'var(--monday-cornflower)',
+                    color: '#FFFFFF'
+                  } : {
+                    color: 'rgba(255,255,255,0.70)'
+                  }}
+                >
+                  <Link
+                    href={item.href}
+                    onClick={onClose}
+                    className="flex flex-1 items-center py-2 pl-3 text-sm"
+                    style={{ color: 'inherit' }}
+                  >
+                    <Icon
+                      className="mr-3 h-[18px] w-[18px] flex-shrink-0"
+                      style={{ color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.55)' }}
+                    />
+                    {item.name}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setYearsOpen((open) => !open)}
+                    aria-expanded={yearsOpen}
+                    aria-label={yearsOpen ? 'Collapse accounting years' : 'Expand accounting years'}
+                    className="flex items-center gap-1 rounded-md py-2 pl-1 pr-3"
+                    style={{ color: 'inherit' }}
+                  >
+                    <span className="text-[11px] font-semibold tabular-nums opacity-80">{year}</span>
+                    <ChevronDown
+                      className={cn('h-3.5 w-3.5 transition-transform', yearsOpen && 'rotate-180')}
+                    />
+                  </button>
+                </div>
+
+                {yearsOpen && (
+                  <div className="mt-0.5 space-y-0.5 pb-1 pl-9 pr-1">
+                    {years.map((y) => {
+                      const selected = y === year
+                      return (
+                        <Link
+                          key={y}
+                          href="/accounting"
+                          onClick={() => { setYear(y); onClose?.() }}
+                          className="block rounded-md px-2 py-1.5 text-[13px] tabular-nums transition-colors"
+                          style={selected ? {
+                            backgroundColor: 'rgba(255,255,255,0.14)',
+                            color: '#FFFFFF',
+                            fontWeight: 600,
+                          } : {
+                            color: 'rgba(255,255,255,0.55)',
+                          }}
+                        >
+                          {y}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          }
 
           // Active item is a solid blue pill, per the reference design.
           // White on that blue is 5.17:1; inactive labels sit at 70% white

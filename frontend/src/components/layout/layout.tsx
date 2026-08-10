@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Sidebar from './sidebar'
 import Header from './header'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { AccountingYearProvider } from '@/contexts/accounting-year'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -14,6 +15,7 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <ProtectedRoute requireAuth={true}>
+      <AccountingYearProvider>
       <div className="flex h-screen" style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
         {/* Mobile overlay */}
         {sidebarOpen && (
@@ -40,6 +42,7 @@ export default function Layout({ children }: LayoutProps) {
           </main>
         </div>
       </div>
+      </AccountingYearProvider>
     </ProtectedRoute>
   )
 }

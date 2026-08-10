@@ -4,10 +4,11 @@ import React, { useState, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
-import { LayoutDashboard, Truck, Receipt, Landmark, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, Truck, Receipt, Landmark } from 'lucide-react'
 import { useLoads } from '@/hooks/use-loads'
 import { useFuel } from '@/hooks/use-fuel'
 import { useExpenses } from '@/hooks/use-expenses'
+import { useAccountingYear } from '@/contexts/accounting-year'
 import type { Load, Expense, Fuel } from '@/types'
 
 const TABS = [
@@ -51,7 +52,8 @@ const isInvoiced = (l: Load) => (l.status as string) === 'invoiced'
 
 export default function AccountingPage() {
   const [tab, setTab] = useState<TabId>('overview')
-  const [year, setYear] = useState<number>(new Date().getFullYear())
+  // Year is chosen from the sidebar menu, shared via context.
+  const { year } = useAccountingYear()
 
   const { data: loadsData, isLoading: loadsLoading } = useLoads(1, 10000)
   const { data: fuelData, isLoading: fuelLoading } = useFuel()
@@ -62,16 +64,6 @@ export default function AccountingPage() {
   const allExpenses = useMemo(() => expenseData?.items ?? [], [expenseData])
 
   const isLoading = loadsLoading || fuelLoading || expensesLoading
-
-  // Years come from the data itself, so the dropdown never offers an empty
-  // year. The current year is always included even before it has any loads.
-  const years = useMemo(() => {
-    const set = new Set<number>([new Date().getFullYear()])
-    allLoads.forEach((l) => { const y = yearOf(l.delivery_date); if (y) set.add(y) })
-    allFuel.forEach((f) => { const y = yearOf(f.date); if (y) set.add(y) })
-    allExpenses.forEach((e) => { const y = yearOf(e.date); if (y) set.add(y) })
-    return Array.from(set).sort((a, b) => b - a)
-  }, [allLoads, allFuel, allExpenses])
 
   const loads = useMemo(
     () => allLoads.filter((l) => yearOf(l.delivery_date) === year),
@@ -89,37 +81,13 @@ export default function AccountingPage() {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
-              Accounting
-            </h1>
-            <p className="text-sm" style={{ color: 'var(--monday-text-muted)' }}>
-              Revenue, cost, and receivables for {year}
-            </p>
-          </div>
-
-          <div className="relative">
-            <select
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="appearance-none rounded-md border pl-3 pr-9 py-2 text-sm font-semibold cursor-pointer"
-              style={{
-                borderColor: 'var(--monday-border-light)',
-                color: 'var(--monday-text-primary)',
-                backgroundColor: '#FFFFFF',
-              }}
-              aria-label="Filter by year"
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-            <ChevronDown
-              className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-              style={{ color: 'var(--monday-text-muted)' }}
-            />
-          </div>
+        <div>
+          <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
+            Accounting
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--monday-text-muted)' }}>
+            Revenue, cost, and receivables for {year}
+          </p>
         </div>
 
         <div className="flex gap-1 border-b" style={{ borderColor: 'var(--monday-border-light)' }}>
@@ -277,15 +245,13 @@ function Overview({ loads, fuel, expenses, year }: {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Kpi label="Revenue" tone="revenue" value={formatCurrency(s.revenue)}
              sub={`${s.trips.toLocaleString()} trips${s.adjustments ? ` · ${formatCurrency(s.adjustments)} adjustments` : ''}`} />
         <Kpi label="Expenses" tone="cost" value={formatCurrency(s.cost)}
              sub={`${formatCurrency(s.fuelCost)} fuel · ${formatCurrency(s.otherCost)} other`} />
         <Kpi label="Net" tone="net" value={formatCurrency(s.net)}
              sub={`${margin.toFixed(1)}% margin`} />
-        <Kpi label="Revenue / mile" value={s.miles > 0 ? `$${(s.revenue / s.miles).toFixed(2)}` : '—'}
-             sub={`${s.miles.toLocaleString()} miles`} />
       </div>
 
       <Card>
