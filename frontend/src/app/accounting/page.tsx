@@ -9,6 +9,7 @@ import { useLoads } from '@/hooks/use-loads'
 import { useFuel } from '@/hooks/use-fuel'
 import { useExpenses } from '@/hooks/use-expenses'
 import { useAccountingYear } from '@/contexts/accounting-year'
+import { isoWeekNumber, isoWeekStart, formatWeekRange } from '@/lib/iso-week'
 import type { Load, Expense, Fuel } from '@/types'
 
 const TABS = [
@@ -20,8 +21,6 @@ const TABS = [
 
 type TabId = typeof TABS[number]['id']
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
 // Revenue is linehaul `rate`, matching how the loads page totals its group
 // rows. Adjustments are reported separately so the two pages reconcile.
 const revenueOf = (l: Load) => Number(l.rate) || 0
@@ -30,11 +29,6 @@ const adjustmentOf = (l: Load) => Number(l.adjustment_amount) || 0
 
 // delivery_date is the accounting date for a trip - it is when the revenue was
 // earned. Loads without one are excluded from every period figure.
-const monthIndex = (date?: string | null) => {
-  if (!date) return null
-  const d = new Date(date)
-  return Number.isNaN(d.getTime()) ? null : d.getMonth()
-}
 const yearOf = (date?: string | null) => {
   if (!date) return null
   const d = new Date(date)
@@ -49,6 +43,42 @@ const pct = (n: number, d: number) => (d > 0 ? (n / d) * 100 : 0)
 // rather than editing the shared type, which would break the dead badge
 // logic in ratecons/page.tsx.
 const isInvoiced = (l: Load) => (l.status as string) === 'invoiced'
+
+type WeekRow<T> = T & { key: string; label: string; range: string }
+
+/**
+ * Buckets dated records into ISO weeks.
+ *
+ * A week only exists once something lands in it, so weeks with no activity
+ * never reach the table - which matters here because a year holds 52-53 weeks
+ * and most of them are empty for the current year. Rows come back newest
+ * first.
+ *
+ * Buckets are keyed on the week start rather than the week number: one
+ * calendar year can contain two weeks numbered 1 (early January, plus the tail
+ * of December that already belongs to the next ISO year), and keying on the
+ * number alone would merge them.
+ */
+function weekIndex<T extends object>(blank: () => T) {
+  const rows = new Map<string, WeekRow<T>>()
+  return {
+    add(date: string | null | undefined, apply: (row: T) => void) {
+      if (!date) return
+      const d = new Date(date)
+      if (Number.isNaN(d.getTime())) return
+
+      const start = isoWeekStart(d)
+      const key = start.toISOString().slice(0, 10)
+      let row = rows.get(key)
+      if (!row) {
+        row = { ...blank(), key, label: `Week ${isoWeekNumber(d)}`, range: formatWeekRange(start) }
+        rows.set(key, row)
+      }
+      apply(row)
+    },
+    rows: () => Array.from(rows.values()).sort((a, b) => b.key.localeCompare(a.key)),
+  }
+}
 
 // AccountingYearProvider is rendered inside Layout, so the year can only be
 // read from a component below it - reading it here in the page component would
@@ -192,6 +222,16 @@ function Td({ children, align = 'left', bold, color }: {
   )
 }
 
+/** First column of every weekly table: `Week 32` over its Mon-Sun span. */
+function WeekCell({ label, range }: { label: string; range: string }) {
+  return (
+    <td className="px-4 py-2 text-sm">
+      <div className="font-semibold" style={{ color: 'var(--monday-text-primary)' }}>{label}</div>
+      <div className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>{range}</div>
+    </td>
+  )
+}
+
 function Empty({ children }: { children: React.ReactNode }) {
   return (
     <Card><CardContent className="py-12 text-center text-sm" style={{ color: 'var(--monday-text-muted)' }}>
@@ -225,25 +265,16 @@ function Overview({ loads, fuel, expenses, year }: {
     }
   }, [loads, fuel, expenses])
 
-  const monthly = useMemo(() => {
-    const rows = MONTHS.map((m) => ({
-      month: m, trips: 0, miles: 0, revenue: 0, fuel: 0, other: 0,
+  const weekly = useMemo(() => {
+    const idx = weekIndex(() => ({ trips: 0, miles: 0, revenue: 0, fuel: 0, other: 0 }))
+    loads.forEach((l) => idx.add(l.delivery_date, (r) => {
+      r.trips += 1
+      r.miles += milesOf(l)
+      r.revenue += revenueOf(l) + adjustmentOf(l)
     }))
-    loads.forEach((l) => {
-      const i = monthIndex(l.delivery_date); if (i === null) return
-      rows[i].trips += 1
-      rows[i].miles += milesOf(l)
-      rows[i].revenue += revenueOf(l) + adjustmentOf(l)
-    })
-    fuel.forEach((f) => {
-      const i = monthIndex(f.date); if (i === null) return
-      rows[i].fuel += Number(f.total_amount) || 0
-    })
-    expenses.forEach((e) => {
-      const i = monthIndex(e.date); if (i === null) return
-      rows[i].other += Number(e.amount) || 0
-    })
-    return rows
+    fuel.forEach((f) => idx.add(f.date, (r) => { r.fuel += Number(f.total_amount) || 0 }))
+    expenses.forEach((e) => idx.add(e.date, (r) => { r.other += Number(e.amount) || 0 }))
+    return idx.rows()
   }, [loads, fuel, expenses])
 
   if (!loads.length && !fuel.length && !expenses.length) {
@@ -264,31 +295,28 @@ function Overview({ loads, fuel, expenses, year }: {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Monthly summary</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Weekly summary</CardTitle></CardHeader>
         <CardContent className="px-0 pb-0">
           <table className="w-full">
             <thead><tr style={headRowStyle}>
-              <Th>Month</Th><Th align="right">Trips</Th><Th align="right">Miles</Th>
+              <Th>Week</Th><Th align="right">Trips</Th><Th align="right">Miles</Th>
               <Th align="right">Revenue</Th><Th align="right">Fuel</Th>
               <Th align="right">Other</Th><Th align="right">Net</Th>
             </tr></thead>
             <tbody>
-              {monthly.map((r) => {
+              {weekly.map((r) => {
                 const net = r.revenue - r.fuel - r.other
-                const idle = !r.trips && !r.fuel && !r.other
                 return (
-                  <tr key={r.month} className="border-t" style={{ borderColor: '#E2E8F0' }}>
-                    <Td bold>{r.month}</Td>
-                    <Td align="right" color={idle ? 'var(--monday-text-muted)' : undefined}>{r.trips || '—'}</Td>
-                    <Td align="right" color={idle ? 'var(--monday-text-muted)' : undefined}>{r.miles ? r.miles.toLocaleString() : '—'}</Td>
+                  <tr key={r.key} className="border-t" style={{ borderColor: '#E2E8F0' }}>
+                    <WeekCell label={r.label} range={r.range} />
+                    <Td align="right" color={r.trips ? undefined : 'var(--monday-text-muted)'}>{r.trips || '—'}</Td>
+                    <Td align="right" color={r.miles ? undefined : 'var(--monday-text-muted)'}>{r.miles ? r.miles.toLocaleString() : '—'}</Td>
                     <Td align="right" color={r.revenue ? '#008000' : 'var(--monday-text-muted)'} bold={!!r.revenue}>
                       {r.revenue ? formatCurrency(r.revenue) : '—'}
                     </Td>
                     <Td align="right" color={r.fuel ? '#B91C1C' : 'var(--monday-text-muted)'}>{r.fuel ? formatCurrency(r.fuel) : '—'}</Td>
                     <Td align="right" color={r.other ? '#B91C1C' : 'var(--monday-text-muted)'}>{r.other ? formatCurrency(r.other) : '—'}</Td>
-                    <Td align="right" bold color={idle ? 'var(--monday-text-muted)' : net >= 0 ? '#008000' : '#B91C1C'}>
-                      {idle ? '—' : formatCurrency(net)}
-                    </Td>
+                    <Td align="right" bold color={net >= 0 ? '#008000' : '#B91C1C'}>{formatCurrency(net)}</Td>
                   </tr>
                 )
               })}
@@ -314,15 +342,14 @@ function Overview({ loads, fuel, expenses, year }: {
 // --------------------------------------------------------------------------
 
 function Trips({ loads }: { loads: Load[] }) {
-  const monthly = useMemo(() => {
-    const rows = MONTHS.map((m) => ({ month: m, trips: 0, miles: 0, revenue: 0 }))
-    loads.forEach((l) => {
-      const i = monthIndex(l.delivery_date); if (i === null) return
-      rows[i].trips += 1
-      rows[i].miles += milesOf(l)
-      rows[i].revenue += revenueOf(l)
-    })
-    return rows
+  const weekly = useMemo(() => {
+    const idx = weekIndex(() => ({ trips: 0, miles: 0, revenue: 0 }))
+    loads.forEach((l) => idx.add(l.delivery_date, (r) => {
+      r.trips += 1
+      r.miles += milesOf(l)
+      r.revenue += revenueOf(l)
+    }))
+    return idx.rows()
   }, [loads])
 
   const byCustomer = useMemo(() => {
@@ -358,17 +385,17 @@ function Trips({ loads }: { loads: Load[] }) {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Trips by month</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Trips by week</CardTitle></CardHeader>
         <CardContent className="px-0 pb-0">
           <table className="w-full">
             <thead><tr style={headRowStyle}>
-              <Th>Month</Th><Th align="right">Trips</Th><Th align="right">Miles</Th>
+              <Th>Week</Th><Th align="right">Trips</Th><Th align="right">Miles</Th>
               <Th align="right">Revenue</Th><Th align="right">$ / mi</Th><Th align="right">Avg / trip</Th>
             </tr></thead>
             <tbody>
-              {monthly.map((r) => (
-                <tr key={r.month} className="border-t" style={{ borderColor: '#E2E8F0' }}>
-                  <Td bold>{r.month}</Td>
+              {weekly.map((r) => (
+                <tr key={r.key} className="border-t" style={{ borderColor: '#E2E8F0' }}>
+                  <WeekCell label={r.label} range={r.range} />
                   <Td align="right" color={r.trips ? undefined : 'var(--monday-text-muted)'}>{r.trips || '—'}</Td>
                   <Td align="right" color={r.miles ? undefined : 'var(--monday-text-muted)'}>{r.miles ? r.miles.toLocaleString() : '—'}</Td>
                   <Td align="right" bold={!!r.revenue} color={r.revenue ? '#008000' : 'var(--monday-text-muted)'}>
@@ -451,17 +478,11 @@ function Expenses({ fuel, expenses }: { fuel: Fuel[]; expenses: Expense[] }) {
     return Array.from(map.values()).sort((a, b) => b.amount - a.amount)
   }, [fuel, expenses, fuelTotal])
 
-  const monthly = useMemo(() => {
-    const rows = MONTHS.map((m) => ({ month: m, fuel: 0, other: 0 }))
-    fuel.forEach((f) => {
-      const i = monthIndex(f.date); if (i === null) return
-      rows[i].fuel += Number(f.total_amount) || 0
-    })
-    expenses.forEach((e) => {
-      const i = monthIndex(e.date); if (i === null) return
-      rows[i].other += Number(e.amount) || 0
-    })
-    return rows
+  const weekly = useMemo(() => {
+    const idx = weekIndex(() => ({ fuel: 0, other: 0 }))
+    fuel.forEach((f) => idx.add(f.date, (r) => { r.fuel += Number(f.total_amount) || 0 }))
+    expenses.forEach((e) => idx.add(e.date, (r) => { r.other += Number(e.amount) || 0 }))
+    return idx.rows()
   }, [fuel, expenses])
 
   if (!fuel.length && !expenses.length) return <Empty>No expenses recorded for this year.</Empty>
@@ -507,18 +528,18 @@ function Expenses({ fuel, expenses }: { fuel: Fuel[]; expenses: Expense[] }) {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">By month</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">By week</CardTitle></CardHeader>
         <CardContent className="px-0 pb-0">
           <table className="w-full">
             <thead><tr style={headRowStyle}>
-              <Th>Month</Th><Th align="right">Fuel</Th><Th align="right">Other</Th><Th align="right">Total</Th>
+              <Th>Week</Th><Th align="right">Fuel</Th><Th align="right">Other</Th><Th align="right">Total</Th>
             </tr></thead>
             <tbody>
-              {monthly.map((r) => {
+              {weekly.map((r) => {
                 const t = r.fuel + r.other
                 return (
-                  <tr key={r.month} className="border-t" style={{ borderColor: '#E2E8F0' }}>
-                    <Td bold>{r.month}</Td>
+                  <tr key={r.key} className="border-t" style={{ borderColor: '#E2E8F0' }}>
+                    <WeekCell label={r.label} range={r.range} />
                     <Td align="right" color={r.fuel ? '#B91C1C' : 'var(--monday-text-muted)'}>{r.fuel ? formatCurrency(r.fuel) : '—'}</Td>
                     <Td align="right" color={r.other ? '#B91C1C' : 'var(--monday-text-muted)'}>{r.other ? formatCurrency(r.other) : '—'}</Td>
                     <Td align="right" bold color={t ? '#B91C1C' : 'var(--monday-text-muted)'}>{t ? formatCurrency(t) : '—'}</Td>
