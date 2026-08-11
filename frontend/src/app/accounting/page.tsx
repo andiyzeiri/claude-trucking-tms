@@ -27,6 +27,17 @@ const revenueOf = (l: Load) => Number(l.rate) || 0
 const milesOf = (l: Load) => Number(l.miles) || 0
 const adjustmentOf = (l: Load) => Number(l.adjustment_amount) || 0
 
+// Who earned the revenue. Owner-operator is the only split the driver record
+// carries, so everything else is company work - including a load with no
+// driver attached, which matches the drivers table's own default. Keeping
+// unassigned on the company side is what makes company + owners reconcile
+// exactly with the revenue column.
+const isOwnerOperator = (l: Load) => l.driver?.driver_type === 'owner_operator'
+
+// The figure the two columns split. Matches the revenue column, adjustments
+// included, so the three always agree.
+const earnedBy = (l: Load) => revenueOf(l) + adjustmentOf(l)
+
 // delivery_date is the accounting date for a trip - it is when the revenue was
 // earned. Loads without one are excluded from every period figure.
 const yearOf = (date?: string | null) => {
@@ -267,19 +278,23 @@ function Overview({ loads, fuel, expenses, year }: {
     const fuelCost = fuel.reduce((a, f) => a + (Number(f.total_amount) || 0), 0)
     const otherCost = expenses.reduce((a, e) => a + (Number(e.amount) || 0), 0)
     const cost = fuelCost + otherCost
+    const owners = loads.reduce((a, l) => a + (isOwnerOperator(l) ? earnedBy(l) : 0), 0)
+    const company = loads.reduce((a, l) => a + (isOwnerOperator(l) ? 0 : earnedBy(l)), 0)
     return {
-      revenue, adjustments, miles, fuelCost, otherCost, cost,
+      revenue, adjustments, miles, fuelCost, otherCost, cost, company, owners,
       net: revenue + adjustments - cost,
       trips: loads.length,
     }
   }, [loads, fuel, expenses])
 
   const weekly = useMemo(() => {
-    const idx = weekIndex(() => ({ trips: 0, miles: 0, revenue: 0, fuel: 0, other: 0 }))
+    const idx = weekIndex(() => ({ trips: 0, miles: 0, revenue: 0, company: 0, owners: 0, fuel: 0, other: 0 }))
     loads.forEach((l) => idx.add(l.delivery_date, (r) => {
       r.trips += 1
       r.miles += milesOf(l)
-      r.revenue += revenueOf(l) + adjustmentOf(l)
+      r.revenue += earnedBy(l)
+      if (isOwnerOperator(l)) r.owners += earnedBy(l)
+      else r.company += earnedBy(l)
     }))
     fuel.forEach((f) => idx.add(f.date, (r) => { r.fuel += Number(f.total_amount) || 0 }))
     expenses.forEach((e) => idx.add(e.date, (r) => { r.other += Number(e.amount) || 0 }))
@@ -309,8 +324,8 @@ function Overview({ loads, fuel, expenses, year }: {
           <table className="w-full">
             <thead><tr style={headRowStyle}>
               <Th>Week</Th><Th align="right">Trips</Th><Th align="right">Miles</Th>
-              <Th align="right">Revenue</Th><Th align="right">Fuel</Th>
-              <Th align="right">Other</Th><Th align="right">Net</Th>
+              <Th align="right">Revenue</Th><Th align="right">Company</Th><Th align="right">Owners</Th>
+              <Th align="right">Fuel</Th><Th align="right">Other</Th><Th align="right">Net</Th>
             </tr></thead>
             <tbody>
               {weekly.map((r, i) => {
@@ -323,6 +338,8 @@ function Overview({ loads, fuel, expenses, year }: {
                     <Td align="right" color={r.revenue ? '#008000' : 'var(--monday-text-muted)'} bold={!!r.revenue}>
                       {r.revenue ? formatCurrency(r.revenue) : '—'}
                     </Td>
+                    <Td align="right" color={r.company ? '#008000' : 'var(--monday-text-muted)'}>{r.company ? formatCurrency(r.company) : '—'}</Td>
+                    <Td align="right" color={r.owners ? '#008000' : 'var(--monday-text-muted)'}>{r.owners ? formatCurrency(r.owners) : '—'}</Td>
                     <Td align="right" color={r.fuel ? '#B91C1C' : 'var(--monday-text-muted)'}>{r.fuel ? formatCurrency(r.fuel) : '—'}</Td>
                     <Td align="right" color={r.other ? '#B91C1C' : 'var(--monday-text-muted)'}>{r.other ? formatCurrency(r.other) : '—'}</Td>
                     <Td align="right" bold color={net >= 0 ? '#008000' : '#B91C1C'}>{formatCurrency(net)}</Td>
@@ -334,6 +351,8 @@ function Overview({ loads, fuel, expenses, year }: {
                 <Td align="right" bold>{s.trips.toLocaleString()}</Td>
                 <Td align="right" bold>{s.miles.toLocaleString()}</Td>
                 <Td align="right" bold color="#008000">{formatCurrency(s.revenue + s.adjustments)}</Td>
+                <Td align="right" bold color="#008000">{formatCurrency(s.company)}</Td>
+                <Td align="right" bold color="#008000">{formatCurrency(s.owners)}</Td>
                 <Td align="right" bold color="#B91C1C">{formatCurrency(s.fuelCost)}</Td>
                 <Td align="right" bold color="#B91C1C">{formatCurrency(s.otherCost)}</Td>
                 <Td align="right" bold color={s.net >= 0 ? '#008000' : '#B91C1C'}>{formatCurrency(s.net)}</Td>
