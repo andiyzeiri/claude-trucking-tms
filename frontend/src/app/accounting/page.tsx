@@ -244,6 +244,15 @@ function Empty({ children }: { children: React.ReactNode }) {
 const headRowStyle: React.CSSProperties = { backgroundColor: '#F8F9FA' }
 const totalRowStyle: React.CSSProperties = { backgroundColor: '#EDF2FB' }
 
+// Weeks alternate between plain and a light tint so two adjacent weeks read as
+// separate blocks - the row heights vary once a week label wraps, and without
+// the banding it is easy to slide a figure into the wrong week. Reuses the
+// header grey rather than introducing another colour.
+const weekRowStyle = (i: number): React.CSSProperties => ({
+  borderColor: '#E2E8F0',
+  backgroundColor: i % 2 === 1 ? '#F8F9FA' : undefined,
+})
+
 // --------------------------------------------------------------------------
 // Overview
 // --------------------------------------------------------------------------
@@ -304,10 +313,10 @@ function Overview({ loads, fuel, expenses, year }: {
               <Th align="right">Other</Th><Th align="right">Net</Th>
             </tr></thead>
             <tbody>
-              {weekly.map((r) => {
+              {weekly.map((r, i) => {
                 const net = r.revenue - r.fuel - r.other
                 return (
-                  <tr key={r.key} className="border-t" style={{ borderColor: '#E2E8F0' }}>
+                  <tr key={r.key} className="border-t" style={weekRowStyle(i)}>
                     <WeekCell label={r.label} range={r.range} />
                     <Td align="right" color={r.trips ? undefined : 'var(--monday-text-muted)'}>{r.trips || '—'}</Td>
                     <Td align="right" color={r.miles ? undefined : 'var(--monday-text-muted)'}>{r.miles ? r.miles.toLocaleString() : '—'}</Td>
@@ -393,8 +402,8 @@ function Trips({ loads }: { loads: Load[] }) {
               <Th align="right">Revenue</Th><Th align="right">$ / mi</Th><Th align="right">Avg / trip</Th>
             </tr></thead>
             <tbody>
-              {weekly.map((r) => (
-                <tr key={r.key} className="border-t" style={{ borderColor: '#E2E8F0' }}>
+              {weekly.map((r, i) => (
+                <tr key={r.key} className="border-t" style={weekRowStyle(i)}>
                   <WeekCell label={r.label} range={r.range} />
                   <Td align="right" color={r.trips ? undefined : 'var(--monday-text-muted)'}>{r.trips || '—'}</Td>
                   <Td align="right" color={r.miles ? undefined : 'var(--monday-text-muted)'}>{r.miles ? r.miles.toLocaleString() : '—'}</Td>
@@ -535,10 +544,10 @@ function Expenses({ fuel, expenses }: { fuel: Fuel[]; expenses: Expense[] }) {
               <Th>Week</Th><Th align="right">Fuel</Th><Th align="right">Other</Th><Th align="right">Total</Th>
             </tr></thead>
             <tbody>
-              {weekly.map((r) => {
+              {weekly.map((r, i) => {
                 const t = r.fuel + r.other
                 return (
-                  <tr key={r.key} className="border-t" style={{ borderColor: '#E2E8F0' }}>
+                  <tr key={r.key} className="border-t" style={weekRowStyle(i)}>
                     <WeekCell label={r.label} range={r.range} />
                     <Td align="right" color={r.fuel ? '#B91C1C' : 'var(--monday-text-muted)'}>{r.fuel ? formatCurrency(r.fuel) : '—'}</Td>
                     <Td align="right" color={r.other ? '#B91C1C' : 'var(--monday-text-muted)'}>{r.other ? formatCurrency(r.other) : '—'}</Td>
