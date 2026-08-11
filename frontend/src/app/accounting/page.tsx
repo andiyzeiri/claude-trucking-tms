@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
@@ -37,6 +37,40 @@ const isOwnerOperator = (l: Load) => l.driver?.driver_type === 'owner_operator'
 // The figure the two columns split. Matches the revenue column, adjustments
 // included, so the three always agree.
 const earnedBy = (l: Load) => revenueOf(l) + adjustmentOf(l)
+
+// Factoring fee. The factor takes a cut of what it advances, so the fee is a
+// percentage of gross revenue rather than of net or of linehaul alone.
+const FACTORING_KEY = 'accounting.factoringPct'
+
+const clampPct = (n: number) => (Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0)
+
+/**
+ * Factoring rate, remembered per browser.
+ *
+ * Held in localStorage rather than on the company record because persisting
+ * it server-side needs a migration and a backend release. That means the rate
+ * does not follow the user to another machine - worth moving into company
+ * settings if more than one person needs it.
+ */
+function useFactoringPct(): [number, (n: number) => void] {
+  const [rate, setRate] = useState(0)
+
+  // Read after mount, never during render: localStorage does not exist while
+  // the page is being prerendered, and seeding state from it directly would
+  // make the server and client markup disagree on first paint.
+  useEffect(() => {
+    const saved = window.localStorage.getItem(FACTORING_KEY)
+    if (saved !== null) setRate(clampPct(Number(saved)))
+  }, [])
+
+  const update = (n: number) => {
+    const next = clampPct(n)
+    setRate(next)
+    window.localStorage.setItem(FACTORING_KEY, String(next))
+  }
+
+  return [rate, update]
+}
 
 // delivery_date is the accounting date for a trip - it is when the revenue was
 // earned. Loads without one are excluded from every period figure.
@@ -271,6 +305,8 @@ const weekRowStyle = (i: number): React.CSSProperties => ({
 function Overview({ loads, fuel, expenses, year }: {
   loads: Load[]; fuel: Fuel[]; expenses: Expense[]; year: number
 }) {
+  const [factoringPct, setFactoringPct] = useFactoringPct()
+
   const s = useMemo(() => {
     const revenue = loads.reduce((a, l) => a + revenueOf(l), 0)
     const adjustments = loads.reduce((a, l) => a + adjustmentOf(l), 0)
@@ -281,8 +317,10 @@ function Overview({ loads, fuel, expenses, year }: {
     const owners = loads.reduce((a, l) => a + (isOwnerOperator(l) ? earnedBy(l) : 0), 0)
     const company = loads.reduce((a, l) => a + (isOwnerOperator(l) ? 0 : earnedBy(l)), 0)
     return {
+      // No net here on purpose - it depends on the factoring rate, which is
+      // component state, so it is derived below rather than cached in here
+      // where it would silently go stale.
       revenue, adjustments, miles, fuelCost, otherCost, cost, company, owners,
-      net: revenue + adjustments - cost,
       trips: loads.length,
     }
   }, [loads, fuel, expenses])
@@ -305,31 +343,60 @@ function Overview({ loads, fuel, expenses, year }: {
     return <Empty>No activity recorded in {year}.</Empty>
   }
 
-  const margin = pct(s.net, s.revenue + s.adjustments)
+  // Gross revenue is what the factor advances against, and the fee it charges
+  // is a real cost - so it joins fuel and expenses in the cost base, and the
+  // net and margin below are both after factoring.
+  const gross = s.revenue + s.adjustments
+  const factoringFee = gross * (factoringPct / 100)
+  const totalCost = s.cost + factoringFee
+  const net = gross - totalCost
+  const margin = pct(net, gross)
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <Kpi label="Revenue" tone="revenue" value={formatCurrency(s.revenue)}
              sub={`${s.trips.toLocaleString()} trips${s.adjustments ? ` · ${formatCurrency(s.adjustments)} adjustments` : ''}`} />
-        <Kpi label="Expenses" tone="cost" value={formatCurrency(s.cost)}
-             sub={`${formatCurrency(s.fuelCost)} fuel · ${formatCurrency(s.otherCost)} other`} />
-        <Kpi label="Net" tone="net" value={formatCurrency(s.net)}
+        <Kpi label="Company" tone="revenue" value={formatCurrency(s.company)}
+             sub={`${pct(s.company, gross).toFixed(1)}% of revenue`} />
+        <Kpi label="Owners" tone="revenue" value={formatCurrency(s.owners)}
+             sub={`${pct(s.owners, gross).toFixed(1)}% of revenue`} />
+        <Kpi label="Expenses" tone="cost" value={formatCurrency(totalCost)}
+             sub={`${formatCurrency(s.fuelCost)} fuel · ${formatCurrency(s.otherCost)} other${factoringFee ? ` · ${formatCurrency(factoringFee)} factoring` : ''}`} />
+        <Kpi label="Net" tone="net" value={formatCurrency(net)}
              sub={`${margin.toFixed(1)}% margin`} />
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Weekly summary</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base">Weekly summary</CardTitle>
+          <label className="flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--monday-text-muted)' }}>
+            Factoring rate
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={0.05}
+              value={factoringPct}
+              onChange={(e) => setFactoringPct(Number(e.target.value))}
+              className="w-20 rounded border px-2 py-1 text-sm tabular-nums text-right"
+              style={{ borderColor: 'var(--monday-border-light)', color: 'var(--monday-text-primary)' }}
+            />
+            %
+          </label>
+        </CardHeader>
         <CardContent className="px-0 pb-0">
           <table className="w-full">
             <thead><tr style={headRowStyle}>
               <Th>Week</Th><Th align="right">Trips</Th><Th align="right">Miles</Th>
               <Th align="right">Revenue</Th><Th align="right">Company</Th><Th align="right">Owners</Th>
-              <Th align="right">Fuel</Th><Th align="right">Other</Th><Th align="right">Net</Th>
+              <Th align="right">Fuel</Th><Th align="right">Other</Th>
+              <Th align="right">Factoring</Th><Th align="right">Net</Th>
             </tr></thead>
             <tbody>
               {weekly.map((r, i) => {
-                const net = r.revenue - r.fuel - r.other
+                const fee = r.revenue * (factoringPct / 100)
+                const net = r.revenue - r.fuel - r.other - fee
                 return (
                   <tr key={r.key} className="border-t" style={weekRowStyle(i)}>
                     <WeekCell label={r.label} range={r.range} />
@@ -342,6 +409,7 @@ function Overview({ loads, fuel, expenses, year }: {
                     <Td align="right" color={r.owners ? '#008000' : 'var(--monday-text-muted)'}>{r.owners ? formatCurrency(r.owners) : '—'}</Td>
                     <Td align="right" color={r.fuel ? '#B91C1C' : 'var(--monday-text-muted)'}>{r.fuel ? formatCurrency(r.fuel) : '—'}</Td>
                     <Td align="right" color={r.other ? '#B91C1C' : 'var(--monday-text-muted)'}>{r.other ? formatCurrency(r.other) : '—'}</Td>
+                    <Td align="right" color={fee ? '#B91C1C' : 'var(--monday-text-muted)'}>{fee ? formatCurrency(fee) : '—'}</Td>
                     <Td align="right" bold color={net >= 0 ? '#008000' : '#B91C1C'}>{formatCurrency(net)}</Td>
                   </tr>
                 )
@@ -355,7 +423,8 @@ function Overview({ loads, fuel, expenses, year }: {
                 <Td align="right" bold color="#008000">{formatCurrency(s.owners)}</Td>
                 <Td align="right" bold color="#B91C1C">{formatCurrency(s.fuelCost)}</Td>
                 <Td align="right" bold color="#B91C1C">{formatCurrency(s.otherCost)}</Td>
-                <Td align="right" bold color={s.net >= 0 ? '#008000' : '#B91C1C'}>{formatCurrency(s.net)}</Td>
+                <Td align="right" bold color="#B91C1C">{formatCurrency(factoringFee)}</Td>
+                <Td align="right" bold color={net >= 0 ? '#008000' : '#B91C1C'}>{formatCurrency(net)}</Td>
               </tr>
             </tbody>
           </table>
