@@ -50,7 +50,18 @@ const pct = (n: number, d: number) => (d > 0 ? (n / d) * 100 : 0)
 // logic in ratecons/page.tsx.
 const isInvoiced = (l: Load) => (l.status as string) === 'invoiced'
 
+// AccountingYearProvider is rendered inside Layout, so the year can only be
+// read from a component below it - reading it here in the page component would
+// sit outside the provider and throw.
 export default function AccountingPage() {
+  return (
+    <Layout>
+      <AccountingWorkspace />
+    </Layout>
+  )
+}
+
+function AccountingWorkspace() {
   const [tab, setTab] = useState<TabId>('overview')
   // Year is chosen from the sidebar menu, shared via context.
   const { year } = useAccountingYear()
@@ -79,52 +90,50 @@ export default function AccountingPage() {
   )
 
   return (
-    <Layout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
-            Accounting
-          </h1>
-          <p className="text-sm" style={{ color: 'var(--monday-text-muted)' }}>
-            Revenue, cost, and receivables for {year}
-          </p>
-        </div>
-
-        <div className="flex gap-1 border-b" style={{ borderColor: 'var(--monday-border-light)' }}>
-          {TABS.map((t) => {
-            const Icon = t.icon
-            const active = tab === t.id
-            return (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors"
-                style={{
-                  color: active ? 'var(--monday-cornflower)' : 'var(--monday-text-secondary)',
-                  borderBottom: active ? '2px solid var(--monday-cornflower)' : '2px solid transparent',
-                }}
-              >
-                <Icon className="h-4 w-4" />
-                {t.label}
-              </button>
-            )
-          })}
-        </div>
-
-        {isLoading ? (
-          <Card><CardContent className="py-12 text-center text-sm" style={{ color: 'var(--monday-text-muted)' }}>
-            Loading&hellip;
-          </CardContent></Card>
-        ) : (
-          <>
-            {tab === 'overview' && <Overview loads={loads} fuel={fuel} expenses={expenses} year={year} />}
-            {tab === 'trips' && <Trips loads={loads} />}
-            {tab === 'expenses' && <Expenses fuel={fuel} expenses={expenses} />}
-            {tab === 'receivables' && <Receivables loads={loads} year={year} />}
-          </>
-        )}
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
+          Accounting
+        </h1>
+        <p className="text-sm" style={{ color: 'var(--monday-text-muted)' }}>
+          Revenue, cost, and receivables for {year}
+        </p>
       </div>
-    </Layout>
+
+      <div className="flex gap-1 border-b" style={{ borderColor: 'var(--monday-border-light)' }}>
+        {TABS.map((t) => {
+          const Icon = t.icon
+          const active = tab === t.id
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors"
+              style={{
+                color: active ? 'var(--monday-cornflower)' : 'var(--monday-text-secondary)',
+                borderBottom: active ? '2px solid var(--monday-cornflower)' : '2px solid transparent',
+              }}
+            >
+              <Icon className="h-4 w-4" />
+              {t.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {isLoading ? (
+        <Card><CardContent className="py-12 text-center text-sm" style={{ color: 'var(--monday-text-muted)' }}>
+          Loading&hellip;
+        </CardContent></Card>
+      ) : (
+        <>
+          {tab === 'overview' && <Overview loads={loads} fuel={fuel} expenses={expenses} year={year} />}
+          {tab === 'trips' && <Trips loads={loads} />}
+          {tab === 'expenses' && <Expenses fuel={fuel} expenses={expenses} />}
+          {tab === 'receivables' && <Receivables loads={loads} year={year} />}
+        </>
+      )}
+    </div>
   )
 }
 
