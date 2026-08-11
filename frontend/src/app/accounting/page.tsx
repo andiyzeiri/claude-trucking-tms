@@ -38,6 +38,22 @@ const isOwnerOperator = (l: Load) => l.driver?.driver_type === 'owner_operator'
 // included, so the three always agree.
 const earnedBy = (l: Load) => revenueOf(l) + adjustmentOf(l)
 
+// Which cost column an expense lands in. expenses.category is free text, not
+// an enum, so this matches on a substring - real entries read "Truck
+// Insurance", "Liability Insurance", "Parking - yard". Every expense lands in
+// exactly one bucket, so pulling insurance and parking out of Other keeps the
+// columns adding up to the same total cost rather than double counting it.
+type CostBucket = 'insurance' | 'parking' | 'other'
+
+const bucketOf = (e: Expense): CostBucket => {
+  const c = (e.category || '').toLowerCase()
+  if (c.includes('insurance')) return 'insurance'
+  if (c.includes('parking')) return 'parking'
+  return 'other'
+}
+
+const amountOf = (e: Expense) => Number(e.amount) || 0
+
 // Factoring fee. The factor takes a cut of what it advances, so the fee is a
 // percentage of gross revenue rather than of net or of linehaul alone.
 const FACTORING_KEY = 'accounting.factoringPct'
@@ -312,21 +328,29 @@ function Overview({ loads, fuel, expenses, year }: {
     const adjustments = loads.reduce((a, l) => a + adjustmentOf(l), 0)
     const miles = loads.reduce((a, l) => a + milesOf(l), 0)
     const fuelCost = fuel.reduce((a, f) => a + (Number(f.total_amount) || 0), 0)
-    const otherCost = expenses.reduce((a, e) => a + (Number(e.amount) || 0), 0)
-    const cost = fuelCost + otherCost
+    const byBucket = expenses.reduce(
+      (a, e) => { a[bucketOf(e)] += amountOf(e); return a },
+      { insurance: 0, parking: 0, other: 0 }
+    )
+    const { insurance: insuranceCost, parking: parkingCost, other: otherCost } = byBucket
+    const cost = fuelCost + insuranceCost + parkingCost + otherCost
     const owners = loads.reduce((a, l) => a + (isOwnerOperator(l) ? earnedBy(l) : 0), 0)
     const company = loads.reduce((a, l) => a + (isOwnerOperator(l) ? 0 : earnedBy(l)), 0)
     return {
       // No net here on purpose - it depends on the factoring rate, which is
       // component state, so it is derived below rather than cached in here
       // where it would silently go stale.
-      revenue, adjustments, miles, fuelCost, otherCost, cost, company, owners,
+      revenue, adjustments, miles, fuelCost, insuranceCost, parkingCost, otherCost, cost,
+      company, owners,
       trips: loads.length,
     }
   }, [loads, fuel, expenses])
 
   const weekly = useMemo(() => {
-    const idx = weekIndex(() => ({ trips: 0, miles: 0, revenue: 0, company: 0, owners: 0, fuel: 0, other: 0 }))
+    const idx = weekIndex(() => ({
+      trips: 0, miles: 0, revenue: 0, company: 0, owners: 0,
+      fuel: 0, insurance: 0, parking: 0, other: 0,
+    }))
     loads.forEach((l) => idx.add(l.delivery_date, (r) => {
       r.trips += 1
       r.miles += milesOf(l)
@@ -335,7 +359,7 @@ function Overview({ loads, fuel, expenses, year }: {
       else r.company += earnedBy(l)
     }))
     fuel.forEach((f) => idx.add(f.date, (r) => { r.fuel += Number(f.total_amount) || 0 }))
-    expenses.forEach((e) => idx.add(e.date, (r) => { r.other += Number(e.amount) || 0 }))
+    expenses.forEach((e) => idx.add(e.date, (r) => { r[bucketOf(e)] += amountOf(e) }))
     return idx.rows()
   }, [loads, fuel, expenses])
 
@@ -362,7 +386,7 @@ function Overview({ loads, fuel, expenses, year }: {
         <Kpi label="Owners" tone="revenue" value={formatCurrency(s.owners)}
              sub={`${pct(s.owners, gross).toFixed(1)}% of revenue`} />
         <Kpi label="Expenses" tone="cost" value={formatCurrency(totalCost)}
-             sub={`${formatCurrency(s.fuelCost)} fuel · ${formatCurrency(s.otherCost)} other${factoringFee ? ` · ${formatCurrency(factoringFee)} factoring` : ''}`} />
+             sub={`${formatCurrency(s.fuelCost)} fuel · ${formatCurrency(s.insuranceCost + s.parkingCost + s.otherCost)} other${factoringFee ? ` · ${formatCurrency(factoringFee)} factoring` : ''}`} />
         <Kpi label="Net" tone="net" value={formatCurrency(net)}
              sub={`${margin.toFixed(1)}% margin`} />
       </div>
@@ -390,13 +414,14 @@ function Overview({ loads, fuel, expenses, year }: {
             <thead><tr style={headRowStyle}>
               <Th>Week</Th><Th align="right">Trips</Th><Th align="right">Miles</Th>
               <Th align="right">Revenue</Th><Th align="right">Company</Th><Th align="right">Owners</Th>
-              <Th align="right">Fuel</Th><Th align="right">Other</Th>
+              <Th align="right">Fuel</Th><Th align="right">Insurance</Th>
+              <Th align="right">Parking</Th><Th align="right">Other</Th>
               <Th align="right">Factoring</Th><Th align="right">Net</Th>
             </tr></thead>
             <tbody>
               {weekly.map((r, i) => {
                 const fee = r.revenue * (factoringPct / 100)
-                const net = r.revenue - r.fuel - r.other - fee
+                const net = r.revenue - r.fuel - r.insurance - r.parking - r.other - fee
                 return (
                   <tr key={r.key} className="border-t" style={weekRowStyle(i)}>
                     <WeekCell label={r.label} range={r.range} />
@@ -408,6 +433,8 @@ function Overview({ loads, fuel, expenses, year }: {
                     <Td align="right" color={r.company ? '#008000' : 'var(--monday-text-muted)'}>{r.company ? formatCurrency(r.company) : '—'}</Td>
                     <Td align="right" color={r.owners ? '#008000' : 'var(--monday-text-muted)'}>{r.owners ? formatCurrency(r.owners) : '—'}</Td>
                     <Td align="right" color={r.fuel ? '#B91C1C' : 'var(--monday-text-muted)'}>{r.fuel ? formatCurrency(r.fuel) : '—'}</Td>
+                    <Td align="right" color={r.insurance ? '#B91C1C' : 'var(--monday-text-muted)'}>{r.insurance ? formatCurrency(r.insurance) : '—'}</Td>
+                    <Td align="right" color={r.parking ? '#B91C1C' : 'var(--monday-text-muted)'}>{r.parking ? formatCurrency(r.parking) : '—'}</Td>
                     <Td align="right" color={r.other ? '#B91C1C' : 'var(--monday-text-muted)'}>{r.other ? formatCurrency(r.other) : '—'}</Td>
                     <Td align="right" color={fee ? '#B91C1C' : 'var(--monday-text-muted)'}>{fee ? formatCurrency(fee) : '—'}</Td>
                     <Td align="right" bold color={net >= 0 ? '#008000' : '#B91C1C'}>{formatCurrency(net)}</Td>
@@ -422,6 +449,8 @@ function Overview({ loads, fuel, expenses, year }: {
                 <Td align="right" bold color="#008000">{formatCurrency(s.company)}</Td>
                 <Td align="right" bold color="#008000">{formatCurrency(s.owners)}</Td>
                 <Td align="right" bold color="#B91C1C">{formatCurrency(s.fuelCost)}</Td>
+                <Td align="right" bold color="#B91C1C">{formatCurrency(s.insuranceCost)}</Td>
+                <Td align="right" bold color="#B91C1C">{formatCurrency(s.parkingCost)}</Td>
                 <Td align="right" bold color="#B91C1C">{formatCurrency(s.otherCost)}</Td>
                 <Td align="right" bold color="#B91C1C">{formatCurrency(factoringFee)}</Td>
                 <Td align="right" bold color={net >= 0 ? '#008000' : '#B91C1C'}>{formatCurrency(net)}</Td>
