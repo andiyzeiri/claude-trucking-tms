@@ -535,6 +535,19 @@ export default function LoadsAIPageInline() {
   const { data: trucksData } = useTrucks()
   const trucks = trucksData?.items || []
 
+  // AI loads store only driver_id / truck_id (no joined objects like the
+  // real loads API returns), so attach them here. Looked up in the full
+  // list so a terminated driver still shows on their old loads.
+  const loadsWithRefs = useMemo(() => {
+    const allDrivers = driversData?.items || []
+    const allTrucks = trucksData?.items || []
+    return loads.map(load => ({
+      ...load,
+      driver: load.driver ?? (load.driver_id ? allDrivers.find(d => d.id === load.driver_id) : undefined),
+      truck: load.truck ?? (load.truck_id ? allTrucks.find(t => t.id === load.truck_id) : undefined),
+    }))
+  }, [loads, driversData, trucksData])
+
   const { data: shippersData } = useShippers()
   const shippers = shippersData?.items || []
 
@@ -601,7 +614,7 @@ export default function LoadsAIPageInline() {
   // Since we update React Query cache directly on create/update/delete,
   // we can simply transform the loads data and use it
   React.useEffect(() => {
-    const loadsWithWeeks = loads.map(load => {
+    const loadsWithWeeks = loadsWithRefs.map(load => {
       // Normalize pickup_date to ensure it's treated as UTC
       const pickupDate = new Date(normalizeDateTime(load.pickup_date))
 
@@ -635,7 +648,7 @@ export default function LoadsAIPageInline() {
     })
     setEditableLoads(loadsWithWeeks)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loads])
+  }, [loadsWithRefs])
 
   // Close group menu when clicking outside
   useEffect(() => {
