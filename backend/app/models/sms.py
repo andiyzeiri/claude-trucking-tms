@@ -7,6 +7,7 @@ from .base import Base
 
 
 class SmsKind:
+    LOAD_ASSIGNED = "load_assigned" # load details sent when a driver is assigned
     POD_REQUEST = "pod_request"     # first text after delivery
     POD_REMINDER = "pod_reminder"   # follow-ups while no POD
     POD_ACK = "pod_ack"             # "thanks, we received the POD"

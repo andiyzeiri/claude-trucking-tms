@@ -98,6 +98,8 @@ class Settings(BaseSettings):
     # job on would text drivers about every historical load missing a POD.
     POD_LOOKBACK_DAYS: int = 3
     POD_CHECK_MINUTES: int = 10
+    # Text the driver the load details when a load is assigned to them.
+    LOAD_ASSIGNMENT_TEXTS_ENABLED: bool = True
     # Public URL Twilio posts inbound texts to, exactly as configured in the
     # Twilio console. Needed to verify the X-Twilio-Signature header, which is
     # computed over the URL as Twilio sees it (not the proxied ALB address).
