@@ -43,6 +43,17 @@ _COMPANY_SUFFIXES = {
     "corporation", "co", "company", "the", "lp", "llp", "plc",
 }
 
+# Words nearly every broker name contains. Two brokers sharing only these
+# ("Coyote Logistics" / "Unicargo Logistics") are not similar, so fuzzy
+# scoring ignores them and compares the distinctive part of the name.
+_GENERIC_FREIGHT_WORDS = {
+    "logistics", "logistic", "freight", "transport", "transportation",
+    "trucking", "truck", "services", "service", "solutions", "group",
+    "global", "worldwide", "brokerage", "broker", "carriers", "carrier",
+    "express", "international", "intl", "usa", "us", "america", "american",
+    "lines", "line", "shipping", "supply", "chain", "management", "and",
+}
+
 
 # --------------------------------------------------------------------------
 # primitives
@@ -248,6 +259,12 @@ def normalize_company_name(name: Optional[str]) -> str:
     return " ".join(tokens)
 
 
+def _distinctive(normalized: str) -> str:
+    """The name without generic freight words, spaces removed ("ch robinson" -> "chrobinson")."""
+    core = "".join(t for t in normalized.split() if t not in _GENERIC_FREIGHT_WORDS)
+    return core or normalized.replace(" ", "")
+
+
 @dataclass
 class CustomerCandidate:
     id: int
@@ -296,12 +313,16 @@ def rank_customers(
         if not candidate_name:
             continue
 
+        target_core = _distinctive(target)
+        candidate_core = _distinctive(candidate_name)
+        shorter = min(len(target_core), len(candidate_core))
+
         if candidate_name == target:
             score, reason = 0.95, "Name matches exactly"
-        elif target in candidate_name or candidate_name in target:
+        elif shorter >= 4 and (target_core in candidate_core or candidate_core in target_core):
             score, reason = 0.85, "Name contains the other"
         else:
-            score = SequenceMatcher(None, target, candidate_name).ratio()
+            score = SequenceMatcher(None, target_core, candidate_core).ratio()
             reason = f"Name {int(score * 100)}% similar"
 
         if score >= 0.60:
@@ -333,6 +354,10 @@ class LoadDraft:
     bol_number: Optional[str] = None
     po_number: Optional[str] = None
     customer_id: Optional[int] = None
+    # The broker as printed on the document, kept so the customer can be
+    # re-matched later against the current customer list.
+    broker_name: Optional[str] = None
+    broker_mc: Optional[str] = None
     pickup_location: Optional[str] = None
     delivery_location: Optional[str] = None
     pickup_date: Optional[str] = None
@@ -452,6 +477,8 @@ def build_load_draft(
     broker_name = take("broker_name")
     broker_mc = take("broker_mc_number")
     candidates = rank_customers(broker_name, broker_mc, customers)
+    draft.broker_name = broker_name
+    draft.broker_mc = broker_mc
 
     if candidates and candidates[0].score >= 0.95:
         draft.customer_id = candidates[0].id

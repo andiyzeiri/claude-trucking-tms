@@ -30,7 +30,7 @@ from app.documents.extraction.base import (
     ExtractionUnavailable,
 )
 from app.documents.extraction.registry import get_extractor
-from app.documents.mapping import build_load_draft, extraction_field_map
+from app.documents.mapping import build_load_draft, extraction_field_map, rank_customers
 from app.documents.pipeline import resolve_company, run_ingestion
 from app.models.company import Company
 from app.models.customer import Customer
@@ -523,7 +523,14 @@ AI_LOAD_FIELDS = {
     "description", "pickup_notes", "delivery_notes", "notes", "status",
     "pod_url", "ratecon_url", "adjustment_type", "adjustment_amount",
     "invoiced", "dispatched", "needs_attention",
+    "broker_name", "broker_mc", "customer_confirmed",
 }
+
+# Customer match thresholds, on rank_customers' score. 0.95 is an MC match
+# or a name equal after dropping punctuation and Inc/LLC-style suffixes;
+# 0.60 is rank_customers' own floor for listing a candidate at all.
+CUSTOMER_EXACT = 0.95
+CUSTOMER_PARTIAL = 0.60
 
 # Statuses whose draft is a live AI load. load_created/needs_review are
 # documents from before AI loads were separated; their drafts are shown
@@ -542,6 +549,13 @@ def _clean_ai_load_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     return {k: v for k, v in payload.items() if k in AI_LOAD_FIELDS}
 
 
+class CustomerMatchCandidate(BaseModel):
+    id: int
+    name: str
+    score: float
+    reason: str
+
+
 class AILoadResponse(BaseModel):
     id: int  # the ingested_documents id
     source: str
@@ -550,9 +564,62 @@ class AILoadResponse(BaseModel):
     warnings: List[str] = []
     created_at: Optional[str] = None
     fields: Dict[str, Any]
+    # exact (green) / partial (orange) / none (red)
+    customer_match: str = "none"
+    customer_match_reason: Optional[str] = None
+    broker_name: Optional[str] = None
+    customer_candidates: List[CustomerMatchCandidate] = []
 
 
-def _ai_load_response(doc: IngestedDocument) -> AILoadResponse:
+def _extracted(doc: IngestedDocument, key: str) -> Optional[str]:
+    """A value from the stored extraction, for drafts saved before broker_name was kept."""
+    ex = doc.extraction if isinstance(doc.extraction, dict) else {}
+    value = (ex.get(key) or {}).get("value") if isinstance(ex.get(key), dict) else None
+    return value or None
+
+
+def _match_customer(doc: IngestedDocument, fields: Dict[str, Any], customers: List[Customer]):
+    """
+    Resolve the AI load's customer against the company's current customers.
+
+    Done at read time rather than once at ingestion, so adding a missing
+    customer on the Customers page turns a red row green with no re-processing.
+    Returns (customer_id, match, reason, broker_name, candidates).
+    """
+    by_id = {c.id: c for c in customers}
+    broker_name = fields.get("broker_name") or _extracted(doc, "broker_name")
+    broker_mc = fields.get("broker_mc") or _extracted(doc, "broker_mc_number")
+
+    # A customer the user picked is authoritative, while it still exists.
+    stored_id = fields.get("customer_id")
+    if fields.get("customer_confirmed") and stored_id in by_id:
+        return stored_id, "exact", "Chosen by you", broker_name, []
+
+    candidates = rank_customers(broker_name, broker_mc, customers)
+    shown = [
+        CustomerMatchCandidate(id=c.id, name=c.name, score=c.score, reason=c.reason)
+        for c in candidates
+    ]
+    if candidates and candidates[0].score >= CUSTOMER_EXACT:
+        return candidates[0].id, "exact", candidates[0].reason, broker_name, shown
+    if candidates and candidates[0].score >= CUSTOMER_PARTIAL:
+        return candidates[0].id, "partial", candidates[0].reason, broker_name, shown
+
+    # Nothing to match on (e.g. a row added by hand): keep whatever customer
+    # it carries, but unconfirmed, so it still asks to be checked.
+    if not broker_name and stored_id in by_id:
+        return stored_id, "partial", "Not confirmed", broker_name, shown
+    reason = (
+        f"{broker_name!r} is not on the Customers page" if broker_name
+        else "No broker name on the document"
+    )
+    return None, "none", reason, broker_name, shown
+
+
+def _ai_load_response(doc: IngestedDocument, customers: List[Customer]) -> AILoadResponse:
+    fields = dict(doc.draft) if isinstance(doc.draft, dict) else {}
+    customer_id, match, reason, broker_name, candidates = _match_customer(doc, fields, customers)
+    fields["customer_id"] = customer_id
     return AILoadResponse(
         id=doc.id,
         source=doc.source,
@@ -560,8 +627,17 @@ def _ai_load_response(doc: IngestedDocument) -> AILoadResponse:
         document_status=doc.status,
         warnings=doc.warnings if isinstance(doc.warnings, list) else [],
         created_at=doc.created_at.isoformat() if doc.created_at else None,
-        fields=dict(doc.draft) if isinstance(doc.draft, dict) else {},
+        fields=fields,
+        customer_match=match,
+        customer_match_reason=reason,
+        broker_name=broker_name,
+        customer_candidates=candidates,
     )
+
+
+async def _company_customers(db: AsyncSession, company_id: int) -> List[Customer]:
+    result = await db.execute(select(Customer).where(Customer.company_id == company_id))
+    return list(result.scalars().all())
 
 
 async def _get_ai_load(db: AsyncSession, company_id: int, ai_load_id: int) -> IngestedDocument:
@@ -594,7 +670,8 @@ async def list_ai_loads(
         )
         .order_by(IngestedDocument.id.desc())
     )
-    return [_ai_load_response(d) for d in result.scalars().all()]
+    customers = await _company_customers(db, current_user.company_id)
+    return [_ai_load_response(d, customers) for d in result.scalars().all()]
 
 
 @router.post("/loads", response_model=AILoadResponse, status_code=status.HTTP_201_CREATED)
@@ -621,7 +698,7 @@ async def create_ai_load(
     db.add(doc)
     await db.commit()
     await db.refresh(doc)
-    return _ai_load_response(doc)
+    return _ai_load_response(doc, await _company_customers(db, current_user.company_id))
 
 
 @router.patch("/loads/{ai_load_id}", response_model=AILoadResponse)
@@ -634,13 +711,24 @@ async def update_ai_load(
     """Merge edited fields into an AI load."""
     doc = await _get_ai_load(db, current_user.company_id, ai_load_id)
     merged = dict(doc.draft) if isinstance(doc.draft, dict) else {}
-    merged.update(_clean_ai_load_payload(payload))
+    changes = _clean_ai_load_payload(payload)
+    # The page re-sends every column on each edit, including the customer it
+    # was *shown* - which may only be a suggestion. Store a customer only
+    # when the user explicitly chose it, so editing the rate on an orange
+    # row doesn't silently turn its guess into a confirmed customer.
+    if changes.get("customer_confirmed") is True:
+        if changes.get("customer_id") is None:
+            raise HTTPException(status_code=422, detail="Choose a customer to confirm.")
+    else:
+        changes.pop("customer_id", None)
+        changes.pop("customer_confirmed", None)
+    merged.update(changes)
     # Reassign rather than mutate in place: SQLAlchemy does not track
     # changes inside a plain JSONB dict.
     doc.draft = merged
     await db.commit()
     await db.refresh(doc)
-    return _ai_load_response(doc)
+    return _ai_load_response(doc, await _company_customers(db, current_user.company_id))
 
 
 @router.delete("/loads/{ai_load_id}", status_code=status.HTTP_204_NO_CONTENT)

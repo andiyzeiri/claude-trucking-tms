@@ -135,7 +135,15 @@ export interface AILoad {
   created_at: string | null
   /** Load-shaped fields (load_number, pickup_location, rate, ...) */
   fields: Record<string, any>
+  /** How the customer was resolved: exact = green, partial = orange, none = red */
+  customer_match: CustomerMatch
+  customer_match_reason: string | null
+  /** Broker as printed on the document */
+  broker_name: string | null
+  customer_candidates: { id: number; name: string; score: number; reason: string }[]
 }
+
+export type CustomerMatch = 'exact' | 'partial' | 'none'
 
 export function useAILoads() {
   return useQuery({

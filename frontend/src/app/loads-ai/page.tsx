@@ -39,10 +39,15 @@ import {
   useUpdateAILoad,
   useDeleteAILoad,
   type AILoad,
+  type CustomerMatch,
 } from '@/hooks/use-loads-ai-ingestion'
 
 interface EditableLoad extends Load {
   isNew?: boolean
+  // AI load customer resolution, from the server (see aiLoadToLoad)
+  customer_match?: CustomerMatch
+  customer_match_reason?: string | null
+  broker_name?: string | null
   weekNumber?: number
   weekLabel?: string
   weekDateRange?: string
@@ -350,7 +355,17 @@ function aiLoadToLoad(a: AILoad): Load {
     notes: f.notes || f.pickup_notes || '',
     created_at: a.created_at || '',
     updated_at: a.created_at || '',
+    customer_match: a.customer_match,
+    customer_match_reason: a.customer_match_reason,
+    broker_name: a.broker_name,
   } as Load
+}
+
+// Customer cell colouring by match quality.
+const CUSTOMER_MATCH_STYLE: Record<CustomerMatch, { background: string; boxShadow: string }> = {
+  exact: { background: '#dcfce7', boxShadow: 'inset 0 0 0 2px #16a34a' },
+  partial: { background: '#ffedd5', boxShadow: 'inset 0 0 0 2px #f97316' },
+  none: { background: '#fee2e2', boxShadow: 'inset 0 0 0 2px #dc2626' },
 }
 
 export default function LoadsAIPageInline() {
@@ -463,12 +478,39 @@ export default function LoadsAIPageInline() {
   }
 
   /** Apply a suggested customer to the draft row the extraction produced. */
+  /**
+   * Record the user's customer choice. Sent with customer_confirmed so the
+   * server stores it; ordinary edits re-send the displayed (possibly only
+   * suggested) customer and are ignored for this field.
+   */
+  const confirmCustomer = async (rowId: number, customerId: number) => {
+    setEditableLoads(prev =>
+      prev.map(l =>
+        l.id === rowId
+          ? { ...l, customer_id: customerId, customer_match: 'exact', customer_match_reason: 'Chosen by you' }
+          : l
+      )
+    )
+    try {
+      await updateLoad.mutateAsync({
+        id: rowId,
+        data: { customer_id: customerId, customer_confirmed: true },
+      })
+    } catch {
+      toast.error('Failed to save the customer')
+      refetch()
+    }
+  }
+
   const applyCustomerToDraft = async (rowId: number, customerId: number) => {
     setEditableLoads(prev =>
       prev.map(l => (l.id === rowId ? { ...l, customer_id: customerId } : l))
     )
     try {
-      await updateLoad.mutateAsync({ id: rowId, data: { customer_id: customerId } })
+      await updateLoad.mutateAsync({
+        id: rowId,
+        data: { customer_id: customerId, customer_confirmed: true },
+      })
       toast.success('Customer set on the AI load')
     } catch {
       toast.error('Failed to save the customer')
@@ -1918,19 +1960,31 @@ export default function LoadsAIPageInline() {
           )}
         </td>
 
-        <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)'}} onClick={() => startEdit(loadKey, 'customer_id')}>
+        <td
+          className="px-3 py-2.5 border-r"
+          style={{
+            borderColor: 'var(--monday-border-light)',
+            ...(load.customer_match && !load.isNew ? CUSTOMER_MATCH_STYLE[load.customer_match] : {}),
+          }}
+          title={load.customer_match_reason || undefined}
+          onClick={() => startEdit(loadKey, 'customer_id')}
+        >
           {isEditing(loadKey, 'customer_id') ? (
             <Select
-              value={String(load.customer_id)}
+              value={load.customer_id ? String(load.customer_id) : undefined}
               onValueChange={(value) => {
-                updateField(loadKey, 'customer_id', Number(value))
+                if (load.isNew) {
+                  updateField(loadKey, 'customer_id', Number(value))
+                } else {
+                  confirmCustomer(load.id, Number(value))
+                }
                 stopEdit()
               }}
               open={true}
               onOpenChange={(open) => !open && stopEdit()}
             >
               <SelectTrigger className="h-8 text-sm">
-                <SelectValue />
+                <SelectValue placeholder="Choose customer" />
               </SelectTrigger>
               <SelectContent>
                 {customers.map(customer => (
@@ -1943,8 +1997,29 @@ export default function LoadsAIPageInline() {
           ) : (
             <div className="cursor-pointer hover:bg-brand/5 rounded px-1 py-1">
               <div style={{fontSize: '14px', lineHeight: '20px', color: '#69140E', fontWeight: 600}}>
-                {customers.find(c => c.id === load.customer_id)?.name || 'N/A'}
+                {customers.find(c => c.id === load.customer_id)?.name ||
+                  (load.customer_match === 'none' ? 'No match' : 'N/A')}
               </div>
+              {load.customer_match === 'none' && load.broker_name && (
+                <div style={{fontSize: '12px', lineHeight: '17px', color: '#991b1b'}}>
+                  On document: {load.broker_name}
+                </div>
+              )}
+              {load.customer_match === 'partial' && !load.isNew && load.customer_id && (
+                <div style={{fontSize: '12px', lineHeight: '17px', color: '#9a3412'}}>
+                  {load.broker_name ? <>On document: {load.broker_name} · </> : null}
+                  <button
+                    type="button"
+                    className="underline font-medium"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      confirmCustomer(load.id, load.customer_id)
+                    }}
+                  >
+                    Confirm
+                  </button>
+                </div>
+              )}
               {customers.find(c => c.id === load.customer_id)?.mc && (
                 <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)'}}>
                   MC: {customers.find(c => c.id === load.customer_id)?.mc}
