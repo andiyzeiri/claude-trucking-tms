@@ -22,7 +22,10 @@ class TwilioService:
         # endpoint returned a 500 on any deployment without Twilio credentials
         # - which is currently all of them. Degrade the way EmailService does
         # instead: report as unconfigured and let callers handle it.
-        self.configured = bool(self.account_sid and self.auth_token and self.phone_number)
+        self.messaging_service_sid = settings.TWILIO_MESSAGING_SERVICE_SID
+        self.configured = bool(
+            self.account_sid and self.auth_token and (self.messaging_service_sid or self.phone_number)
+        )
         self.client = Client(self.account_sid, self.auth_token) if self.configured else None
 
     async def send_sms(
@@ -57,11 +60,13 @@ class TwilioService:
                 # Assume US number if no country code
                 to_phone = f'+1{to_phone.replace("-", "").replace("(", "").replace(")", "").replace(" ", "")}'
 
-            message_params = {
-                'body': message,
-                'from_': self.phone_number,
-                'to': to_phone
-            }
+            message_params = {'body': message, 'to': to_phone}
+            # Registered A2P 10DLC traffic must go through the Messaging
+            # Service; fall back to the bare number only if none is set.
+            if self.messaging_service_sid:
+                message_params['messaging_service_sid'] = self.messaging_service_sid
+            else:
+                message_params['from_'] = self.phone_number
 
             if media_url:
                 message_params['media_url'] = [media_url]

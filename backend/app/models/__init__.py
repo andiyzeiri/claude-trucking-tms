@@ -20,6 +20,7 @@ from .account import Account
 from .journal_entry import JournalEntry, JournalLine
 from .accounting_mapping import AccountingMapping
 from .report_recipient import ReportRecipient
+from .sms import LoadSmsMessage
 from .loads_ai import InboundEmail, IngestedDocument
 
 __all__ = [
@@ -48,4 +49,5 @@ __all__ = [
     "ReportRecipient",
     "InboundEmail",
     "IngestedDocument",
+    "LoadSmsMessage",
 ]

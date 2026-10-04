@@ -12,6 +12,7 @@ from app.api.v1.api import api_router
 from app.health import router as health_router
 from app.services.dedicated_lane_scheduler import generate_loads_from_dedicated_lanes
 from app.documents.pipeline import run_ingestion_job
+from app.sms.pod_reminders import run_pod_reminder_job
 
 # Set up logging
 logging.basicConfig(
@@ -61,6 +62,24 @@ async def lifespan(app: FastAPI):
         )
     else:
         logger.info("Loads AI ingestion is disabled; mailbox will not be polled")
+
+    # Driver POD reminder texts. Same overlap guards as ingestion.
+    if settings.POD_REMINDERS_ENABLED:
+        scheduler.add_job(
+            run_pod_reminder_job,
+            IntervalTrigger(minutes=settings.POD_CHECK_MINUTES),
+            id="pod_reminders",
+            name="Text drivers for PODs",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )
+        logger.info(
+            "POD reminders scheduled every %s minute(s) (dry_run=%s, company=%s)",
+            settings.POD_CHECK_MINUTES, settings.POD_REMINDERS_DRY_RUN, settings.POD_REMINDERS_COMPANY_ID,
+        )
+    else:
+        logger.info("POD reminders are disabled; no driver texts will be sent")
 
     scheduler.start()
     logger.info("Dedicated lane scheduler started - will run every Monday at 00:00")

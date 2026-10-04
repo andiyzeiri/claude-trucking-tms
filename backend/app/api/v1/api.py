@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, users, companies, customers, trucks, drivers, loads, loads_ai, stops, invoices, payroll, payroll_override, lanes, expenses, uploads, shippers, receivers, notifications, ratecons, fuel, ifta, migrate, driver_payroll_settings, maps, dedicated_lanes, driver_days_off, driver_attention_days, driver_day_notes, rate_to_operate, accounting, reports_email
+from app.api.v1.endpoints import auth, users, companies, customers, trucks, drivers, loads, loads_ai, stops, invoices, payroll, payroll_override, lanes, expenses, uploads, shippers, receivers, notifications, ratecons, fuel, ifta, migrate, driver_payroll_settings, maps, dedicated_lanes, driver_days_off, driver_attention_days, driver_day_notes, rate_to_operate, accounting, reports_email, sms
 
 api_router = APIRouter()
 
@@ -34,3 +34,4 @@ api_router.include_router(maps.router, prefix="/maps", tags=["maps"])
 api_router.include_router(rate_to_operate.router, prefix="/rate-to-operate", tags=["rate-to-operate"])
 api_router.include_router(accounting.router, prefix="/accounting", tags=["accounting"])
 api_router.include_router(reports_email.router, prefix="/reports-email", tags=["reports-email"])
+api_router.include_router(sms.router, prefix="/sms", tags=["sms"])

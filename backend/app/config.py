@@ -78,6 +78,30 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: Optional[str] = None
     TWILIO_PHONE_NUMBER: Optional[str] = None
     TWILIO_EMAIL_FROM: Optional[str] = None
+    # A2P 10DLC: US carriers only deliver business texts sent through the
+    # registered Messaging Service, so sends use this when set.
+    TWILIO_MESSAGING_SERVICE_SID: Optional[str] = None
+
+    # --- Driver POD reminder texts ------------------------------------------
+    # Off unless switched on. In dry-run the job logs who it would text and
+    # sends nothing, so it can be checked against real loads first.
+    POD_REMINDERS_ENABLED: bool = False
+    POD_REMINDERS_DRY_RUN: bool = True
+    # Only loads of this company are texted (the Twilio number is theirs).
+    POD_REMINDERS_COMPANY_ID: Optional[int] = None
+    POD_FIRST_TEXT_AFTER_HOURS: float = 2.0     # after the delivery appointment
+    POD_REMINDER_EVERY_HOURS: float = 3.0
+    POD_MAX_TEXTS: int = 5                      # then stop and flag the load
+    POD_QUIET_START_HOUR: int = 21              # no texts 9 PM ...
+    POD_QUIET_END_HOUR: int = 7                 # ... to 7 AM, delivery-local time
+    # Never text about deliveries older than this. Without it, switching the
+    # job on would text drivers about every historical load missing a POD.
+    POD_LOOKBACK_DAYS: int = 3
+    POD_CHECK_MINUTES: int = 10
+    # Public URL Twilio posts inbound texts to, exactly as configured in the
+    # Twilio console. Needed to verify the X-Twilio-Signature header, which is
+    # computed over the URL as Twilio sees it (not the proxied ALB address).
+    TWILIO_INBOUND_WEBHOOK_URL: str = "https://absolutetms.com/api/v1/sms/inbound"
 
     # Google Maps Configuration
     GOOGLE_MAPS_API_KEY: Optional[str] = None
@@ -207,6 +231,20 @@ class Settings(BaseSettings):
                 print("✓ Loaded Loads AI mailbox credentials from LOADS_AI_IMAP_SECRET_JSON")
             except (json.JSONDecodeError, KeyError) as e:
                 print(f"⚠ Warning: Failed to parse LOADS_AI_IMAP_SECRET_JSON: {e}")
+
+        # Parse Twilio credentials if present.
+        # Accepts {"account_sid", "auth_token", "messaging_service_sid", "phone_number"}.
+        twilio_secret_json = os.getenv("TWILIO_SECRET_JSON")
+        if twilio_secret_json:
+            try:
+                tw = json.loads(twilio_secret_json)
+                self.TWILIO_ACCOUNT_SID = tw.get("account_sid") or self.TWILIO_ACCOUNT_SID
+                self.TWILIO_AUTH_TOKEN = tw.get("auth_token") or self.TWILIO_AUTH_TOKEN
+                self.TWILIO_MESSAGING_SERVICE_SID = tw.get("messaging_service_sid") or self.TWILIO_MESSAGING_SERVICE_SID
+                self.TWILIO_PHONE_NUMBER = tw.get("phone_number") or self.TWILIO_PHONE_NUMBER
+                print("✓ Loaded Twilio credentials from TWILIO_SECRET_JSON")
+            except json.JSONDecodeError as e:
+                print(f"⚠ Warning: Failed to parse TWILIO_SECRET_JSON: {e}")
 
         # Parse Redis Secret JSON if present
         redis_secret_json = os.getenv("REDIS_SECRET_JSON")

@@ -43,6 +43,9 @@ class Driver(Base):
     has_fuel_card = Column(Boolean, default=False, nullable=False)
     fuel_card_number = Column(String, nullable=True)
 
+    # Set when the driver replies STOP to a dispatch text; cleared on START.
+    sms_opt_out = Column(Boolean, default=False, nullable=False, server_default="false")
+
     # Multi-tenant
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
     company = relationship("Company", back_populates="drivers")

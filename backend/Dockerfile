@@ -79,6 +79,7 @@ COPY add_loads_ai_permission.py ./
 COPY add_loads_ai_email_column.py ./
 COPY add_load_identifier_columns.py ./
 COPY create_loads_ai_tables.py ./
+COPY create_sms_tables.py ./
 COPY create_report_recipients_table.py ./
 COPY entrypoint.sh ./
 
