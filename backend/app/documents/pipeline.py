@@ -242,6 +242,10 @@ async def process_document(
     )
     mapped = build_load_draft(result.extraction, customers=list(customers))
     draft = vars(mapped.draft).copy()
+    # Attach the source document as the AI load's rate confirmation, in the
+    # same /uploads/s3 form the Ratecon column already opens.
+    if document.s3_key:
+        draft["ratecon_url"] = f"/api/v1/uploads/s3/{document.s3_key}"
     document.draft = draft
     document.warnings = mapped.warnings
 

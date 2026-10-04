@@ -614,6 +614,11 @@ def _match_customer(doc: IngestedDocument, fields: Dict[str, Any], customers: Li
 
 def _ai_load_response(doc: IngestedDocument, customers: List[Customer]) -> AILoadResponse:
     fields = dict(doc.draft) if isinstance(doc.draft, dict) else {}
+    # AI loads created before the source PDF was attached at extraction
+    # time: show it as the ratecon. Only when the key is absent - a ratecon
+    # the user removed is stored as null and stays removed.
+    if "ratecon_url" not in fields and doc.s3_key:
+        fields["ratecon_url"] = f"/api/v1/uploads/s3/{doc.s3_key}"
     customer_id, match, reason, broker_name, candidates = _match_customer(doc, fields, customers)
     fields["customer_id"] = customer_id
     return AILoadResponse(

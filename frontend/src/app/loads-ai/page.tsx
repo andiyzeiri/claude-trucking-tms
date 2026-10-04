@@ -444,10 +444,24 @@ export default function LoadsAIPageInline() {
 
       // Saved straight away as an AI load, so it survives a reload like
       // the ones that arrive by email. Dates stay wall-clock strings.
+      // Keep the uploaded file as the AI load's rate confirmation, through
+      // the same upload endpoint the Ratecon column uses. A failed upload
+      // shouldn't lose the extraction, so the load is still created.
+      let rateconUrl: string | undefined
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        const up = await api.post('/v1/uploads/', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+        rateconUrl = up.data?.url
+      } catch {
+        toast.error('Load created, but the PDF could not be attached as the ratecon')
+      }
+
       const created = await createLoad.mutateAsync({
         ...d,
         notes: d.pickup_notes || undefined,
         status: d.status || 'available',
+        ...(rateconUrl ? { ratecon_url: rateconUrl } : {}),
       })
       setLastExtraction({ ...result, draftRowId: created.id })
       toast.dismiss(toastId)
