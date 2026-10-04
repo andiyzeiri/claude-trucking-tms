@@ -1,13 +1,16 @@
 """
-Email -> load pipeline.
+Email -> AI load pipeline.
 
-Reads a mailbox, turns each readable attachment into a load. The model's
+Reads a mailbox, turns each readable attachment into an AI load: a draft
+stored on its ingested_documents row and shown only on the Loads AI page.
+The real loads table is never written here; it is reserved for loads the
+dispatcher enters by hand. The model's
 only job is to say what the document says; every decision about what
 becomes a load is made here, in ordinary code.
 
 Idempotency is the central concern. This runs on a timer, a message can be
 redelivered, and a PDF gets forwarded more than once - so the same input
-must never produce a second load. Two unique constraints do that work:
+must never produce a second AI load. Two unique constraints do that work:
 
     inbound_emails      (company_id, message_id)
     ingested_documents  (company_id, sha256)
@@ -19,8 +22,6 @@ import hashlib
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
-from decimal import Decimal, InvalidOperation
 from typing import List, Optional
 
 from sqlalchemy import func, select
@@ -40,7 +41,6 @@ from app.documents.sources.base import SourceAttachment, SourceMessage
 from app.documents.sources.imap_mailbox import ImapMailboxReader, MailboxError
 from app.models.company import Company
 from app.models.customer import Customer
-from app.models.load import Load, LoadStatus
 from app.models.loads_ai import (
     DocumentStatus,
     InboundEmail,
@@ -107,29 +107,6 @@ class IngestSummary:
             "errors": self.errors,
             "notes": self.notes,
         }
-
-
-def _to_decimal(value: Optional[str]) -> Optional[Decimal]:
-    if value in (None, ""):
-        return None
-    try:
-        return Decimal(value)
-    except (InvalidOperation, TypeError):
-        return None
-
-
-def _to_naive_datetime(value: Optional[str]) -> Optional[datetime]:
-    """
-    Draft dates are already wall-clock strings; Load columns are naive
-    timestamps. Parse without any timezone conversion, which would move the
-    appointment by a day.
-    """
-    if not value:
-        return None
-    try:
-        return datetime.fromisoformat(value.replace("Z", ""))
-    except ValueError:
-        return None
 
 
 async def resolve_company(session: AsyncSession, mailbox: str) -> Optional[Company]:
@@ -221,61 +198,6 @@ async def _store_attachment(
     return document, "created"
 
 
-async def _create_load_from_draft(
-    session: AsyncSession,
-    company_id: int,
-    document: IngestedDocument,
-    draft: dict,
-) -> Optional[Load]:
-    """
-    Turn a draft into a real load.
-
-    Returns None when the draft cannot become one. That is not a failure
-    mode we chose - loads.customer_id is NOT NULL, so a document whose
-    broker does not resolve to a customer physically cannot be created
-    unattended. Those stay as needs_review.
-    """
-    customer_id = draft.get("customer_id")
-    if not customer_id:
-        return None
-
-    # A load number is required by the schema. Prefer what the document
-    # said; fall back to the broker's number, then to a traceable
-    # machine-generated one rather than inventing something meaningless.
-    load_number = (
-        draft.get("load_number")
-        or draft.get("broker_load_number")
-        or f"AI-{document.id}"
-    )
-
-    load = Load(
-        company_id=company_id,
-        customer_id=customer_id,
-        load_number=load_number,
-        reference_number=draft.get("reference_number"),
-        broker_load_number=draft.get("broker_load_number"),
-        bol_number=draft.get("bol_number"),
-        po_number=draft.get("po_number"),
-        description=draft.get("description"),
-        pickup_location=draft.get("pickup_location"),
-        delivery_location=draft.get("delivery_location"),
-        pickup_date=_to_naive_datetime(draft.get("pickup_date")),
-        delivery_date=_to_naive_datetime(draft.get("delivery_date")),
-        miles=draft.get("miles"),
-        rate=_to_decimal(draft.get("rate")),
-        fuel_surcharge=_to_decimal(draft.get("fuel_surcharge")),
-        accessorial_charges=_to_decimal(draft.get("accessorial_charges")),
-        pickup_notes=draft.get("pickup_notes"),
-        status=LoadStatus.available,
-        # Surfaces the load on the dispatch board so a human lays eyes on
-        # something a machine created from an email.
-        needs_attention=settings.LOADS_AI_FLAG_CREATED_LOADS,
-    )
-    session.add(load)
-    await session.flush()
-    return load
-
-
 async def process_document(
     session: AsyncSession,
     company_id: int,
@@ -323,30 +245,17 @@ async def process_document(
     document.draft = draft
     document.warnings = mapped.warnings
 
-    if not settings.LOADS_AI_AUTO_CREATE_LOADS:
-        document.status = DocumentStatus.NEEDS_REVIEW
-        summary.needs_review += 1
-        return
-
-    load = await _create_load_from_draft(session, company_id, document, draft)
-    if load is None:
-        document.status = DocumentStatus.NEEDS_REVIEW
-        summary.needs_review += 1
-        logger.info(
-            "loads-ai: %s could not be auto-created (%s)",
-            document.original_filename,
-            "; ".join(mapped.warnings) or "no customer match",
-        )
-        return
-
-    document.load_id = load.id
-    document.status = DocumentStatus.LOAD_CREATED
+    # The draft IS the AI load. It lives only on this document row and is
+    # shown on the Loads AI page; nothing is written to the real loads
+    # table, which stays reserved for manually entered loads (and so never
+    # leaks into invoicing, payroll or reports).
+    document.status = DocumentStatus.AI_LOAD
     summary.loads_created += 1
     logger.info(
-        "loads-ai: created load %s (#%s) from %s",
-        load.load_number,
-        load.id,
+        "loads-ai: AI load %s ready from %s (document #%s)",
+        draft.get("load_number") or draft.get("broker_load_number") or "(no number)",
         document.original_filename,
+        document.id,
     )
 
 

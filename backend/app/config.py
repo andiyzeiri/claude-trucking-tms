@@ -124,13 +124,6 @@ class Settings(BaseSettings):
     LOADS_AI_MAX_MESSAGES_PER_POLL: int = 5
     LOADS_AI_MAX_DOCUMENTS_PER_POLL: int = 10
 
-    # Create loads straight from a document rather than queueing a draft.
-    # Documents that cannot be auto-created (unmatched broker, no rate)
-    # still land as needs_review - loads.customer_id is NOT NULL, so there
-    # is no way to create those unattended.
-    LOADS_AI_AUTO_CREATE_LOADS: bool = True
-    # Mark auto-created loads so a human can spot them on the board.
-    LOADS_AI_FLAG_CREATED_LOADS: bool = True
 
     class Config:
         env_file = ".env"

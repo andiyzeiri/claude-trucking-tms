@@ -9,7 +9,6 @@ export interface IngestionStatus {
   mailbox: string | null
   credentials_configured: boolean
   extraction_configured: boolean
-  auto_create_loads: boolean
   poll_minutes: number
   mailbox_matches_company: boolean
   /** Human-readable reasons ingestion can't run. Empty means it's ready. */
@@ -23,6 +22,7 @@ export interface IngestSummary {
   messages_new: number
   documents_created: number
   duplicates: number
+  retried?: number
   unsupported: number
   loads_created: number
   needs_review: number
@@ -82,8 +82,9 @@ export function usePollMailbox() {
     },
     onSuccess: (s) => {
       queryClient.invalidateQueries({ queryKey: ['loads-ai-documents'] })
-      // Created loads land in the real loads table, so the board is stale.
-      queryClient.invalidateQueries({ queryKey: ['loads'] })
+      // New AI loads appear in the Loads AI table. The real loads table is
+      // never touched by ingestion, so ['loads'] is deliberately left alone.
+      queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY })
 
       if (s.errors.length) {
         toast.error(s.errors[0])
@@ -98,7 +99,7 @@ export function usePollMailbox() {
         return
       }
       const bits = [`${s.messages_new} new email(s)`]
-      if (s.loads_created) bits.push(`${s.loads_created} load(s) created`)
+      if (s.loads_created) bits.push(`${s.loads_created} AI load(s) added`)
       if (s.needs_review) bits.push(`${s.needs_review} need review`)
       if (s.duplicates) bits.push(`${s.duplicates} duplicate(s) skipped`)
       toast.success(bits.join(' · '))
@@ -116,4 +117,65 @@ export function usePollMailbox() {
   })
 
   return { pollMailbox: mutation.mutateAsync, isPolling: mutation.isPending }
+}
+
+// --- AI loads ---------------------------------------------------------------
+// Loads read from documents. Stored server-side on the ingested document,
+// never in the real loads table, and shown only on the Loads AI page.
+
+export const AI_LOADS_KEY = ['loads-ai-loads'] as const
+
+export interface AILoad {
+  /** ingested_documents id - the AI load's identity */
+  id: number
+  source: string
+  original_filename: string | null
+  document_status: string
+  warnings: string[]
+  created_at: string | null
+  /** Load-shaped fields (load_number, pickup_location, rate, ...) */
+  fields: Record<string, any>
+}
+
+export function useAILoads() {
+  return useQuery({
+    queryKey: AI_LOADS_KEY,
+    queryFn: async (): Promise<AILoad[]> => {
+      const response = await api.get('/v1/loads-ai/loads')
+      return response.data
+    },
+    retry: false,
+  })
+}
+
+export function useCreateAILoad() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (data: Record<string, any>): Promise<AILoad> => {
+      const response = await api.post('/v1/loads-ai/loads', data)
+      return response.data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY }),
+  })
+}
+
+export function useUpdateAILoad() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Record<string, any> }): Promise<AILoad> => {
+      const response = await api.patch(`/v1/loads-ai/loads/${id}`, data)
+      return response.data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY }),
+  })
+}
+
+export function useDeleteAILoad() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number): Promise<void> => {
+      await api.delete(`/v1/loads-ai/loads/${id}`)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY }),
+  })
 }

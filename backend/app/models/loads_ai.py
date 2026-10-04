@@ -46,7 +46,10 @@ class DocumentStatus:
     RECEIVED = "received"
     PROCESSING = "processing"
     EXTRACTED = "extracted"
-    LOAD_CREATED = "load_created"     # a load was created from this document
+    AI_LOAD = "ai_load"               # draft is live as an AI load on the Loads AI page
+    DISMISSED = "dismissed"           # AI load deleted from the Loads AI page (soft delete)
+    # Legacy: rows written before AI loads were separated from the loads table.
+    LOAD_CREATED = "load_created"     # a real load was created from this document
     NEEDS_REVIEW = "needs_review"     # extracted but could not be auto-created
     DUPLICATE = "duplicate"           # same bytes already seen
     UNSUPPORTED = "unsupported"       # not a document type we can read

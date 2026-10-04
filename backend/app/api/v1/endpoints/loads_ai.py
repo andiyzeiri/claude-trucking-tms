@@ -10,7 +10,9 @@ at a different mailbox decides which messages the system will read, so it is
 not exposed to dispatchers, drivers, customers, or viewers.
 """
 
+import hashlib
 import logging
+import uuid
 from typing import Any, Dict, List, Optional
 
 from email_validator import EmailNotValidError, validate_email
@@ -33,7 +35,7 @@ from app.documents.pipeline import resolve_company, run_ingestion
 from app.models.company import Company
 from app.models.customer import Customer
 from app.models.load import Load
-from app.models.loads_ai import IngestedDocument
+from app.models.loads_ai import DocumentStatus, IngestedDocument
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -355,7 +357,6 @@ class IngestionStatusResponse(BaseModel):
     mailbox: Optional[str] = None
     credentials_configured: bool
     extraction_configured: bool
-    auto_create_loads: bool
     poll_minutes: int
     mailbox_matches_company: bool
     blockers: List[str]
@@ -401,7 +402,6 @@ async def ingestion_status(
         mailbox=mailbox,
         credentials_configured=creds,
         extraction_configured=bool(settings.ANTHROPIC_API_KEY),
-        auto_create_loads=settings.LOADS_AI_AUTO_CREATE_LOADS,
         poll_minutes=settings.LOADS_AI_POLL_MINUTES,
         mailbox_matches_company=matches,
         blockers=blockers,
@@ -504,3 +504,156 @@ async def list_ingested_documents(
             )
         )
     return out
+
+
+# --- AI loads ---------------------------------------------------------------
+#
+# An AI load is the draft stored on an ingested_documents row. These
+# endpoints back the Loads AI page and deliberately never touch the real
+# loads table: that table holds only manually entered loads, and everything
+# downstream of it (invoices, payroll, reports) must not see AI output.
+
+# Keys the page may store on an AI load. Anything else is dropped, so the
+# JSONB column cannot be used as an arbitrary blob store.
+AI_LOAD_FIELDS = {
+    "load_number", "reference_number", "broker_load_number", "bol_number",
+    "po_number", "customer_id", "driver_id", "truck_id",
+    "pickup_location", "delivery_location", "pickup_date", "delivery_date",
+    "rate", "fuel_surcharge", "accessorial_charges", "miles", "weight",
+    "description", "pickup_notes", "delivery_notes", "notes", "status",
+    "pod_url", "ratecon_url", "adjustment_type", "adjustment_amount",
+    "invoiced", "dispatched", "needs_attention",
+}
+
+# Statuses whose draft is a live AI load. load_created/needs_review are
+# documents from before AI loads were separated; their drafts are shown
+# too so nothing extracted so far disappears from the page.
+LIVE_AI_LOAD_STATUSES = (
+    DocumentStatus.AI_LOAD,
+    DocumentStatus.LOAD_CREATED,
+    DocumentStatus.NEEDS_REVIEW,
+    DocumentStatus.EXTRACTED,
+)
+
+
+def _clean_ai_load_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=422, detail="Expected a JSON object.")
+    return {k: v for k, v in payload.items() if k in AI_LOAD_FIELDS}
+
+
+class AILoadResponse(BaseModel):
+    id: int  # the ingested_documents id
+    source: str
+    original_filename: Optional[str] = None
+    document_status: str
+    warnings: List[str] = []
+    created_at: Optional[str] = None
+    fields: Dict[str, Any]
+
+
+def _ai_load_response(doc: IngestedDocument) -> AILoadResponse:
+    return AILoadResponse(
+        id=doc.id,
+        source=doc.source,
+        original_filename=doc.original_filename,
+        document_status=doc.status,
+        warnings=doc.warnings if isinstance(doc.warnings, list) else [],
+        created_at=doc.created_at.isoformat() if doc.created_at else None,
+        fields=dict(doc.draft) if isinstance(doc.draft, dict) else {},
+    )
+
+
+async def _get_ai_load(db: AsyncSession, company_id: int, ai_load_id: int) -> IngestedDocument:
+    doc = (
+        await db.execute(
+            select(IngestedDocument).where(
+                IngestedDocument.id == ai_load_id,
+                IngestedDocument.company_id == company_id,
+                IngestedDocument.status.in_(LIVE_AI_LOAD_STATUSES),
+            )
+        )
+    ).scalars().first()
+    if doc is None:
+        raise HTTPException(status_code=404, detail="AI load not found.")
+    return doc
+
+
+@router.get("/loads", response_model=List[AILoadResponse])
+async def list_ai_loads(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Every live AI load for the caller's company, newest first."""
+    result = await db.execute(
+        select(IngestedDocument)
+        .where(
+            IngestedDocument.company_id == current_user.company_id,
+            IngestedDocument.status.in_(LIVE_AI_LOAD_STATUSES),
+            IngestedDocument.draft.isnot(None),
+        )
+        .order_by(IngestedDocument.id.desc())
+    )
+    return [_ai_load_response(d) for d in result.scalars().all()]
+
+
+@router.post("/loads", response_model=AILoadResponse, status_code=status.HTTP_201_CREATED)
+async def create_ai_load(
+    payload: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """
+    Add an AI load by hand from the Loads AI page (the "add row" button, an
+    upload, or undoing a delete). Stored like an ingested document so the
+    page has a single data source; the hash is random because there are no
+    document bytes to deduplicate on.
+    """
+    doc = IngestedDocument(
+        company_id=current_user.company_id,
+        source="manual",
+        content_type="application/json",
+        byte_size=0,
+        sha256=hashlib.sha256(uuid.uuid4().bytes).hexdigest(),
+        status=DocumentStatus.AI_LOAD,
+        draft=_clean_ai_load_payload(payload),
+    )
+    db.add(doc)
+    await db.commit()
+    await db.refresh(doc)
+    return _ai_load_response(doc)
+
+
+@router.patch("/loads/{ai_load_id}", response_model=AILoadResponse)
+async def update_ai_load(
+    ai_load_id: int,
+    payload: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Merge edited fields into an AI load."""
+    doc = await _get_ai_load(db, current_user.company_id, ai_load_id)
+    merged = dict(doc.draft) if isinstance(doc.draft, dict) else {}
+    merged.update(_clean_ai_load_payload(payload))
+    # Reassign rather than mutate in place: SQLAlchemy does not track
+    # changes inside a plain JSONB dict.
+    doc.draft = merged
+    await db.commit()
+    await db.refresh(doc)
+    return _ai_load_response(doc)
+
+
+@router.delete("/loads/{ai_load_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_ai_load(
+    ai_load_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """
+    Soft delete. The document row (and its extraction) is kept for audit,
+    and because it still holds the file hash, the same PDF arriving again
+    is recognised as a duplicate rather than resurrected.
+    """
+    doc = await _get_ai_load(db, current_user.company_id, ai_load_id)
+    doc.status = DocumentStatus.DISMISSED
+    await db.commit()

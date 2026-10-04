@@ -8,7 +8,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
 import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X, Check, ArrowUpDown, ArrowUp, ArrowDown, Search, Mail, FileUp, AlertTriangle, Sparkles, RefreshCw, Inbox, CheckCircle2 } from 'lucide-react'
-import { useLoads, useCreateLoad, useUpdateLoad, useDeleteLoad } from '@/hooks/use-loads'
 import { useDedicatedLanes } from '@/hooks/use-dedicated-lanes'
 import { useCustomers } from '@/hooks/use-customers'
 import { useDrivers } from '@/hooks/use-drivers'
@@ -35,6 +34,11 @@ import {
   useIngestionStatus,
   useIngestedDocuments,
   usePollMailbox,
+  useAILoads,
+  useCreateAILoad,
+  useUpdateAILoad,
+  useDeleteAILoad,
+  type AILoad,
 } from '@/hooks/use-loads-ai-ingestion'
 
 interface EditableLoad extends Load {
@@ -325,40 +329,55 @@ function parseTimeInput(timeInput: string, existingDateTime: string): string {
   return `${year}-${month}-${day}T${hoursStr}:${minutesStr}:00.000Z`
 }
 
+// Shape an AI load like a Load so the table code shared with /loads works
+// unchanged. Extracted values arrive as strings (money stays a decimal
+// string server-side); the table expects numbers.
+function aiLoadToLoad(a: AILoad): Load {
+  const f = a.fields || {}
+  const fallbackDate = a.created_at || new Date().toISOString()
+  return {
+    ...f,
+    id: a.id,
+    load_number: f.load_number || f.broker_load_number || '',
+    customer_id: f.customer_id ?? null,
+    pickup_location: f.pickup_location || '',
+    delivery_location: f.delivery_location || '',
+    pickup_date: f.pickup_date || fallbackDate,
+    delivery_date: f.delivery_date || f.pickup_date || fallbackDate,
+    rate: Number(f.rate) || 0,
+    miles: Number(f.miles) || 0,
+    status: f.status || 'available',
+    notes: f.notes || f.pickup_notes || '',
+    created_at: a.created_at || '',
+    updated_at: a.created_at || '',
+  } as Load
+}
+
 export default function LoadsAIPageInline() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin' || user?.role === 'company_admin' || user?.role === 'super_admin'
-  // --- Loads AI sandbox ------------------------------------------------
-  // Clean clone of /loads. This page deliberately does NOT read or write the
-  // real loads table: it starts empty, and row edits stay in local React
-  // state, so experimenting here can never touch production loads. The AI
-  // document pipeline will become this page's data source.
-  //
-  // To point it at the live loads table instead, replace this block with:
-  //   const { data: loadsData, isLoading, refetch } = useLoads(1, 10000)
-  //   const loads = loadsData?.items || []
-  //   const createLoad = useCreateLoad()
-  //   const updateLoad = useUpdateLoad()
-  //   const deleteLoad = useDeleteLoad()
-
-  // Must be a stable reference. A fresh [] on each render would retrigger the
-  // sync effect below and wipe local edits every render.
-  const loads = useMemo<Load[]>(() => [], [])
-  const refetch = () => {}
-
-  // Local-only stand-ins for the load mutations. Same `mutateAsync` call shape
-  // as the real hooks, so the cloned handlers below work unchanged. Negative
-  // ids so sandbox rows can never collide with real load ids.
-  const nextLocalId = useRef(-1)
+  // --- AI loads ----------------------------------------------------------
+  // This page shows AI loads only: loads read from emailed or uploaded
+  // documents, stored server-side under /loads-ai/loads. It never reads or
+  // writes the real loads table - that stays reserved for loads entered by
+  // hand on /loads, so AI output can't leak into invoicing or payroll.
+  const { data: aiLoadsData, refetch } = useAILoads()
+  const createAILoad = useCreateAILoad()
+  // Same call shape as the real useCreateLoad, returning a Load-shaped row,
+  // so the add / undo handlers cloned from /loads work unchanged.
   const createLoad = {
-    mutateAsync: async (data: any) => ({ ...data, id: nextLocalId.current-- }),
+    mutateAsync: async (data: any): Promise<Load> =>
+      aiLoadToLoad(await createAILoad.mutateAsync(data)),
   }
-  const updateLoad = {
-    mutateAsync: async ({ id, data }: { id: number; data: any }) => ({ id, ...data }),
-  }
-  const deleteLoad = {
-    mutateAsync: async (_id: number) => undefined,
-  }
+  const updateLoad = useUpdateAILoad()
+  const deleteLoad = useDeleteAILoad()
+
+  // Must be a stable reference: the sync effect below re-runs on every new
+  // array and would wipe in-progress edits.
+  const loads = useMemo<Load[]>(
+    () => (aiLoadsData ?? []).map(aiLoadToLoad),
+    [aiLoadsData]
+  )
   // ---------------------------------------------------------------------
 
   // Source mailbox Loads AI will draw loads from (stored on the company).
@@ -408,43 +427,14 @@ export default function LoadsAIPageInline() {
       const result = await extractDocument(file)
       const d = result.draft
 
-      // Backend sends wall-clock UTC without a suffix; normalizeDateTime
-      // appends the Z so the grid's date maths treats it as UTC.
-      const pickupIso = d.pickup_date ? normalizeDateTime(d.pickup_date) : ''
-      const deliveryIso = d.delivery_date ? normalizeDateTime(d.delivery_date) : ''
-      const pickupDate = pickupIso ? new Date(pickupIso) : new Date()
-      const nowIso = new Date().toISOString()
-      const draftRowId = nextLocalId.current--
-
-      const draftRow: EditableLoad = {
-        id: draftRowId,
-        load_number: d.load_number || '',
-        reference_number: d.reference_number || undefined,
-        broker_load_number: d.broker_load_number || undefined,
-        bol_number: d.bol_number || undefined,
-        po_number: d.po_number || undefined,
-        // 0 means "unresolved" - loads.customer_id is NOT NULL, so this row
-        // cannot be saved until a customer is chosen.
-        customer_id: d.customer_id ?? 0,
-        pickup_location: d.pickup_location || '',
-        delivery_location: d.delivery_location || '',
-        pickup_date: pickupIso,
-        delivery_date: deliveryIso,
-        rate: d.rate ? Number(d.rate) : 0,
-        miles: d.miles ?? undefined,
+      // Saved straight away as an AI load, so it survives a reload like
+      // the ones that arrive by email. Dates stay wall-clock strings.
+      const created = await createLoad.mutateAsync({
+        ...d,
         notes: d.pickup_notes || undefined,
-        status: (d.status as EditableLoad['status']) || 'available',
-        created_at: nowIso,
-        updated_at: nowIso,
-        weekNumber: getWeekNumber(pickupDate),
-        weekLabel: getWeekLabel(pickupDate),
-        weekDateRange: getWeekDateRange(pickupDate),
-        dayOfWeek: pickupDate.getUTCDay(),
-        dayLabel: getDayLabel(pickupDate),
-      }
-
-      setEditableLoads(prev => [...prev, draftRow])
-      setLastExtraction({ ...result, draftRowId })
+        status: d.status || 'available',
+      })
+      setLastExtraction({ ...result, draftRowId: created.id })
       toast.dismiss(toastId)
       toast.success(
         result.warnings.length
@@ -465,9 +455,7 @@ export default function LoadsAIPageInline() {
   const handlePollMailbox = async () => {
     try {
       await pollMailbox()
-      // Loads created from email go into the real loads table, which this
-      // sandbox board does not read - so say so rather than leaving the user
-      // wondering why nothing appeared in the grid below.
+      // New AI loads are refetched by the hook; refresh the document log too.
       refetchIngested()
     } catch {
       // toast handled in the hook
@@ -475,11 +463,17 @@ export default function LoadsAIPageInline() {
   }
 
   /** Apply a suggested customer to the draft row the extraction produced. */
-  const applyCustomerToDraft = (rowId: number, customerId: number) => {
+  const applyCustomerToDraft = async (rowId: number, customerId: number) => {
     setEditableLoads(prev =>
       prev.map(l => (l.id === rowId ? { ...l, customer_id: customerId } : l))
     )
-    toast.success('Customer set on the draft row')
+    try {
+      await updateLoad.mutateAsync({ id: rowId, data: { customer_id: customerId } })
+      toast.success('Customer set on the AI load')
+    } catch {
+      toast.error('Failed to save the customer')
+      refetch()
+    }
   }
 
   const { data: customersData } = useCustomers()
@@ -2851,11 +2845,8 @@ export default function LoadsAIPageInline() {
           <p className="mt-2 text-xs" style={{ color: 'var(--monday-text-secondary)' }}>
             Reads unread mail with attachments from{' '}
             <span className="font-medium">{ingestionStatus?.mailbox || 'the source mailbox'}</span>
-            {ingestionStatus?.auto_create_loads
-              ? ' and creates loads automatically. They appear on the '
-              : ' and queues them for review. See the '}
-            <a href="/loads" className="underline">Loads</a>
-            {ingestionStatus?.auto_create_loads ? ' board, flagged for attention — not here.' : ' board.'}
+ and adds each document as an AI load in the table below. AI loads stay on this page only and never appear on the{' '}
+            <a href="/loads" className="underline">Loads</a> board.
           </p>
 
           {ingestedDocs && ingestedDocs.length > 0 && (
@@ -2874,12 +2865,14 @@ export default function LoadsAIPageInline() {
                     <tr key={d.id} className="border-t" style={{ borderColor: 'var(--monday-border-light)' }}>
                       <td className="py-1.5 pr-3 align-top">{d.original_filename || `#${d.id}`}</td>
                       <td className="py-1.5 pr-3 align-top">
-                        {d.status === 'load_created' ? (
+                        {d.status === 'ai_load' || d.status === 'load_created' ? (
                           <span className="inline-flex items-center gap-1 text-green-700">
-                            <CheckCircle2 className="h-3.5 w-3.5" /> load created
+                            <CheckCircle2 className="h-3.5 w-3.5" /> AI load added
                           </span>
                         ) : d.status === 'needs_review' ? (
                           <span className="text-amber-700">needs review</span>
+                        ) : d.status === 'dismissed' ? (
+                          <span className="text-gray-500">deleted</span>
                         ) : d.status === 'duplicate' ? (
                           <span className="text-gray-500">duplicate</span>
                         ) : d.status === 'failed' ? (
@@ -2888,7 +2881,9 @@ export default function LoadsAIPageInline() {
                           <span className="text-gray-500">{d.status}</span>
                         )}
                       </td>
-                      <td className="py-1.5 pr-3 align-top">{d.load_number || '—'}</td>
+                      <td className="py-1.5 pr-3 align-top">
+                        {d.draft?.load_number || d.draft?.broker_load_number || d.load_number || '—'}
+                      </td>
                       <td className="py-1.5 align-top" style={{ color: 'var(--monday-text-secondary)' }}>
                         {d.last_error
                           ? d.last_error.slice(0, 90)
