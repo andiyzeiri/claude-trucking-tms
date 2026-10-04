@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, users, companies, customers, trucks, drivers, loads, stops, invoices, payroll, payroll_override, lanes, expenses, uploads, shippers, receivers, notifications, ratecons, fuel, ifta, migrate, driver_payroll_settings, maps, dedicated_lanes, driver_days_off, driver_attention_days, driver_day_notes, rate_to_operate, accounting, reports_email
+from app.api.v1.endpoints import auth, users, companies, customers, trucks, drivers, loads, loads_ai, stops, invoices, payroll, payroll_override, lanes, expenses, uploads, shippers, receivers, notifications, ratecons, fuel, ifta, migrate, driver_payroll_settings, maps, dedicated_lanes, driver_days_off, driver_attention_days, driver_day_notes, rate_to_operate, accounting, reports_email
 
 api_router = APIRouter()
 
@@ -13,6 +13,7 @@ api_router.include_router(driver_days_off.router, prefix="/driver-days-off", tag
 api_router.include_router(driver_attention_days.router, prefix="/driver-attention-days", tags=["driver-attention-days"])
 api_router.include_router(driver_day_notes.router, prefix="/driver-day-notes", tags=["driver-day-notes"])
 api_router.include_router(loads.router, prefix="/loads", tags=["loads"])
+api_router.include_router(loads_ai.router, prefix="/loads-ai", tags=["loads-ai"])
 api_router.include_router(stops.router, prefix="/stops", tags=["stops"])
 api_router.include_router(invoices.router, prefix="/invoices", tags=["invoices"])
 api_router.include_router(payroll.router, prefix="/payroll", tags=["payroll"])

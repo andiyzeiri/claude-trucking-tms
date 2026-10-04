@@ -75,6 +75,9 @@ COPY add_expense_group_column.py ./
 COPY create_rate_to_operate_table.py ./
 COPY create_accounting_tables.py ./
 COPY add_accounting_permission.py ./
+COPY add_loads_ai_permission.py ./
+COPY add_loads_ai_email_column.py ./
+COPY add_load_identifier_columns.py ./
 COPY create_report_recipients_table.py ./
 COPY entrypoint.sh ./
 

@@ -24,6 +24,7 @@ import {
   CalendarDays,
   BookOpen,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react'
 
 // Navigation items with page IDs that match the permissions system
@@ -31,6 +32,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home, pageId: 'dashboard' },
   { name: 'Dispatch Board', href: '/dispatch', icon: CalendarDays, pageId: 'dispatch' },
   { name: 'Loads', href: '/loads', icon: Package, pageId: 'loads' },
+  { name: 'Loads AI', href: '/loads-ai', icon: Sparkles, pageId: 'loads-ai' },
   { name: 'Brokerage', href: '/brokerage', icon: Building2, pageId: 'brokerage' },
   { name: 'Equipment', href: '/trucks', icon: Truck, pageId: 'trucks' },
   { name: 'Drivers', href: '/drivers', icon: Users, pageId: 'drivers' },

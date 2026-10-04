@@ -1,25 +1,39 @@
 name: Deploy API to AWS ECS
 
+# Builds the backend image and rolls it out to the RUNNING production service.
+#
+# Deliberately does NOT run Terraform. The previous version of this workflow
+# ran `terraform init -backend=false && terraform plan && terraform apply
+# -auto-approve` against ./infra, which - with no state backend - plans to
+# create an entire parallel stack (VPC, RDS, ElastiCache, ALB, ECS) from
+# scratch and then auto-approves it. It also targeted `andi-tms-prod-*`
+# resources, while production actually runs on `trucking-tms-*`, so it would
+# not have deployed the change either way.
+#
+# Infrastructure changes are made deliberately, not as a side effect of a
+# code push. ./infra is currently out of sync with production and would need
+# `terraform import` before it can safely manage these resources.
+
 on:
   push:
     branches:
       - main
     paths:
       - 'backend/**'
-      - 'infra/**'
       - '.github/workflows/deploy-api.yml'
+  workflow_dispatch:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: andi-tms/prod/api
+  ECR_REPOSITORY: trucking-tms-backend
+  ECS_CLUSTER: trucking-tms-cluster
+  ECS_SERVICE: trucking-tms-backend-service
+  TASK_FAMILY: trucking-tms-backend
 
 jobs:
   deploy:
     name: Build and Deploy API
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
 
     steps:
       - name: Checkout code
@@ -32,81 +46,139 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # Fail before spending time on a build if the targets are wrong.
+      - name: Verify deploy targets exist
+        run: |
+          set -euo pipefail
+
+          echo "Checking cluster '$ECS_CLUSTER'..."
+          STATUS=$(aws ecs describe-clusters --clusters "$ECS_CLUSTER" \
+            --query 'clusters[0].status' --output text)
+          if [ "$STATUS" != "ACTIVE" ]; then
+            echo "::error::Cluster '$ECS_CLUSTER' is not ACTIVE (got '$STATUS')."
+            exit 1
+          fi
+
+          echo "Checking service '$ECS_SERVICE'..."
+          FOUND=$(aws ecs describe-services \
+            --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" \
+            --query 'length(services[?status==`ACTIVE`])' --output text)
+          if [ "$FOUND" != "1" ]; then
+            echo "::error::Service '$ECS_SERVICE' not found in '$ECS_CLUSTER'."
+            echo "Services actually in this cluster:"
+            aws ecs list-services --cluster "$ECS_CLUSTER" --output text
+            exit 1
+          fi
+
+          echo "Targets OK."
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push image to Amazon ECR
+      - name: Build, tag and push image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          cd backend
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >> $GITHUB_OUTPUT
+          set -euo pipefail
+          IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker build -t "$IMAGE" ./backend
+          docker tag "$IMAGE" "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+          docker push "$IMAGE"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.0
-          terraform_wrapper: false
-
-      - name: Terraform Init
-        working-directory: ./infra
-        run: terraform init -backend=false
-
-      - name: Terraform Plan
-        working-directory: ./infra
-        run: terraform plan -out=tfplan
-
-      - name: Terraform Apply
-        working-directory: ./infra
-        run: terraform apply -auto-approve tfplan
-
-      - name: Get Terraform Outputs
-        id: tf-outputs
-        working-directory: ./infra
+      # Takes the task definition that is live right now and changes only the
+      # image. Everything else - env vars, secrets, roles, logging - is
+      # preserved exactly, so configuration set by hand in the console (such
+      # as the ANTHROPIC_SECRET_JSON secret reference) survives every deploy
+      # and never has to live in this repository.
+      - name: Register new task definition revision
+        id: task-def
+        env:
+          IMAGE: ${{ steps.build-image.outputs.image }}
         run: |
-          echo "alb_dns=$(terraform output -raw alb_dns_name)" >> $GITHUB_OUTPUT
-          echo "api_url=$(terraform output -raw api_url)" >> $GITHUB_OUTPUT
-          echo "ecs_cluster=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
-          echo "ecs_service=$(terraform output -raw ecs_service_name)" >> $GITHUB_OUTPUT
+          set -euo pipefail
 
-      - name: Force new ECS deployment
+          aws ecs describe-task-definition \
+            --task-definition "$TASK_FAMILY" \
+            --query 'taskDefinition' > current-task-def.json
+
+          CONTAINERS=$(jq '.containerDefinitions | length' current-task-def.json)
+          if [ "$CONTAINERS" != "1" ]; then
+            echo "::error::Expected 1 container in '$TASK_FAMILY', found $CONTAINERS."
+            echo "This workflow assumes a single-container task. Update it before deploying."
+            exit 1
+          fi
+
+          # register-task-definition rejects the read-only fields that
+          # describe-task-definition returns, so strip them.
+          jq --arg IMAGE "$IMAGE" '
+            .containerDefinitions[0].image = $IMAGE
+            | del(
+                .taskDefinitionArn,
+                .revision,
+                .status,
+                .requiresAttributes,
+                .compatibilities,
+                .registeredAt,
+                .registeredBy,
+                .deregisteredAt
+              )
+          ' current-task-def.json > new-task-def.json
+
+          echo "Secrets carried over: $(jq -r '[.containerDefinitions[0].secrets // [] | .[].name] | join(", ") // "(none)"' new-task-def.json)"
+
+          ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://new-task-def.json \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "Registered $ARN"
+          echo "arn=$ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to ECS
+        env:
+          TASK_DEF_ARN: ${{ steps.task-def.outputs.arn }}
         run: |
+          set -euo pipefail
           aws ecs update-service \
-            --cluster ${{ steps.tf-outputs.outputs.ecs_cluster }} \
-            --service ${{ steps.tf-outputs.outputs.ecs_service }} \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --task-definition "$TASK_DEF_ARN" \
             --force-new-deployment \
-            --region ${{ env.AWS_REGION }}
+            --query 'service.deployments[0].{status:status,desired:desiredCount}' \
+            --output table
 
-      - name: Wait for ECS service to stabilize
+      # The container runs the entrypoint migration scripts on boot, so a
+      # successful stabilisation also means the schema changes applied.
+      - name: Wait for the service to stabilise
         run: |
+          set -euo pipefail
           aws ecs wait services-stable \
-            --cluster ${{ steps.tf-outputs.outputs.ecs_cluster }} \
-            --services ${{ steps.tf-outputs.outputs.ecs_service }} \
-            --region ${{ env.AWS_REGION }}
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE"
 
-      - name: Generate deployment summary
+      - name: Deployment summary
+        if: always()
+        env:
+          IMAGE: ${{ steps.build-image.outputs.image }}
+          TASK_DEF_ARN: ${{ steps.task-def.outputs.arn }}
         run: |
-          echo "## 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### API Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **API URL**: ${{ steps.tf-outputs.outputs.api_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **ALB DNS**: ${{ steps.tf-outputs.outputs.alb_dns }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image**: ${{ steps.build-image.outputs.image }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ECS Service" >> $GITHUB_STEP_SUMMARY
-          echo "- **Cluster**: ${{ steps.tf-outputs.outputs.ecs_cluster }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Service**: ${{ steps.tf-outputs.outputs.ecs_service }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
-          echo "Update Amplify environment variable:" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "NEXT_PUBLIC_API_URL=${{ steps.tf-outputs.outputs.api_url }}" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## API deployment"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Image | \`${IMAGE:-not built}\` |"
+            echo "| Task definition | \`${TASK_DEF_ARN:-not registered}\` |"
+            echo "| Cluster | \`$ECS_CLUSTER\` |"
+            echo "| Service | \`$ECS_SERVICE\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Show recent logs on failure
+        if: failure()
+        run: |
+          echo "Last 100 log lines from the service:"
+          aws logs tail "/ecs/$TASK_FAMILY" --since 10m --format short | tail -100 || true

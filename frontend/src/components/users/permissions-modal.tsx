@@ -20,7 +20,8 @@ import {
   Warehouse,
   Fuel,
   Shield,
-  CalendarDays
+  CalendarDays,
+  Sparkles
 } from 'lucide-react'
 
 // All available pages in the system
@@ -28,6 +29,7 @@ const ALL_PAGES = [
   { id: 'dashboard', name: 'Dashboard', icon: Home, description: 'Main dashboard overview' },
   { id: 'dispatch', name: 'Dispatch Board', icon: CalendarDays, description: 'Weekly driver schedule' },
   { id: 'loads', name: 'Loads', icon: Package, description: 'Load management & tracking' },
+  { id: 'loads-ai', name: 'Loads AI', icon: Sparkles, description: 'AI-assisted load entry (sandbox)' },
   { id: 'brokerage', name: 'Brokerage', icon: Building2, description: 'Brokerage load management' },
   { id: 'trucks', name: 'Equipment', icon: Truck, description: 'Trucks and trailers' },
   { id: 'drivers', name: 'Drivers', icon: Users, description: 'Driver roster management' },

@@ -10,6 +10,9 @@ from app.schemas.truck import TruckResponse
 class LoadBase(BaseModel):
     load_number: str
     reference_number: Optional[str] = None
+    broker_load_number: Optional[str] = None
+    bol_number: Optional[str] = None
+    po_number: Optional[str] = None
     description: Optional[str] = None
     pickup_location: Optional[str] = None
     delivery_location: Optional[str] = None
@@ -49,6 +52,9 @@ class LoadCreate(LoadBase):
 class LoadUpdate(BaseModel):
     load_number: Optional[str] = None
     reference_number: Optional[str] = None
+    broker_load_number: Optional[str] = None
+    bol_number: Optional[str] = None
+    po_number: Optional[str] = None
     description: Optional[str] = None
     pickup_location: Optional[str] = None
     delivery_location: Optional[str] = None
@@ -87,6 +93,9 @@ class LoadResponse(BaseModel):
     id: int
     load_number: str
     reference_number: Optional[str] = None
+    broker_load_number: Optional[str] = None
+    bol_number: Optional[str] = None
+    po_number: Optional[str] = None
     description: Optional[str] = None
     pickup_location: Optional[str] = None
     delivery_location: Optional[str] = None

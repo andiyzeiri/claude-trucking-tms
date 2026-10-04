@@ -6,8 +6,8 @@ import { useEffect } from 'react'
 
 // Default pages for each role - must match sidebar.tsx
 const ROLE_PAGES: Record<string, string[]> = {
-  company_admin: ['dashboard', 'dispatch', 'loads', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'payroll', 'invoices', 'ratecons', 'reports', 'users', 'settings'],
-  super_admin: ['dashboard', 'dispatch', 'loads', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'payroll', 'invoices', 'ratecons', 'reports', 'users', 'settings'],
+  company_admin: ['dashboard', 'dispatch', 'loads', 'loads-ai', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'payroll', 'invoices', 'ratecons', 'reports', 'users', 'settings'],
+  super_admin: ['dashboard', 'dispatch', 'loads', 'loads-ai', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'payroll', 'invoices', 'ratecons', 'reports', 'users', 'settings'],
   dispatcher: ['dashboard', 'dispatch', 'loads', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'expenses', 'fuel', 'payroll', 'invoices', 'reports'],
   driver: ['dashboard', 'loads'],
   customer: ['dashboard', 'loads', 'invoices'],
@@ -47,6 +47,7 @@ function getPageIdFromPath(pathname: string): string | null {
     'dashboard': 'dashboard',
     'dispatch': 'dispatch',
     'loads': 'loads',
+    'loads-ai': 'loads-ai',
     'trucks': 'trucks',
     'drivers': 'drivers',
     'customers': 'customers',

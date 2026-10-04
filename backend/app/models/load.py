@@ -25,6 +25,21 @@ class Load(Base):
 
     load_number = Column(String, nullable=True, index=True)
     reference_number = Column(String)
+
+    # Broker / shipper identifiers.
+    #
+    # reference_number historically carried all three of these at once, so
+    # extracting a rate confirmation meant finding three identifiers and
+    # keeping one. Splitting them out is also what makes exact-identifier
+    # document matching possible - city + date alone must never be enough to
+    # decide which load a POD belongs to.
+    #
+    # Composite (company_id, lower(col)) indexes are created in
+    # add_load_identifier_columns.py rather than declared here, so the
+    # matching lookups are scoped per tenant.
+    broker_load_number = Column(String, nullable=True)
+    bol_number = Column(String, nullable=True)
+    po_number = Column(String, nullable=True)
     description = Column(Text)
     pickup_location = Column(String)
     delivery_location = Column(String)

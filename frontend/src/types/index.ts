@@ -90,6 +90,12 @@ export interface Truck {
 export interface Load {
   id: number
   load_number: string
+  reference_number?: string
+  /** Broker's own load number. Kept distinct from BOL/PO so documents can be
+   *  matched on an exact identifier rather than on fuzzy city/date signals. */
+  broker_load_number?: string
+  bol_number?: string
+  po_number?: string
   customer_id: number
   customer?: Customer
   driver_id?: number

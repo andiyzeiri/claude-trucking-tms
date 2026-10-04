@@ -133,6 +133,18 @@ python3 create_accounting_tables.py || echo "⚠️  create_accounting_tables.py
 echo "🔧 Adding accounting to admin permissions..."
 python3 add_accounting_permission.py || echo "⚠️  add_accounting_permission.py had errors, continuing..."
 
+# Grant the Loads AI sandbox page to existing admins
+echo "🔧 Adding loads-ai to admin permissions..."
+python3 add_loads_ai_permission.py || echo "⚠️  add_loads_ai_permission.py had errors, continuing..."
+
+# Add the Loads AI source mailbox column to companies
+echo "🔧 Adding loads_ai_source_email to companies..."
+python3 add_loads_ai_email_column.py || echo "⚠️  add_loads_ai_email_column.py had errors, continuing..."
+
+# Add broker/BOL/PO identifier columns + matching indexes to loads
+echo "🔧 Adding load identifier columns..."
+python3 add_load_identifier_columns.py || echo "⚠️  add_load_identifier_columns.py had errors, continuing..."
+
 # Create report_recipients table (emailed report distribution lists)
 echo "🔧 Creating report_recipients table..."
 python3 create_report_recipients_table.py || echo "⚠️  create_report_recipients_table.py had errors, continuing..."

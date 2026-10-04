@@ -63,6 +63,10 @@ class User(Base):
             "dashboard",
             "dispatch",
             "loads",
+            # Sandbox clone of the loads board used to build out the AI
+            # document pipeline. Admin-only on purpose - it is experimental
+            # and is deliberately absent from the role lists below.
+            "loads-ai",
             "brokerage",
             "trucks",
             "drivers",

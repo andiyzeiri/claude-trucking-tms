@@ -1,3 +1,23 @@
+# DISABLED - renamed so GitHub Actions ignores it (only *.yml / *.yaml run).
+#
+# Why: this workflow fired on EVERY push to main and ran
+#   cd infrastructure && terraform init && terraform plan && terraform apply
+# against ./infrastructure, which builds a third, separate `claude-tms-*`
+# stack - its own VPC, RDS, ALB, CloudFront and S3 - with no state backend,
+# auto-approved. Production actually runs on `trucking-tms-*`, so this never
+# deployed the live site; it only risked creating duplicate paid resources.
+#
+# It also deployed the frontend to S3 + CloudFront, which is superseded:
+# the frontend is built and hosted by Netlify (see netlify.toml), and it ran
+# `alembic upgrade head` as a one-off task, which conflicts with the
+# entrypoint migration scripts the container actually uses.
+#
+# Backend deploys now live in deploy-api.yml, which targets the running
+# production service and does not touch Terraform.
+#
+# Kept rather than deleted so the Terraform/CloudFront wiring is recoverable
+# if ./infrastructure is ever reconciled with production.
+
 name: Deploy Claude TMS
 
 on:

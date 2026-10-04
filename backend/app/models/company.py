@@ -16,6 +16,11 @@ class Company(Base):
     phone = Column(String)
     email = Column(String)
 
+    # Loads AI: the mailbox that the document pipeline draws loads from.
+    # Per-company so each tenant points at its own intake address. Nullable -
+    # Loads AI simply has no source configured until someone sets one.
+    loads_ai_source_email = Column(String, nullable=True)
+
     # Relationships
     users = relationship("User", back_populates="company")
     trucks = relationship("Truck", back_populates="company")

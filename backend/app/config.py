@@ -82,6 +82,24 @@ class Settings(BaseSettings):
     # Google Maps Configuration
     GOOGLE_MAPS_API_KEY: Optional[str] = None
 
+    # Loads AI document extraction (Anthropic / Claude).
+    #
+    # ANTHROPIC_API_KEY may be injected directly, or as ANTHROPIC_SECRET_JSON
+    # from Secrets Manager (same shape as DATABASE_SECRET_JSON). When neither
+    # is set, extraction is disabled and the endpoint returns a clear 503
+    # rather than failing mid-request.
+    ANTHROPIC_API_KEY: Optional[str] = None
+    DOCUMENT_AI_PROVIDER: str = "anthropic"
+    DOCUMENT_AI_MODEL: str = "claude-opus-5"
+    # Extraction is transcription, not reasoning - low effort keeps latency
+    # and cost down. Thinking is left at its default (on) because disabling
+    # it on this model has known failure modes.
+    DOCUMENT_AI_EFFORT: str = "low"
+    DOCUMENT_AI_MAX_TOKENS: int = 8000
+    # Hard cap on what we will hand to the model. 32MB is the API request
+    # limit; stay well under it once base64 expansion is accounted for.
+    DOCUMENT_MAX_UPLOAD_BYTES: int = 20 * 1024 * 1024
+
     class Config:
         env_file = ".env"
         extra = "ignore"
@@ -132,6 +150,24 @@ class Settings(BaseSettings):
             except (json.JSONDecodeError, KeyError) as e:
                 print(f"⚠ Warning: Failed to parse DATABASE_SECRET_JSON: {e}")
                 print(f"⚠ Falling back to DATABASE_URL environment variable")
+
+        # Parse Anthropic Secret JSON if present.
+        # Accepts {"api_key": "..."} or {"ANTHROPIC_API_KEY": "..."}.
+        anthropic_secret_json = os.getenv("ANTHROPIC_SECRET_JSON")
+        if anthropic_secret_json:
+            try:
+                anthropic_secret = json.loads(anthropic_secret_json)
+                api_key = (
+                    anthropic_secret.get("api_key")
+                    or anthropic_secret.get("ANTHROPIC_API_KEY")
+                )
+                if api_key:
+                    self.ANTHROPIC_API_KEY = api_key
+                    print("✓ Loaded Anthropic API key from ANTHROPIC_SECRET_JSON")
+                else:
+                    print("⚠ Warning: ANTHROPIC_SECRET_JSON has no api_key field")
+            except (json.JSONDecodeError, KeyError) as e:
+                print(f"⚠ Warning: Failed to parse ANTHROPIC_SECRET_JSON: {e}")
 
         # Parse Redis Secret JSON if present
         redis_secret_json = os.getenv("REDIS_SECRET_JSON")
