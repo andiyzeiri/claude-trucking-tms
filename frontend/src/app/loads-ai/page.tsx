@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X, Check, ArrowUpDown, ArrowUp, ArrowDown, Search, Mail, FileUp, AlertTriangle, Sparkles } from 'lucide-react'
+import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X, Check, ArrowUpDown, ArrowUp, ArrowDown, Search, Mail, FileUp, AlertTriangle, Sparkles, RefreshCw, Inbox, CheckCircle2 } from 'lucide-react'
 import { useLoads, useCreateLoad, useUpdateLoad, useDeleteLoad } from '@/hooks/use-loads'
 import { useDedicatedLanes } from '@/hooks/use-dedicated-lanes'
 import { useCustomers } from '@/hooks/use-customers'
@@ -31,6 +31,11 @@ import {
   extractionErrorMessage,
   type ExtractDocumentResult,
 } from '@/hooks/use-loads-ai-extract'
+import {
+  useIngestionStatus,
+  useIngestedDocuments,
+  usePollMailbox,
+} from '@/hooks/use-loads-ai-ingestion'
 
 interface EditableLoad extends Load {
   isNew?: boolean
@@ -449,6 +454,23 @@ export default function LoadsAIPageInline() {
     } catch (error: any) {
       toast.dismiss(toastId)
       toast.error(extractionErrorMessage(error))
+    }
+  }
+
+  // --- Automatic email ingestion -----------------------------------------
+  const { data: ingestionStatus } = useIngestionStatus()
+  const { data: ingestedDocs, refetch: refetchIngested } = useIngestedDocuments()
+  const { pollMailbox, isPolling } = usePollMailbox()
+
+  const handlePollMailbox = async () => {
+    try {
+      await pollMailbox()
+      // Loads created from email go into the real loads table, which this
+      // sandbox board does not read - so say so rather than leaving the user
+      // wondering why nothing appeared in the grid below.
+      refetchIngested()
+    } catch {
+      // toast handled in the hook
     }
   }
 
@@ -2784,6 +2806,102 @@ export default function LoadsAIPageInline() {
             )}{' '}
             <span className="font-medium">Ingestion is not connected yet</span> — this only saves the address.
           </p>
+        </div>
+
+        {/* Automatic email ingestion */}
+        <div
+          className="rounded-lg border p-3 md:p-4"
+          style={{ backgroundColor: 'var(--monday-bg-primary)', borderColor: 'var(--monday-border-light)' }}
+        >
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--monday-text-primary)' }}>
+              <Inbox className="h-4 w-4" />
+              Automatic email reading
+              {ingestionStatus && (
+                <span
+                  className={`ml-1 rounded-full px-2 py-0.5 text-xs ${
+                    ingestionStatus.blockers.length === 0
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-amber-100 text-amber-800'
+                  }`}
+                >
+                  {ingestionStatus.blockers.length === 0
+                    ? `on · every ${ingestionStatus.poll_minutes} min`
+                    : 'not running'}
+                </span>
+              )}
+            </div>
+            <Button variant="outline" onClick={handlePollMailbox} disabled={isPolling}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isPolling ? 'animate-spin' : ''}`} />
+              {isPolling ? 'Checking mail…' : 'Check email now'}
+            </Button>
+          </div>
+
+          {ingestionStatus && ingestionStatus.blockers.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {ingestionStatus.blockers.map((b, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-amber-700">
+                  <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <p className="mt-2 text-xs" style={{ color: 'var(--monday-text-secondary)' }}>
+            Reads unread mail with attachments from{' '}
+            <span className="font-medium">{ingestionStatus?.mailbox || 'the source mailbox'}</span>
+            {ingestionStatus?.auto_create_loads
+              ? ' and creates loads automatically. They appear on the '
+              : ' and queues them for review. See the '}
+            <a href="/loads" className="underline">Loads</a>
+            {ingestionStatus?.auto_create_loads ? ' board, flagged for attention — not here.' : ' board.'}
+          </p>
+
+          {ingestedDocs && ingestedDocs.length > 0 && (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr style={{ color: 'var(--monday-text-secondary)' }}>
+                    <th className="text-left font-medium py-1 pr-3">Document</th>
+                    <th className="text-left font-medium py-1 pr-3">Result</th>
+                    <th className="text-left font-medium py-1 pr-3">Load</th>
+                    <th className="text-left font-medium py-1">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ingestedDocs.map(d => (
+                    <tr key={d.id} className="border-t" style={{ borderColor: 'var(--monday-border-light)' }}>
+                      <td className="py-1.5 pr-3 align-top">{d.original_filename || `#${d.id}`}</td>
+                      <td className="py-1.5 pr-3 align-top">
+                        {d.status === 'load_created' ? (
+                          <span className="inline-flex items-center gap-1 text-green-700">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> load created
+                          </span>
+                        ) : d.status === 'needs_review' ? (
+                          <span className="text-amber-700">needs review</span>
+                        ) : d.status === 'duplicate' ? (
+                          <span className="text-gray-500">duplicate</span>
+                        ) : d.status === 'failed' ? (
+                          <span className="text-red-700">failed</span>
+                        ) : (
+                          <span className="text-gray-500">{d.status}</span>
+                        )}
+                      </td>
+                      <td className="py-1.5 pr-3 align-top">{d.load_number || '—'}</td>
+                      <td className="py-1.5 align-top" style={{ color: 'var(--monday-text-secondary)' }}>
+                        {d.last_error
+                          ? d.last_error.slice(0, 90)
+                          : d.warnings?.length
+                          ? d.warnings[0].slice(0, 90)
+                          : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Read a rate confirmation into a draft load */}

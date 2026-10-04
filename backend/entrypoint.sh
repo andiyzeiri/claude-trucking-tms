@@ -145,6 +145,10 @@ python3 add_loads_ai_email_column.py || echo "⚠️  add_loads_ai_email_column.
 echo "🔧 Adding load identifier columns..."
 python3 add_load_identifier_columns.py || echo "⚠️  add_load_identifier_columns.py had errors, continuing..."
 
+# Create Loads AI ingestion tables
+echo "🔧 Creating Loads AI ingestion tables..."
+python3 create_loads_ai_tables.py || echo "⚠️  create_loads_ai_tables.py had errors, continuing..."
+
 # Create report_recipients table (emailed report distribution lists)
 echo "🔧 Creating report_recipients table..."
 python3 create_report_recipients_table.py || echo "⚠️  create_report_recipients_table.py had errors, continuing..."

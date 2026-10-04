@@ -55,6 +55,26 @@ class S3Service:
             print(f"Error generating presigned URL: {e}")
             return None
 
+    def upload_bytes(self, key: str, content: bytes, content_type: str) -> bool:
+        """
+        Store raw bytes at `key`.
+
+        Used by document ingestion, where the original attachment is kept so
+        a load can always be traced back to the file it came from, and so a
+        failed extraction can be retried without re-reading the mailbox.
+        """
+        try:
+            self.s3_client.put_object(
+                Bucket=self.bucket_name,
+                Key=key,
+                Body=content,
+                ContentType=content_type,
+            )
+            return True
+        except ClientError as e:
+            print(f"Error uploading {key}: {e}")
+            return False
+
     def delete_file(self, key: str) -> bool:
         """Delete a file from S3"""
         try:

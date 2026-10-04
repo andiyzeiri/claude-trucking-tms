@@ -6,10 +6,12 @@ from fastapi.exceptions import RequestValidationError
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from app.config import settings
 from app.api.v1.api import api_router
 from app.health import router as health_router
 from app.services.dedicated_lane_scheduler import generate_loads_from_dedicated_lanes
+from app.documents.pipeline import run_ingestion_job
 
 # Set up logging
 logging.basicConfig(
@@ -36,6 +38,30 @@ async def lifespan(app: FastAPI):
         name='Generate loads from dedicated lanes',
         replace_existing=True
     )
+
+    # Loads AI mailbox poller. Only scheduled when ingestion is switched on,
+    # so a deployment without credentials configured does nothing at all.
+    #
+    # max_instances=1 and coalesce=True matter: a cycle can take minutes (each
+    # document is a ~27s model call) and this shares a 0.25 vCPU task with the
+    # API. Without them, slow cycles would pile up and starve web requests.
+    if settings.LOADS_AI_INGESTION_ENABLED:
+        scheduler.add_job(
+            run_ingestion_job,
+            IntervalTrigger(minutes=settings.LOADS_AI_POLL_MINUTES),
+            id="loads_ai_ingestion",
+            name="Read mailbox and create loads",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )
+        logger.info(
+            "Loads AI ingestion scheduled every %s minute(s)",
+            settings.LOADS_AI_POLL_MINUTES,
+        )
+    else:
+        logger.info("Loads AI ingestion is disabled; mailbox will not be polled")
+
     scheduler.start()
     logger.info("Dedicated lane scheduler started - will run every Monday at 00:00")
 

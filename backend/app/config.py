@@ -100,6 +100,38 @@ class Settings(BaseSettings):
     # limit; stay well under it once base64 expansion is accounted for.
     DOCUMENT_MAX_UPLOAD_BYTES: int = 20 * 1024 * 1024
 
+    # --- Loads AI email ingestion -------------------------------------
+    #
+    # Off by default. Turning it on makes the app log into a mailbox and
+    # create loads unattended, which should be a deliberate act.
+    #
+    # The mailbox is tied to a tenant by matching LOADS_AI_IMAP_USERNAME
+    # against companies.loads_ai_source_email - the field set on the
+    # Loads AI page. No match, no ingestion.
+    LOADS_AI_INGESTION_ENABLED: bool = False
+    LOADS_AI_IMAP_HOST: str = "imap.gmail.com"
+    LOADS_AI_IMAP_PORT: int = 993
+    LOADS_AI_IMAP_USERNAME: Optional[str] = None
+    # Gmail requires an App Password here, not the account password.
+    # Supply via LOADS_AI_IMAP_SECRET_JSON in production.
+    LOADS_AI_IMAP_PASSWORD: Optional[str] = None
+    LOADS_AI_IMAP_FOLDER: str = "INBOX"
+
+    # How often the poller runs, and how much work one cycle may do. The
+    # caps matter: each document is a ~27s model call costing a few cents,
+    # and this runs in-process on a 0.25 vCPU task.
+    LOADS_AI_POLL_MINUTES: int = 5
+    LOADS_AI_MAX_MESSAGES_PER_POLL: int = 5
+    LOADS_AI_MAX_DOCUMENTS_PER_POLL: int = 10
+
+    # Create loads straight from a document rather than queueing a draft.
+    # Documents that cannot be auto-created (unmatched broker, no rate)
+    # still land as needs_review - loads.customer_id is NOT NULL, so there
+    # is no way to create those unattended.
+    LOADS_AI_AUTO_CREATE_LOADS: bool = True
+    # Mark auto-created loads so a human can spot them on the board.
+    LOADS_AI_FLAG_CREATED_LOADS: bool = True
+
     class Config:
         env_file = ".env"
         extra = "ignore"
@@ -168,6 +200,20 @@ class Settings(BaseSettings):
                     print("⚠ Warning: ANTHROPIC_SECRET_JSON has no api_key field")
             except (json.JSONDecodeError, KeyError) as e:
                 print(f"⚠ Warning: Failed to parse ANTHROPIC_SECRET_JSON: {e}")
+
+        # Parse Loads AI mailbox credentials if present.
+        # Accepts {"username": "...", "password": "..."}.
+        imap_secret_json = os.getenv("LOADS_AI_IMAP_SECRET_JSON")
+        if imap_secret_json:
+            try:
+                imap_secret = json.loads(imap_secret_json)
+                if imap_secret.get("username"):
+                    self.LOADS_AI_IMAP_USERNAME = imap_secret["username"]
+                if imap_secret.get("password"):
+                    self.LOADS_AI_IMAP_PASSWORD = imap_secret["password"]
+                print("✓ Loaded Loads AI mailbox credentials from LOADS_AI_IMAP_SECRET_JSON")
+            except (json.JSONDecodeError, KeyError) as e:
+                print(f"⚠ Warning: Failed to parse LOADS_AI_IMAP_SECRET_JSON: {e}")
 
         # Parse Redis Secret JSON if present
         redis_secret_json = os.getenv("REDIS_SECRET_JSON")
