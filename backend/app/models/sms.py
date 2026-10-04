@@ -28,6 +28,9 @@ class LoadSmsMessage(Base):
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
     load_id = Column(Integer, ForeignKey("loads.id", ondelete="SET NULL"), nullable=True)
+    # Driver texting runs on AI loads only (the Loads AI page), which are
+    # ingested_documents rows; load_id is unused for those.
+    ai_load_id = Column(Integer, ForeignKey("ingested_documents.id", ondelete="SET NULL"), nullable=True)
     driver_id = Column(Integer, ForeignKey("drivers.id", ondelete="SET NULL"), nullable=True)
     direction = Column(String, nullable=False)  # out | in
     kind = Column(String, nullable=False)

@@ -1,5 +1,6 @@
 """
-Text a driver the load details when a load is assigned to them.
+Text a driver the load details when an AI load (Loads AI page) is assigned
+to them. Manually entered loads never trigger a text.
 
 Called as a FastAPI background task after the load is saved, so the
 dispatcher never waits on Twilio. Follows the same switches as POD
@@ -15,8 +16,9 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.models.driver import Driver
-from app.models.load import Load
+from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, IngestedDocument
 from app.models.sms import LoadSmsMessage, SmsKind
+from app.sms.ai_loads import view as ai_view
 from app.sms.pod_reminders import load_label
 from app.sms.util import delivery_tz, to_e164, wall_clock_to_utc
 
@@ -33,7 +35,7 @@ def _when(value: Optional[datetime]) -> str:
     return f"{day} {value.strftime('%I:%M %p').lstrip('0')}"
 
 
-def assignment_text(load: Load) -> str:
+def assignment_text(load) -> str:
     lines = [f"Absolute Trucking: Load {load_label(load)} is assigned to you."]
     lines.append(f"Pickup: {load.pickup_location or 'TBD'} - {_when(load.pickup_date)}")
     lines.append(f"Delivery: {load.delivery_location or 'TBD'} - {_when(load.delivery_date)}")
@@ -46,7 +48,7 @@ def assignment_text(load: Load) -> str:
     return "\n".join(lines)
 
 
-async def notify_load_assigned(load_id: int, driver_id: int) -> None:
+async def notify_ai_load_assigned(ai_load_id: int, driver_id: int) -> None:
     """Background task: owns its own session and never raises."""
     from app.database import AsyncSessionLocal
 
@@ -55,14 +57,22 @@ async def notify_load_assigned(load_id: int, driver_id: int) -> None:
         return
     try:
         async with AsyncSessionLocal() as db:
-            load = await db.get(Load, load_id)
+            doc = await db.get(IngestedDocument, ai_load_id)
             driver = await db.get(Driver, driver_id)
-            if not load or not driver or load.company_id != s.POD_REMINDERS_COMPANY_ID or load.driver_id != driver_id:
+            if (
+                not doc or not driver
+                or doc.company_id != s.POD_REMINDERS_COMPANY_ID
+                or driver.company_id != doc.company_id
+                or doc.status not in LIVE_AI_LOAD_STATUSES
+            ):
+                return
+            load = ai_view(doc)
+            if load.driver_id != driver_id:
                 return
 
             now = datetime.now(timezone.utc)
             if load.delivery_date and wall_clock_to_utc(load.delivery_date, delivery_tz(load.delivery_location)) < now:
-                logger.info("load-assigned: load %s delivery already past; not texting", load.id)
+                logger.info("load-assigned: AI load %s delivery already past; not texting", doc.id)
                 return
             if driver.sms_opt_out:
                 logger.info("load-assigned: driver %s opted out; not texting", driver.id)
@@ -75,7 +85,7 @@ async def notify_load_assigned(load_id: int, driver_id: int) -> None:
             # A double save (or quick re-assign back and forth) shouldn't text twice.
             recent = await db.execute(
                 select(LoadSmsMessage.id).where(
-                    LoadSmsMessage.load_id == load.id,
+                    LoadSmsMessage.ai_load_id == doc.id,
                     LoadSmsMessage.driver_id == driver.id,
                     LoadSmsMessage.kind == SmsKind.LOAD_ASSIGNED,
                     LoadSmsMessage.status != "failed",
@@ -87,7 +97,7 @@ async def notify_load_assigned(load_id: int, driver_id: int) -> None:
 
             body = assignment_text(load)
             if s.POD_REMINDERS_DRY_RUN:
-                logger.info("load-assigned: WOULD TEXT %s %s %s about load %s: %r",
+                logger.info("load-assigned: WOULD TEXT %s %s %s about AI load %s: %r",
                             driver.first_name, driver.last_name, phone, load_label(load), body)
                 return
 
@@ -96,7 +106,7 @@ async def notify_load_assigned(load_id: int, driver_id: int) -> None:
             result = await get_twilio_service().send_sms(phone, body)
             ok = bool(result.get("success"))
             db.add(LoadSmsMessage(
-                company_id=load.company_id, load_id=load.id, driver_id=driver.id, direction="out",
+                company_id=doc.company_id, ai_load_id=doc.id, driver_id=driver.id, direction="out",
                 kind=SmsKind.LOAD_ASSIGNED, phone=phone, body=body, created_at=now,
                 twilio_sid=result.get("message_sid"),
                 status=(result.get("status") or "sent") if ok else "failed",
@@ -105,6 +115,6 @@ async def notify_load_assigned(load_id: int, driver_id: int) -> None:
             if not ok and result.get("error_code") == 21610:
                 driver.sms_opt_out = True
             await db.commit()
-            logger.info("load-assigned: texted driver %s about load %s (ok=%s)", driver.id, load_label(load), ok)
+            logger.info("load-assigned: texted driver %s about AI load %s (ok=%s)", driver.id, load_label(load), ok)
     except Exception:
-        logger.exception("load-assigned: failed for load %s", load_id)
+        logger.exception("load-assigned: failed for AI load %s", ai_load_id)

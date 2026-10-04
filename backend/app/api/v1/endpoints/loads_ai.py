@@ -16,7 +16,7 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 from email_validator import EmailNotValidError, validate_email
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,7 +35,9 @@ from app.documents.pipeline import resolve_company, run_ingestion
 from app.models.company import Company
 from app.models.customer import Customer
 from app.models.load import Load
-from app.models.loads_ai import DocumentStatus, IngestedDocument
+from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, DocumentStatus, IngestedDocument
+from app.sms.ai_loads import view as ai_view
+from app.sms.assignment import notify_ai_load_assigned
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -535,12 +537,6 @@ CUSTOMER_PARTIAL = 0.60
 # Statuses whose draft is a live AI load. load_created/needs_review are
 # documents from before AI loads were separated; their drafts are shown
 # too so nothing extracted so far disappears from the page.
-LIVE_AI_LOAD_STATUSES = (
-    DocumentStatus.AI_LOAD,
-    DocumentStatus.LOAD_CREATED,
-    DocumentStatus.NEEDS_REVIEW,
-    DocumentStatus.EXTRACTED,
-)
 
 
 def _clean_ai_load_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -677,6 +673,7 @@ async def list_ai_loads(
 @router.post("/loads", response_model=AILoadResponse, status_code=status.HTTP_201_CREATED)
 async def create_ai_load(
     payload: Dict[str, Any],
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
@@ -698,6 +695,9 @@ async def create_ai_load(
     db.add(doc)
     await db.commit()
     await db.refresh(doc)
+    new_driver = ai_view(doc).driver_id
+    if new_driver:
+        background_tasks.add_task(notify_ai_load_assigned, doc.id, new_driver)
     return _ai_load_response(doc, await _company_customers(db, current_user.company_id))
 
 
@@ -705,11 +705,13 @@ async def create_ai_load(
 async def update_ai_load(
     ai_load_id: int,
     payload: Dict[str, Any],
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
     """Merge edited fields into an AI load."""
     doc = await _get_ai_load(db, current_user.company_id, ai_load_id)
+    previous_driver = ai_view(doc).driver_id
     merged = dict(doc.draft) if isinstance(doc.draft, dict) else {}
     changes = _clean_ai_load_payload(payload)
     # The page re-sends every column on each edit, including the customer it
@@ -728,6 +730,11 @@ async def update_ai_load(
     doc.draft = merged
     await db.commit()
     await db.refresh(doc)
+    # Text the driver only when the assignment actually changes; the page
+    # re-sends every column on each edit.
+    new_driver = ai_view(doc).driver_id
+    if new_driver and new_driver != previous_driver:
+        background_tasks.add_task(notify_ai_load_assigned, doc.id, new_driver)
     return _ai_load_response(doc, await _company_customers(db, current_user.company_id))
 
 

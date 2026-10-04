@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -9,7 +9,6 @@ from app.models.driver import Driver
 from app.schemas.load import LoadCreate, LoadUpdate, LoadResponse
 from app.core.security import get_current_active_user
 from app.models.user import User, UserRole
-from app.sms.assignment import notify_load_assigned
 
 router = APIRouter()
 
@@ -55,7 +54,6 @@ async def get_loads(
 @router.post("", response_model=LoadResponse)
 async def create_load(
     load: LoadCreate,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -71,8 +69,6 @@ async def create_load(
         db.add(db_load)
         await db.commit()
         await db.refresh(db_load)
-        if db_load.driver_id:
-            background_tasks.add_task(notify_load_assigned, db_load.id, db_load.driver_id)
 
         # Reload with relationships to avoid greenlet error
         query = (
@@ -136,7 +132,6 @@ async def get_load(
 async def update_load(
     load_id: int,
     load_update: LoadUpdate,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -157,17 +152,12 @@ async def update_load(
     if not load:
         raise HTTPException(status_code=404, detail="Load not found")
 
-    previous_driver_id = load.driver_id
     update_data = load_update.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(load, field, value)
 
     await db.commit()
     await db.refresh(load)
-    # Text the driver only when the assignment actually changes; the loads
-    # grid re-sends every column on each edit.
-    if load.driver_id and load.driver_id != previous_driver_id:
-        background_tasks.add_task(notify_load_assigned, load.id, load.driver_id)
     return load
 
 

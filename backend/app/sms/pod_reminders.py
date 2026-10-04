@@ -1,5 +1,5 @@
 """
-POD reminder texts.
+POD reminder texts, for AI loads (the Loads AI page) only.
 
 After a load's delivery appointment, text the driver asking whether they're
 unloaded and for a photo of the signed POD; keep reminding until a POD is on
@@ -16,14 +16,16 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Callable, List, Optional
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from app.config import settings
 from app.models.driver import Driver
-from app.models.load import Load, LoadStatus
+from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, IngestedDocument
 from app.models.sms import POD_PROMPT_KINDS, LoadSmsMessage, SmsKind
+from app.sms.ai_loads import update_draft
+from app.sms.ai_loads import view as ai_view
 from app.sms.util import city_state, delivery_tz, to_e164, wall_clock_to_utc
 
 logger = logging.getLogger(__name__)
@@ -32,25 +34,25 @@ UTC = timezone.utc
 TWILIO_UNSUBSCRIBED = 21610  # "Attempt to send to unsubscribed recipient"
 
 
-def load_label(load: Load) -> str:
+def load_label(load) -> str:
     return load.load_number or load.reference_number or load.broker_load_number or f"#{load.id}"
 
 
-def first_text(load: Load) -> str:
+def first_text(load) -> str:
     return (
         f"Absolute Trucking: Load {load_label(load)} delivering to {city_state(load.delivery_location)} "
         f"- are you unloaded? Please reply with a photo of the signed POD. Reply STOP to opt out."
     )
 
 
-def reminder_text(load: Load) -> str:
+def reminder_text(load) -> str:
     return (
         f"Absolute Trucking: Reminder - we still need the signed POD for load {load_label(load)}. "
         f"Please reply with a photo of it. Reply STOP to opt out."
     )
 
 
-def ack_text(load: Load) -> str:
+def ack_text(load) -> str:
     return f"Absolute Trucking: Thanks, we received the POD for load {load_label(load)}. Reply STOP to opt out."
 
 
@@ -125,7 +127,11 @@ async def run_pod_reminders(
     send: Optional[Callable[[str, str], dict]] = None,
 ) -> ReminderSummary:
     """
-    One pass over qualifying loads.
+    One pass over AI loads (Loads AI page) that are waiting on a POD.
+
+    Manually entered loads are never texted. An AI load qualifies when it
+    has a driver, isn't invoiced, has no POD yet, and its delivery falls in
+    the lookback window.
 
     `send(to, body) -> {"success", "message_sid", "status", "error", "error_code"}`
     defaults to Twilio; tests pass a fake.
@@ -152,33 +158,38 @@ async def run_pod_reminders(
             import asyncio
             return asyncio.run(twilio.send_sms(to, body))
 
-    # Cheap window in naive wall-clock terms; decide() does the exact check
-    # per load once its time zone is known (zones span at most ~10 hours).
     naive_now = now.replace(tzinfo=None)
     window_start = naive_now - timedelta(days=s.POD_LOOKBACK_DAYS + 1)
 
-    rows = (
+    docs = (
         await session.execute(
-            select(Load, Driver)
-            .join(Driver, Driver.id == Load.driver_id)
-            .where(
-                Load.company_id == company_id,
-                Load.status == LoadStatus.dispatched,
-                Load.delivery_date.isnot(None),
-                Load.delivery_date >= window_start,
-                Load.delivery_date <= naive_now,
-                or_(Load.pod_url.is_(None), Load.pod_url == ""),
+            select(IngestedDocument).where(
+                IngestedDocument.company_id == company_id,
+                IngestedDocument.status.in_(LIVE_AI_LOAD_STATUSES),
+                IngestedDocument.draft.isnot(None),
             )
-            .order_by(Load.delivery_date)
         )
-    ).all()
+    ).scalars().all()
 
-    for load, driver in rows:
+    for doc in docs:
+        load = ai_view(doc)
+        if (
+            not load.driver_id
+            or load.pod_url
+            or load.status == "invoiced"
+            or load.delivery_date is None
+            or not (window_start <= load.delivery_date <= naive_now)
+        ):
+            continue
+        driver = await session.get(Driver, load.driver_id)
+        if driver is None or driver.company_id != company_id:
+            continue
+
         summary.checked += 1
         prompts = (
             await session.execute(
                 select(LoadSmsMessage.status, LoadSmsMessage.created_at, LoadSmsMessage.kind).where(
-                    LoadSmsMessage.load_id == load.id,
+                    LoadSmsMessage.ai_load_id == doc.id,
                     LoadSmsMessage.direction == "out",
                     LoadSmsMessage.kind.in_(POD_PROMPT_KINDS + (SmsKind.ESCALATED,)),
                 )
@@ -211,25 +222,25 @@ async def run_pod_reminders(
 
         if d.action == "escalate":
             summary.escalated += 1
-            summary.details.append(f"load {label}: {d.reason} - flagged for dispatch")
+            summary.details.append(f"AI load {label}: {d.reason} - flagged for dispatch")
             if not s.POD_REMINDERS_DRY_RUN:
-                load.needs_attention = True
+                update_draft(doc, needs_attention=True)
                 session.add(LoadSmsMessage(
-                    company_id=company_id, load_id=load.id, driver_id=driver.id, direction="out",
+                    company_id=company_id, ai_load_id=doc.id, driver_id=driver.id, direction="out",
                     kind=SmsKind.ESCALATED, status="internal", created_at=now,
-                    body=f"No POD after {s.POD_MAX_TEXTS} texts; load flagged needs attention.",
+                    body=f"No POD after {s.POD_MAX_TEXTS} texts; AI load flagged needs attention.",
                 ))
                 await session.commit()
             continue
 
         if driver.sms_opt_out:
             summary.skipped_opted_out += 1
-            summary.details.append(f"load {label}: {driver_name} opted out of texts")
+            summary.details.append(f"AI load {label}: {driver_name} opted out of texts")
             continue
         phone = to_e164(driver.phone)
         if not phone:
             summary.skipped_no_phone += 1
-            summary.details.append(f"load {label}: {driver_name} has no textable phone ({driver.phone!r})")
+            summary.details.append(f"AI load {label}: {driver_name} has no textable phone ({driver.phone!r})")
             continue
 
         kind = SmsKind.POD_REQUEST if d.action == "first" else SmsKind.POD_REMINDER
@@ -237,13 +248,13 @@ async def run_pod_reminders(
 
         if s.POD_REMINDERS_DRY_RUN:
             summary.would_send += 1
-            summary.details.append(f"WOULD TEXT {driver_name} {phone} about load {label}: {body}")
+            summary.details.append(f"WOULD TEXT {driver_name} {phone} about AI load {label}: {body}")
             continue
 
         result = await run_in_threadpool(send, phone, body)
         ok = bool(result.get("success"))
         session.add(LoadSmsMessage(
-            company_id=company_id, load_id=load.id, driver_id=driver.id, direction="out",
+            company_id=company_id, ai_load_id=doc.id, driver_id=driver.id, direction="out",
             kind=kind, phone=phone, body=body, created_at=now,
             twilio_sid=result.get("message_sid"),
             status=(result.get("status") or "sent") if ok else "failed",
@@ -251,10 +262,10 @@ async def run_pod_reminders(
         ))
         if ok:
             summary.sent += 1
-            summary.details.append(f"texted {driver_name} about load {label} ({kind})")
+            summary.details.append(f"texted {driver_name} about AI load {label} ({kind})")
         else:
             summary.failed += 1
-            summary.details.append(f"load {label}: send to {driver_name} failed: {result.get('error')}")
+            summary.details.append(f"AI load {label}: send to {driver_name} failed: {result.get('error')}")
             if result.get("error_code") == TWILIO_UNSUBSCRIBED:
                 driver.sms_opt_out = True
         await session.commit()

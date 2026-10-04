@@ -4,9 +4,10 @@ Inbound driver texts (Twilio webhook).
 Configured in the Twilio console on the Messaging Service:
     Incoming messages -> Send a webhook -> POST https://absolutetms.com/api/v1/sms/inbound
 
-A photo or PDF reply is saved to S3 and set as the POD on the load the
-driver was last texted about; a plain text reply is appended to that load's
-delivery notes. STOP / START keep drivers.sms_opt_out in step with Twilio's
+Driver texting runs on AI loads only (the Loads AI page; ingested_documents
+rows). A photo or PDF reply is saved to S3 and set as the POD on the AI load
+the driver was last texted about; a plain text reply is appended to that AI
+load's notes. STOP / START keep drivers.sms_opt_out in step with Twilio's
 own opt-out handling (Twilio blocks sends to opted-out numbers regardless).
 """
 
@@ -24,9 +25,11 @@ from starlette.concurrency import run_in_threadpool
 from app.config import settings
 from app.database import get_db
 from app.models.driver import Driver
-from app.models.load import Load
+from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, IngestedDocument
 from app.models.sms import POD_PROMPT_KINDS, LoadSmsMessage, SmsKind
 from app.services.s3 import s3_service
+from app.sms.ai_loads import append_note, update_draft
+from app.sms.ai_loads import view as ai_view
 from app.sms.pod_reminders import ack_text
 from app.sms.util import delivery_tz, to_e164
 
@@ -59,11 +62,11 @@ def _download_media(url: str) -> tuple[bytes, str]:
     return data, (r.headers.get("Content-Type") or "").split(";")[0].strip().lower()
 
 
-async def _target_load(db: AsyncSession, company_id: int, phone: str) -> Optional[Load]:
-    """The load this driver was most recently asked about; prefer one still missing its POD."""
+async def _target_load(db: AsyncSession, company_id: int, phone: str) -> Optional[IngestedDocument]:
+    """The AI load this driver was most recently texted about; prefer one still missing its POD."""
     recent = (
         await db.execute(
-            select(LoadSmsMessage.load_id)
+            select(LoadSmsMessage.ai_load_id)
             .where(
                 LoadSmsMessage.company_id == company_id,
                 LoadSmsMessage.phone == phone,
@@ -71,21 +74,21 @@ async def _target_load(db: AsyncSession, company_id: int, phone: str) -> Optiona
                 # Drivers often reply to the assignment text with the POD
                 # once they've delivered, so that counts as well.
                 LoadSmsMessage.kind.in_(POD_PROMPT_KINDS + (SmsKind.LOAD_ASSIGNED,)),
-                LoadSmsMessage.load_id.isnot(None),
+                LoadSmsMessage.ai_load_id.isnot(None),
             )
             .order_by(LoadSmsMessage.created_at.desc())
             .limit(10)
         )
     ).scalars().all()
-    loads: List[Load] = []
-    for load_id in dict.fromkeys(recent):  # keep order, drop repeats
-        load = await db.get(Load, load_id)
-        if load is not None and load.company_id == company_id:
-            loads.append(load)
-    for load in loads:
-        if not load.pod_url:
-            return load
-    return loads[0] if loads else None
+    docs: List[IngestedDocument] = []
+    for doc_id in dict.fromkeys(recent):  # keep order, drop repeats
+        doc = await db.get(IngestedDocument, doc_id)
+        if doc is not None and doc.company_id == company_id and doc.status in LIVE_AI_LOAD_STATUSES:
+            docs.append(doc)
+    for doc in docs:
+        if not ai_view(doc).pod_url:
+            return doc
+    return docs[0] if docs else None
 
 
 @router.post("/inbound")
@@ -147,17 +150,17 @@ async def twilio_inbound(request: Request, db: AsyncSession = Depends(get_db)):
                 logger.warning("sms-inbound: media %s download failed: %s", i, e)
                 continue
             ext = MEDIA_EXT.get(ctype) or MEDIA_EXT[declared]
-            key = f"pod-sms-{load.id if load else 'unmatched'}-{uuid.uuid4().hex}.{ext}"
+            key = f"pod-sms-ai{load.id if load else '-unmatched'}-{uuid.uuid4().hex}.{ext}"
             ok = await run_in_threadpool(s3_service.upload_bytes, key, data, ctype or declared)
             if ok:
                 stored.append({"key": key, "url": f"/api/v1/uploads/s3/{key}", "content_type": ctype or declared, "bytes": len(data)})
 
         newly_attached = False
-        if load is not None and stored and not load.pod_url:
-            load.pod_url = stored[0]["url"]
+        if load is not None and stored and not ai_view(load).pod_url:
+            update_draft(load, pod_url=stored[0]["url"])
             newly_attached = True
         record(kind=SmsKind.POD_MEDIA, body=body or None, media=stored or None,
-               load_id=load.id if load else None,
+               ai_load_id=load.id if load else None,
                error=None if stored else "no media could be saved")
         if body and load is not None:
             _append_note(load, body)
@@ -172,25 +175,25 @@ async def twilio_inbound(request: Request, db: AsyncSession = Depends(get_db)):
     # Plain text reply.
     if load is not None and body:
         _append_note(load, body)
-    record(kind=SmsKind.REPLY, body=body, load_id=load.id if load else None)
+    record(kind=SmsKind.REPLY, body=body, ai_load_id=load.id if load else None)
     await db.commit()
     return _twiml()
 
 
-def _append_note(load: Load, text: str) -> None:
-    stamp = datetime.now(timezone.utc).astimezone(delivery_tz(load.delivery_location)).strftime("%m/%d %I:%M %p")
-    line = f"[Driver text {stamp}] {text[:500]}"
-    load.delivery_notes = f"{load.delivery_notes}\n{line}" if load.delivery_notes else line
+def _append_note(doc: IngestedDocument, text: str) -> None:
+    v = ai_view(doc)
+    stamp = datetime.now(timezone.utc).astimezone(delivery_tz(v.delivery_location)).strftime("%m/%d %I:%M %p")
+    append_note(doc, f"[Driver text {stamp}] {text[:500]}")
 
 
-async def _send_ack(db: AsyncSession, company_id: int, driver: Optional[Driver], phone: str, load: Load) -> None:
+async def _send_ack(db: AsyncSession, company_id: int, driver: Optional[Driver], phone: str, doc: IngestedDocument) -> None:
     from app.services.twilio_service import get_twilio_service
 
-    body = ack_text(load)
+    body = ack_text(ai_view(doc))
     result = await get_twilio_service().send_sms(phone, body)
     ok = bool(result.get("success"))
     db.add(LoadSmsMessage(
-        company_id=company_id, load_id=load.id, driver_id=driver.id if driver else None,
+        company_id=company_id, ai_load_id=doc.id, driver_id=driver.id if driver else None,
         direction="out", kind=SmsKind.POD_ACK, phone=phone, body=body,
         twilio_sid=result.get("message_sid"), status=(result.get("status") or "sent") if ok else "failed",
         error=None if ok else str(result.get("error"))[:1000],

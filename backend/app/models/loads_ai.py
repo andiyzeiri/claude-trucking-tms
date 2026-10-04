@@ -56,6 +56,16 @@ class DocumentStatus:
     FAILED = "failed"
 
 
+# Documents whose draft is shown as an AI load on the Loads AI page.
+# load_created / needs_review predate AI loads being kept off the loads table.
+LIVE_AI_LOAD_STATUSES = (
+    DocumentStatus.AI_LOAD,
+    DocumentStatus.LOAD_CREATED,
+    DocumentStatus.NEEDS_REVIEW,
+    DocumentStatus.EXTRACTED,
+)
+
+
 class InboundEmail(Base):
     """A message pulled from the configured mailbox."""
 

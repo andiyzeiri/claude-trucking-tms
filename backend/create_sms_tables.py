@@ -38,6 +38,9 @@ STATEMENTS = [
     "CREATE UNIQUE INDEX IF NOT EXISTS uq_load_sms_messages_sid ON load_sms_messages (twilio_sid) WHERE twilio_sid IS NOT NULL",
     # Tables created by an earlier version of this script.
     "ALTER TABLE load_sms_messages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ",
+    # Texts are about AI loads (Loads AI page), which live on ingested_documents.
+    "ALTER TABLE load_sms_messages ADD COLUMN IF NOT EXISTS ai_load_id INTEGER REFERENCES ingested_documents(id) ON DELETE SET NULL",
+    "CREATE INDEX IF NOT EXISTS ix_load_sms_messages_ai_load ON load_sms_messages (ai_load_id, direction, kind)",
     "ALTER TABLE drivers ADD COLUMN IF NOT EXISTS sms_opt_out BOOLEAN NOT NULL DEFAULT FALSE",
 ]
 
