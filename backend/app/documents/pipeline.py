@@ -82,6 +82,7 @@ class IngestSummary:
     messages_new: int = 0
     documents_created: int = 0
     duplicates: int = 0
+    retried: int = 0
     unsupported: int = 0
     loads_created: int = 0
     needs_review: int = 0
@@ -98,6 +99,7 @@ class IngestSummary:
             "messages_new": self.messages_new,
             "documents_created": self.documents_created,
             "duplicates": self.duplicates,
+            "retried": self.retried,
             "unsupported": self.unsupported,
             "loads_created": self.loads_created,
             "needs_review": self.needs_review,
@@ -156,13 +158,31 @@ async def _store_attachment(
     """
     Persist one attachment. Returns (document, outcome).
 
-    outcome is one of: created, duplicate, unsupported.
+    outcome is one of: created, retry, duplicate, unsupported.
+
+    "retry" means these exact bytes were seen before but extraction failed
+    (e.g. the API key was missing at the time). Re-sending the document is
+    the natural way for a user to ask for another attempt, so we honour it
+    instead of discarding it as a duplicate.
     """
     content_type = sniff_content_type(attachment.content)
     if content_type is None:
         return None, "unsupported"
 
     digest = hashlib.sha256(attachment.content).hexdigest()
+
+    existing = (
+        await session.execute(
+            select(IngestedDocument).where(
+                IngestedDocument.company_id == company_id,
+                IngestedDocument.sha256 == digest,
+            )
+        )
+    ).scalars().first()
+    if existing is not None:
+        if existing.status == DocumentStatus.FAILED:
+            return existing, "retry"
+        return None, "duplicate"
 
     # Filename is never used to build the key - it is untrusted input.
     s3_key = f"companies/{company_id}/documents/{uuid.uuid4()}"
@@ -187,13 +207,15 @@ async def _store_attachment(
         sha256=digest,
         status=DocumentStatus.RECEIVED,
     )
-    session.add(document)
     try:
-        # Flush rather than commit so the unique constraint is tested now,
-        # and a duplicate can be rolled back without losing the message row.
-        await session.flush()
+        # A savepoint, not session.rollback(): a full rollback would also
+        # discard the not-yet-committed message row and expire every loaded
+        # object, and touching an expired attribute under asyncio raises
+        # MissingGreenlet. Only reachable if a concurrent poll inserted the
+        # same bytes between the lookup above and here.
+        async with session.begin_nested():
+            session.add(document)
     except IntegrityError:
-        await session.rollback()
         return None, "duplicate"
 
     return document, "created"
@@ -351,12 +373,12 @@ async def ingest_message(
         attachment_count=len(message.attachments),
         status=InboundEmailStatus.RECEIVED,
     )
-    session.add(email_row)
     try:
-        await session.flush()
+        # Savepoint for the same reason as in _store_attachment.
+        async with session.begin_nested():
+            session.add(email_row)
     except IntegrityError:
         # Already ingested on an earlier poll. Expected, not an error.
-        await session.rollback()
         return 0
 
     summary.messages_new += 1
@@ -380,14 +402,17 @@ async def ingest_message(
             summary.unsupported += 1
             continue
 
-        created_docs += 1
-        summary.documents_created += 1
+        if outcome == "retry":
+            summary.retried += 1
+        else:
+            created_docs += 1
+            summary.documents_created += 1
         used += 1
         await process_document(session, company_id, document, attachment.content, summary)
 
     email_row.documents_created = created_docs
     email_row.status = (
-        InboundEmailStatus.PROCESSED if created_docs else InboundEmailStatus.SKIPPED
+        InboundEmailStatus.PROCESSED if used else InboundEmailStatus.SKIPPED
     )
     await session.flush()
     return used
@@ -423,7 +448,10 @@ async def run_ingestion(session: AsyncSession) -> IngestSummary:
             f"tenant to file these loads under. Set it on the Loads AI page."
         )
         return summary
-    summary.company_id = company.id
+    # Read once into a plain int: the rollback in the loop below expires
+    # every ORM object, and company.id would then try a lazy reload.
+    company_id = company.id
+    summary.company_id = company_id
 
     reader = ImapMailboxReader(
         host=settings.LOADS_AI_IMAP_HOST,
@@ -455,7 +483,7 @@ async def run_ingestion(session: AsyncSession) -> IngestSummary:
             summary.notes.append("Per-cycle document limit reached; remaining mail stays unread.")
             break
         try:
-            budget -= await ingest_message(session, company.id, message, summary, budget)
+            budget -= await ingest_message(session, company_id, message, summary, budget)
             await session.commit()
         except Exception as e:
             await session.rollback()

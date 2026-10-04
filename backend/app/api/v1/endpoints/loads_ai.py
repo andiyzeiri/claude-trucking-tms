@@ -416,6 +416,7 @@ class IngestSummaryResponse(BaseModel):
     messages_new: int
     documents_created: int
     duplicates: int
+    retried: int = 0
     unsupported: int
     loads_created: int
     needs_review: int
@@ -436,10 +437,11 @@ async def poll_mailbox_now(
     timer does. Returns a summary rather than raising, so a misconfigured
     mailbox reports the reason instead of a 500.
     """
+    # Captured before the run: a rollback inside it expires current_user,
+    # and reading an expired attribute afterwards raises MissingGreenlet.
+    user_id = current_user.id
     summary = await run_ingestion(db)
-    logger.info(
-        "loads-ai: manual poll by user %s -> %s", current_user.id, summary.as_dict()
-    )
+    logger.info("loads-ai: manual poll by user %s -> %s", user_id, summary.as_dict())
     return IngestSummaryResponse(**summary.as_dict())
 
 
