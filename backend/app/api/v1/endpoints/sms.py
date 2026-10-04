@@ -68,7 +68,9 @@ async def _target_load(db: AsyncSession, company_id: int, phone: str) -> Optiona
                 LoadSmsMessage.company_id == company_id,
                 LoadSmsMessage.phone == phone,
                 LoadSmsMessage.direction == "out",
-                LoadSmsMessage.kind.in_(POD_PROMPT_KINDS),
+                # Drivers often reply to the assignment text with the POD
+                # once they've delivered, so that counts as well.
+                LoadSmsMessage.kind.in_(POD_PROMPT_KINDS + (SmsKind.LOAD_ASSIGNED,)),
                 LoadSmsMessage.load_id.isnot(None),
             )
             .order_by(LoadSmsMessage.created_at.desc())
