@@ -2973,6 +2973,14 @@ export default function LoadsAIPageInline() {
                           </span>
                         ) : d.status === 'needs_review' ? (
                           <span className="text-amber-700">needs review</span>
+                        ) : d.status === 'pod_attached' ? (
+                          <span className="inline-flex items-center gap-1 text-green-700">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> POD attached
+                          </span>
+                        ) : d.status === 'pod_unmatched' ? (
+                          <span className="text-amber-700">POD &ndash; not matched</span>
+                        ) : d.status === 'not_a_load' ? (
+                          <span className="text-gray-500">not a load</span>
                         ) : d.status === 'dismissed' ? (
                           <span className="text-gray-500">deleted</span>
                         ) : d.status === 'duplicate' ? (

@@ -25,6 +25,9 @@ export interface IngestSummary {
   retried?: number
   unsupported: number
   loads_created: number
+  pods_attached?: number
+  pods_unmatched?: number
+  not_loads?: number
   needs_review: number
   failed: number
   errors: string[]
@@ -100,6 +103,8 @@ export function usePollMailbox() {
       }
       const bits = [`${s.messages_new} new email(s)`]
       if (s.loads_created) bits.push(`${s.loads_created} AI load(s) added`)
+      if (s.pods_attached) bits.push(`${s.pods_attached} POD(s) attached`)
+      if (s.pods_unmatched) bits.push(`${s.pods_unmatched} POD(s) need matching`)
       if (s.needs_review) bits.push(`${s.needs_review} need review`)
       if (s.duplicates) bits.push(`${s.duplicates} duplicate(s) skipped`)
       toast.success(bits.join(' · '))

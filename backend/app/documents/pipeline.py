@@ -19,6 +19,7 @@ Both are enforced by the database, not by checking first and hoping.
 """
 
 import hashlib
+import re
 import logging
 import uuid
 from dataclasses import dataclass, field
@@ -42,6 +43,7 @@ from app.documents.sources.imap_mailbox import ImapMailboxReader, MailboxError
 from app.models.company import Company
 from app.models.customer import Customer
 from app.models.loads_ai import (
+    LIVE_AI_LOAD_STATUSES,
     DocumentStatus,
     InboundEmail,
     InboundEmailStatus,
@@ -85,6 +87,9 @@ class IngestSummary:
     retried: int = 0
     unsupported: int = 0
     loads_created: int = 0
+    pods_attached: int = 0
+    pods_unmatched: int = 0
+    not_loads: int = 0
     needs_review: int = 0
     failed: int = 0
     errors: List[str] = field(default_factory=list)
@@ -102,6 +107,9 @@ class IngestSummary:
             "retried": self.retried,
             "unsupported": self.unsupported,
             "loads_created": self.loads_created,
+            "pods_attached": self.pods_attached,
+            "pods_unmatched": self.pods_unmatched,
+            "not_loads": self.not_loads,
             "needs_review": self.needs_review,
             "failed": self.failed,
             "errors": self.errors,
@@ -198,6 +206,81 @@ async def _store_attachment(
     return document, "created"
 
 
+def _norm_ref(value) -> str:
+    """Compare reference numbers on letters and digits only: 'PO# 55-21' == 'po5521'."""
+    return re.sub(r"[^A-Za-z0-9]", "", str(value or "")).upper()
+
+
+# AI load fields a POD's printed numbers are matched against.
+_AI_LOAD_REF_FIELDS = ("load_number", "broker_load_number", "bol_number", "po_number", "reference_number")
+
+
+async def _attach_pod_to_ai_load(
+    session: AsyncSession,
+    company_id: int,
+    document: IngestedDocument,
+    classification,
+    summary: IngestSummary,
+) -> None:
+    """
+    Route a proof of delivery to the AI load it belongs to.
+
+    Matched on any reference number printed on the POD against the AI load's
+    load / broker / BOL / PO / reference numbers. An existing POD is never
+    overwritten, and an ambiguous match is left for a person.
+    """
+    refs = {_norm_ref(r) for r in (classification.reference_numbers or [])}
+    refs = {r for r in refs if len(r) >= 4}   # ignore stray short numbers ("1", "53")
+    document.draft = None  # a POD document is not itself an AI load
+
+    candidates = (
+        await session.execute(
+            select(IngestedDocument).where(
+                IngestedDocument.company_id == company_id,
+                IngestedDocument.status.in_(LIVE_AI_LOAD_STATUSES),
+                IngestedDocument.id != document.id,
+                IngestedDocument.draft.isnot(None),
+            )
+        )
+    ).scalars().all()
+    matches = []
+    for doc in candidates:
+        f = doc.draft if isinstance(doc.draft, dict) else {}
+        own = {_norm_ref(f.get(k)) for k in _AI_LOAD_REF_FIELDS if f.get(k)}
+        hit = refs & own
+        if hit:
+            matches.append((doc, sorted(hit)))
+
+    label = lambda d: (d.draft or {}).get("load_number") or (d.draft or {}).get("broker_load_number") or f"#{d.id}"
+    pod_url = f"/api/v1/uploads/s3/{document.s3_key}" if document.s3_key else None
+
+    if len(matches) == 1 and pod_url:
+        target, hit = matches[0]
+        if (target.draft or {}).get("pod_url"):
+            document.status = DocumentStatus.POD_UNMATCHED
+            document.warnings = [f"Proof of delivery for load {label(target)}, which already has a POD - kept the existing one."]
+            summary.pods_unmatched += 1
+        else:
+            merged = dict(target.draft)
+            merged["pod_url"] = pod_url
+            target.draft = merged
+            document.status = DocumentStatus.POD_ATTACHED
+            document.warnings = [f"Attached as the POD for load {label(target)} (matched {', '.join(hit)})."]
+            summary.pods_attached += 1
+            logger.info("loads-ai: POD %s attached to AI load %s", document.original_filename, target.id)
+        return
+
+    document.status = DocumentStatus.POD_UNMATCHED
+    if not pod_url:
+        document.warnings = ["Proof of delivery, but the file could not be stored, so it was not attached."]
+    elif len(matches) > 1:
+        document.warnings = ["Proof of delivery matching more than one load (" + ", ".join(label(d) for d, _ in matches[:5]) + ") - attach it by hand."]
+    else:
+        shown = ", ".join(sorted(classification.reference_numbers or [])[:6]) or "none readable"
+        document.warnings = [f"Proof of delivery, but no AI load matches its numbers ({shown})."]
+    summary.pods_unmatched += 1
+
+
 async def process_document(
     session: AsyncSession,
     company_id: int,
@@ -205,20 +288,47 @@ async def process_document(
     content: bytes,
     summary: IngestSummary,
 ) -> None:
-    """Extract one document and create a load from it where possible."""
+    """
+    Classify one document, then route it:
+
+      rate confirmation (or unclear)  -> a new AI load, with the PDF as its ratecon
+      proof of delivery / signed BOL  -> attached as the POD of the AI load it matches
+      invoice / unsigned BOL / other  -> recorded, no AI load
+    """
     document.status = DocumentStatus.PROCESSING
     document.attempt_count = (document.attempt_count or 0) + 1
     await session.flush()
 
+    doc_bytes = DocumentBytes(
+        content=content,
+        content_type=document.content_type,
+        filename=document.original_filename,
+    )
     try:
         extractor = get_extractor()
-        result = await extractor.extract_ratecon(
-            DocumentBytes(
-                content=content,
-                content_type=document.content_type,
-                filename=document.original_filename,
-            )
-        )
+        classified = await extractor.classify(doc_bytes)
+        c = classified.classification
+        document.doc_type = c.doc_type
+        document.doc_type_confidence = c.confidence
+
+        is_pod = c.doc_type == "pod" or (c.doc_type == "bol" and c.has_signature)
+        if is_pod:
+            document.extraction = {"classification": c.model_dump()}
+            document.ai_provider = classified.usage.provider
+            document.ai_model = classified.usage.model
+            await _attach_pod_to_ai_load(session, company_id, document, c, summary)
+            return
+        if c.doc_type in ("invoice", "bol", "other") and c.confidence >= 0.6:
+            document.extraction = {"classification": c.model_dump()}
+            document.draft = None
+            document.status = DocumentStatus.NOT_A_LOAD
+            document.warnings = [f"Read as {'an invoice' if c.doc_type == 'invoice' else 'an unsigned bill of lading' if c.doc_type == 'bol' else 'other paperwork'} - no load created."]
+            summary.not_loads += 1
+            return
+
+        # Rate confirmation - or genuinely unclear, which is read as one so a
+        # real load is never silently dropped.
+        result = await extractor.extract_ratecon(doc_bytes)
     except (ExtractionError, ExtractionUnavailable) as e:
         document.status = DocumentStatus.FAILED
         document.last_error = str(e)[:2000]

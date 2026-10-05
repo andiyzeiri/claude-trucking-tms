@@ -117,6 +117,21 @@ class DocumentClassification(BaseModel):
     reasoning: Optional[str] = Field(
         default=None, description="One sentence on what identified it."
     )
+    has_signature: bool = Field(
+        default=False,
+        description="True if a handwritten signature (or signed initials) appears, e.g. a receiver/consignee signing for the freight.",
+    )
+    appears_scanned: bool = Field(
+        default=False,
+        description="True if the page looks like a scan or phone photo of paper (skew, shadows, grain, handwriting, stamps) rather than a typed digital PDF.",
+    )
+    reference_numbers: List[str] = Field(
+        default_factory=list,
+        description="Every load, order, PRO, BOL, PO, shipment, confirmation or reference number printed on the document, verbatim, one per entry.",
+    )
+    shipper_name: Optional[str] = Field(default=None, description="Shipper / pickup company, if shown.")
+    consignee_name: Optional[str] = Field(default=None, description="Consignee / receiver company, if shown.")
+    delivery_city_state: Optional[str] = Field(default=None, description="Delivery city and state, e.g. 'Stow, OH', if shown.")
 
 
 class RateconExtraction(BaseModel):
@@ -194,17 +209,32 @@ fuel surcharge and accessorials separately, fill each in as well as the total.
 """
 
 CLASSIFICATION_SYSTEM_PROMPT = """\
-You classify freight documents for a trucking company's TMS.
+You classify freight documents for a trucking company's TMS. The two that \
+matter most are rate confirmations and proofs of delivery, and they must not \
+be confused: a rate confirmation creates a load, a POD closes one.
 
 - "ratecon" is a rate confirmation: a broker's agreement to pay a carrier a \
-stated rate to move a stated load.
-- "pod" is a proof of delivery or signed delivery receipt, usually bearing a \
-receiver's signature.
-- "bol" is a bill of lading.
+stated rate to move a stated load. Usually a typed, digitally generated PDF \
+on broker letterhead titled "Rate Confirmation", "Load Confirmation", \
+"Carrier Confirmation" or "Carrier Agreement", listing a linehaul rate or \
+total pay, pickup and delivery appointments, and terms. It may carry a \
+typed or e-signature from the carrier accepting the rate - that does not \
+make it a POD.
+- "pod" is a proof of delivery: paperwork signed at delivery. Typically a \
+scanned or phone-photographed bill of lading or delivery receipt with a \
+handwritten receiver/consignee signature, often with a date, a "received in \
+good order" line, piece counts, stamps, seal numbers or handwritten notes. \
+A bill of lading that has been signed by the receiver IS a "pod".
+- "bol" is a bill of lading with no receiver's signature (e.g. a blank or \
+shipper-only copy).
 - "invoice" is a bill requesting payment.
 - "other" is a real document of some other kind.
 - "unknown" is for anything you cannot identify, including blank pages, logos, \
 email signatures, and unreadable scans.
+
+Report has_signature and appears_scanned honestly - they are strong evidence \
+for a POD. Always list every reference number you can read; they are used to \
+match a POD to the load it belongs to.
 
 Prefer "unknown" over a low-confidence guess. Downstream code routes unknown \
 documents to a human, which is the correct outcome when the type is unclear.

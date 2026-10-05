@@ -48,6 +48,9 @@ class DocumentStatus:
     EXTRACTED = "extracted"
     AI_LOAD = "ai_load"               # draft is live as an AI load on the Loads AI page
     DISMISSED = "dismissed"           # AI load deleted from the Loads AI page (soft delete)
+    POD_ATTACHED = "pod_attached"     # a proof of delivery, attached to the AI load it matched
+    POD_UNMATCHED = "pod_unmatched"   # a proof of delivery no AI load could be matched to
+    NOT_A_LOAD = "not_a_load"         # invoice / unsigned BOL / other paperwork: no AI load
     # Legacy: rows written before AI loads were separated from the loads table.
     LOAD_CREATED = "load_created"     # a real load was created from this document
     NEEDS_REVIEW = "needs_review"     # extracted but could not be auto-created
