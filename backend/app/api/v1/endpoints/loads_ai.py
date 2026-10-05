@@ -38,6 +38,7 @@ from app.models.load import Load
 from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, DocumentStatus, IngestedDocument
 from app.sms.ai_loads import view as ai_view
 from app.sms.assignment import notify_ai_load_assigned
+from app.documents.unverified import verify_with
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -726,6 +727,9 @@ async def create_ai_load(
         draft=_clean_ai_load_payload(payload),
     )
     db.add(doc)
+    await db.flush()
+    # A ratecon uploaded by hand verifies its Highway notice, like email does.
+    await verify_with(db, current_user.company_id, doc)
     await db.commit()
     await db.refresh(doc)
     new_driver = ai_view(doc).driver_id
@@ -783,5 +787,67 @@ async def delete_ai_load(
     is recognised as a duplicate rather than resurrected.
     """
     doc = await _get_ai_load(db, current_user.company_id, ai_load_id)
+    doc.status = DocumentStatus.DISMISSED
+    await db.commit()
+
+
+# --- Unverified loads (Highway notices awaiting their rate confirmation) -----
+
+class UnverifiedLoadResponse(BaseModel):
+    id: int
+    source: str
+    load_number: Optional[str] = None
+    broker_name: Optional[str] = None
+    broker_contact: Optional[str] = None
+    received_at: Optional[str] = None
+
+
+@router.get("/unverified", response_model=List[UnverifiedLoadResponse])
+async def list_unverified_loads(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Loads announced by a notice (e.g. Highway) whose rate confirmation hasn't arrived yet."""
+    docs = (
+        await db.execute(
+            select(IngestedDocument)
+            .where(
+                IngestedDocument.company_id == current_user.company_id,
+                IngestedDocument.status == DocumentStatus.UNVERIFIED,
+            )
+            .order_by(IngestedDocument.id.desc())
+        )
+    ).scalars().all()
+    return [
+        UnverifiedLoadResponse(
+            id=d.id,
+            source=d.source,
+            load_number=(d.draft or {}).get("broker_load_number"),
+            broker_name=(d.draft or {}).get("broker_name"),
+            broker_contact=(d.draft or {}).get("broker_contact"),
+            received_at=d.created_at.isoformat() if d.created_at else None,
+        )
+        for d in docs
+    ]
+
+
+@router.delete("/unverified/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def dismiss_unverified_load(
+    doc_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Remove an unverified load (e.g. the load fell through). Soft delete."""
+    doc = (
+        await db.execute(
+            select(IngestedDocument).where(
+                IngestedDocument.id == doc_id,
+                IngestedDocument.company_id == current_user.company_id,
+                IngestedDocument.status == DocumentStatus.UNVERIFIED,
+            )
+        )
+    ).scalars().first()
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Unverified load not found.")
     doc.status = DocumentStatus.DISMISSED
     await db.commit()

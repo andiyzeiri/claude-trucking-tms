@@ -234,6 +234,7 @@ class ImapMailboxReader:
                             received_at=received,
                             attachments=attachments,
                             skipped_attachments=skipped,
+                            body_text=body_text(msg),
                         )
                     )
 
@@ -255,3 +256,30 @@ class ImapMailboxReader:
                 conn.logout()
             except Exception:
                 pass
+
+
+def body_text(msg, limit: int = 20000) -> str:
+    """The message body as plain text: text/plain if present, else stripped HTML."""
+    import html as _html
+    import re as _re
+
+    plain, rich = None, None
+    for part in msg.walk():
+        if part.get_content_maintype() == "multipart" or part.get_filename():
+            continue
+        ctype = part.get_content_type()
+        try:
+            payload = part.get_payload(decode=True)
+            if payload is None:
+                continue
+            text = payload.decode(part.get_content_charset() or "utf-8", errors="ignore")
+        except Exception:
+            continue
+        if ctype == "text/plain" and plain is None:
+            plain = text
+        elif ctype == "text/html" and rich is None:
+            rich = text
+    if plain is None and rich is not None:
+        rich = _re.sub(r"<(style|script)[^>]*>.*?</\1>", " ", rich, flags=_re.S | _re.I)
+        plain = _html.unescape(_re.sub(r"<[^>]+>", "\n", rich))
+    return (plain or "")[:limit]

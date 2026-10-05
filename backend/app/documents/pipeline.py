@@ -39,6 +39,8 @@ from app.documents.extraction.base import (
 from app.documents.extraction.registry import get_extractor
 from app.documents.mapping import build_load_draft
 from app.documents.sources.base import SourceAttachment, SourceMessage
+from app.documents.sources.highway import parse_highway_notification
+from app.documents.unverified import record_unverified, verify_with
 from app.documents.sources.imap_mailbox import ImapMailboxReader, MailboxError
 from app.models.company import Company
 from app.models.customer import Customer
@@ -87,6 +89,8 @@ class IngestSummary:
     retried: int = 0
     unsupported: int = 0
     loads_created: int = 0
+    unverified_created: int = 0
+    unverified_verified: int = 0
     pods_attached: int = 0
     pods_unmatched: int = 0
     not_loads: int = 0
@@ -107,6 +111,8 @@ class IngestSummary:
             "retried": self.retried,
             "unsupported": self.unsupported,
             "loads_created": self.loads_created,
+            "unverified_created": self.unverified_created,
+            "unverified_verified": self.unverified_verified,
             "pods_attached": self.pods_attached,
             "pods_unmatched": self.pods_unmatched,
             "not_loads": self.not_loads,
@@ -394,6 +400,10 @@ async def process_document(
     # leaks into invoicing, payroll or reports).
     document.status = DocumentStatus.AI_LOAD
     summary.loads_created += 1
+    # A Highway notice may have announced this load already: verify it.
+    await session.flush()
+    if await verify_with(session, company_id, document):
+        summary.unverified_verified += 1
     logger.info(
         "loads-ai: AI load %s ready from %s (document #%s)",
         draft.get("load_number") or draft.get("broker_load_number") or "(no number)",
@@ -438,6 +448,21 @@ async def ingest_message(
     used = 0
     created_docs = 0
 
+    # Highway sends a notice instead of the rate confirmation. Record it as
+    # an unverified load (rate confirmations inbox / shared inbox only).
+    if mode != "pod":
+        notice = parse_highway_notification(message.subject, message.from_address, message.body_text)
+        if notice is not None:
+            _, outcome = await record_unverified(
+                session, company_id,
+                load_id=notice.load_id, broker_name=notice.broker_name, contact_name=notice.contact_name,
+                source="highway", inbound_email_id=email_row.id,
+            )
+            if outcome == "created":
+                summary.unverified_created += 1
+                created_docs += 1
+            logger.info("loads-ai: Highway notice for load %s (%s): %s", notice.load_id, notice.broker_name, outcome)
+
     for attachment in message.attachments:
         if used >= remaining_documents:
             summary.notes.append(
@@ -468,7 +493,7 @@ async def ingest_message(
 
     email_row.documents_created = created_docs
     email_row.status = (
-        InboundEmailStatus.PROCESSED if used else InboundEmailStatus.SKIPPED
+        InboundEmailStatus.PROCESSED if (used or created_docs) else InboundEmailStatus.SKIPPED
     )
     await session.flush()
     return used

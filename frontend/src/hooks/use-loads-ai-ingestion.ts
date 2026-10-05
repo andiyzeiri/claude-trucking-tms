@@ -29,6 +29,8 @@ export interface IngestSummary {
   retried?: number
   unsupported: number
   loads_created: number
+  unverified_created?: number
+  unverified_verified?: number
   pods_attached?: number
   pods_unmatched?: number
   not_loads?: number
@@ -92,6 +94,7 @@ export function usePollMailbox() {
       // New AI loads appear in the Loads AI table. The real loads table is
       // never touched by ingestion, so ['loads'] is deliberately left alone.
       queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY })
+      queryClient.invalidateQueries({ queryKey: UNVERIFIED_KEY })
 
       if (s.errors.length) {
         toast.error(s.errors[0])
@@ -107,6 +110,7 @@ export function usePollMailbox() {
       }
       const bits = [`${s.messages_new} new email(s)`]
       if (s.loads_created) bits.push(`${s.loads_created} AI load(s) added`)
+      if (s.unverified_created) bits.push(`${s.unverified_created} Highway load(s) waiting for ratecon`)
       if (s.pods_attached) bits.push(`${s.pods_attached} POD(s) attached`)
       if (s.pods_unmatched) bits.push(`${s.pods_unmatched} POD(s) need matching`)
       if (s.needs_review) bits.push(`${s.needs_review} need review`)
@@ -172,7 +176,11 @@ export function useCreateAILoad() {
       const response = await api.post('/v1/loads-ai/loads', data)
       return response.data
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY }),
+    // An uploaded ratecon can verify a Highway notice, so refresh both tables.
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY })
+      queryClient.invalidateQueries({ queryKey: UNVERIFIED_KEY })
+    },
   })
 }
 
@@ -194,5 +202,40 @@ export function useDeleteAILoad() {
       await api.delete(`/v1/loads-ai/loads/${id}`)
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY }),
+  })
+}
+
+// --- Unverified loads ---------------------------------------------------
+// Loads announced by a Highway notice whose rate confirmation hasn't arrived.
+// Verified automatically when a ratecon with the same load number comes in.
+
+export const UNVERIFIED_KEY = ['loads-ai-unverified'] as const
+
+export interface UnverifiedLoad {
+  id: number
+  source: string
+  load_number: string | null
+  broker_name: string | null
+  broker_contact: string | null
+  received_at: string | null
+}
+
+export function useUnverifiedLoads() {
+  return useQuery({
+    queryKey: UNVERIFIED_KEY,
+    queryFn: async (): Promise<UnverifiedLoad[]> => (await api.get('/v1/loads-ai/unverified')).data,
+    retry: false,
+  })
+}
+
+export function useDismissUnverified() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number) => { await api.delete(`/v1/loads-ai/unverified/${id}`) },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: UNVERIFIED_KEY })
+      toast.success('Unverified load removed')
+    },
+    onError: () => toast.error('Could not remove the unverified load'),
   })
 }

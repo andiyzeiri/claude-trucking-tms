@@ -34,3 +34,6 @@ class SourceMessage:
     # Attachments seen but discarded (logos, signatures, unreadable types),
     # kept as a count so the audit trail explains what was ignored.
     skipped_attachments: int = 0
+    # Plain text of the message body (HTML stripped), for notification emails
+    # that carry information but no attachment (e.g. Highway load notices).
+    body_text: str = ""

@@ -51,6 +51,8 @@ class DocumentStatus:
     POD_ATTACHED = "pod_attached"     # a proof of delivery, attached to the AI load it matched
     POD_UNMATCHED = "pod_unmatched"   # a proof of delivery no AI load could be matched to
     NOT_A_LOAD = "not_a_load"         # invoice / unsigned BOL / other paperwork: no AI load
+    UNVERIFIED = "unverified"         # load known from a notice (Highway) - waiting for its rate confirmation
+    VERIFIED = "verified"             # unverified load whose rate confirmation arrived (now an AI load)
     # Legacy: rows written before AI loads were separated from the loads table.
     LOAD_CREATED = "load_created"     # a real load was created from this document
     NEEDS_REVIEW = "needs_review"     # extracted but could not be auto-created

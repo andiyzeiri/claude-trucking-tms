@@ -41,6 +41,8 @@ import {
   useDeleteAILoad,
   type AILoad,
   type CustomerMatch,
+  useUnverifiedLoads,
+  useDismissUnverified,
 } from '@/hooks/use-loads-ai-ingestion'
 
 interface EditableLoad extends Load {
@@ -457,6 +459,8 @@ export default function LoadsAIPageInline() {
 
   // --- Automatic email ingestion -----------------------------------------
   const { data: ingestionStatus } = useIngestionStatus()
+  const { data: unverifiedLoads } = useUnverifiedLoads()
+  const dismissUnverified = useDismissUnverified()
   const { data: ingestedDocs, refetch: refetchIngested } = useIngestedDocuments()
   const { pollMailbox, isPolling } = usePollMailbox()
 
@@ -3063,6 +3067,60 @@ export default function LoadsAIPageInline() {
             </div>
           )}
         </div>
+
+        {/* Unverified loads: Highway notices waiting for their rate confirmation */}
+        {unverifiedLoads && unverifiedLoads.length > 0 && (
+          <div className="rounded-lg border" style={{ backgroundColor: 'var(--monday-bg-primary)', borderColor: '#F59E0B' }}>
+            <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 pt-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                Unverified loads ({unverifiedLoads.length})
+              </h3>
+              <p className="text-xs" style={{ color: 'var(--monday-text-secondary)' }}>
+                From Highway notices. Each moves to the table below when its rate confirmation arrives.
+              </p>
+            </div>
+            <div className="overflow-x-auto px-4 pb-3 pt-2">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs" style={{ color: 'var(--monday-text-secondary)' }}>
+                    <th className="py-1.5 pr-4 font-medium">Load #</th>
+                    <th className="py-1.5 pr-4 font-medium">Broker</th>
+                    <th className="py-1.5 pr-4 font-medium">Contact</th>
+                    <th className="py-1.5 pr-4 font-medium">Received</th>
+                    <th className="py-1.5 font-medium">Source</th>
+                    <th className="py-1.5" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {unverifiedLoads.map(u => (
+                    <tr key={u.id} className="border-t" style={{ borderColor: 'var(--monday-border-light)' }}>
+                      <td className="py-2 pr-4 font-semibold" style={{ color: '#69140E' }}>{u.load_number || '—'}</td>
+                      <td className="py-2 pr-4">{u.broker_name || '—'}</td>
+                      <td className="py-2 pr-4" style={{ color: 'var(--monday-text-secondary)' }}>{u.broker_contact || '—'}</td>
+                      <td className="py-2 pr-4 whitespace-nowrap" style={{ color: 'var(--monday-text-secondary)' }}>
+                        {u.received_at ? new Date(u.received_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'}
+                      </td>
+                      <td className="py-2 pr-4">
+                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">Highway &middot; awaiting ratecon</span>
+                      </td>
+                      <td className="py-2 text-right">
+                        <button
+                          type="button"
+                          title="Remove (load fell through)"
+                          onClick={() => dismissUnverified.mutate(u.id)}
+                          className="rounded p-1 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Year Tabs */}
         <div className="flex items-center gap-2 border-b overflow-x-auto" style={{ borderColor: 'var(--monday-border-light)' }}>
