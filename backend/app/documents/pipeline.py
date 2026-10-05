@@ -568,11 +568,17 @@ async def run_ingestion(session: AsyncSession) -> IngestSummary:
     # Read once into a plain int: the rollback in the loop below expires
     # every ORM object, and company.id would then try a lazy reload.
     company_id = company.id
+    pod_setting = (company.loads_ai_pod_email or "").strip().lower()
     summary.company_id = company_id
 
     pod_mailbox = (settings.LOADS_AI_POD_IMAP_USERNAME or "").strip()
     pod_password = settings.LOADS_AI_POD_IMAP_PASSWORD
-    has_pod_inbox = bool(pod_mailbox and pod_password)
+    # Read pods@ only once it is both connected (credentials) and named as
+    # this company's POD inbox on the Loads AI page - the same opt-in the
+    # rate confirmations inbox requires.
+    has_pod_inbox = bool(pod_mailbox and pod_password and pod_setting == pod_mailbox.lower())
+    if pod_mailbox and pod_password and not has_pod_inbox:
+        summary.notes.append(f"{pod_mailbox} is connected but not set as the POD inbox on the Loads AI page.")
     if has_pod_inbox:
         summary.mailbox = f"{mailbox}, {pod_mailbox}"
 

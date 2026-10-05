@@ -39,7 +39,12 @@ async def add_loads_ai_email_column():
             ALTER TABLE companies
             ADD COLUMN IF NOT EXISTS loads_ai_source_email VARCHAR
         """)
-        print("✓ companies.loads_ai_source_email ready")
+        # The driver POD inbox (pods@), shown next to the ratecons inbox.
+        await conn.execute("""
+            ALTER TABLE companies
+            ADD COLUMN IF NOT EXISTS loads_ai_pod_email VARCHAR
+        """)
+        print("✓ companies.loads_ai_source_email / loads_ai_pod_email ready")
     except Exception as e:
         print(f"⚠️ Error adding loads_ai_source_email: {e}")
     finally:

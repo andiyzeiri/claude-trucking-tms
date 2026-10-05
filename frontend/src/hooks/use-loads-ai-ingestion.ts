@@ -13,6 +13,10 @@ export interface IngestionStatus {
   mailbox_matches_company: boolean
   /** Human-readable reasons ingestion can't run. Empty means it's ready. */
   blockers: string[]
+  pod_mailbox?: string | null
+  pod_credentials_configured?: boolean
+  pod_mailbox_matches_company?: boolean
+  pod_blockers?: string[]
 }
 
 export interface IngestSummary {

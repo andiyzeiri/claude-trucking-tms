@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from fastapi.encoders import jsonable_encoder
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -121,7 +122,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         pass
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"detail": exc.errors()},
+        # jsonable_encoder: a field_validator's ValueError rides along in each
+        # error's "ctx", and raw json.dumps can't serialise it - which turned
+        # every validation message (e.g. "Invalid email address") into a 500.
+        content={"detail": jsonable_encoder(exc.errors())},
         headers={
             "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
             "Access-Control-Allow-Credentials": "true",

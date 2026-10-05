@@ -48,7 +48,8 @@ router = APIRouter()
 class LoadsAISettingsResponse(BaseModel):
     """Current Loads AI configuration for the caller's company."""
 
-    source_email: Optional[str] = None
+    source_email: Optional[str] = None   # rate confirmations inbox
+    pod_email: Optional[str] = None      # driver POD inbox
 
     class Config:
         from_attributes = True
@@ -56,8 +57,9 @@ class LoadsAISettingsResponse(BaseModel):
 
 class LoadsAISettingsUpdate(BaseModel):
     source_email: Optional[str] = None
+    pod_email: Optional[str] = None
 
-    @field_validator("source_email", mode="before")
+    @field_validator("source_email", "pod_email", mode="before")
     @classmethod
     def normalize_source_email(cls, v):
         """
@@ -101,7 +103,7 @@ async def get_loads_ai_settings(
 ):
     """Read the Loads AI source mailbox for the caller's company."""
     company = await _get_company(db, current_user.company_id)
-    return LoadsAISettingsResponse(source_email=company.loads_ai_source_email)
+    return LoadsAISettingsResponse(source_email=company.loads_ai_source_email, pod_email=company.loads_ai_pod_email)
 
 
 @router.put("/settings", response_model=LoadsAISettingsResponse)
@@ -126,11 +128,15 @@ async def update_loads_ai_settings(
             company.loads_ai_source_email,
             current_user.id,
         )
+    if "pod_email" in payload:
+        logger.info("loads-ai: company %s POD mailbox %r -> %r (by user %s)",
+                    company.id, company.loads_ai_pod_email, payload["pod_email"], current_user.id)
+        company.loads_ai_pod_email = payload["pod_email"]
 
     await db.commit()
     await db.refresh(company)
 
-    return LoadsAISettingsResponse(source_email=company.loads_ai_source_email)
+    return LoadsAISettingsResponse(source_email=company.loads_ai_source_email, pod_email=company.loads_ai_pod_email)
 
 
 # ---------------------------------------------------------------------------
@@ -362,6 +368,11 @@ class IngestionStatusResponse(BaseModel):
     poll_minutes: int
     mailbox_matches_company: bool
     blockers: List[str]
+    # Driver POD inbox
+    pod_mailbox: Optional[str] = None
+    pod_credentials_configured: bool = False
+    pod_mailbox_matches_company: bool = False
+    pod_blockers: List[str] = []
 
 
 @router.get("/ingestion-status", response_model=IngestionStatusResponse)
@@ -394,13 +405,30 @@ async def ingestion_status(
         matches = company is not None and company.id == current_user.company_id
         if company is None:
             blockers.append(
-                f"No company has {mailbox} as its Source mailbox - set it in the field above."
+                f"Enter {mailbox} in the rate confirmations inbox field above to start reading it."
             )
         elif company.id != current_user.company_id:
             blockers.append(f"{mailbox} is claimed by a different company.")
 
+    pod_mailbox = (settings.LOADS_AI_POD_IMAP_USERNAME or "").strip() or None
+    pod_creds = bool(pod_mailbox and settings.LOADS_AI_POD_IMAP_PASSWORD)
+    pod_blockers: List[str] = []
+    company_row = await _get_company(db, current_user.company_id)
+    pod_setting = (company_row.loads_ai_pod_email or "").strip().lower()
+    pod_matches = bool(pod_mailbox and pod_setting == pod_mailbox.lower())
+    if not pod_mailbox:
+        pod_blockers.append("No POD inbox is connected yet (run the setup script with MAILBOX_KIND=pod).")
+    elif not settings.LOADS_AI_POD_IMAP_PASSWORD:
+        pod_blockers.append("The POD inbox has no App Password stored.")
+    elif not pod_matches:
+        pod_blockers.append(f"Enter {pod_mailbox} in the POD inbox field above to start reading it.")
+
     return IngestionStatusResponse(
         enabled=settings.LOADS_AI_INGESTION_ENABLED,
+        pod_mailbox=pod_mailbox,
+        pod_credentials_configured=pod_creds,
+        pod_mailbox_matches_company=pod_matches,
+        pod_blockers=pod_blockers,
         mailbox=mailbox,
         credentials_configured=creds,
         extraction_configured=bool(settings.ANTHROPIC_API_KEY),

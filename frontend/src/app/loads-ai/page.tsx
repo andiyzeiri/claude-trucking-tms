@@ -25,6 +25,7 @@ import { DedicatedLanesPanel } from '@/components/dedicated-lanes/dedicated-lane
 import api from '@/lib/api'
 import { useAuth } from '@/hooks/use-auth'
 import { useLoadsAISettings } from '@/hooks/use-loads-ai-settings'
+import { InboxField } from '@/components/loads-ai/inbox-field'
 import {
   useExtractDocument,
   extractionErrorMessage,
@@ -395,37 +396,15 @@ export default function LoadsAIPageInline() {
   )
   // ---------------------------------------------------------------------
 
-  // Source mailbox Loads AI will draw loads from (stored on the company).
+  // The two Loads AI inboxes (stored on the company): rate confirmations
+  // (ratecons@, new AI loads) and driver PODs (pods@, filed on AI loads).
   const {
     sourceEmail,
-    isLoading: isLoadingSourceEmail,
+    podEmail,
+    isLoading: isLoadingInboxes,
     updateSettings,
-    isUpdating: isSavingSourceEmail,
+    isUpdating: isSavingInbox,
   } = useLoadsAISettings()
-  const [sourceEmailDraft, setSourceEmailDraft] = useState('')
-  // Tracks whether the user has started editing, so the seeding effect below
-  // never overwrites what they are typing when the query refetches.
-  const [sourceEmailTouched, setSourceEmailTouched] = useState(false)
-
-  useEffect(() => {
-    if (!sourceEmailTouched) {
-      setSourceEmailDraft(sourceEmail ?? '')
-    }
-  }, [sourceEmail, sourceEmailTouched])
-
-  const sourceEmailDirty = sourceEmailDraft.trim() !== (sourceEmail ?? '')
-
-  const handleSaveSourceEmail = async () => {
-    try {
-      // Empty clears the setting; the backend normalizes '' to null.
-      await updateSettings({ source_email: sourceEmailDraft.trim() || null })
-      // Hand control back to the effect so the field shows the saved,
-      // normalized address returned by the server.
-      setSourceEmailTouched(false)
-    } catch {
-      // Error toast is raised by the hook; keep the draft so it can be fixed.
-    }
-  }
 
   // --- Document extraction -----------------------------------------------
   const { extractDocument, isExtracting } = useExtractDocument()
@@ -2846,62 +2825,44 @@ export default function LoadsAIPageInline() {
           </div>
         </div>
 
-        {/* Loads AI source mailbox */}
-        <div
-          className="rounded-lg border p-3 md:p-4"
-          style={{ backgroundColor: 'var(--monday-bg-primary)', borderColor: 'var(--monday-border-light)' }}
-        >
-          <label
-            htmlFor="loads-ai-source-email"
-            className="flex items-center gap-2 text-sm font-medium"
-            style={{ color: 'var(--monday-text-primary)' }}
-          >
-            <Mail className="h-4 w-4" />
-            Source mailbox
-          </label>
-
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Input
-              id="loads-ai-source-email"
-              type="email"
-              inputMode="email"
-              autoComplete="off"
-              spellCheck={false}
-              placeholder={isLoadingSourceEmail ? 'Loading…' : 'docs@yourcompany.com'}
-              disabled={isLoadingSourceEmail || isSavingSourceEmail}
-              value={sourceEmailDraft}
-              onChange={(e) => {
-                setSourceEmailTouched(true)
-                setSourceEmailDraft(e.target.value)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && sourceEmailDirty && !isSavingSourceEmail) {
-                  handleSaveSourceEmail()
-                }
-              }}
-              className="w-full sm:w-80"
-              style={{ backgroundColor: 'var(--monday-bg-primary)', borderColor: 'var(--monday-border-light)' }}
-            />
-            <Button
-              onClick={handleSaveSourceEmail}
-              disabled={!sourceEmailDirty || isLoadingSourceEmail || isSavingSourceEmail}
-              className="sm:w-24"
-            >
-              {isSavingSourceEmail ? 'Saving…' : 'Save'}
-            </Button>
-          </div>
-
-          <p className="mt-2 text-xs" style={{ color: 'var(--monday-text-secondary)' }}>
-            {sourceEmail ? (
-              <>
-                Loads AI will draw loads from{' '}
-                <span className="font-medium">{sourceEmail}</span>. Clear the field and save to remove it.
-              </>
-            ) : (
-              <>Set the inbox Loads AI should draw loads from.</>
-            )}{' '}
-            <span className="font-medium">Ingestion is not connected yet</span> — this only saves the address.
-          </p>
+        {/* Loads AI inboxes: rate confirmations and driver PODs */}
+        <div className="grid gap-3 md:grid-cols-2">
+          <InboxField
+            id="loads-ai-ratecon-email"
+            label="Rate confirmations inbox"
+            description="Each rate confirmation emailed here becomes an AI load, with the PDF as its ratecon."
+            icon={<Mail className="h-4 w-4" />}
+            value={sourceEmail}
+            loading={isLoadingInboxes}
+            saving={isSavingInbox}
+            placeholder="ratecons@absolutetrucking.net"
+            onSave={(v) => updateSettings({ source_email: v })}
+            status={
+              !ingestionStatus
+                ? null
+                : ingestionStatus.enabled && ingestionStatus.credentials_configured && ingestionStatus.mailbox_matches_company
+                ? { ok: true, text: `Connected · read every ${ingestionStatus.poll_minutes} min` }
+                : { ok: false, text: ingestionStatus.blockers[0] || 'Not connected yet' }
+            }
+          />
+          <InboxField
+            id="loads-ai-pod-email"
+            label="Proof of delivery inbox"
+            description="Each POD drivers email here is attached to its AI load, matched by load number or by the driver who sent it."
+            icon={<Inbox className="h-4 w-4" />}
+            value={podEmail}
+            loading={isLoadingInboxes}
+            saving={isSavingInbox}
+            placeholder="pods@absolutetrucking.net"
+            onSave={(v) => updateSettings({ pod_email: v })}
+            status={
+              !ingestionStatus
+                ? null
+                : ingestionStatus.enabled && ingestionStatus.pod_credentials_configured && ingestionStatus.pod_mailbox_matches_company
+                ? { ok: true, text: `Connected · read every ${ingestionStatus.poll_minutes} min` }
+                : { ok: false, text: (ingestionStatus.pod_blockers && ingestionStatus.pod_blockers[0]) || 'Not connected yet' }
+            }
+          />
         </div>
 
         {/* Automatic email ingestion */}

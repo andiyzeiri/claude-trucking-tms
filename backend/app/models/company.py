@@ -19,7 +19,8 @@ class Company(Base):
     # Loads AI: the mailbox that the document pipeline draws loads from.
     # Per-company so each tenant points at its own intake address. Nullable -
     # Loads AI simply has no source configured until someone sets one.
-    loads_ai_source_email = Column(String, nullable=True)
+    loads_ai_source_email = Column(String, nullable=True)   # rate confirmations inbox
+    loads_ai_pod_email = Column(String, nullable=True)      # driver POD inbox
 
     # Relationships
     users = relationship("User", back_populates="company")
