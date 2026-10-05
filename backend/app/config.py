@@ -141,6 +141,11 @@ class Settings(BaseSettings):
     # Gmail requires an App Password here, not the account password.
     # Supply via LOADS_AI_IMAP_SECRET_JSON in production.
     LOADS_AI_IMAP_PASSWORD: Optional[str] = None
+    # Driver POD inbox (pods@). Everything that arrives here is filed as a
+    # proof of delivery on the AI load it matches; nothing creates a load.
+    # Supply via LOADS_AI_POD_IMAP_SECRET_JSON in production.
+    LOADS_AI_POD_IMAP_USERNAME: Optional[str] = None
+    LOADS_AI_POD_IMAP_PASSWORD: Optional[str] = None
     LOADS_AI_IMAP_FOLDER: str = "INBOX"
 
     # How often the poller runs, and how much work one cycle may do. The
@@ -233,6 +238,17 @@ class Settings(BaseSettings):
                 print("✓ Loaded Loads AI mailbox credentials from LOADS_AI_IMAP_SECRET_JSON")
             except (json.JSONDecodeError, KeyError) as e:
                 print(f"⚠ Warning: Failed to parse LOADS_AI_IMAP_SECRET_JSON: {e}")
+
+        # Parse the driver POD mailbox credentials if present.
+        pod_imap_json = os.getenv("LOADS_AI_POD_IMAP_SECRET_JSON")
+        if pod_imap_json:
+            try:
+                pod = json.loads(pod_imap_json)
+                self.LOADS_AI_POD_IMAP_USERNAME = pod.get("username") or self.LOADS_AI_POD_IMAP_USERNAME
+                self.LOADS_AI_POD_IMAP_PASSWORD = pod.get("password") or self.LOADS_AI_POD_IMAP_PASSWORD
+                print("✓ Loaded Loads AI POD mailbox credentials from LOADS_AI_POD_IMAP_SECRET_JSON")
+            except json.JSONDecodeError as e:
+                print(f"⚠ Warning: Failed to parse LOADS_AI_POD_IMAP_SECRET_JSON: {e}")
 
         # Parse Twilio credentials if present.
         # Accepts {"account_sid", "auth_token", "messaging_service_sid", "phone_number"}.

@@ -221,6 +221,7 @@ async def _attach_pod_to_ai_load(
     document: IngestedDocument,
     classification,
     summary: IngestSummary,
+    sender: Optional[str] = None,
 ) -> None:
     """
     Route a proof of delivery to the AI load it belongs to.
@@ -253,6 +254,21 @@ async def _attach_pod_to_ai_load(
 
     label = lambda d: (d.draft or {}).get("load_number") or (d.draft or {}).get("broker_load_number") or f"#{d.id}"
     pod_url = f"/api/v1/uploads/s3/{document.s3_key}" if document.s3_key else None
+
+    # No number on the paper matched: fall back to who sent it. A driver
+    # emailing pods@ is almost always sending the POD for the load they just
+    # delivered, i.e. their most recent AI load still missing one.
+    if not matches and sender:
+        driver = await _driver_by_email(session, company_id, sender)
+        if driver is not None:
+            mine = []
+            for doc in candidates:
+                f = doc.draft if isinstance(doc.draft, dict) else {}
+                if str(f.get("driver_id") or "") == str(driver.id) and not f.get("pod_url") and f.get("status") != "invoiced":
+                    mine.append(doc)
+            if mine:
+                mine.sort(key=lambda d: str((d.draft or {}).get("delivery_date") or ""), reverse=True)
+                matches = [(mine[0], [f"sender {driver.first_name} {driver.last_name}".strip()])]
 
     if len(matches) == 1 and pod_url:
         target, hit = matches[0]
@@ -287,9 +303,15 @@ async def process_document(
     document: IngestedDocument,
     content: bytes,
     summary: IngestSummary,
+    mode: str = "auto",
+    sender: Optional[str] = None,
 ) -> None:
     """
-    Classify one document, then route it:
+    Route one document by the inbox it came from:
+
+      mode "ratecon" (ratecons@)  -> always a new AI load
+      mode "pod"     (pods@)      -> always filed as a POD on the matching AI load
+      mode "auto"    (one shared inbox) -> classified, then routed as below
 
       rate confirmation (or unclear)  -> a new AI load, with the PDF as its ratecon
       proof of delivery / signed BOL  -> attached as the POD of the AI load it matches
@@ -306,19 +328,25 @@ async def process_document(
     )
     try:
         extractor = get_extractor()
-        classified = await extractor.classify(doc_bytes)
-        c = classified.classification
-        document.doc_type = c.doc_type
-        document.doc_type_confidence = c.confidence
+        if mode == "ratecon":
+            # The ratecons inbox only receives rate confirmations; no need to ask.
+            result = await extractor.extract_ratecon(doc_bytes)
+            document.doc_type = "ratecon"
+            c = None
+        else:
+            classified = await extractor.classify(doc_bytes)
+            c = classified.classification
+            document.doc_type = c.doc_type
+            document.doc_type_confidence = c.confidence
 
-        is_pod = c.doc_type == "pod" or (c.doc_type == "bol" and c.has_signature)
+        is_pod = c is not None and (mode == "pod" or c.doc_type == "pod" or (c.doc_type == "bol" and c.has_signature))
         if is_pod:
             document.extraction = {"classification": c.model_dump()}
             document.ai_provider = classified.usage.provider
             document.ai_model = classified.usage.model
-            await _attach_pod_to_ai_load(session, company_id, document, c, summary)
+            await _attach_pod_to_ai_load(session, company_id, document, c, summary, sender=sender)
             return
-        if c.doc_type in ("invoice", "bol", "other") and c.confidence >= 0.6:
+        if c is not None and c.doc_type in ("invoice", "bol", "other") and c.confidence >= 0.6:
             document.extraction = {"classification": c.model_dump()}
             document.draft = None
             document.status = DocumentStatus.NOT_A_LOAD
@@ -328,7 +356,8 @@ async def process_document(
 
         # Rate confirmation - or genuinely unclear, which is read as one so a
         # real load is never silently dropped.
-        result = await extractor.extract_ratecon(doc_bytes)
+        if c is not None:
+            result = await extractor.extract_ratecon(doc_bytes)
     except (ExtractionError, ExtractionUnavailable) as e:
         document.status = DocumentStatus.FAILED
         document.last_error = str(e)[:2000]
@@ -379,6 +408,7 @@ async def ingest_message(
     message: SourceMessage,
     summary: IngestSummary,
     remaining_documents: int,
+    mode: str = "auto",
 ) -> int:
     """
     Record one message and process its attachments.
@@ -431,7 +461,10 @@ async def ingest_message(
             created_docs += 1
             summary.documents_created += 1
         used += 1
-        await process_document(session, company_id, document, attachment.content, summary)
+        await process_document(
+            session, company_id, document, attachment.content, summary,
+            mode=mode, sender=message.from_address,
+        )
 
     email_row.documents_created = created_docs
     email_row.status = (
@@ -439,6 +472,67 @@ async def ingest_message(
     )
     await session.flush()
     return used
+
+
+async def _driver_by_email(session: AsyncSession, company_id: int, sender: str):
+    """The company's driver whose email is this message's sender, if any."""
+    from email.utils import parseaddr
+
+    from app.models.driver import Driver
+
+    address = (parseaddr(sender or "")[1] or "").strip().lower()
+    if not address:
+        return None
+    return (
+        await session.execute(
+            select(Driver).where(Driver.company_id == company_id, func.lower(Driver.email) == address)
+        )
+    ).scalars().first()
+
+
+async def _poll_mailbox(
+    session: AsyncSession,
+    company_id: int,
+    username: str,
+    password: str,
+    mode: str,
+    summary: IngestSummary,
+    budget: int,
+) -> int:
+    """Read one inbox and process its unread mail. Returns the remaining document budget."""
+    reader = ImapMailboxReader(
+        host=settings.LOADS_AI_IMAP_HOST,
+        port=settings.LOADS_AI_IMAP_PORT,
+        username=username,
+        password=password,
+        folder=settings.LOADS_AI_IMAP_FOLDER,
+    )
+    try:
+        # imaplib is blocking; keep it off the event loop.
+        messages = await run_in_threadpool(reader.fetch_unseen, settings.LOADS_AI_MAX_MESSAGES_PER_POLL)
+    except MailboxError as e:
+        summary.errors.append(f"{username}: {e}")
+        logger.warning("loads-ai: %s: %s", username, e)
+        return budget
+    except Exception as e:
+        summary.errors.append(f"{username}: unexpected mailbox error: {e}")
+        logger.exception("loads-ai: unexpected mailbox error (%s)", username)
+        return budget
+
+    summary.messages_seen += len(messages)
+    for message in messages:
+        if budget <= 0:
+            summary.notes.append("Per-cycle document limit reached; remaining mail stays unread.")
+            break
+        try:
+            budget -= await ingest_message(session, company_id, message, summary, budget, mode=mode)
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
+            summary.failed += 1
+            summary.errors.append(f"{message.subject!r}: {e}")
+            logger.exception("loads-ai: failed ingesting message %s", message.message_id)
+    return budget
 
 
 async def run_ingestion(session: AsyncSession) -> IngestSummary:
@@ -476,43 +570,20 @@ async def run_ingestion(session: AsyncSession) -> IngestSummary:
     company_id = company.id
     summary.company_id = company_id
 
-    reader = ImapMailboxReader(
-        host=settings.LOADS_AI_IMAP_HOST,
-        port=settings.LOADS_AI_IMAP_PORT,
-        username=mailbox,
-        password=password,
-        folder=settings.LOADS_AI_IMAP_FOLDER,
-    )
+    pod_mailbox = (settings.LOADS_AI_POD_IMAP_USERNAME or "").strip()
+    pod_password = settings.LOADS_AI_POD_IMAP_PASSWORD
+    has_pod_inbox = bool(pod_mailbox and pod_password)
+    if has_pod_inbox:
+        summary.mailbox = f"{mailbox}, {pod_mailbox}"
 
-    try:
-        # imaplib is blocking; keep it off the event loop.
-        messages = await run_in_threadpool(
-            reader.fetch_unseen, settings.LOADS_AI_MAX_MESSAGES_PER_POLL
-        )
-    except MailboxError as e:
-        summary.errors.append(str(e))
-        logger.warning("loads-ai: %s", e)
-        return summary
-    except Exception as e:
-        summary.errors.append(f"Unexpected mailbox error: {e}")
-        logger.exception("loads-ai: unexpected mailbox error")
-        return summary
-
-    summary.messages_seen = len(messages)
     budget = settings.LOADS_AI_MAX_DOCUMENTS_PER_POLL
-
-    for message in messages:
-        if budget <= 0:
-            summary.notes.append("Per-cycle document limit reached; remaining mail stays unread.")
-            break
-        try:
-            budget -= await ingest_message(session, company_id, message, summary, budget)
-            await session.commit()
-        except Exception as e:
-            await session.rollback()
-            summary.failed += 1
-            summary.errors.append(f"{message.subject!r}: {e}")
-            logger.exception("loads-ai: failed ingesting message %s", message.message_id)
+    # With a dedicated pods inbox, the main inbox is rate confirmations only;
+    # with a single shared inbox, each document is classified.
+    budget = await _poll_mailbox(
+        session, company_id, mailbox, password, "ratecon" if has_pod_inbox else "auto", summary, budget
+    )
+    if has_pod_inbox:
+        await _poll_mailbox(session, company_id, pod_mailbox, pod_password, "pod", summary, budget)
 
     logger.info("loads-ai: ingestion cycle %s", summary.as_dict())
     return summary

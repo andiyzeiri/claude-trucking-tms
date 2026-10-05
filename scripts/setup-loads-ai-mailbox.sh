@@ -20,17 +20,29 @@
 #
 #   ./scripts/setup-loads-ai-mailbox.sh --yes   # skip the confirmation prompt
 #
+#   For the driver POD inbox, prefix with MAILBOX_KIND=pod.
+#
 # Re-run it to rotate the app password.
 
 set -euo pipefail
 
 AWS_REGION="${AWS_REGION:-us-east-1}"
-SECRET_NAME="${SECRET_NAME:-trucking-tms/loads-ai-mailbox}"
+# Two mailboxes: rate confirmations (new AI loads) and driver PODs.
+#   ./scripts/setup-loads-ai-mailbox.sh                    -> ratecons mailbox
+#   MAILBOX_KIND=pod ./scripts/setup-loads-ai-mailbox.sh   -> pods mailbox
+MAILBOX_KIND="${MAILBOX_KIND:-ratecon}"
+if [ "$MAILBOX_KIND" = "pod" ]; then
+  SECRET_NAME="${SECRET_NAME:-trucking-tms/loads-ai-pod-mailbox}"
+  SECRET_ENV_NAME="LOADS_AI_POD_IMAP_SECRET_JSON"
+  POLICY_NAME="trucking-tms-loads-ai-pod-mailbox-read"
+else
+  SECRET_NAME="${SECRET_NAME:-trucking-tms/loads-ai-mailbox}"
+  SECRET_ENV_NAME="LOADS_AI_IMAP_SECRET_JSON"
+  POLICY_NAME="trucking-tms-loads-ai-mailbox-read"
+fi
 ECS_CLUSTER="${ECS_CLUSTER:-trucking-tms-cluster}"
 ECS_SERVICE="${ECS_SERVICE:-trucking-tms-backend-service}"
 TASK_FAMILY="${TASK_FAMILY:-trucking-tms-backend}"
-SECRET_ENV_NAME="LOADS_AI_IMAP_SECRET_JSON"
-POLICY_NAME="trucking-tms-loads-ai-mailbox-read"
 
 ASSUME_YES=0
 [ "${1:-}" = "--yes" ] && ASSUME_YES=1
