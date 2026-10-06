@@ -1158,8 +1158,9 @@ export default function LoadsAIPageInline() {
     if (!file) return
 
     // Validate file type
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      toast.error('Only PDF files are allowed')
+    // PDFs, or photos - the server converts photos to PDF.
+    if (!/\.(pdf|jpe?g|png|heic|heif|webp|gif)$/i.test(file.name)) {
+      toast.error('Upload a PDF or a photo (JPG, PNG, HEIC)')
       return
     }
 
@@ -2623,7 +2624,7 @@ export default function LoadsAIPageInline() {
                 </button>
                 <input
                   type="file"
-                  accept=".pdf"
+                  accept=".pdf,image/*,.heic,.heif"
                   onChange={(e) => handleFileUpload(e, loadKey, 'ratecon_url')}
                   className="hidden"
                   id={`ratecon-upload-${loadKey}`}
@@ -2640,7 +2641,7 @@ export default function LoadsAIPageInline() {
               <>
                 <input
                   type="file"
-                  accept=".pdf"
+                  accept=".pdf,image/*,.heic,.heif"
                   onChange={(e) => handleFileUpload(e, loadKey, 'ratecon_url')}
                   className="hidden"
                   id={`ratecon-upload-${loadKey}`}
@@ -2722,7 +2723,7 @@ export default function LoadsAIPageInline() {
                 </button>
                 <input
                   type="file"
-                  accept=".pdf"
+                  accept=".pdf,image/*,.heic,.heif"
                   onChange={(e) => handleFileUpload(e, loadKey, 'pod_url')}
                   className="hidden"
                   id={`pod-upload-${loadKey}`}
@@ -2739,7 +2740,7 @@ export default function LoadsAIPageInline() {
               <>
                 <input
                   type="file"
-                  accept=".pdf"
+                  accept=".pdf,image/*,.heic,.heif"
                   onChange={(e) => handleFileUpload(e, loadKey, 'pod_url')}
                   className="hidden"
                   id={`pod-upload-${loadKey}`}

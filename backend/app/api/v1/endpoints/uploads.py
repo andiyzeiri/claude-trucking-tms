@@ -35,16 +35,25 @@ async def upload_file(
 ):
     """Upload a file to S3 or local storage and return the URL"""
 
-    # Validate file type (only PDFs)
-    if not file.filename.lower().endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+    # PDFs as-is; photos (JPEG/PNG/HEIC...) are converted to a one-page PDF,
+    # so every stored POD/ratecon opens as a PDF.
+    name = (file.filename or "").lower()
+    image_exts = ('.jpg', '.jpeg', '.png', '.heic', '.heif', '.webp', '.gif')
+    if not (name.endswith('.pdf') or name.endswith(image_exts)):
+        raise HTTPException(status_code=400, detail="Upload a PDF or a photo (JPG, PNG, HEIC).")
 
-    # Generate unique filename
-    file_extension = file.filename.split('.')[-1]
-    unique_filename = f"{uuid.uuid4()}.{file_extension}"
+    unique_filename = f"{uuid.uuid4()}.pdf"
 
     try:
         contents = await file.read()
+        if not name.endswith('.pdf'):
+            from starlette.concurrency import run_in_threadpool
+            from app.services.pdf_convert import image_to_pdf
+
+            pdf = await run_in_threadpool(image_to_pdf, contents)
+            if pdf is None:
+                raise HTTPException(status_code=400, detail="That photo couldn't be read. Try a JPG or PDF.")
+            contents = pdf
 
         if settings.USE_S3 and s3_client:
             # Upload to S3
@@ -69,6 +78,8 @@ async def upload_file(
             "url": file_url,
             "size": len(contents)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
 
