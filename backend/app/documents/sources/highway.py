@@ -20,8 +20,13 @@ from dataclasses import dataclass
 from typing import Optional
 
 _SENDER = "no-reply@highway.com"
-_ORDER_RE = re.compile(r"Rate\s+Confirmation\s+for\s+order\s*#\s*([A-Za-z0-9][A-Za-z0-9\-_/.]*)", re.I)
+# Highway has used both "for order # 1283004" and "for order: 9487363".
+_ORDER_RE = re.compile(r"Rate\s+Confirmation\s+for\s+order\s*(?:#|:|no\.?|number)?\s*[:#]?\s*([A-Za-z0-9][A-Za-z0-9\-_/.]*)", re.I)
 _BROKER_RE = re.compile(r"New\s+rate\s+confirmation\s+from\s+([^\n\r]+)", re.I)
+# Update notices: "Rate Confirmation from DESTINATION TRANSPORT, LLC has been updated"
+_UPDATED_RE = re.compile(r"Rate\s+Confirmation\s+from\s+(.+?)\s+has\s+been\s+updated", re.I)
+# Newer subjects lead with the broker: "DestiNATION Transport, LLC Rate Confirmation for order: 9487363"
+_SUBJECT_BROKER_RE = re.compile(r"^(?:(?:fwd?|fw|re)\s*:\s*)*(?:updated\s*-\s*)?(.+?)\s+Rate\s+Confirmation\s+for\s+order", re.I)
 _CONTACT_RE = re.compile(r"([A-Z][^\n\r*]{1,60}?)\s*\*?\s*from\s*\*?\s*([^\n\r*]{2,80}?)\s*\*?\s+has\s+issued", re.I)
 
 
@@ -41,7 +46,8 @@ def _clean(s: Optional[str]) -> Optional[str]:
 
 def parse_highway_notification(subject: Optional[str], from_address: Optional[str], body: Optional[str]) -> Optional[HighwayLoad]:
     """A HighwayLoad if this is a Highway rate-confirmation notice (direct or forwarded), else None."""
-    subject = subject or ""
+    # Long subjects arrive folded across lines ("...for order:\r\n 9487363").
+    subject = re.sub(r"\s+", " ", subject or "").strip()
     body = body or ""
     from_highway = _SENDER in (from_address or "").lower()
     forwarded_from_highway = bool(re.search(r"From:\s*Highway\s*<\s*no-reply@highway\.com\s*>", body, re.I))
@@ -54,7 +60,7 @@ def parse_highway_notification(subject: Optional[str], from_address: Optional[st
     load_id = m.group(1).rstrip(".")
 
     broker = None
-    b = _BROKER_RE.search(body)
+    b = _BROKER_RE.search(body) or _UPDATED_RE.search(body)
     if b:
         broker = _clean(b.group(1))
     contact = None
@@ -62,4 +68,8 @@ def parse_highway_notification(subject: Optional[str], from_address: Optional[st
     if c:
         contact = _clean(c.group(1))
         broker = broker or _clean(c.group(2))
+    if not broker:
+        s = _SUBJECT_BROKER_RE.search(subject)
+        if s:
+            broker = _clean(s.group(1))
     return HighwayLoad(load_id=load_id, broker_name=broker, contact_name=contact)
