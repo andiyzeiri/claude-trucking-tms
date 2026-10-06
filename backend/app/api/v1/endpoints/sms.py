@@ -33,6 +33,7 @@ from app.documents.lumper import scan_media_for_lumper
 from app.services.pdf_convert import image_to_pdf, is_image
 from app.sms.ai_loads import view as ai_view
 from app.sms.pod_reminders import ack_text
+from app.sms.pod_pages import add_pages, window_open
 from app.sms.util import delivery_tz, to_e164
 
 logger = logging.getLogger(__name__)
@@ -64,8 +65,18 @@ def _download_media(url: str) -> tuple[bytes, str]:
     return data, (r.headers.get("Content-Type") or "").split(";")[0].strip().lower()
 
 
-async def _target_load(db: AsyncSession, company_id: int, phone: str) -> Optional[IngestedDocument]:
-    """The AI load this driver was most recently texted about; prefer one still missing its POD."""
+async def _route(db: AsyncSession, company_id: int, phone: str, now: datetime):
+    """
+    Which AI load an incoming photo/text belongs to, and what to do:
+
+      ("start", doc)   - the load we most recently texted this driver about
+                         has no POD yet: this begins its POD
+      ("append", doc)  - its texted POD is still within the 2-hour window
+                         (and we haven't texted them about another load since):
+                         add as more pages
+      ("start", other) - else another recently texted load still missing a POD
+      ("flag", doc)    - nothing open: keep the photo, note it on the load
+    """
     recent = (
         await db.execute(
             select(LoadSmsMessage.ai_load_id)
@@ -73,8 +84,7 @@ async def _target_load(db: AsyncSession, company_id: int, phone: str) -> Optiona
                 LoadSmsMessage.company_id == company_id,
                 LoadSmsMessage.phone == phone,
                 LoadSmsMessage.direction == "out",
-                # Drivers often reply to the assignment text with the POD
-                # once they've delivered, so that counts as well.
+                # Drivers often reply to the assignment text with the POD.
                 LoadSmsMessage.kind.in_(POD_PROMPT_KINDS + (SmsKind.LOAD_ASSIGNED,)),
                 LoadSmsMessage.ai_load_id.isnot(None),
             )
@@ -87,10 +97,17 @@ async def _target_load(db: AsyncSession, company_id: int, phone: str) -> Optiona
         doc = await db.get(IngestedDocument, doc_id)
         if doc is not None and doc.company_id == company_id and doc.status in LIVE_AI_LOAD_STATUSES:
             docs.append(doc)
-    for doc in docs:
+    if not docs:
+        return "flag", None
+    latest = docs[0]
+    if not ai_view(latest).pod_url:
+        return "start", latest
+    if await window_open(db, latest, phone, now):
+        return "append", latest
+    for doc in docs[1:]:
         if not ai_view(doc).pod_url:
-            return doc
-    return docs[0] if docs else None
+            return "start", doc
+    return "flag", latest
 
 
 @router.post("/inbound")
@@ -137,7 +154,8 @@ async def twilio_inbound(request: Request, background_tasks: BackgroundTasks, db
         await db.commit()
         return _twiml()
 
-    load = await _target_load(db, company_id, phone) if phone else None
+    now = datetime.now(timezone.utc)
+    action, load = await _route(db, company_id, phone, now) if phone else ("flag", None)
 
     if num_media:
         stored = []
@@ -166,10 +184,15 @@ async def twilio_inbound(request: Request, background_tasks: BackgroundTasks, db
                 scan.append((data, ctype, key) if readable_image or not pdf else (pdf, "application/pdf", key))
                 stored.append({"key": key, "url": f"/api/v1/uploads/s3/{key}", "content_type": body_type, "bytes": len(body_bytes)})
 
-        newly_attached = False
-        if load is not None and stored and not ai_view(load).pod_url:
-            update_draft(load, pod_url=stored[0]["url"])
-            newly_attached = True
+        page_keys = [m["key"] for m in stored if m["content_type"] == "application/pdf"]
+        pages = 0
+        if load is not None and page_keys and action in ("start", "append"):
+            if action == "start":
+                update_draft(load, pod_window_started=now.isoformat(), pod_pages=[], pod_source="sms")
+            pages = await add_pages(load, page_keys, now, driver.id if driver else None)
+        elif load is not None and stored:
+            # Nothing open for more pages: keep the photo, change nothing.
+            _append_note(load, f"Driver texted {len(stored)} more photo(s) after the POD was complete - saved, not added to the POD.")
         record(kind=SmsKind.POD_MEDIA, body=body or None, media=stored or None,
                ai_load_id=load.id if load else None,
                error=None if stored else "no media could be saved")
@@ -177,8 +200,9 @@ async def twilio_inbound(request: Request, background_tasks: BackgroundTasks, db
             _append_note(load, body)
         await db.commit()
 
-        if newly_attached:
-            await _send_ack(db, company_id, driver, phone, load)
+        if pages:
+            await _send_ack(db, company_id, driver, phone, load, pages)
+        newly_attached = bool(pages)
         # Look for a lumper receipt among the photos, after Twilio has its reply.
         if load is not None and scan:
             background_tasks.add_task(scan_media_for_lumper, load.id, scan)
@@ -200,10 +224,10 @@ def _append_note(doc: IngestedDocument, text: str) -> None:
     append_note(doc, f"[Driver text {stamp}] {text[:500]}")
 
 
-async def _send_ack(db: AsyncSession, company_id: int, driver: Optional[Driver], phone: str, doc: IngestedDocument) -> None:
+async def _send_ack(db: AsyncSession, company_id: int, driver: Optional[Driver], phone: str, doc: IngestedDocument, pages: int = 1) -> None:
     from app.services.twilio_service import get_twilio_service
 
-    body = ack_text(ai_view(doc))
+    body = ack_text(ai_view(doc), pages)
     result = await get_twilio_service().send_sms(phone, body)
     ok = bool(result.get("success"))
     db.add(LoadSmsMessage(

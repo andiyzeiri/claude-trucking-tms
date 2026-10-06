@@ -59,8 +59,9 @@ def manual_request_text(load) -> str:
     )
 
 
-def ack_text(load) -> str:
-    return f"Absolute Trucking: Thanks, we received the POD for load {load_label(load)}. Reply STOP to opt out."
+def ack_text(load, pages: int = 1) -> str:
+    what = f"{pages} pages of the POD" if pages and pages > 1 else "the POD"
+    return f"Absolute Trucking: Thanks, we received {what} for load {load_label(load)}. Reply STOP to opt out."
 
 
 @dataclass
