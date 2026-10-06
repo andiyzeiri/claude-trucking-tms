@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional
 from email_validator import EmailNotValidError, validate_email
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, field_validator
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -40,6 +40,8 @@ from app.sms.ai_loads import view as ai_view
 from app.sms.assignment import notify_ai_load_assigned
 from app.documents.unverified import verify_with
 from app.services.mileage import fill_miles
+from app.models.driver import Driver
+from app.models.sms import POD_PROMPT_KINDS, LoadSmsMessage, SmsKind
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -596,6 +598,8 @@ class AILoadResponse(BaseModel):
     customer_match_reason: Optional[str] = None
     broker_name: Optional[str] = None
     customer_candidates: List[CustomerMatchCandidate] = []
+    # Last time the driver was texted for this load's POD (button or reminder).
+    pod_requested_at: Optional[str] = None
 
 
 def _extracted(doc: IngestedDocument, key: str) -> Optional[str]:
@@ -703,7 +707,30 @@ async def list_ai_loads(
         .order_by(IngestedDocument.id.desc())
     )
     customers = await _company_customers(db, current_user.company_id)
-    return [_ai_load_response(d, customers) for d in result.scalars().all()]
+    docs = result.scalars().all()
+    # One query for every row's latest POD text.
+    last = dict(
+        (
+            await db.execute(
+                select(LoadSmsMessage.ai_load_id, func.max(LoadSmsMessage.created_at))
+                .where(
+                    LoadSmsMessage.company_id == current_user.company_id,
+                    LoadSmsMessage.direction == "out",
+                    LoadSmsMessage.kind.in_(POD_PROMPT_KINDS),
+                    LoadSmsMessage.status != "failed",
+                    LoadSmsMessage.ai_load_id.in_([d.id for d in docs] or [0]),
+                )
+                .group_by(LoadSmsMessage.ai_load_id)
+            )
+        ).all()
+    )
+    out = []
+    for d in docs:
+        r = _ai_load_response(d, customers)
+        if d.id in last and last[d.id]:
+            r.pod_requested_at = last[d.id].isoformat()
+        out.append(r)
+    return out
 
 
 @router.post("/loads", response_model=AILoadResponse, status_code=status.HTTP_201_CREATED)
@@ -854,3 +881,78 @@ async def dismiss_unverified_load(
         raise HTTPException(status_code=404, detail="Unverified load not found.")
     doc.status = DocumentStatus.DISMISSED
     await db.commit()
+
+
+# --- "Request POD" button ---------------------------------------------------
+
+class PodRequestResponse(BaseModel):
+    sent: bool
+    message: str
+    requested_at: Optional[str] = None
+
+
+@router.post("/loads/{ai_load_id}/request-pod", response_model=PodRequestResponse)
+async def request_pod(
+    ai_load_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Text the AI load's assigned driver asking for the signed POD, now."""
+    from datetime import datetime, timedelta, timezone
+
+    from app.sms.pod_reminders import manual_request_text
+    from app.sms.util import to_e164
+
+    doc = await _get_ai_load(db, current_user.company_id, ai_load_id)
+    load = ai_view(doc)
+    if not load.driver_id:
+        raise HTTPException(status_code=400, detail="Assign a driver to this load first.")
+    driver = await db.get(Driver, load.driver_id)
+    if driver is None or driver.company_id != current_user.company_id:
+        raise HTTPException(status_code=400, detail="The assigned driver wasn't found.")
+    name = f"{driver.first_name} {driver.last_name}".strip()
+    if driver.sms_opt_out:
+        raise HTTPException(status_code=409, detail=f"{name} has opted out of texts (replied STOP).")
+    phone = to_e164(driver.phone)
+    if not phone:
+        raise HTTPException(status_code=422, detail=f"{name}'s phone number ({driver.phone or 'none'}) can't receive texts. Fix it on the Drivers page.")
+    if not (settings.POD_REMINDERS_ENABLED and settings.POD_REMINDERS_COMPANY_ID == current_user.company_id):
+        raise HTTPException(status_code=503, detail="Driver texting isn't switched on.")
+
+    now = datetime.now(timezone.utc)
+    recent = (
+        await db.execute(
+            select(LoadSmsMessage.created_at).where(
+                LoadSmsMessage.ai_load_id == doc.id,
+                LoadSmsMessage.kind == SmsKind.POD_REQUEST_MANUAL,
+                LoadSmsMessage.status != "failed",
+                LoadSmsMessage.created_at >= now - timedelta(minutes=2),
+            )
+        )
+    ).first()
+    if recent:
+        return PodRequestResponse(sent=False, message=f"Already requested from {name} a moment ago.", requested_at=recent[0].isoformat())
+
+    body = manual_request_text(load)
+    if settings.POD_REMINDERS_DRY_RUN:
+        logger.info("request-pod: WOULD TEXT %s %s: %r", name, phone, body)
+        return PodRequestResponse(sent=False, message=f"Texting is in dry-run mode; {name} was not texted.")
+
+    from app.services.twilio_service import get_twilio_service
+
+    result = await get_twilio_service().send_sms(phone, body)
+    ok = bool(result.get("success"))
+    db.add(LoadSmsMessage(
+        company_id=current_user.company_id, ai_load_id=doc.id, driver_id=driver.id, direction="out",
+        kind=SmsKind.POD_REQUEST_MANUAL, phone=phone, body=body, created_at=now,
+        twilio_sid=result.get("message_sid"),
+        status=(result.get("status") or "sent") if ok else "failed",
+        error=None if ok else str(result.get("error"))[:1000],
+    ))
+    if not ok and result.get("error_code") == 21610:
+        driver.sms_opt_out = True
+    await db.commit()
+    if not ok:
+        raise HTTPException(status_code=502, detail=f"The text to {name} failed: {result.get('error')}")
+    logger.info("request-pod: texted %s about AI load %s (by user %s)", name, doc.id, current_user.id)
+    return PodRequestResponse(sent=True, message=f"POD requested from {name}.", requested_at=now.isoformat())

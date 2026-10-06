@@ -154,6 +154,8 @@ export interface AILoad {
   /** Broker as printed on the document */
   broker_name: string | null
   customer_candidates: { id: number; name: string; score: number; reason: string }[]
+  /** Last time the driver was texted for this load's POD. */
+  pod_requested_at?: string | null
 }
 
 export type CustomerMatch = 'exact' | 'partial' | 'none'
@@ -237,5 +239,25 @@ export function useDismissUnverified() {
       toast.success('Unverified load removed')
     },
     onError: () => toast.error('Could not remove the unverified load'),
+  })
+}
+
+// --- Request POD ------------------------------------------------------------
+// Texts the AI load's assigned driver for the signed POD right away.
+
+export function useRequestPod() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (aiLoadId: number): Promise<{ sent: boolean; message: string }> =>
+      (await api.post(`/v1/loads-ai/loads/${aiLoadId}/request-pod`)).data,
+    onSuccess: (r) => {
+      if (r.sent) toast.success(r.message)
+      else toast(r.message)
+      queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY })
+    },
+    onError: (error: any) => {
+      const detail = error?.response?.data?.detail
+      toast.error(typeof detail === 'string' ? detail : 'Could not send the POD request')
+    },
   })
 }

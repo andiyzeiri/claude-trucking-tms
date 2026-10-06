@@ -52,6 +52,13 @@ def reminder_text(load) -> str:
     )
 
 
+def manual_request_text(load) -> str:
+    return (
+        f"Absolute Trucking: Please send a photo of the signed POD for load {load_label(load)} "
+        f"(delivered to {city_state(load.delivery_location)}). Reply with the photo. Reply STOP to opt out."
+    )
+
+
 def ack_text(load) -> str:
     return f"Absolute Trucking: Thanks, we received the POD for load {load_label(load)}. Reply STOP to opt out."
 

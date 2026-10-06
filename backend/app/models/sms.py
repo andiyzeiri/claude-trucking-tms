@@ -10,6 +10,7 @@ class SmsKind:
     LOAD_ASSIGNED = "load_assigned" # load details sent when a driver is assigned
     POD_REQUEST = "pod_request"     # first text after delivery
     POD_REMINDER = "pod_reminder"   # follow-ups while no POD
+    POD_REQUEST_MANUAL = "pod_request_manual"  # "Request POD" button on Loads AI
     POD_ACK = "pod_ack"             # "thanks, we received the POD"
     ESCALATED = "escalated"         # reminders exhausted, load flagged for dispatch
     REPLY = "reply"                 # inbound text without a POD
@@ -19,7 +20,9 @@ class SmsKind:
 
 
 # Outbound kinds that count toward the per-load reminder limit.
-POD_PROMPT_KINDS = (SmsKind.POD_REQUEST, SmsKind.POD_REMINDER)
+# A manual request counts too: replies route to that load, and the automatic
+# reminders space themselves from it.
+POD_PROMPT_KINDS = (SmsKind.POD_REQUEST, SmsKind.POD_REMINDER, SmsKind.POD_REQUEST_MANUAL)
 
 
 class LoadSmsMessage(Base):

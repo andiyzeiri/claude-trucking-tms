@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X, Check, ArrowUpDown, ArrowUp, ArrowDown, Search, Mail, FileUp, AlertTriangle, Sparkles, RefreshCw, Inbox, CheckCircle2 } from 'lucide-react'
+import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X, Check, ArrowUpDown, ArrowUp, ArrowDown, Search, Mail, FileUp, AlertTriangle, Sparkles, RefreshCw, Inbox, CheckCircle2, MessageSquare } from 'lucide-react'
 import { useDedicatedLanes } from '@/hooks/use-dedicated-lanes'
 import { useCustomers } from '@/hooks/use-customers'
 import { useDrivers } from '@/hooks/use-drivers'
@@ -43,6 +43,7 @@ import {
   type CustomerMatch,
   useUnverifiedLoads,
   useDismissUnverified,
+  useRequestPod,
 } from '@/hooks/use-loads-ai-ingestion'
 
 interface EditableLoad extends Load {
@@ -358,6 +359,7 @@ function aiLoadToLoad(a: AILoad): Load {
     notes: f.notes || f.pickup_notes || '',
     created_at: a.created_at || '',
     updated_at: a.created_at || '',
+    pod_requested_at: a.pod_requested_at,
     customer_match: a.customer_match,
     customer_match_reason: a.customer_match_reason,
     broker_name: a.broker_name,
@@ -461,6 +463,7 @@ export default function LoadsAIPageInline() {
   const { data: ingestionStatus } = useIngestionStatus()
   const { data: unverifiedLoads } = useUnverifiedLoads()
   const dismissUnverified = useDismissUnverified()
+  const requestPod = useRequestPod()
   const { data: ingestedDocs, refetch: refetchIngested } = useIngestedDocuments()
   const { pollMailbox, isPolling } = usePollMailbox()
 
@@ -2656,6 +2659,26 @@ export default function LoadsAIPageInline() {
 
         {/* POD */}
         <td className="px-3 py-2.5 border-r" style={{borderColor: 'var(--monday-border-light)', backgroundColor: load.pod_url ? '#F1FFFA' : '#FEF3C7'}}>
+          {/* Request POD: texts the assigned driver for the signed POD */}
+          {!load.pod_url && !load.isNew && load.driver_id && (
+            <div className="mb-1">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); requestPod.mutate(load.id) }}
+                disabled={requestPod.isPending && requestPod.variables === load.id}
+                className="inline-flex items-center gap-1 rounded border border-orange-300 bg-white px-1.5 py-0.5 text-xs font-medium text-orange-700 hover:bg-orange-50 disabled:opacity-50"
+                title={`Text ${load.driver ? load.driver.first_name : 'the driver'} for the signed POD`}
+              >
+                <MessageSquare className="h-3 w-3" />
+                {requestPod.isPending && requestPod.variables === load.id ? 'Sending…' : 'Request POD'}
+              </button>
+              {(load as any).pod_requested_at && (
+                <div className="mt-0.5 text-[11px]" style={{color: 'var(--monday-text-secondary)'}}>
+                  Requested {new Date((load as any).pod_requested_at).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex items-center gap-2">
             {!load.pod_url && (
               <span className="text-orange-600 font-bold text-lg">!</span>
