@@ -41,6 +41,7 @@ from app.documents.mapping import build_load_draft
 from app.documents.sources.base import SourceAttachment, SourceMessage
 from app.documents.sources.highway import parse_highway_notification
 from app.documents.unverified import record_unverified, verify_with
+from app.documents.lumper import apply_lumper, lumper_total
 from app.documents.sources.imap_mailbox import ImapMailboxReader, MailboxError
 from app.models.company import Company
 from app.models.customer import Customer
@@ -93,6 +94,7 @@ class IngestSummary:
     unverified_verified: int = 0
     pods_attached: int = 0
     pods_unmatched: int = 0
+    lumpers_found: int = 0
     not_loads: int = 0
     needs_review: int = 0
     failed: int = 0
@@ -115,6 +117,7 @@ class IngestSummary:
             "unverified_verified": self.unverified_verified,
             "pods_attached": self.pods_attached,
             "pods_unmatched": self.pods_unmatched,
+            "lumpers_found": self.lumpers_found,
             "not_loads": self.not_loads,
             "needs_review": self.needs_review,
             "failed": self.failed,
@@ -258,6 +261,19 @@ async def _attach_pod_to_ai_load(
         if hit:
             matches.append((doc, sorted(hit)))
 
+    # Several loads share a number with the paper: prefer the only one still
+    # missing its POD, else the one matching the most numbers. Otherwise it
+    # stays ambiguous and is left for a person.
+    if len(matches) > 1:
+        open_ = [(d, h) for d, h in matches if not (d.draft or {}).get("pod_url")]
+        if len(open_) == 1:
+            matches = open_
+        else:
+            best = max(len(h) for _, h in matches)
+            top = [(d, h) for d, h in matches if len(h) == best]
+            if len(top) == 1:
+                matches = top
+
     label = lambda d: (d.draft or {}).get("load_number") or (d.draft or {}).get("broker_load_number") or f"#{d.id}"
     pod_url = f"/api/v1/uploads/s3/{document.s3_key}" if document.s3_key else None
 
@@ -276,18 +292,32 @@ async def _attach_pod_to_ai_load(
                 mine.sort(key=lambda d: str((d.draft or {}).get("delivery_date") or ""), reverse=True)
                 matches = [(mine[0], [f"sender {driver.first_name} {driver.last_name}".strip()])]
 
+    lumper = lumper_total(classification)
+    if len(matches) == 1 and lumper is not None:
+        # Recorded even when the load already has its POD: drivers often send
+        # the lumper receipt separately, after the signed BOL.
+        outcome = apply_lumper(matches[0][0], lumper, getattr(classification, "lumper_vendor", None))
+        summary.lumpers_found += 1
+        lumper_note = {
+            "set": f" Lumper ${lumper} recorded.",
+            "same": f" Lumper ${lumper} (already recorded).",
+            "conflict": f" Lumper receipt for ${lumper}, but the load already shows a different lumper amount - check it.",
+        }[outcome]
+    else:
+        lumper_note = f" Lumper receipt for ${lumper} found, but the load couldn't be matched." if lumper is not None else ""
+
     if len(matches) == 1 and pod_url:
         target, hit = matches[0]
         if (target.draft or {}).get("pod_url"):
             document.status = DocumentStatus.POD_UNMATCHED
-            document.warnings = [f"Proof of delivery for load {label(target)}, which already has a POD - kept the existing one."]
+            document.warnings = [f"Proof of delivery for load {label(target)}, which already has a POD - kept the existing one.{lumper_note}"]
             summary.pods_unmatched += 1
         else:
             merged = dict(target.draft)
             merged["pod_url"] = pod_url
             target.draft = merged
             document.status = DocumentStatus.POD_ATTACHED
-            document.warnings = [f"Attached as the POD for load {label(target)} (matched {', '.join(hit)})."]
+            document.warnings = [f"Attached as the POD for load {label(target)} (matched {', '.join(hit)}).{lumper_note}"]
             summary.pods_attached += 1
             logger.info("loads-ai: POD %s attached to AI load %s", document.original_filename, target.id)
         return
@@ -299,7 +329,7 @@ async def _attach_pod_to_ai_load(
         document.warnings = ["Proof of delivery matching more than one load (" + ", ".join(label(d) for d, _ in matches[:5]) + ") - attach it by hand."]
     else:
         shown = ", ".join(sorted(classification.reference_numbers or [])[:6]) or "none readable"
-        document.warnings = [f"Proof of delivery, but no AI load matches its numbers ({shown})."]
+        document.warnings = [f"Proof of delivery, but no AI load matches its numbers ({shown}).{lumper_note}"]
     summary.pods_unmatched += 1
 
 

@@ -592,7 +592,8 @@ export default function LoadsAIPageInline() {
     miles: 100,
     rpm: 80,
     pod: 100,
-    ratecon: 100
+    ratecon: 100,
+    lumper: 110
   })
 
   // Local state for editing location fields
@@ -1748,6 +1749,7 @@ export default function LoadsAIPageInline() {
       }
       const groupLoads = getAllLoads(groupData)
       const groupTotalRate = groupLoads.reduce((sum, l) => sum + (Number(l.rate) || 0), 0)
+      const groupTotalLumper = groupLoads.reduce((sum, l) => sum + (Number((l as any).lumper_amount) || 0), 0)
       const groupTotalMiles = groupLoads.reduce((sum, l) => sum + (Number(l.miles) || 0), 0)
       const groupRPM = groupTotalMiles > 0 ? groupTotalRate / groupTotalMiles : 0
 
@@ -1802,6 +1804,9 @@ export default function LoadsAIPageInline() {
             </div>
           </td>
           <td className="px-2 py-2 text-sm" colSpan={3}></td>
+          <td className="px-2 py-2 text-sm text-right" style={{fontWeight: 600, color: 'var(--monday-text-primary)'}}>
+            {groupTotalLumper > 0 ? formatCurrency(groupTotalLumper) : ''}
+          </td>
         </tr>
       )
 
@@ -1815,7 +1820,7 @@ export default function LoadsAIPageInline() {
         if (Array.isArray(groupData)) {
           elements.push(
             <tr key={`add-${uniqueGroupKey}`} className="border-b transition-colors" style={{borderColor: 'var(--monday-border-light)'}}>
-              <td colSpan={13} className="px-2 py-2">
+              <td colSpan={14} className="px-2 py-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -2728,6 +2733,38 @@ export default function LoadsAIPageInline() {
           </div>
         </td>
 
+        {/* Lumper - read from the POD's lumper receipt by the AI; editable */}
+        <td
+          className="px-3 py-2.5 border-r text-right"
+          style={{borderColor: 'var(--monday-border-light)', backgroundColor: (load as any).lumper_amount ? '#FFF7ED' : undefined}}
+          title={(load as any).lumper_vendor ? `Lumper receipt: ${(load as any).lumper_vendor}` : undefined}
+          onClick={() => !isEditing(loadKey, 'lumper_amount' as any) && startEdit(loadKey, 'lumper_amount' as any)}
+        >
+          {isEditing(loadKey, 'lumper_amount' as any) ? (
+            <Input
+              autoFocus
+              type="text"
+              inputMode="decimal"
+              defaultValue={(load as any).lumper_amount ?? ''}
+              placeholder="0.00"
+              className="h-7 text-sm text-right"
+              onBlur={(e) => {
+                const raw = e.target.value.replace(/[$,\s]/g, '')
+                const value = raw === '' ? null : (Number(raw) >= 0 ? Number(raw).toFixed(2) : null)
+                updateField(loadKey, 'lumper_amount' as any, value)
+                stopEdit()
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                if (e.key === 'Escape') stopEdit()
+              }}
+            />
+          ) : (load as any).lumper_amount ? (
+            <span style={{fontSize: '14px', fontWeight: 600, color: '#9A3412'}}>{formatCurrency(Number((load as any).lumper_amount))}</span>
+          ) : (
+            <span style={{color: 'var(--monday-text-muted)'}}>&mdash;</span>
+          )}
+        </td>
       </tr>
     )
   }
@@ -3321,6 +3358,13 @@ export default function LoadsAIPageInline() {
                       onAdjust={(delta) => adjustWidth('pod', delta)}
                     />
                     POD
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-[13px] font-medium border-b relative group" style={{color: 'var(--monday-text-secondary)', borderColor: 'var(--monday-border-light)', fontWeight: 500, width: `${columnWidths.lumper}px`, minWidth: `${columnWidths.lumper}px`}} title="Lumper paid, read from the POD's lumper receipt">
+                    <ColumnWidthControl
+                      currentWidth={columnWidths.lumper}
+                      onAdjust={(delta) => adjustWidth('lumper', delta)}
+                    />
+                    Lumper
                   </th>
                 </tr>
               </thead>

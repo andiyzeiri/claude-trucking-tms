@@ -132,6 +132,17 @@ class DocumentClassification(BaseModel):
     shipper_name: Optional[str] = Field(default=None, description="Shipper / pickup company, if shown.")
     consignee_name: Optional[str] = Field(default=None, description="Consignee / receiver company, if shown.")
     delivery_city_state: Optional[str] = Field(default=None, description="Delivery city and state, e.g. 'Stow, OH', if shown.")
+    lumper_receipt: bool = Field(
+        default=False,
+        description="True if any page is a lumper / unloading-service receipt (a receipt for paying a third party to unload the trailer).",
+    )
+    lumper_amount: Optional[str] = Field(
+        default=None,
+        description="Total paid on the lumper receipt(s) in US dollars, digits only with two decimals, e.g. '185.00'. Include service/convenience fees charged on the receipt. Sum them if there are several receipts. Null if there is no lumper receipt or the total can't be read.",
+    )
+    lumper_vendor: Optional[str] = Field(
+        default=None, description="Company on the lumper receipt (e.g. 'Capstone Logistics'), if shown."
+    )
 
 
 class RateconExtraction(BaseModel):
@@ -231,6 +242,14 @@ shipper-only copy).
 - "other" is a real document of some other kind.
 - "unknown" is for anything you cannot identify, including blank pages, logos, \
 email signatures, and unreadable scans.
+
+Lumper receipts: drivers often include a lumper receipt with the POD - a \
+receipt from an unloading service (e.g. Capstone Logistics, NFI, Encompass, \
+RXO/PAS, Lumper Services, or a warehouse "unloading fee"/"lumper fee") for \
+paying someone to unload the trailer, frequently paid by Comdata, EFS or \
+fuel card check. Set lumper_receipt when one is present and lumper_amount \
+to the total actually charged. A rate confirmation that merely mentions \
+lumper reimbursement is NOT a lumper receipt.
 
 Report has_signature and appears_scanned honestly - they are strong evidence \
 for a POD. Always list every reference number you can read; they are used to \

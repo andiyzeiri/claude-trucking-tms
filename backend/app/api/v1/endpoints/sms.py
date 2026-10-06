@@ -16,7 +16,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +29,7 @@ from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, IngestedDocument
 from app.models.sms import POD_PROMPT_KINDS, LoadSmsMessage, SmsKind
 from app.services.s3 import s3_service
 from app.sms.ai_loads import append_note, update_draft
+from app.documents.lumper import scan_media_for_lumper
 from app.sms.ai_loads import view as ai_view
 from app.sms.pod_reminders import ack_text
 from app.sms.util import delivery_tz, to_e164
@@ -92,7 +93,7 @@ async def _target_load(db: AsyncSession, company_id: int, phone: str) -> Optiona
 
 
 @router.post("/inbound")
-async def twilio_inbound(request: Request, db: AsyncSession = Depends(get_db)):
+async def twilio_inbound(request: Request, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     if not settings.TWILIO_AUTH_TOKEN or not settings.POD_REMINDERS_COMPANY_ID:
         raise HTTPException(status_code=503, detail="SMS is not configured")
 
@@ -139,6 +140,7 @@ async def twilio_inbound(request: Request, db: AsyncSession = Depends(get_db)):
 
     if num_media:
         stored = []
+        scan = []  # (bytes, content type, name) to check for a lumper receipt
         for i in range(min(num_media, 10)):
             url = params.get(f"MediaUrl{i}")
             declared = (params.get(f"MediaContentType{i}") or "").lower()
@@ -153,6 +155,7 @@ async def twilio_inbound(request: Request, db: AsyncSession = Depends(get_db)):
             key = f"pod-sms-ai{load.id if load else '-unmatched'}-{uuid.uuid4().hex}.{ext}"
             ok = await run_in_threadpool(s3_service.upload_bytes, key, data, ctype or declared)
             if ok:
+                scan.append((data, ctype or declared, key))
                 stored.append({"key": key, "url": f"/api/v1/uploads/s3/{key}", "content_type": ctype or declared, "bytes": len(data)})
 
         newly_attached = False
@@ -168,6 +171,9 @@ async def twilio_inbound(request: Request, db: AsyncSession = Depends(get_db)):
 
         if newly_attached:
             await _send_ack(db, company_id, driver, phone, load)
+        # Look for a lumper receipt among the photos, after Twilio has its reply.
+        if load is not None and scan:
+            background_tasks.add_task(scan_media_for_lumper, load.id, scan)
         logger.info("sms-inbound: %s media from %s -> load %s (attached=%s)",
                     len(stored), phone, load.id if load else None, newly_attached)
         return _twiml()

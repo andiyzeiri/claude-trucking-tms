@@ -555,6 +555,7 @@ AI_LOAD_FIELDS = {
     "pod_url", "ratecon_url", "adjustment_type", "adjustment_amount",
     "invoiced", "dispatched", "needs_attention",
     "broker_name", "broker_mc", "customer_confirmed",
+    "lumper_amount", "lumper_vendor",
 }
 
 # Customer match thresholds, on rank_customers' score. 0.95 is an MC match
