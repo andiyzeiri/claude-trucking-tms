@@ -144,6 +144,12 @@ class Settings(BaseSettings):
     # Driver POD inbox (pods@). Everything that arrives here is filed as a
     # proof of delivery on the AI load it matches; nothing creates a load.
     # Supply via LOADS_AI_POD_IMAP_SECRET_JSON in production.
+    # Each poll looks at every message from the last N days (read or unread)
+    # and skips ones already processed, so nothing is missed if a person opens
+    # an email first or the service is briefly down.
+    LOADS_AI_LOOKBACK_DAYS: int = 3
+    # Failed documents are retried hourly, up to this many attempts in total.
+    LOADS_AI_MAX_ATTEMPTS: int = 3
     LOADS_AI_POD_IMAP_USERNAME: Optional[str] = None
     LOADS_AI_POD_IMAP_PASSWORD: Optional[str] = None
     LOADS_AI_IMAP_FOLDER: str = "INBOX"

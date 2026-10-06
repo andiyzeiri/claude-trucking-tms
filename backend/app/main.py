@@ -12,7 +12,7 @@ from app.config import settings
 from app.api.v1.api import api_router
 from app.health import router as health_router
 from app.services.dedicated_lane_scheduler import generate_loads_from_dedicated_lanes
-from app.documents.pipeline import run_ingestion_job
+from app.documents.pipeline import run_ingestion_job, run_retry_job
 from app.sms.pod_reminders import run_pod_reminder_job
 
 # Set up logging
@@ -60,6 +60,16 @@ async def lifespan(app: FastAPI):
         logger.info(
             "Loads AI ingestion scheduled every %s minute(s)",
             settings.LOADS_AI_POLL_MINUTES,
+        )
+        # Hourly: re-read any document whose extraction failed (from S3).
+        scheduler.add_job(
+            run_retry_job,
+            IntervalTrigger(hours=1),
+            id="loads_ai_retry",
+            name="Retry failed Loads AI documents",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
         )
     else:
         logger.info("Loads AI ingestion is disabled; mailbox will not be polled")

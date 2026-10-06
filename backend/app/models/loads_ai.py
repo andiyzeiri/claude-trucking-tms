@@ -85,6 +85,7 @@ class InboundEmail(Base):
     # RFC Message-ID. The dedupe key - the same message seen on a second poll
     # must not be reprocessed.
     message_id = Column(String, nullable=False)
+    mailbox = Column(String)  # the inbox it was read from (ratecons@ / pods@)
 
     from_address = Column(String)
     to_address = Column(String)

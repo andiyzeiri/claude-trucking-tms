@@ -75,6 +75,14 @@ class S3Service:
             print(f"Error uploading {key}: {e}")
             return False
 
+    def download_bytes(self, key: str) -> Optional[bytes]:
+        """Read back an object stored with upload_bytes; None if it can't be read."""
+        try:
+            return self.s3_client.get_object(Bucket=self.bucket_name, Key=key)["Body"].read()
+        except ClientError as e:
+            print(f"Error downloading {key}: {e}")
+            return None
+
     def delete_file(self, key: str) -> bool:
         """Delete a file from S3"""
         try:

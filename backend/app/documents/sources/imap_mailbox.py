@@ -140,10 +140,14 @@ def extract_attachments(msg: Message) -> tuple[List[SourceAttachment], int]:
 
 def _fallback_message_id(msg: Message, uid: bytes) -> str:
     """
-    Some senders omit Message-ID. Fall back to the mailbox UID so the message
-    still deduplicates, rather than being reprocessed on every poll.
+    Some senders omit Message-ID. Fall back to a hash of sender, date and
+    subject - stable across folders and polls (a mailbox UID is not: it
+    differs between INBOX and All Mail) - so the message still deduplicates.
     """
-    return f"imap-uid-{uid.decode(errors='replace')}"
+    import hashlib
+
+    basis = "|".join(_decode(msg.get(h)) or "" for h in ("From", "Date", "Subject", "To"))
+    return "no-message-id-" + hashlib.sha256(basis.encode("utf-8", "replace")).hexdigest()[:32]
 
 
 class ImapMailboxReader:
@@ -283,3 +287,106 @@ def body_text(msg, limit: int = 20000) -> str:
         rich = _re.sub(r"<(style|script)[^>]*>.*?</\1>", " ", rich, flags=_re.S | _re.I)
         plain = _html.unescape(_re.sub(r"<[^>]+>", "\n", rich))
     return (plain or "")[:limit]
+
+
+def _parse_message(raw: bytes, uid: bytes) -> SourceMessage:
+    msg = email.message_from_bytes(raw)
+    attachments, skipped = extract_attachments(msg)
+    received = None
+    if msg.get("Date"):
+        try:
+            received = parsedate_to_datetime(msg["Date"])
+            if received and received.tzinfo:
+                received = received.replace(tzinfo=None)
+        except Exception:
+            received = None
+    return SourceMessage(
+        message_id=(msg.get("Message-ID") or "").strip() or _fallback_message_id(msg, uid),
+        from_address=_decode(msg.get("From")),
+        to_address=_decode(msg.get("To")),
+        subject=_decode(msg.get("Subject")),
+        received_at=received,
+        attachments=attachments,
+        skipped_attachments=skipped,
+        body_text=body_text(msg),
+    )
+
+
+def fetch_recent(reader: "ImapMailboxReader", days: int, known_ids, limit: int = 10) -> List[SourceMessage]:
+    """
+    Every message from the last `days` days that isn't in `known_ids`,
+    oldest first, read or unread. Nothing is marked as read.
+
+    Reading by date rather than by the unread flag means a message someone
+    already opened in Gmail - or one that arrived while this service was
+    down - is still picked up; dedup is by Message-ID against `known_ids`.
+    On Gmail the "All Mail" folder is used, so an archived message counts
+    too; messages the mailbox sent itself are skipped.
+    """
+    import datetime as _dt
+
+    conn = imaplib.IMAP4_SSL(reader.host, reader.port)
+    try:
+        try:
+            conn.login(reader.username, reader.password)
+        except imaplib.IMAP4.error as e:
+            raise MailboxError(
+                f"Mailbox login failed for {reader.username}. For Gmail this usually means an "
+                f"App Password is required, not the account password. Server said: {e}"
+            ) from e
+
+        folder = reader.folder
+        if "gmail" in reader.host.lower():
+            status, _ = conn.select('"[Gmail]/All Mail"', readonly=True)
+            if status != "OK":
+                status, _ = conn.select(folder, readonly=True)
+        else:
+            status, _ = conn.select(folder, readonly=True)
+        if status != "OK":
+            raise MailboxError(f"Could not open folder {folder!r}.")
+
+        since = (_dt.date.today() - _dt.timedelta(days=days)).strftime("%d-%b-%Y")
+        status, data = conn.uid("search", None, "SINCE", since)
+        if status != "OK":
+            raise MailboxError("Mailbox search failed.")
+        uids = data[0].split() if data and data[0] else []
+
+        own = reader.username.strip().lower()
+        new_uids = []
+        # Headers only first: cheap, and enough to skip what we've already seen.
+        for i in range(0, len(uids), 100):
+            chunk = b",".join(uids[i:i + 100])
+            status, rows = conn.uid("fetch", chunk, "(UID BODY.PEEK[HEADER.FIELDS (MESSAGE-ID FROM DATE SUBJECT TO)])")
+            if status != "OK":
+                continue
+            for row in rows:
+                if not isinstance(row, tuple):
+                    continue
+                m = re.search(rb"UID (\d+)", row[0])
+                if not m:
+                    continue
+                uid = m.group(1)
+                hdr = email.message_from_bytes(row[1])
+                mid = (hdr.get("Message-ID") or "").strip() or _fallback_message_id(hdr, uid)
+                if mid in known_ids:
+                    continue
+                if own and own in (_decode(hdr.get("From")) or "").lower():
+                    continue  # sent by this mailbox, not received
+                new_uids.append(uid)
+
+        logger.info("loads-ai: %s message(s) in the last %s day(s) of %s, %s new", len(uids), days, reader.username, len(new_uids))
+        out: List[SourceMessage] = []
+        for uid in new_uids[:limit]:
+            try:
+                status, payload = conn.uid("fetch", uid, "(BODY.PEEK[])")
+                if status != "OK" or not payload or not isinstance(payload[0], tuple):
+                    continue
+                out.append(_parse_message(payload[0][1], uid))
+            except Exception as e:
+                logger.exception("loads-ai: failed reading message uid=%s: %s", uid, e)
+        return out
+    finally:
+        try:
+            conn.logout()
+        except Exception:
+            pass

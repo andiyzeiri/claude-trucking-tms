@@ -42,6 +42,10 @@ STATEMENTS = [
         ON inbound_emails (company_id, message_id)
     """,
     "CREATE INDEX IF NOT EXISTS ix_inbound_emails_company_status ON inbound_emails (company_id, status)",
+    # Which inbox a message came from (ratecons@ / pods@), so a failed
+    # document can be retried in the right mode.
+    "ALTER TABLE inbound_emails ADD COLUMN IF NOT EXISTS mailbox VARCHAR",
+    "CREATE INDEX IF NOT EXISTS ix_inbound_emails_company_created ON inbound_emails (company_id, created_at)",
     """
     CREATE TABLE IF NOT EXISTS ingested_documents (
         id                  SERIAL PRIMARY KEY,

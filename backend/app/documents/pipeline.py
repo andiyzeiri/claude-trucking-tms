@@ -19,6 +19,7 @@ Both are enforced by the database, not by checking first and hoping.
 """
 
 import hashlib
+from datetime import datetime, timedelta
 import re
 import logging
 import uuid
@@ -44,7 +45,7 @@ from app.documents.unverified import record_unverified, verify_with
 from app.documents.lumper import apply_lumper, lumper_total
 from app.services.mileage import fill_miles
 from app.services.pdf_convert import image_to_jpeg, image_to_pdf, is_image
-from app.documents.sources.imap_mailbox import ImapMailboxReader, MailboxError
+from app.documents.sources.imap_mailbox import ImapMailboxReader, MailboxError, fetch_recent
 from app.models.company import Company
 from app.models.customer import Customer
 from app.models.loads_ai import (
@@ -469,6 +470,7 @@ async def ingest_message(
     summary: IngestSummary,
     remaining_documents: int,
     mode: str = "auto",
+    mailbox: Optional[str] = None,
 ) -> int:
     """
     Record one message and process its attachments.
@@ -485,6 +487,7 @@ async def ingest_message(
         received_at=message.received_at,
         attachment_count=len(message.attachments),
         status=InboundEmailStatus.RECEIVED,
+        mailbox=mailbox,
     )
     try:
         # Savepoint for the same reason as in _store_attachment.
@@ -582,9 +585,23 @@ async def _poll_mailbox(
         password=password,
         folder=settings.LOADS_AI_IMAP_FOLDER,
     )
+    # Message-IDs already handled - generous margin past the lookback window.
+    since = datetime.utcnow() - timedelta(days=settings.LOADS_AI_LOOKBACK_DAYS + 3)
+    known = set(
+        (
+            await session.execute(
+                select(InboundEmail.message_id).where(
+                    InboundEmail.company_id == company_id, InboundEmail.created_at >= since
+                )
+            )
+        ).scalars().all()
+    )
     try:
-        # imaplib is blocking; keep it off the event loop.
-        messages = await run_in_threadpool(reader.fetch_unseen, settings.LOADS_AI_MAX_MESSAGES_PER_POLL)
+        # imaplib is blocking; keep it off the event loop. Reads by date, read
+        # or unread, and never marks anything read.
+        messages = await run_in_threadpool(
+            fetch_recent, reader, settings.LOADS_AI_LOOKBACK_DAYS, known, settings.LOADS_AI_MAX_MESSAGES_PER_POLL
+        )
     except MailboxError as e:
         summary.errors.append(f"{username}: {e}")
         logger.warning("loads-ai: %s: %s", username, e)
@@ -600,7 +617,7 @@ async def _poll_mailbox(
             summary.notes.append("Per-cycle document limit reached; remaining mail stays unread.")
             break
         try:
-            budget -= await ingest_message(session, company_id, message, summary, budget, mode=mode)
+            budget -= await ingest_message(session, company_id, message, summary, budget, mode=mode, mailbox=username)
             await session.commit()
         except Exception as e:
             await session.rollback()
@@ -682,3 +699,69 @@ async def run_ingestion_job() -> None:
             await run_ingestion(session)
         except Exception:
             logger.exception("loads-ai: ingestion job crashed")
+
+
+async def retry_failed_documents(session: AsyncSession) -> dict:
+    """
+    Re-read documents whose extraction failed (e.g. a model outage), from
+    the copy already stored in S3, in the mode of the inbox they came from.
+    Gives up after LOADS_AI_MAX_ATTEMPTS attempts in total.
+    """
+    stats = {"retried": 0, "recovered": 0, "gave_up": 0}
+    if not settings.USE_S3:
+        return stats
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    docs = (
+        await session.execute(
+            select(IngestedDocument).where(
+                IngestedDocument.status == DocumentStatus.FAILED,
+                IngestedDocument.s3_key.isnot(None),
+                IngestedDocument.created_at >= week_ago,
+                IngestedDocument.attempt_count < settings.LOADS_AI_MAX_ATTEMPTS,
+            )
+        )
+    ).scalars().all()
+    pod_inbox = (settings.LOADS_AI_POD_IMAP_USERNAME or "").strip().lower()
+
+    for doc in docs:
+        content = await run_in_threadpool(s3_service.download_bytes, doc.s3_key)
+        if not content:
+            continue
+        email_row = await session.get(InboundEmail, doc.inbound_email_id) if doc.inbound_email_id else None
+        inbox = ((email_row.mailbox if email_row else None) or "").strip().lower()
+        mode = "pod" if pod_inbox and inbox == pod_inbox else ("ratecon" if inbox and pod_inbox else "auto")
+        summary = IngestSummary()
+        stats["retried"] += 1
+        try:
+            # The stored copy of a photo is a PDF; read it as stored.
+            if content.startswith(b"%PDF"):
+                doc.content_type = "application/pdf"
+            await process_document(
+                session, doc.company_id, doc, content, summary,
+                mode=mode, sender=email_row.from_address if email_row else None,
+            )
+            if doc.status == DocumentStatus.FAILED and (doc.attempt_count or 0) >= settings.LOADS_AI_MAX_ATTEMPTS:
+                doc.warnings = [f"Could not be read after {doc.attempt_count} attempts - check it by hand."]
+                stats["gave_up"] += 1
+            elif doc.status != DocumentStatus.FAILED:
+                stats["recovered"] += 1
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            logger.exception("loads-ai: retry of document %s crashed", doc.id)
+    if stats["retried"]:
+        logger.info("loads-ai: failed-document retry %s", stats)
+    return stats
+
+
+async def run_retry_job() -> None:
+    """Scheduler entry point for the hourly retry. Owns its session; never raises."""
+    from app.database import AsyncSessionLocal
+
+    if not settings.LOADS_AI_INGESTION_ENABLED:
+        return
+    async with AsyncSessionLocal() as session:
+        try:
+            await retry_failed_documents(session)
+        except Exception:
+            logger.exception("loads-ai: retry job crashed")
