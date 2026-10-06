@@ -43,6 +43,7 @@ from app.documents.sources.highway import parse_highway_notification
 from app.documents.unverified import record_unverified, verify_with
 from app.documents.lumper import apply_lumper, lumper_total
 from app.services.mileage import fill_miles
+from app.services.pdf_convert import image_to_jpeg, image_to_pdf, is_image
 from app.documents.sources.imap_mailbox import ImapMailboxReader, MailboxError
 from app.models.company import Company
 from app.models.customer import Customer
@@ -74,6 +75,9 @@ def sniff_content_type(content: bytes) -> Optional[str]:
             return media_type
     if content[:4] == b"RIFF" and content[8:12] == b"WEBP":
         return "image/webp"
+    # iPhone photos: ISO-BMFF 'ftyp' box with a HEIF brand.
+    if content[4:8] == b"ftyp" and content[8:12] in (b"heic", b"heix", b"hevc", b"heim", b"heis", b"mif1", b"msf1"):
+        return "image/heic"
     return None
 
 
@@ -182,8 +186,15 @@ async def _store_attachment(
     # Filename is never used to build the key - it is untrusted input.
     s3_key = f"companies/{company_id}/documents/{uuid.uuid4()}"
     if settings.USE_S3:
+        # Photos are stored as PDFs so the POD/Ratecon columns always open a
+        # PDF; the model still reads the original image bytes.
+        stored_bytes, stored_type = attachment.content, content_type
+        if is_image(content_type):
+            pdf = await run_in_threadpool(image_to_pdf, attachment.content)
+            if pdf:
+                stored_bytes, stored_type = pdf, "application/pdf"
         stored = await run_in_threadpool(
-            s3_service.upload_bytes, s3_key, attachment.content, content_type
+            s3_service.upload_bytes, s3_key, stored_bytes, stored_type
         )
         if not stored:
             logger.warning("loads-ai: S3 upload failed for %s", attachment.filename)
@@ -358,9 +369,15 @@ async def process_document(
     document.attempt_count = (document.attempt_count or 0) + 1
     await session.flush()
 
+    model_content, model_type = content, document.content_type
+    if model_type == "image/heic":
+        # The model doesn't read HEIC; give it a JPEG copy of the photo.
+        jpeg = await run_in_threadpool(image_to_jpeg, content)
+        if jpeg:
+            model_content, model_type = jpeg, "image/jpeg"
     doc_bytes = DocumentBytes(
-        content=content,
-        content_type=document.content_type,
+        content=model_content,
+        content_type=model_type,
         filename=document.original_filename,
     )
     try:

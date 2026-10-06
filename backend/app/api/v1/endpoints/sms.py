@@ -30,6 +30,7 @@ from app.models.sms import POD_PROMPT_KINDS, LoadSmsMessage, SmsKind
 from app.services.s3 import s3_service
 from app.sms.ai_loads import append_note, update_draft
 from app.documents.lumper import scan_media_for_lumper
+from app.services.pdf_convert import image_to_pdf, is_image
 from app.sms.ai_loads import view as ai_view
 from app.sms.pod_reminders import ack_text
 from app.sms.util import delivery_tz, to_e164
@@ -151,12 +152,19 @@ async def twilio_inbound(request: Request, background_tasks: BackgroundTasks, db
             except Exception as e:
                 logger.warning("sms-inbound: media %s download failed: %s", i, e)
                 continue
+            ctype = ctype or declared
             ext = MEDIA_EXT.get(ctype) or MEDIA_EXT[declared]
+            # Store photos as PDFs so the POD column always opens a PDF.
+            pdf = await run_in_threadpool(image_to_pdf, data) if is_image(ctype) else None
+            body_bytes, body_type, ext = (pdf, "application/pdf", "pdf") if pdf else (data, ctype, ext)
             key = f"pod-sms-ai{load.id if load else '-unmatched'}-{uuid.uuid4().hex}.{ext}"
-            ok = await run_in_threadpool(s3_service.upload_bytes, key, data, ctype or declared)
+            ok = await run_in_threadpool(s3_service.upload_bytes, key, body_bytes, body_type)
             if ok:
-                scan.append((data, ctype or declared, key))
-                stored.append({"key": key, "url": f"/api/v1/uploads/s3/{key}", "content_type": ctype or declared, "bytes": len(data)})
+                # The lumper check reads the original photo when the model can
+                # (JPEG/PNG/...), else the PDF (e.g. iPhone HEIC).
+                readable_image = ctype in ("image/jpeg", "image/png", "image/gif", "image/webp")
+                scan.append((data, ctype, key) if readable_image or not pdf else (pdf, "application/pdf", key))
+                stored.append({"key": key, "url": f"/api/v1/uploads/s3/{key}", "content_type": body_type, "bytes": len(body_bytes)})
 
         newly_attached = False
         if load is not None and stored and not ai_view(load).pod_url:
