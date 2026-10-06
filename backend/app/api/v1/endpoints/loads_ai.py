@@ -39,6 +39,7 @@ from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, DocumentStatus, IngestedD
 from app.sms.ai_loads import view as ai_view
 from app.sms.assignment import notify_ai_load_assigned
 from app.documents.unverified import verify_with
+from app.services.mileage import fill_miles
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -725,7 +726,8 @@ async def create_ai_load(
         byte_size=0,
         sha256=hashlib.sha256(uuid.uuid4().bytes).hexdigest(),
         status=DocumentStatus.AI_LOAD,
-        draft=_clean_ai_load_payload(payload),
+        # Uploaded ratecons arrive with both stops: fill miles once here too.
+        draft=await fill_miles(_clean_ai_load_payload(payload)),
     )
     db.add(doc)
     await db.flush()

@@ -42,6 +42,7 @@ from app.documents.sources.base import SourceAttachment, SourceMessage
 from app.documents.sources.highway import parse_highway_notification
 from app.documents.unverified import record_unverified, verify_with
 from app.documents.lumper import apply_lumper, lumper_total
+from app.services.mileage import fill_miles
 from app.documents.sources.imap_mailbox import ImapMailboxReader, MailboxError
 from app.models.company import Company
 from app.models.customer import Customer
@@ -421,6 +422,8 @@ async def process_document(
     # same /uploads/s3 form the Ratecon column already opens.
     if document.s3_key:
         draft["ratecon_url"] = f"/api/v1/uploads/s3/{document.s3_key}"
+    # Miles once, when the load is built (the page recalculates on edit).
+    draft = await fill_miles(draft)
     document.draft = draft
     document.warnings = mapped.warnings
 
