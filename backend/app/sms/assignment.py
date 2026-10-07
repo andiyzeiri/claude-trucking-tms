@@ -84,7 +84,13 @@ def assignment_text(load) -> str:
         lines.append(freight)
     if refs:
         lines.append(" / ".join(refs))
-    if load.pickup_notes:
+    notes = (getattr(load, "notes", None) or "").strip()
+    instructions = (getattr(load, "instructions", None) or "").strip()
+    if notes:
+        lines.append(f"Ref #s: {notes[:300]}")
+    if instructions and instructions != notes:
+        lines.append(f"Instructions: {instructions[:300]}")
+    elif not notes and load.pickup_notes:
         lines.append(f"Notes: {load.pickup_notes.strip()[:300]}")
     lines.append("Reply STOP to opt out.")
     return "\n".join(lines)

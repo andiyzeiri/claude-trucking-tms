@@ -369,6 +369,7 @@ class LoadDraft:
     description: Optional[str] = None
     pickup_notes: Optional[str] = None
     # Shown to the driver in the assignment text.
+    notes: Optional[str] = None
     pickup_number: Optional[str] = None
     delivery_number: Optional[str] = None
     shipper_name: Optional[str] = None
@@ -479,6 +480,8 @@ def build_load_draft(
     description_bits = [b for b in (commodity, equipment, weight) if b]
     draft.description = " / ".join(description_bits) or None
     draft.pickup_notes = take("special_instructions")
+    # Notes column: every reference number on the rate con, grouped by label.
+    draft.notes = reference_notes(extraction)
     draft.pickup_number = take("pickup_number")
     draft.delivery_number = take("delivery_number")
     draft.shipper_name = take("origin_company")
@@ -540,3 +543,43 @@ def extraction_field_map(extraction: RateconExtraction) -> Dict[str, Dict[str, A
                 "source_text": value.get("source_text"),
             }
     return out
+
+_LABEL_ORDER = ["PO", "BOL", "PU", "DEL", "Appt", "Order", "Load", "Shipment", "Trip", "PRO", "Confirmation", "Ref", "Seal"]
+
+
+def reference_notes(extraction) -> Optional[str]:
+    """
+    'PO# 5521-A, 5521-B · BOL# 88217643 · PU# 55821 · Order# 1283004'.
+
+    Every number the model listed, de-duplicated and grouped by label, plus
+    the dedicated identifier fields in case a number wasn't repeated there.
+    """
+    groups: dict = {}
+    seen: set = set()
+
+    def add(label: Optional[str], value: Optional[str]) -> None:
+        lab = (label or "Ref").strip().rstrip("#:. ") or "Ref"
+        for known in _LABEL_ORDER:  # normalise case, e.g. 'po' -> 'PO'
+            if lab.lower() == known.lower():
+                lab = known
+        # A field sometimes holds a list ("SYSTEM_AUTO,7364143449,7365399820"):
+        # one entry per number, and only tokens that contain a digit.
+        for v in re.split(r"[,;/\s]+", value or ""):
+            v = v.strip(" .#:")
+            key = re.sub(r"[^A-Za-z0-9]", "", v).upper()
+            if len(key) < 3 or not any(ch.isdigit() for ch in v) or key in seen:
+                continue
+            seen.add(key)
+            groups.setdefault(lab, []).append(v)
+
+    for item in getattr(extraction, "reference_numbers", None) or []:
+        add(getattr(item, "label", None), getattr(item, "value", None))
+    for label, name in (("PO", "po_number"), ("BOL", "bol_number"), ("PU", "pickup_number"),
+                        ("DEL", "delivery_number"), ("Load", "broker_load_number"), ("Ref", "internal_load_number")):
+        add(label, field_value(getattr(extraction, name, None)))
+
+    if not groups:
+        return None
+    order = {k: i for i, k in enumerate(_LABEL_ORDER)}
+    parts = [f"{lab}# {', '.join(vals)}" for lab, vals in sorted(groups.items(), key=lambda kv: order.get(kv[0], 99))]
+    return " · ".join(parts)

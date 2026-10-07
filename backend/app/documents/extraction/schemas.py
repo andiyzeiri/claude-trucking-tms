@@ -96,6 +96,13 @@ class ExtractedField(BaseModel):
     )
 
 
+class LabeledNumber(BaseModel):
+    """One reference number printed on the document, with its label."""
+
+    label: str = Field(description="The label as printed, normalised to a short tag: 'PO', 'BOL', 'PU', 'DEL', 'Order', 'Load', 'Shipment', 'PRO', 'Seal', 'Appt', 'Ref', 'Confirmation', or the document's own short label.")
+    value: str = Field(description="The number exactly as printed.")
+
+
 class ExtractedStop(BaseModel):
     """An additional pickup or delivery beyond the primary origin/destination."""
 
@@ -203,6 +210,17 @@ class RateconExtraction(BaseModel):
     additional_stops: List[ExtractedStop] = Field(
         default_factory=list,
         description="Stops beyond the primary origin and destination. Empty when none.",
+    )
+
+    reference_numbers: List[LabeledNumber] = Field(
+        default_factory=list,
+        description=(
+            "EVERY reference number printed anywhere on the document, each with its label: all PO "
+            "numbers (list each one), BOL, pickup/PU numbers, delivery/DEL and appointment numbers, "
+            "order, load, shipment, trip and PRO numbers, confirmation and reference numbers, seal "
+            "numbers. Exclude phone/fax numbers, MC/DOT numbers, zip codes, addresses, dollar "
+            "amounts, weights, dates and times."
+        ),
     )
 
 

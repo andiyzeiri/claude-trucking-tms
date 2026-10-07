@@ -58,6 +58,8 @@ class AILoadView:
     delivery_number: Optional[str] = None
     commodity: Optional[str] = None
     weight: Optional[str] = None
+    notes: Optional[str] = None          # Notes column: reference numbers (or what dispatch typed)
+    instructions: Optional[str] = None   # the rate con's special instructions
 
 
 def _extracted(doc: IngestedDocument, key: str) -> Optional[str]:
@@ -108,6 +110,8 @@ def view(doc: IngestedDocument) -> AILoadView:
         delivery_number=f.get("delivery_number") or _extracted(doc, "delivery_number"),
         commodity=_extracted(doc, "commodity"),
         weight=_extracted(doc, "weight"),
+        notes=f.get("notes") or None,
+        instructions=f.get("pickup_notes") or _extracted(doc, "special_instructions"),
     )
 
 
