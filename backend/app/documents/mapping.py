@@ -559,6 +559,9 @@ def reference_notes(extraction) -> Optional[str]:
 
     def add(label: Optional[str], value: Optional[str]) -> None:
         lab = (label or "Ref").strip().rstrip("#:. ") or "Ref"
+        # Not reference numbers, whatever the model labelled them.
+        if re.search(r"phone|fax|tel|cell|mobile|\bmc\b|\bdot\b|scac|zip|postal|nmfc|weight|amount|rate", lab, re.I):
+            return
         for known in _LABEL_ORDER:  # normalise case, e.g. 'po' -> 'PO'
             if lab.lower() == known.lower():
                 lab = known
