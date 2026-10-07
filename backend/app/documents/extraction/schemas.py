@@ -175,6 +175,10 @@ class RateconExtraction(BaseModel):
     origin_zip: ExtractedField = Field(default_factory=ExtractedField)
     pickup_date: ExtractedField = Field(default_factory=ExtractedField)
     pickup_time: ExtractedField = Field(default_factory=ExtractedField)
+    pickup_number: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description="Pickup/appointment/confirmation number for the shipper (PU#, PU number, pickup confirmation, appointment #), verbatim.",
+    )
 
     # --- Destination
     destination_company: ExtractedField = Field(default_factory=ExtractedField)
@@ -184,6 +188,10 @@ class RateconExtraction(BaseModel):
     destination_zip: ExtractedField = Field(default_factory=ExtractedField)
     delivery_date: ExtractedField = Field(default_factory=ExtractedField)
     delivery_time: ExtractedField = Field(default_factory=ExtractedField)
+    delivery_number: ExtractedField = Field(
+        default_factory=ExtractedField,
+        description="Delivery/appointment/confirmation number for the receiver (DEL#, appointment #, delivery confirmation), verbatim.",
+    )
 
     # --- Freight details
     equipment_type: ExtractedField = Field(default_factory=ExtractedField)

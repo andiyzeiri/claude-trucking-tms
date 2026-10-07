@@ -49,10 +49,36 @@ class AILoadView:
     delivery_date: Optional[datetime]
     pickup_notes: Optional[str]
     pod_url: Optional[str]
+    # For the driver's assignment text
+    shipper_name: Optional[str] = None
+    receiver_name: Optional[str] = None
+    pickup_window: Optional[str] = None
+    delivery_window: Optional[str] = None
+    pickup_number: Optional[str] = None
+    delivery_number: Optional[str] = None
+    commodity: Optional[str] = None
+    weight: Optional[str] = None
+
+
+def _extracted(doc: IngestedDocument, key: str) -> Optional[str]:
+    ex = doc.extraction if isinstance(doc.extraction, dict) else {}
+    v = ex.get(key)
+    return (v.get("value") or None) if isinstance(v, dict) else None
 
 
 def view(doc: IngestedDocument) -> AILoadView:
     f: Dict[str, Any] = doc.draft if isinstance(doc.draft, dict) else {}
+    pickup = parse_wall_clock(f.get("pickup_date"))
+    delivery = parse_wall_clock(f.get("delivery_date"))
+    # The rate confirmation had no delivery date, yet the load shows one equal
+    # to pickup: that's the page's display placeholder having been saved, not
+    # a real appointment. Treat delivery as unknown.
+    if (
+        isinstance(doc.extraction, dict) and doc.extraction
+        and not _extracted(doc, "delivery_date")
+        and delivery is not None and delivery == pickup
+    ):
+        delivery = None
     driver_id = f.get("driver_id")
     try:
         driver_id = int(driver_id) if driver_id not in (None, "", 0) else None
@@ -69,11 +95,19 @@ def view(doc: IngestedDocument) -> AILoadView:
         po_number=f.get("po_number") or None,
         bol_number=f.get("bol_number") or None,
         pickup_location=f.get("pickup_location") or None,
-        pickup_date=parse_wall_clock(f.get("pickup_date")),
+        pickup_date=pickup,
         delivery_location=f.get("delivery_location") or None,
-        delivery_date=parse_wall_clock(f.get("delivery_date")),
+        delivery_date=delivery,
         pickup_notes=(f.get("notes") or f.get("pickup_notes") or None),
         pod_url=f.get("pod_url") or None,
+        shipper_name=f.get("shipper_name") or _extracted(doc, "origin_company"),
+        receiver_name=f.get("receiver_name") or _extracted(doc, "destination_company"),
+        pickup_window=f.get("pickup_window") or _extracted(doc, "pickup_time"),
+        delivery_window=f.get("delivery_window") or _extracted(doc, "delivery_time"),
+        pickup_number=f.get("pickup_number") or _extracted(doc, "pickup_number"),
+        delivery_number=f.get("delivery_number") or _extracted(doc, "delivery_number"),
+        commodity=_extracted(doc, "commodity"),
+        weight=_extracted(doc, "weight"),
     )
 
 

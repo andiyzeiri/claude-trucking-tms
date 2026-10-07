@@ -389,7 +389,23 @@ export default function LoadsAIPageInline() {
     mutateAsync: async (data: any): Promise<Load> =>
       aiLoadToLoad(await createAILoad.mutateAsync(data)),
   }
-  const updateLoad = useUpdateAILoad()
+  const updateAILoad = useUpdateAILoad()
+  // The grid shows a stand-in date when an AI load has none (pickup for a
+  // missing delivery, created-at for a missing pickup) because grouping
+  // needs one, and every cell edit re-sends all columns. Don't let those
+  // stand-ins be saved as real appointment dates.
+  const sameInstant = (a: any, b: any) =>
+    !!a && !!b && new Date(normalizeDateTime(String(a))).getTime() === new Date(normalizeDateTime(String(b))).getTime()
+  const updateLoad = {
+    mutateAsync: ({ id, data }: { id: number; data: any }) => {
+      const orig = aiLoadsData?.find(a => a.id === id)
+      const f = orig?.fields || {}
+      const payload = { ...data }
+      if (!f.delivery_date && sameInstant(payload.delivery_date, f.pickup_date || orig?.created_at)) delete payload.delivery_date
+      if (!f.pickup_date && sameInstant(payload.pickup_date, orig?.created_at)) delete payload.pickup_date
+      return updateAILoad.mutateAsync({ id, data: payload })
+    },
+  }
   const deleteLoad = useDeleteAILoad()
 
   // Must be a stable reference: the sync effect below re-runs on every new

@@ -559,6 +559,8 @@ AI_LOAD_FIELDS = {
     "invoiced", "dispatched", "needs_attention",
     "broker_name", "broker_mc", "customer_confirmed",
     "lumper_amount", "lumper_vendor",
+    "pickup_number", "delivery_number", "shipper_name", "receiver_name",
+    "pickup_window", "delivery_window",
 }
 
 # Customer match thresholds, on rank_customers' score. 0.95 is an MC match

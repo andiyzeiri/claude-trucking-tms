@@ -25,25 +25,67 @@ from app.sms.util import delivery_tz, to_e164, wall_clock_to_utc
 logger = logging.getLogger(__name__)
 
 
-def _when(value: Optional[datetime]) -> str:
-    """Stop times are wall-clock at the stop; print them as stored."""
-    if not value:
-        return "time TBD"
-    day = value.strftime("%a %m/%d")
-    if value.hour == 0 and value.minute == 0:
-        return day
-    return f"{day} {value.strftime('%I:%M %p').lstrip('0')}"
+def _day(value: Optional[datetime]) -> Optional[str]:
+    return value.strftime("%a %m/%d") if value else None
+
+
+def _clock(value: Optional[datetime]) -> Optional[str]:
+    if not value or (value.hour == 0 and value.minute == 0):
+        return None
+    return value.strftime("%I:%M %p").lstrip("0")
+
+
+def _when(value: Optional[datetime], window: Optional[str]) -> str:
+    """'Wed 10/07, 8:00 AM - 3:00 PM' - the printed window beats a single clock time."""
+    day = _day(value)
+    if not day:
+        return "Date: not on the rate con - check with dispatch"
+    time = (window or "").strip() or _clock(value)
+    return f"{day}, {time}" if time else f"{day} (no time given)"
 
 
 def assignment_text(load) -> str:
-    lines = [f"Absolute Trucking: Load {load_label(load)} is assigned to you."]
-    lines.append(f"Pickup: {load.pickup_location or 'TBD'} - {_when(load.pickup_date)}")
-    lines.append(f"Delivery: {load.delivery_location or 'TBD'} - {_when(load.delivery_date)}")
-    refs = [f"{k} {v}" for k, v in (("PO", load.po_number), ("BOL", load.bol_number), ("Ref", load.broker_load_number)) if v]
+    """
+    Everything the driver needs to run the load, as plain lines:
+
+      Absolute Trucking: Load 132005652 is assigned to you.
+
+      PICKUP - Schroeders Pallet
+      7333 S Lockwood Ave, Bedford Park, IL 60638
+      Wed 10/07, 8:00 AM - 3:00 PM
+      PU#: 55821
+
+      DELIVERY - Professional Pallet
+      160 Brown St, Lawrenceburg, IN 47025
+      Date: not on the rate con - check with dispatch
+
+      Pallets, 25,000 lb
+      Notes: Check in at gate 3
+      Reply STOP to opt out.
+    """
+    def stop(title, name, location, when, number, number_label):
+        out = [f"{title}" + (f" - {name}" if name else "")]
+        out.append(location or "Address: check with dispatch")
+        out.append(when)
+        if number:
+            out.append(f"{number_label}: {number}")
+        return out
+
+    lines = [f"Absolute Trucking: Load {load_label(load)} is assigned to you.", ""]
+    lines += stop("PICKUP", load.shipper_name, load.pickup_location,
+                  _when(load.pickup_date, load.pickup_window), load.pickup_number, "PU#")
+    lines.append("")
+    lines += stop("DELIVERY", load.receiver_name, load.delivery_location,
+                  _when(load.delivery_date, load.delivery_window), load.delivery_number, "DEL#")
+    lines.append("")
+    refs = [f"{k} {v}" for k, v in (("PO", load.po_number), ("BOL", load.bol_number)) if v]
+    freight = ", ".join(x for x in (load.commodity, f"{load.weight} lb" if load.weight and "lb" not in str(load.weight).lower() else load.weight) if x)
+    if freight:
+        lines.append(freight)
     if refs:
         lines.append(" / ".join(refs))
     if load.pickup_notes:
-        lines.append(f"Notes: {load.pickup_notes.strip()[:200]}")
+        lines.append(f"Notes: {load.pickup_notes.strip()[:300]}")
     lines.append("Reply STOP to opt out.")
     return "\n".join(lines)
 
@@ -71,8 +113,10 @@ async def notify_ai_load_assigned(ai_load_id: int, driver_id: int) -> None:
                 return
 
             now = datetime.now(timezone.utc)
-            if load.delivery_date and wall_clock_to_utc(load.delivery_date, delivery_tz(load.delivery_location)) < now:
-                logger.info("load-assigned: AI load %s delivery already past; not texting", doc.id)
+            # Loads are often dispatched in the TMS after they've moved; only
+            # stay quiet for old loads being filled in for records.
+            if load.delivery_date and wall_clock_to_utc(load.delivery_date, delivery_tz(load.delivery_location)) < now - timedelta(days=2):
+                logger.info("load-assigned: AI load %s delivered over 2 days ago; not texting", doc.id)
                 return
             if driver.sms_opt_out:
                 logger.info("load-assigned: driver %s opted out; not texting", driver.id)

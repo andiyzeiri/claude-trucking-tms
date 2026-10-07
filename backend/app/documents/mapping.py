@@ -368,6 +368,13 @@ class LoadDraft:
     miles: Optional[int] = None
     description: Optional[str] = None
     pickup_notes: Optional[str] = None
+    # Shown to the driver in the assignment text.
+    pickup_number: Optional[str] = None
+    delivery_number: Optional[str] = None
+    shipper_name: Optional[str] = None
+    receiver_name: Optional[str] = None
+    pickup_window: Optional[str] = None
+    delivery_window: Optional[str] = None
     status: str = "available"
 
 
@@ -472,6 +479,13 @@ def build_load_draft(
     description_bits = [b for b in (commodity, equipment, weight) if b]
     draft.description = " / ".join(description_bits) or None
     draft.pickup_notes = take("special_instructions")
+    draft.pickup_number = take("pickup_number")
+    draft.delivery_number = take("delivery_number")
+    draft.shipper_name = take("origin_company")
+    draft.receiver_name = take("destination_company")
+    # Appointment windows as printed ("8:00 AM - 3:00 PM"), for the driver.
+    draft.pickup_window = take("pickup_time")
+    draft.delivery_window = take("delivery_time")
 
     # --- customer. NOT NULL on loads, so this gates saving.
     broker_name = take("broker_name")
