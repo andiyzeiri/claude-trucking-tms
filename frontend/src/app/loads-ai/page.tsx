@@ -41,6 +41,13 @@ import {
   useDeleteAILoad,
   type AILoad,
   type CustomerMatch,
+  type TimeDisplay,
+  type PendingRevision,
+  type MissingRatecon,
+  useRevisionAction,
+  useMissingRatecons,
+  useRemoveMissingRatecon,
+  useAttachMissingRatecon,
   useUnverifiedLoads,
   useDismissUnverified,
   useRequestPod,
@@ -363,7 +370,47 @@ function aiLoadToLoad(a: AILoad): Load {
     customer_match: a.customer_match,
     customer_match_reason: a.customer_match_reason,
     broker_name: a.broker_name,
+    pickup_time_display: a.pickup_time,
+    delivery_time_display: a.delivery_time,
+    pickup_date_known: !!f.pickup_date,
+    delivery_date_known: !!f.delivery_date,
+    pending_revision: a.pending_revision ?? null,
   } as Load
+}
+
+// Pickup / delivery date and time as the rate con states them:
+// a window in green ("8 AM – 3 PM"), a firm appointment in orange
+// ("8 AM appt"), unknown in red ("N/A"). A time edited by hand is an appointment.
+const TIME_COLOR: Record<TimeDisplay['kind'], string> = {
+  window: '#16a34a',
+  appointment: '#ea580c',
+  none: '#dc2626',
+}
+
+function StopDateTime({ load, side }: { load: any; side: 'pickup' | 'delivery' }) {
+  const known = load[`${side}_date_known`] !== false
+  const t: TimeDisplay | undefined = load[`${side}_time_display`]
+  const style = { fontSize: '12px', lineHeight: '17px', whiteSpace: 'nowrap' as const }
+  return (
+    <>
+      <div style={{ ...style, width: '60px', color: known ? 'var(--monday-text-muted)' : TIME_COLOR.none, fontWeight: known ? undefined : 600 }}>
+        {known ? formatDateShort(load[`${side}_date`]) : 'N/A'}
+      </div>
+      <div
+        style={{ ...style, width: '92px', color: TIME_COLOR[t?.kind ?? 'none'], fontWeight: 600 }}
+        title={t?.kind === 'window' ? 'Time window' : t?.kind === 'appointment' ? 'Appointment' : 'No time on the rate confirmation'}
+      >
+        {t ? t.text : formatTimeShort(load[`${side}_date`])}
+      </div>
+    </>
+  )
+}
+
+// /api/v1/uploads/s3/... paths are served by the API host.
+function fileUrl(path: string): string {
+  if (path.startsWith('http')) return path
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.absolutetms.com/api'
+  return `${apiUrl.replace('/api/v1', '').replace('/api', '')}${path}`
 }
 
 // Customer cell colouring by match quality.
@@ -480,6 +527,12 @@ export default function LoadsAIPageInline() {
   const { data: unverifiedLoads } = useUnverifiedLoads()
   const dismissUnverified = useDismissUnverified()
   const requestPod = useRequestPod()
+  const revisionAction = useRevisionAction()
+  const [revisionLoad, setRevisionLoad] = useState<{ id: number; label: string; revision: PendingRevision } | null>(null)
+  const { data: missingRatecons } = useMissingRatecons()
+  const removeMissingRatecon = useRemoveMissingRatecon()
+  const attachMissingRatecon = useAttachMissingRatecon()
+  const [showAllDocs, setShowAllDocs] = useState(false)
   const { data: ingestedDocs, refetch: refetchIngested } = useIngestedDocuments()
   const { pollMailbox, isPolling } = usePollMailbox()
 
@@ -1991,6 +2044,19 @@ export default function LoadsAIPageInline() {
           ) : (
             <div className="font-medium cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)'}}>
               {load.load_number}
+              {(load as any).pending_revision && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setRevisionLoad({ id: load.id, label: load.load_number || `#${load.id}`, revision: (load as any).pending_revision })
+                  }}
+                  className="mt-1 block whitespace-nowrap rounded bg-orange-100 px-1.5 py-0.5 text-[11px] font-semibold text-orange-800 hover:bg-orange-200"
+                  title="A revised rate confirmation arrived for this load"
+                >
+                  Revision received
+                </button>
+              )}
             </div>
           )}
         </td>
@@ -2235,12 +2301,7 @@ export default function LoadsAIPageInline() {
                 <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)', flex: 1}}>
                   {parseLocation(load.pickup_location).street || 'Street'}
                 </div>
-                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-muted)', width: '60px'}}>
-                  {formatDateShort(load.pickup_date)}
-                </div>
-                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-muted)', width: '65px'}}>
-                  {formatTimeShort(load.pickup_date)}
-                </div>
+                <StopDateTime load={load} side="pickup" />
               </div>
             </div>
           )}
@@ -2387,12 +2448,7 @@ export default function LoadsAIPageInline() {
                 <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-secondary)', flex: 1}}>
                   {parseLocation(load.delivery_location).street || 'Street'}
                 </div>
-                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-muted)', width: '60px'}}>
-                  {formatDateShort(load.delivery_date)}
-                </div>
-                <div style={{fontSize: '12px', lineHeight: '17px', color: 'var(--monday-text-muted)', width: '65px'}}>
-                  {formatTimeShort(load.delivery_date)}
-                </div>
+                <StopDateTime load={load} side="delivery" />
               </div>
             </div>
           )}
@@ -3005,7 +3061,7 @@ export default function LoadsAIPageInline() {
                   </tr>
                 </thead>
                 <tbody>
-                  {ingestedDocs.map(d => (
+                  {(showAllDocs ? ingestedDocs : ingestedDocs.slice(0, 10)).map(d => (
                     <tr key={d.id} className="border-t" style={{ borderColor: 'var(--monday-border-light)' }}>
                       <td className="py-1.5 pr-3 align-top">{d.original_filename || `#${d.id}`}</td>
                       <td className="py-1.5 pr-3 align-top">
@@ -3021,6 +3077,24 @@ export default function LoadsAIPageInline() {
                           </span>
                         ) : d.status === 'pod_unmatched' ? (
                           <span className="text-amber-700">POD &ndash; not matched</span>
+                        ) : d.status === 'pod_only' ? (
+                          <span className="text-amber-700">POD &ndash; waiting for ratecon</span>
+                        ) : d.status === 'pod_merged' ? (
+                          <span className="inline-flex items-center gap-1 text-green-700">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> POD merged
+                          </span>
+                        ) : d.status === 'revision' ? (
+                          <span className="text-orange-700">revision &ndash; to review</span>
+                        ) : d.status === 'revision_applied' ? (
+                          <span className="text-green-700">revision applied</span>
+                        ) : d.status === 'revision_dismissed' ? (
+                          <span className="text-gray-500">revision dismissed</span>
+                        ) : d.status === 'revision_same' ? (
+                          <span className="text-gray-500">re-sent, no changes</span>
+                        ) : d.status === 'unverified' ? (
+                          <span className="text-amber-700">unverified</span>
+                        ) : d.status === 'verified' ? (
+                          <span className="text-green-700">verified</span>
                         ) : d.status === 'not_a_load' ? (
                           <span className="text-gray-500">not a load</span>
                         ) : d.status === 'dismissed' ? (
@@ -3047,6 +3121,16 @@ export default function LoadsAIPageInline() {
                   ))}
                 </tbody>
               </table>
+              {ingestedDocs.length > 10 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllDocs(v => !v)}
+                  className="mt-1 text-xs underline"
+                  style={{ color: 'var(--monday-text-secondary)' }}
+                >
+                  {showAllDocs ? 'Show the last 10 only' : `Show more (${ingestedDocs.length - 10})`}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -3195,6 +3279,169 @@ export default function LoadsAIPageInline() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Missing ratecons: PODs that arrived before their rate confirmation */}
+        {missingRatecons && missingRatecons.length > 0 && (
+          <div className="rounded-lg border" style={{ backgroundColor: 'var(--monday-bg-primary)', borderColor: '#F59E0B' }}>
+            <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 pt-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                Missing ratecons ({missingRatecons.length})
+              </h3>
+              <p className="text-xs" style={{ color: 'var(--monday-text-secondary)' }}>
+                Built from a POD. Each merges into its load when the rate confirmation arrives.
+              </p>
+            </div>
+            <div className="overflow-x-auto px-4 pb-3 pt-2">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs" style={{ color: 'var(--monday-text-secondary)' }}>
+                    <th className="py-1.5 pr-4 font-medium">Shipper</th>
+                    <th className="py-1.5 pr-4 font-medium">Consignee</th>
+                    <th className="py-1.5 pr-4 font-medium">Date</th>
+                    <th className="py-1.5 pr-4 font-medium">Refs</th>
+                    <th className="py-1.5 pr-4 font-medium">Driver</th>
+                    <th className="py-1.5 pr-4 font-medium">POD</th>
+                    <th className="py-1.5 pr-4 font-medium">Lumper</th>
+                    <th className="py-1.5 pr-4 font-medium">Attach to load</th>
+                    <th className="py-1.5" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {missingRatecons.map((m: MissingRatecon) => {
+                    const driver = (driversData?.items || []).find((d: any) => d.id === m.driver_id)
+                    const when = m.delivery_date || m.pickup_date
+                    return (
+                      <tr key={m.id} className="border-t align-top" style={{ borderColor: 'var(--monday-border-light)' }}>
+                        <td className="py-2 pr-4">
+                          <div className="font-medium">{m.shipper_name || '—'}</div>
+                          <div className="text-xs" style={{ color: 'var(--monday-text-secondary)' }}>{m.pickup_location || ''}</div>
+                        </td>
+                        <td className="py-2 pr-4">
+                          <div className="font-medium">{m.receiver_name || '—'}</div>
+                          <div className="text-xs" style={{ color: 'var(--monday-text-secondary)' }}>{m.delivery_location || ''}</div>
+                        </td>
+                        <td className="py-2 pr-4 whitespace-nowrap">{when ? formatDateShort(when) : <span className="text-red-600">N/A</span>}</td>
+                        <td className="py-2 pr-4 text-xs" style={{ color: 'var(--monday-text-secondary)', maxWidth: 260 }}>
+                          {m.notes || m.references.join(', ') || '—'}
+                        </td>
+                        <td className="py-2 pr-4 whitespace-nowrap">{driver ? `${driver.first_name} ${driver.last_name}` : '—'}</td>
+                        <td className="py-2 pr-4">
+                          {m.pod_url ? (
+                            <button type="button" className="text-brand hover:underline"
+                              onClick={() => setPdfModal({ url: fileUrl(m.pod_url!), loadId: 0, type: 'pod' })}>View</button>
+                          ) : '—'}
+                        </td>
+                        <td className="py-2 pr-4 whitespace-nowrap">{m.lumper_amount ? `$${Number(m.lumper_amount).toFixed(2)}` : '—'}</td>
+                        <td className="py-2 pr-4">
+                          <select
+                            className="rounded border px-1.5 py-1 text-xs"
+                            style={{ borderColor: 'var(--monday-border-light)', maxWidth: 180 }}
+                            value=""
+                            disabled={attachMissingRatecon.isPending}
+                            onChange={(e) => {
+                              const id = Number(e.target.value)
+                              if (id) attachMissingRatecon.mutate({ id: m.id, aiLoadId: id })
+                            }}
+                          >
+                            <option value="">Choose a load…</option>
+                            {(aiLoadsData ?? [])
+                              .filter(a => !a.fields?.pod_url)
+                              .map(a => (
+                                <option key={a.id} value={a.id}>
+                                  {(a.fields?.load_number || a.fields?.broker_load_number || `#${a.id}`) +
+                                    (a.fields?.delivery_location ? ` · ${String(a.fields.delivery_location).split(',').slice(-2).join(',').trim()}` : '')}
+                                </option>
+                              ))}
+                          </select>
+                        </td>
+                        <td className="py-2 text-right">
+                          <button
+                            type="button"
+                            title="Remove"
+                            onClick={() => removeMissingRatecon.mutate(m.id)}
+                            className="rounded p-1 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Revised rate confirmation: what changed, accept or dismiss */}
+        {revisionLoad && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setRevisionLoad(null)}>
+            <div
+              className="w-full max-w-lg rounded-lg border p-4 shadow-xl"
+              style={{ backgroundColor: 'var(--monday-bg-primary)', borderColor: 'var(--monday-border-light)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-base font-semibold" style={{ color: 'var(--monday-text-primary)' }}>
+                Revised rate confirmation &middot; load {revisionLoad.label}
+              </h3>
+              <p className="mt-1 text-xs" style={{ color: 'var(--monday-text-secondary)' }}>
+                {revisionLoad.revision.received_at
+                  ? `Received ${new Date(revisionLoad.revision.received_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}. `
+                  : ''}
+                Accepting updates the load; driver, truck, POD and lumper stay as they are.
+              </p>
+              <table className="mt-3 w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs" style={{ color: 'var(--monday-text-secondary)' }}>
+                    <th className="py-1 pr-3 font-medium">Field</th>
+                    <th className="py-1 pr-3 font-medium">Now</th>
+                    <th className="py-1 font-medium">Revised</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {revisionLoad.revision.changes.map(c => (
+                    <tr key={c.field} className="border-t" style={{ borderColor: 'var(--monday-border-light)' }}>
+                      <td className="py-1.5 pr-3 font-medium">{c.label}</td>
+                      <td className="py-1.5 pr-3 text-gray-500 line-through">{c.old || '—'}</td>
+                      <td className="py-1.5 font-semibold text-orange-700">{c.new || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {revisionLoad.revision.ratecon_url && (
+                <button
+                  type="button"
+                  onClick={() => setPdfModal({ url: fileUrl(revisionLoad.revision.ratecon_url!), loadId: 0, type: 'ratecon' })}
+                  className="mt-3 inline-block text-xs underline"
+                >
+                  Open the revised rate confirmation
+                </button>
+              )}
+              <div className="mt-4 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  disabled={revisionAction.isPending}
+                  onClick={async () => {
+                    await revisionAction.mutateAsync({ id: revisionLoad.id, action: 'dismiss' }).catch(() => {})
+                    setRevisionLoad(null)
+                  }}
+                >
+                  Dismiss
+                </Button>
+                <Button
+                  disabled={revisionAction.isPending}
+                  onClick={async () => {
+                    await revisionAction.mutateAsync({ id: revisionLoad.id, action: 'accept' }).catch(() => {})
+                    setRevisionLoad(null)
+                  }}
+                >
+                  Accept revision
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -3501,6 +3748,8 @@ export default function LoadsAIPageInline() {
                   {pdfModal.type === 'pod' ? 'Proof of Delivery' : 'Rate Confirmation'}
                 </h2>
                 <div className="flex items-center gap-2">
+                  {/* loadId 0: a file shown from Missing ratecons / a revision, not on a load */}
+                  {pdfModal.loadId > 0 && (
                   <Button
                     variant="destructive"
                     size="sm"
@@ -3513,6 +3762,7 @@ export default function LoadsAIPageInline() {
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
                   </Button>
+                  )}
                   <button
                     onClick={() => setPdfModal(null)}
                     className="p-2 hover:bg-surface-hover rounded-full"

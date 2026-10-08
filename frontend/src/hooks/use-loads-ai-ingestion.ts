@@ -34,6 +34,9 @@ export interface IngestSummary {
   pods_attached?: number
   pods_unmatched?: number
   not_loads?: number
+  revisions?: number
+  missing_ratecons?: number
+  pods_merged?: number
   needs_review: number
   failed: number
   errors: string[]
@@ -95,6 +98,7 @@ export function usePollMailbox() {
       // never touched by ingestion, so ['loads'] is deliberately left alone.
       queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY })
       queryClient.invalidateQueries({ queryKey: UNVERIFIED_KEY })
+      queryClient.invalidateQueries({ queryKey: MISSING_RATECONS_KEY })
 
       if (s.errors.length) {
         toast.error(s.errors[0])
@@ -112,6 +116,8 @@ export function usePollMailbox() {
       if (s.loads_created) bits.push(`${s.loads_created} AI load(s) added`)
       if (s.unverified_created) bits.push(`${s.unverified_created} Highway load(s) waiting for ratecon`)
       if (s.pods_attached) bits.push(`${s.pods_attached} POD(s) attached`)
+      if (s.revisions) bits.push(`${s.revisions} revised ratecon(s) to review`)
+      if (s.missing_ratecons) bits.push(`${s.missing_ratecons} POD(s) waiting for a ratecon`)
       if (s.pods_unmatched) bits.push(`${s.pods_unmatched} POD(s) need matching`)
       if (s.needs_review) bits.push(`${s.needs_review} need review`)
       if (s.duplicates) bits.push(`${s.duplicates} duplicate(s) skipped`)
@@ -156,6 +162,31 @@ export interface AILoad {
   customer_candidates: { id: number; name: string; score: number; reason: string }[]
   /** Last time the driver was texted for this load's POD. */
   pod_requested_at?: string | null
+  /** How the pickup / delivery time reads: window = green, appointment = orange, none = red. */
+  pickup_time?: TimeDisplay
+  delivery_time?: TimeDisplay
+  /** A revised rate confirmation waiting to be accepted or dismissed. */
+  pending_revision?: PendingRevision | null
+}
+
+export interface TimeDisplay {
+  kind: 'window' | 'appointment' | 'none'
+  text: string
+}
+
+export interface RevisionChange {
+  field: string
+  label: string
+  old: string | null
+  new: string | null
+}
+
+export interface PendingRevision {
+  doc_id: number
+  changes: RevisionChange[]
+  received_at: string | null
+  filename?: string | null
+  ratecon_url?: string | null
 }
 
 export type CustomerMatch = 'exact' | 'partial' | 'none'
@@ -258,6 +289,87 @@ export function useRequestPod() {
     onError: (error: any) => {
       const detail = error?.response?.data?.detail
       toast.error(typeof detail === 'string' ? detail : 'Could not send the POD request')
+    },
+  })
+}
+
+// --- Revised rate confirmations ------------------------------------------------
+
+export function useRevisionAction() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, action }: { id: number; action: 'accept' | 'dismiss' }): Promise<AILoad> =>
+      (await api.post(`/v1/loads-ai/loads/${id}/revision/${action}`)).data,
+    onSuccess: (_, v) => {
+      toast.success(v.action === 'accept' ? 'Revision applied' : 'Revision dismissed')
+      queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY })
+      queryClient.invalidateQueries({ queryKey: ['loads-ai-documents'] })
+    },
+    onError: (error: any) => {
+      const detail = error?.response?.data?.detail
+      toast.error(typeof detail === 'string' ? detail : 'Could not update the revision')
+      queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY })
+    },
+  })
+}
+
+// --- Missing ratecons ------------------------------------------------------------
+// A POD that came in before its rate confirmation, kept as a temporary load.
+// Merged into the AI load automatically when the ratecon arrives.
+
+export const MISSING_RATECONS_KEY = ['loads-ai-missing-ratecons'] as const
+
+export interface MissingRatecon {
+  id: number
+  received_at: string | null
+  shipper_name: string | null
+  receiver_name: string | null
+  pickup_location: string | null
+  delivery_location: string | null
+  pickup_date: string | null
+  delivery_date: string | null
+  notes: string | null
+  references: string[]
+  driver_id: number | null
+  pod_url: string | null
+  lumper_amount: string | null
+  lumper_vendor: string | null
+  original_filename: string | null
+}
+
+export function useMissingRatecons() {
+  return useQuery({
+    queryKey: MISSING_RATECONS_KEY,
+    queryFn: async (): Promise<MissingRatecon[]> => (await api.get('/v1/loads-ai/missing-ratecons')).data,
+    retry: false,
+  })
+}
+
+export function useRemoveMissingRatecon() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number) => { await api.delete(`/v1/loads-ai/missing-ratecons/${id}`) },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MISSING_RATECONS_KEY })
+      toast.success('Removed')
+    },
+    onError: () => toast.error('Could not remove it'),
+  })
+}
+
+export function useAttachMissingRatecon() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, aiLoadId }: { id: number; aiLoadId: number }) =>
+      (await api.post(`/v1/loads-ai/missing-ratecons/${id}/attach`, { ai_load_id: aiLoadId })).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MISSING_RATECONS_KEY })
+      queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY })
+      toast.success('POD attached to the load')
+    },
+    onError: (error: any) => {
+      const detail = error?.response?.data?.detail
+      toast.error(typeof detail === 'string' ? detail : 'Could not attach it')
     },
   })
 }

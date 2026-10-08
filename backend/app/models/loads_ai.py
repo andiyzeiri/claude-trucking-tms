@@ -52,6 +52,12 @@ class DocumentStatus:
     POD_UNMATCHED = "pod_unmatched"   # a proof of delivery no AI load could be matched to
     NOT_A_LOAD = "not_a_load"         # invoice / unsigned BOL / other paperwork: no AI load
     UNVERIFIED = "unverified"         # load known from a notice (Highway) - waiting for its rate confirmation
+    POD_ONLY = "pod_only"             # temporary load built from a POD whose rate confirmation hasn't arrived
+    POD_MERGED = "pod_merged"         # temporary POD load merged into the AI load once its ratecon arrived
+    REVISION = "revision"             # revised rate confirmation for an existing AI load, awaiting accept/dismiss
+    REVISION_APPLIED = "revision_applied"
+    REVISION_DISMISSED = "revision_dismissed"
+    REVISION_SAME = "revision_same"   # re-sent rate confirmation with nothing changed
     VERIFIED = "verified"             # unverified load whose rate confirmation arrived (now an AI load)
     # Legacy: rows written before AI loads were separated from the loads table.
     LOAD_CREATED = "load_created"     # a real load was created from this document

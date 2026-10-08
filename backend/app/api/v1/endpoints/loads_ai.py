@@ -38,7 +38,10 @@ from app.models.load import Load
 from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, DocumentStatus, IngestedDocument
 from app.sms.ai_loads import view as ai_view
 from app.sms.assignment import notify_ai_load_assigned
-from app.documents.unverified import verify_with
+from app.documents import revisions
+from app.documents.load_times import describe_time
+from app.documents.unverified import merge_pod_into, verify_with
+from app.sms.ai_loads import parse_wall_clock
 from app.services.mileage import fill_miles
 from app.models.driver import Driver
 from app.models.sms import POD_PROMPT_KINDS, LoadSmsMessage, SmsKind
@@ -602,6 +605,11 @@ class AILoadResponse(BaseModel):
     customer_candidates: List[CustomerMatchCandidate] = []
     # Last time the driver was texted for this load's POD (button or reminder).
     pod_requested_at: Optional[str] = None
+    # How the pickup / delivery time reads: {"kind": window|appointment|none, "text"}
+    pickup_time: Dict[str, str] = {}
+    delivery_time: Dict[str, str] = {}
+    # A revised rate confirmation waiting to be accepted or dismissed.
+    pending_revision: Optional[Dict[str, Any]] = None
 
 
 def _extracted(doc: IngestedDocument, key: str) -> Optional[str]:
@@ -670,6 +678,11 @@ def _ai_load_response(doc: IngestedDocument, customers: List[Customer]) -> AILoa
         customer_match_reason=reason,
         broker_name=broker_name,
         customer_candidates=candidates,
+        pickup_time=describe_time(fields.get("pickup_window"), parse_wall_clock(fields.get("pickup_date")),
+                                  bool(fields.get("pickup_time_manual"))),
+        delivery_time=describe_time(fields.get("delivery_window"), parse_wall_clock(fields.get("delivery_date")),
+                                    bool(fields.get("delivery_time_manual"))),
+        pending_revision=fields.get("pending_revision") if isinstance(fields.get("pending_revision"), dict) else None,
     )
 
 
@@ -793,6 +806,21 @@ async def update_ai_load(
     else:
         changes.pop("customer_id", None)
         changes.pop("customer_confirmed", None)
+    # A pickup/delivery time changed by hand is a firm appointment: it
+    # replaces the window printed on the rate con. (The page re-sends every
+    # column, so compare the clock reading, not the string.)
+    for side in ("pickup", "delivery"):
+        key = f"{side}_date"
+        if key in changes:
+            new_when = parse_wall_clock(changes[key])
+            old_when = parse_wall_clock(merged.get(key))
+            changes.pop(f"{side}_window", None)
+            if new_when is None:
+                merged.pop(f"{side}_time_manual", None)
+            elif old_when is None or new_when.time() != old_when.time():
+                # Only a changed clock time; moving the day keeps the window.
+                changes[f"{side}_window"] = None
+                merged[f"{side}_time_manual"] = True
     merged.update(changes)
     # Reassign rather than mutate in place: SQLAlchemy does not track
     # changes inside a plain JSONB dict.
@@ -883,6 +911,173 @@ async def dismiss_unverified_load(
         raise HTTPException(status_code=404, detail="Unverified load not found.")
     doc.status = DocumentStatus.DISMISSED
     await db.commit()
+
+
+# --- Revised rate confirmations ----------------------------------------------
+
+async def _pending_revision(db: AsyncSession, company_id: int, doc: IngestedDocument) -> Optional[IngestedDocument]:
+    pending = (doc.draft or {}).get("pending_revision") or {}
+    rev_id = pending.get("doc_id")
+    if not rev_id:
+        return None
+    return (
+        await db.execute(
+            select(IngestedDocument).where(
+                IngestedDocument.id == rev_id,
+                IngestedDocument.company_id == company_id,
+                IngestedDocument.status == DocumentStatus.REVISION,
+            )
+        )
+    ).scalars().first()
+
+
+@router.post("/loads/{ai_load_id}/revision/accept", response_model=AILoadResponse)
+async def accept_revision(
+    ai_load_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Apply the revised rate confirmation. Driver, truck, POD, lumper and status are kept."""
+    doc = await _get_ai_load(db, current_user.company_id, ai_load_id)
+    revision = await _pending_revision(db, current_user.company_id, doc)
+    if revision is None:
+        revisions.dismiss(doc, None)
+        await db.commit()
+        raise HTTPException(status_code=404, detail="That revision is no longer available.")
+    before = dict(doc.draft or {})
+    revisions.accept(doc, revision)
+    after = dict(doc.draft)
+    moved = (after.get("pickup_location"), after.get("delivery_location")) != (before.get("pickup_location"), before.get("delivery_location"))
+    if moved and not (revision.draft or {}).get("miles"):
+        after["miles"] = None
+        doc.draft = await fill_miles(after)
+    await db.commit()
+    await db.refresh(doc)
+    logger.info("loads-ai: revision %s accepted on AI load %s by user %s", revision.id, doc.id, current_user.id)
+    return _ai_load_response(doc, await _company_customers(db, current_user.company_id))
+
+
+@router.post("/loads/{ai_load_id}/revision/dismiss", response_model=AILoadResponse)
+async def dismiss_revision(
+    ai_load_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Keep the load as it is and drop the revision notice."""
+    doc = await _get_ai_load(db, current_user.company_id, ai_load_id)
+    revisions.dismiss(doc, await _pending_revision(db, current_user.company_id, doc))
+    await db.commit()
+    await db.refresh(doc)
+    return _ai_load_response(doc, await _company_customers(db, current_user.company_id))
+
+
+# --- Missing ratecons (POD arrived before its rate confirmation) ---------------
+
+class MissingRateconResponse(BaseModel):
+    id: int
+    received_at: Optional[str] = None
+    shipper_name: Optional[str] = None
+    receiver_name: Optional[str] = None
+    pickup_location: Optional[str] = None
+    delivery_location: Optional[str] = None
+    pickup_date: Optional[str] = None
+    delivery_date: Optional[str] = None
+    notes: Optional[str] = None
+    references: List[str] = []
+    driver_id: Optional[int] = None
+    pod_url: Optional[str] = None
+    lumper_amount: Optional[str] = None
+    lumper_vendor: Optional[str] = None
+    original_filename: Optional[str] = None
+
+
+async def _get_missing_ratecon(db: AsyncSession, company_id: int, doc_id: int) -> IngestedDocument:
+    doc = (
+        await db.execute(
+            select(IngestedDocument).where(
+                IngestedDocument.id == doc_id,
+                IngestedDocument.company_id == company_id,
+                IngestedDocument.status == DocumentStatus.POD_ONLY,
+            )
+        )
+    ).scalars().first()
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Missing-ratecon load not found.")
+    return doc
+
+
+@router.get("/missing-ratecons", response_model=List[MissingRateconResponse])
+async def list_missing_ratecons(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Temporary loads built from a POD whose rate confirmation hasn't arrived yet."""
+    docs = (
+        await db.execute(
+            select(IngestedDocument)
+            .where(
+                IngestedDocument.company_id == current_user.company_id,
+                IngestedDocument.status == DocumentStatus.POD_ONLY,
+            )
+            .order_by(IngestedDocument.id.desc())
+        )
+    ).scalars().all()
+    out = []
+    for d in docs:
+        f = d.draft or {}
+        out.append(MissingRateconResponse(
+            id=d.id,
+            received_at=d.created_at.isoformat() if d.created_at else None,
+            shipper_name=f.get("shipper_name"),
+            receiver_name=f.get("receiver_name"),
+            pickup_location=f.get("pickup_location"),
+            delivery_location=f.get("delivery_location"),
+            pickup_date=f.get("pickup_date"),
+            delivery_date=f.get("delivery_date"),
+            notes=f.get("notes"),
+            references=list(f.get("ref_keys") or [])[:12],
+            driver_id=f.get("driver_id"),
+            pod_url=f.get("pod_url"),
+            lumper_amount=f.get("lumper_amount"),
+            lumper_vendor=f.get("lumper_vendor"),
+            original_filename=d.original_filename,
+        ))
+    return out
+
+
+@router.delete("/missing-ratecons/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_missing_ratecon(
+    doc_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Remove a temporary POD load by hand. Soft delete; the POD file is kept."""
+    doc = await _get_missing_ratecon(db, current_user.company_id, doc_id)
+    doc.status = DocumentStatus.DISMISSED
+    await db.commit()
+
+
+class AttachMissingRatecon(BaseModel):
+    ai_load_id: int
+
+
+@router.post("/missing-ratecons/{doc_id}/attach", response_model=AILoadResponse)
+async def attach_missing_ratecon(
+    doc_id: int,
+    body: AttachMissingRatecon,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Match a POD-only load to an AI load by hand: its POD, driver and lumper move over."""
+    pod_only = await _get_missing_ratecon(db, current_user.company_id, doc_id)
+    target = await _get_ai_load(db, current_user.company_id, body.ai_load_id)
+    if (target.draft or {}).get("pod_url"):
+        raise HTTPException(status_code=409, detail="That load already has a POD. Remove it first to attach this one.")
+    merge_pod_into(pod_only, target)
+    await db.commit()
+    await db.refresh(target)
+    logger.info("loads-ai: missing-ratecon %s attached to AI load %s by user %s", pod_only.id, target.id, current_user.id)
+    return _ai_load_response(target, await _company_customers(db, current_user.company_id))
 
 
 # --- "Request POD" button ---------------------------------------------------

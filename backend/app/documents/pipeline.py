@@ -41,7 +41,13 @@ from app.documents.extraction.registry import get_extractor
 from app.documents.mapping import build_load_draft
 from app.documents.sources.base import SourceAttachment, SourceMessage
 from app.documents.sources.highway import parse_highway_notification
-from app.documents.unverified import record_unverified, verify_with
+from app.documents.unverified import (
+    all_refs,
+    merge_pod_only,
+    record_unverified,
+    verify_with,
+)
+from app.documents import revisions
 from app.documents.lumper import apply_lumper, lumper_total
 from app.services.mileage import fill_miles
 from app.services.pdf_convert import image_to_jpeg, image_to_pdf, is_image
@@ -101,6 +107,9 @@ class IngestSummary:
     pods_attached: int = 0
     pods_unmatched: int = 0
     lumpers_found: int = 0
+    missing_ratecons: int = 0
+    pods_merged: int = 0
+    revisions: int = 0
     not_loads: int = 0
     needs_review: int = 0
     failed: int = 0
@@ -124,6 +133,9 @@ class IngestSummary:
             "pods_attached": self.pods_attached,
             "pods_unmatched": self.pods_unmatched,
             "lumpers_found": self.lumpers_found,
+            "missing_ratecons": self.missing_ratecons,
+            "pods_merged": self.pods_merged,
+            "revisions": self.revisions,
             "not_loads": self.not_loads,
             "needs_review": self.needs_review,
             "failed": self.failed,
@@ -228,10 +240,35 @@ async def _store_attachment(
     return document, "created"
 
 
+def _pod_refs(classification) -> set:
+    """
+    Numbers printed on a POD, as match keys: each one whole and each of its
+    parts, so 'PO 4471902' also matches a load whose PO is 4471902.
+    Stray short numbers ("1", "53") are ignored.
+    """
+    out = set()
+    for r in classification.reference_numbers or []:
+        out.add(_norm_ref(r))
+        for token in re.split(r"[\s#:,;/]+", str(r or "")):
+            if any(ch.isdigit() for ch in token):
+                out.add(_norm_ref(token))
+    return {r for r in out if len(r) >= 4}
+
+
+def _same_city(printed: Optional[str], location: Optional[str]) -> bool:
+    """'Stow, OH' vs '123 Main St, Stow, OH 44224'."""
+    city = (printed or "").split(",")[0].strip().lower()
+    return bool(city) and city in (location or "").lower()
+
+
 def _norm_ref(value) -> str:
     """Compare reference numbers on letters and digits only: 'PO# 55-21' == 'po5521'."""
     return re.sub(r"[^A-Za-z0-9]", "", str(value or "")).upper()
 
+
+# Loads a POD can be attached to: AI loads, unverified (Highway) loads and
+# temporary POD-only loads.
+MATCHABLE_STATUSES = LIVE_AI_LOAD_STATUSES + (DocumentStatus.UNVERIFIED, DocumentStatus.POD_ONLY)
 
 # AI load fields a POD's printed numbers are matched against.
 _AI_LOAD_REF_FIELDS = ("load_number", "broker_load_number", "bol_number", "po_number", "reference_number")
@@ -244,23 +281,28 @@ async def _attach_pod_to_ai_load(
     classification,
     summary: IngestSummary,
     sender: Optional[str] = None,
-) -> None:
+) -> bool:
     """
     Route a proof of delivery to the AI load it belongs to.
 
-    Matched on any reference number printed on the POD against the AI load's
-    load / broker / BOL / PO / reference numbers. An existing POD is never
-    overwritten, and an ambiguous match is left for a person.
+    Matched on any reference number printed on the POD against every number
+    on the AI load (its rate con's load / broker / BOL / PO / pickup numbers).
+    Unverified loads (Highway notices) and POD-only loads are candidates too:
+    a POD attached to one carries over when its rate confirmation arrives.
+    An existing POD is never overwritten, and an ambiguous match is left for
+    a person.
+
+    Returns True when nothing matched and the POD should become a temporary
+    "missing rate confirmation" load.
     """
-    refs = {_norm_ref(r) for r in (classification.reference_numbers or [])}
-    refs = {r for r in refs if len(r) >= 4}   # ignore stray short numbers ("1", "53")
+    refs = _pod_refs(classification)
     document.draft = None  # a POD document is not itself an AI load
 
     candidates = (
         await session.execute(
             select(IngestedDocument).where(
                 IngestedDocument.company_id == company_id,
-                IngestedDocument.status.in_(LIVE_AI_LOAD_STATUSES),
+                IngestedDocument.status.in_(MATCHABLE_STATUSES),
                 IngestedDocument.id != document.id,
                 IngestedDocument.draft.isnot(None),
             )
@@ -269,7 +311,7 @@ async def _attach_pod_to_ai_load(
     matches = []
     for doc in candidates:
         f = doc.draft if isinstance(doc.draft, dict) else {}
-        own = {_norm_ref(f.get(k)) for k in _AI_LOAD_REF_FIELDS if f.get(k)}
+        own = {_norm_ref(f.get(k)) for k in _AI_LOAD_REF_FIELDS if f.get(k)} | all_refs(doc)
         hit = refs & own
         if hit:
             matches.append((doc, sorted(hit)))
@@ -291,15 +333,22 @@ async def _attach_pod_to_ai_load(
     pod_url = f"/api/v1/uploads/s3/{document.s3_key}" if document.s3_key else None
 
     # No number on the paper matched: fall back to who sent it. A driver
-    # emailing pods@ is almost always sending the POD for the load they just
-    # delivered, i.e. their most recent AI load still missing one.
+    # emailing pods@ is usually sending the POD for the load they just
+    # delivered, i.e. their most recent AI load still missing one. But when
+    # the paper has numbers and none match, it's more likely a load whose
+    # rate confirmation hasn't come in yet - so only trust the sender then
+    # if the delivery city agrees.
     if not matches and sender:
         driver = await _driver_by_email(session, company_id, sender)
         if driver is not None:
             mine = []
             for doc in candidates:
+                if doc.status not in LIVE_AI_LOAD_STATUSES:
+                    continue
                 f = doc.draft if isinstance(doc.draft, dict) else {}
                 if str(f.get("driver_id") or "") == str(driver.id) and not f.get("pod_url") and f.get("status") != "invoiced":
+                    if refs and not _same_city(getattr(classification, "delivery_city_state", None), f.get("delivery_location")):
+                        continue
                     mine.append(doc)
             if mine:
                 mine.sort(key=lambda d: str((d.draft or {}).get("delivery_date") or ""), reverse=True)
@@ -333,7 +382,7 @@ async def _attach_pod_to_ai_load(
             document.warnings = [f"Attached as the POD for load {label(target)} (matched {', '.join(hit)}).{lumper_note}"]
             summary.pods_attached += 1
             logger.info("loads-ai: POD %s attached to AI load %s", document.original_filename, target.id)
-        return
+        return False
 
     document.status = DocumentStatus.POD_UNMATCHED
     if not pod_url:
@@ -341,9 +390,61 @@ async def _attach_pod_to_ai_load(
     elif len(matches) > 1:
         document.warnings = ["Proof of delivery matching more than one load (" + ", ".join(label(d) for d, _ in matches[:5]) + ") - attach it by hand."]
     else:
-        shown = ", ".join(sorted(classification.reference_numbers or [])[:6]) or "none readable"
-        document.warnings = [f"Proof of delivery, but no AI load matches its numbers ({shown}).{lumper_note}"]
+        # Nothing to attach it to: the POD came before its rate confirmation.
+        return True
     summary.pods_unmatched += 1
+    return False
+
+
+async def _build_pod_only(
+    session: AsyncSession,
+    company_id: int,
+    document: IngestedDocument,
+    classification,
+    extraction,
+    summary: IngestSummary,
+    sender: Optional[str] = None,
+) -> None:
+    """
+    Temporary load built from a POD whose rate confirmation hasn't arrived
+    ("Missing ratecons" table): shipper/consignee, addresses, dates and
+    reference numbers as printed on the paperwork, the POD itself, the driver
+    who sent it and any lumper receipt. No rate and no broker - those only
+    come from the rate confirmation, which merges into this when it arrives.
+    """
+    draft = {}
+    if extraction is not None:
+        mapped = build_load_draft(extraction, customers=[])
+        draft = {k: v for k, v in vars(mapped.draft).items() if v not in (None, "")}
+        for k in ("rate", "fuel_surcharge", "accessorial_charges", "customer_id", "broker_name", "broker_mc", "miles"):
+            draft.pop(k, None)
+        document.extraction = {**extraction.model_dump(), "classification": classification.model_dump()}
+    else:
+        document.extraction = {"classification": classification.model_dump()}
+    draft.setdefault("shipper_name", getattr(classification, "shipper_name", None))
+    draft.setdefault("receiver_name", getattr(classification, "consignee_name", None))
+    if not draft.get("delivery_location") and getattr(classification, "delivery_city_state", None):
+        draft["delivery_location"] = classification.delivery_city_state
+    draft["pod_url"] = f"/api/v1/uploads/s3/{document.s3_key}"
+    draft["pod_source"] = "email"
+    draft["ref_keys"] = sorted(_pod_refs(classification) | all_refs(document))
+    if sender:
+        driver = await _driver_by_email(session, company_id, sender)
+        if driver is not None:
+            draft["driver_id"] = driver.id
+    lumper = lumper_total(classification)
+    if lumper is not None:
+        draft["lumper_amount"] = str(lumper)
+        if getattr(classification, "lumper_vendor", None):
+            draft["lumper_vendor"] = classification.lumper_vendor
+        summary.lumpers_found += 1
+    document.draft = {k: v for k, v in draft.items() if v not in (None, "")}
+    document.status = DocumentStatus.POD_ONLY
+    shown = ", ".join(sorted(classification.reference_numbers or [])[:6]) or "none readable"
+    document.warnings = [f"Missing rate confirmation: no AI load matches this POD's numbers ({shown}). "
+                         "Kept as a temporary load until the rate confirmation arrives."]
+    summary.missing_ratecons += 1
+    logger.info("loads-ai: POD %s kept as a missing-ratecon load (#%s)", document.original_filename, document.id)
 
 
 async def process_document(
@@ -358,13 +459,19 @@ async def process_document(
     """
     Route one document by the inbox it came from:
 
-      mode "ratecon" (ratecons@)  -> always a new AI load
+      mode "ratecon" (ratecons@)  -> every attachment is forwarded there, so
+                                     only rate confirmations become AI loads;
+                                     anything else is logged as not a load
       mode "pod"     (pods@)      -> always filed as a POD on the matching AI load
       mode "auto"    (one shared inbox) -> classified, then routed as below
 
       rate confirmation (or unclear)  -> a new AI load, with the PDF as its ratecon
       proof of delivery / signed BOL  -> attached as the POD of the AI load it matches
+                                         (or kept as a missing-ratecon load)
       invoice / unsigned BOL / other  -> recorded, no AI load
+
+    A rate confirmation for a load that is already an AI load is a revision:
+    it is held on the existing load for a person to accept or dismiss.
     """
     document.status = DocumentStatus.PROCESSING
     document.attempt_count = (document.attempt_count or 0) + 1
@@ -383,25 +490,38 @@ async def process_document(
     )
     try:
         extractor = get_extractor()
-        if mode == "ratecon":
-            # The ratecons inbox only receives rate confirmations; no need to ask.
-            result = await extractor.extract_ratecon(doc_bytes)
-            document.doc_type = "ratecon"
-            c = None
-        else:
-            classified = await extractor.classify(doc_bytes)
-            c = classified.classification
-            document.doc_type = c.doc_type
-            document.doc_type_confidence = c.confidence
+        classified = await extractor.classify(doc_bytes)
+        c = classified.classification
+        document.doc_type = c.doc_type
+        document.doc_type_confidence = c.confidence
 
-        is_pod = c is not None and (mode == "pod" or c.doc_type == "pod" or (c.doc_type == "bol" and c.has_signature))
+        if mode == "ratecon" and c.doc_type != "ratecon":
+            # ratecons@ gets every attachment the dispatcher receives. PODs
+            # and signed BOLs reach pods@ on their own; the rest isn't a load.
+            document.extraction = {"classification": c.model_dump()}
+            document.ai_provider = classified.usage.provider
+            document.ai_model = classified.usage.model
+            document.draft = None
+            document.status = DocumentStatus.NOT_A_LOAD
+            document.warnings = [_not_a_ratecon_reason(c)]
+            summary.not_loads += 1
+            return
+
+        is_pod = mode == "pod" or (mode == "auto" and (c.doc_type == "pod" or (c.doc_type == "bol" and c.has_signature)))
         if is_pod:
             document.extraction = {"classification": c.model_dump()}
             document.ai_provider = classified.usage.provider
             document.ai_model = classified.usage.model
-            await _attach_pod_to_ai_load(session, company_id, document, c, summary, sender=sender)
+            if await _attach_pod_to_ai_load(session, company_id, document, c, summary, sender=sender):
+                # POD before its rate confirmation: read the paperwork for a temporary load.
+                try:
+                    pod_read = (await extractor.extract_ratecon(doc_bytes)).extraction
+                except (ExtractionError, ExtractionUnavailable) as e:
+                    logger.warning("loads-ai: could not read POD %s for a temporary load: %s", document.original_filename, e)
+                    pod_read = None
+                await _build_pod_only(session, company_id, document, c, pod_read, summary, sender=sender)
             return
-        if c is not None and c.doc_type in ("invoice", "bol", "other") and c.confidence >= 0.6:
+        if mode == "auto" and c.doc_type in ("invoice", "bol", "other") and c.confidence >= 0.6:
             document.extraction = {"classification": c.model_dump()}
             document.draft = None
             document.status = DocumentStatus.NOT_A_LOAD
@@ -409,10 +529,9 @@ async def process_document(
             summary.not_loads += 1
             return
 
-        # Rate confirmation - or genuinely unclear, which is read as one so a
-        # real load is never silently dropped.
-        if c is not None:
-            result = await extractor.extract_ratecon(doc_bytes)
+        # Rate confirmation - or, on a shared inbox, genuinely unclear, which
+        # is read as one so a real load is never silently dropped.
+        result = await extractor.extract_ratecon(doc_bytes)
     except (ExtractionError, ExtractionUnavailable) as e:
         document.status = DocumentStatus.FAILED
         document.last_error = str(e)[:2000]
@@ -440,6 +559,23 @@ async def process_document(
     # same /uploads/s3 form the Ratecon column already opens.
     if document.s3_key:
         draft["ratecon_url"] = f"/api/v1/uploads/s3/{document.s3_key}"
+
+    # Same load number as a load already on the page: a revised (or re-sent)
+    # rate confirmation, never a second AI load.
+    existing = await revisions.find_existing(session, company_id, draft, document.id)
+    if existing is not None:
+        document.draft = draft
+        changes = revisions.diff(existing.draft or {}, draft)
+        if changes:
+            revisions.flag_revision(existing, document, changes,
+                                    superseded=await revisions.pending_doc(session, existing))
+            summary.revisions += 1
+        else:
+            document.status = DocumentStatus.REVISION_SAME
+            document.warnings = [f"Same rate confirmation re-sent for load {revisions.label_of(existing)} - nothing changed."]
+        logger.info("loads-ai: %s is a revision of AI load %s (%s changes)", document.original_filename, existing.id, len(changes))
+        return
+
     # Miles once, when the load is built (the page recalculates on edit).
     draft = await fill_miles(draft)
     document.draft = draft
@@ -455,12 +591,27 @@ async def process_document(
     await session.flush()
     if await verify_with(session, company_id, document):
         summary.unverified_verified += 1
+    # ...and its POD may already be here, as a missing-ratecon load.
+    if await merge_pod_only(session, company_id, document):
+        summary.pods_merged += 1
     logger.info(
         "loads-ai: AI load %s ready from %s (document #%s)",
         draft.get("load_number") or draft.get("broker_load_number") or "(no number)",
         document.original_filename,
         document.id,
     )
+
+
+def _not_a_ratecon_reason(c) -> str:
+    if c.doc_type == "pod" or (c.doc_type == "bol" and c.has_signature):
+        return "Proof of delivery / signed bill of lading - ignored here, PODs come in through the PODs inbox."
+    if c.doc_type == "bol":
+        return "Bill of lading (unsigned) - not a rate confirmation, no load created."
+    if c.doc_type == "invoice":
+        return "Invoice - not a rate confirmation, no load created."
+    if c.doc_type == "other":
+        return "Not a rate confirmation - no load created."
+    return "Couldn't tell if this is a rate confirmation - no load created. Upload it on the Loads AI page if it is one."
 
 
 async def ingest_message(
