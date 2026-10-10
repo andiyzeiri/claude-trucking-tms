@@ -5,9 +5,9 @@ Loads AI is the sandbox board for the document-automation pipeline. For now
 the only thing it owns is its source mailbox - the inbox that loads will be
 drawn from once ingestion lands.
 
-Admin-only throughout, matching the page's own gating: pointing the pipeline
-at a different mailbox decides which messages the system will read, so it is
-not exposed to dispatchers, drivers, customers, or viewers.
+Open to admins and to users given the "Loads AI" page in Users ->
+Permissions. Changing the inbox addresses stays admin-only: it decides which
+messages the system will read.
 """
 
 import hashlib
@@ -22,7 +22,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.security import get_current_admin_user
+from app.core.security import get_current_admin_user, get_loads_ai_user
 from app.database import get_db
 from app.documents.extraction.base import (
     DocumentBytes,
@@ -106,7 +106,7 @@ async def _get_company(db: AsyncSession, company_id: int) -> Company:
 @router.get("/settings", response_model=LoadsAISettingsResponse)
 async def get_loads_ai_settings(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """Read the Loads AI source mailbox for the caller's company."""
     company = await _get_company(db, current_user.company_id)
@@ -239,7 +239,7 @@ async def extract_document(
     file: UploadFile = File(...),
     classify: bool = False,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """
     Read a rate confirmation and return a proposed load.
@@ -385,7 +385,7 @@ class IngestionStatusResponse(BaseModel):
 @router.get("/ingestion-status", response_model=IngestionStatusResponse)
 async def ingestion_status(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """
     Report whether email ingestion can run, naming anything that blocks it.
@@ -465,7 +465,7 @@ class IngestSummaryResponse(BaseModel):
 @router.post("/poll", response_model=IngestSummaryResponse)
 async def poll_mailbox_now(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """
     Run one ingestion cycle immediately.
@@ -506,7 +506,7 @@ class IngestedDocumentResponse(BaseModel):
 async def list_ingested_documents(
     limit: int = 50,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """Recently ingested documents and what became of each."""
     limit = max(1, min(limit, 200))
@@ -709,7 +709,7 @@ async def _get_ai_load(db: AsyncSession, company_id: int, ai_load_id: int) -> In
 @router.get("/loads", response_model=List[AILoadResponse])
 async def list_ai_loads(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """Every live AI load for the caller's company, newest first."""
     result = await db.execute(
@@ -753,7 +753,7 @@ async def create_ai_load(
     payload: Dict[str, Any],
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """
     Add an AI load by hand from the Loads AI page (the "add row" button, an
@@ -789,7 +789,7 @@ async def update_ai_load(
     payload: Dict[str, Any],
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """Merge edited fields into an AI load."""
     doc = await _get_ai_load(db, current_user.company_id, ai_load_id)
@@ -839,7 +839,7 @@ async def update_ai_load(
 async def delete_ai_load(
     ai_load_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """
     Soft delete. The document row (and its extraction) is kept for audit,
@@ -865,7 +865,7 @@ class UnverifiedLoadResponse(BaseModel):
 @router.get("/unverified", response_model=List[UnverifiedLoadResponse])
 async def list_unverified_loads(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """Loads announced by a notice (e.g. Highway) whose rate confirmation hasn't arrived yet."""
     docs = (
@@ -895,7 +895,7 @@ async def list_unverified_loads(
 async def dismiss_unverified_load(
     doc_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """Remove an unverified load (e.g. the load fell through). Soft delete."""
     doc = (
@@ -935,7 +935,7 @@ async def _pending_revision(db: AsyncSession, company_id: int, doc: IngestedDocu
 async def accept_revision(
     ai_load_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """Apply the revised rate confirmation. Driver, truck, POD, lumper and status are kept."""
     doc = await _get_ai_load(db, current_user.company_id, ai_load_id)
@@ -961,7 +961,7 @@ async def accept_revision(
 async def dismiss_revision(
     ai_load_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """Keep the load as it is and drop the revision notice."""
     doc = await _get_ai_load(db, current_user.company_id, ai_load_id)
@@ -1009,7 +1009,7 @@ async def _get_missing_ratecon(db: AsyncSession, company_id: int, doc_id: int) -
 @router.get("/missing-ratecons", response_model=List[MissingRateconResponse])
 async def list_missing_ratecons(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """Temporary loads built from a POD whose rate confirmation hasn't arrived yet."""
     docs = (
@@ -1049,7 +1049,7 @@ async def list_missing_ratecons(
 async def remove_missing_ratecon(
     doc_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """Remove a temporary POD load by hand. Soft delete; the POD file is kept."""
     doc = await _get_missing_ratecon(db, current_user.company_id, doc_id)
@@ -1066,7 +1066,7 @@ async def attach_missing_ratecon(
     doc_id: int,
     body: AttachMissingRatecon,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """Match a POD-only load to an AI load by hand: its POD, driver and lumper move over."""
     pod_only = await _get_missing_ratecon(db, current_user.company_id, doc_id)
@@ -1092,7 +1092,7 @@ class PodRequestResponse(BaseModel):
 async def request_pod(
     ai_load_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_loads_ai_user),
 ):
     """Text the AI load's assigned driver asking for the signed POD, now."""
     from datetime import datetime, timedelta, timezone

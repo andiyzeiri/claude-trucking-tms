@@ -19,6 +19,8 @@ interface InboxFieldProps {
   /** Connected and being read, or the reason it isn't. */
   status: { ok: boolean; text: string } | null
   placeholder: string
+  /** Only admins change which inboxes are read; others just see them. */
+  readOnly?: boolean
 }
 
 /**
@@ -26,7 +28,7 @@ interface InboxFieldProps {
  * The address is the opt-in - an inbox is only read once it's named here
  * and its App Password is stored on the server.
  */
-export function InboxField({ id, label, description, icon, value, loading, saving, onSave, status, placeholder }: InboxFieldProps) {
+export function InboxField({ id, label, description, icon, value, loading, saving, onSave, status, placeholder, readOnly }: InboxFieldProps) {
   const [draft, setDraft] = useState('')
   // Don't overwrite what the user is typing when the query refetches.
   const [touched, setTouched] = useState(false)
@@ -64,16 +66,18 @@ export function InboxField({ id, label, description, icon, value, loading, savin
           autoComplete="off"
           spellCheck={false}
           placeholder={loading ? 'Loading…' : placeholder}
-          disabled={loading || saving}
+          disabled={loading || saving || readOnly}
           value={draft}
           onChange={(e) => { setTouched(true); setDraft(e.target.value) }}
           onKeyDown={(e) => { if (e.key === 'Enter' && dirty && !saving) save() }}
           className="w-full"
           style={{ backgroundColor: 'var(--monday-bg-primary)', borderColor: 'var(--monday-border-light)' }}
         />
-        <Button onClick={save} disabled={!dirty || loading || saving} className="sm:w-24 shrink-0">
-          {saving ? 'Saving…' : 'Save'}
-        </Button>
+        {!readOnly && (
+          <Button onClick={save} disabled={!dirty || loading || saving} className="sm:w-24 shrink-0">
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+        )}
       </div>
       {status && (
         <p className={`flex items-start gap-1.5 text-xs ${status.ok ? 'text-green-700' : 'text-amber-700'}`}>

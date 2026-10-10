@@ -2973,6 +2973,7 @@ export default function LoadsAIPageInline() {
             loading={isLoadingInboxes}
             saving={isSavingInbox}
             placeholder="ratecons@absolutetrucking.net"
+            readOnly={!isAdmin}
             onSave={(v) => updateSettings({ source_email: v })}
             status={
               !ingestionStatus
@@ -2991,6 +2992,7 @@ export default function LoadsAIPageInline() {
             loading={isLoadingInboxes}
             saving={isSavingInbox}
             placeholder="pods@absolutetrucking.net"
+            readOnly={!isAdmin}
             onSave={(v) => updateSettings({ pod_email: v })}
             status={
               !ingestionStatus

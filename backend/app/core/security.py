@@ -118,6 +118,23 @@ async def get_current_admin_user(
     )
 
 
+async def get_loads_ai_user(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """
+    Guard for the Loads AI page: admins, plus anyone an admin has given the
+    "Loads AI" page in Users -> Permissions (e.g. the accounting login).
+    """
+    if current_user.is_superuser or _role_value(current_user) in ADMIN_ROLES:
+        return current_user
+    if "loads-ai" in (current_user.allowed_pages or []):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You don't have access to Loads AI. Ask an admin to turn it on in Users -> Permissions.",
+    )
+
+
 async def get_security_context(
     current_user: User = Depends(get_current_active_user)
 ) -> SecurityContext:
