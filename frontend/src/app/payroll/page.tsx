@@ -5,7 +5,8 @@ import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatCurrency } from '@/lib/utils'
-import { Calculator, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Edit2, Trash2, Copy, RefreshCw, Settings } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Calculator, ChevronLeft, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Edit2, Trash2, Copy, RefreshCw, Settings } from 'lucide-react'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
 import { useCalculatedPayroll } from '@/hooks/use-payroll'
@@ -136,6 +137,20 @@ export default function PayrollPage() {
 
   const weeks = useMemo(() => generateWeeks(selectedYear), [selectedYear])
 
+  // One week at a time, picked from the dropdown. Defaults to this week when
+  // looking at the current year, else week 1.
+  const currentWeekNumber = (ws: ReturnType<typeof generateWeeks>) => {
+    const today = new Date()
+    const end = (w: { endDate: Date }) => new Date(w.endDate.getFullYear(), w.endDate.getMonth(), w.endDate.getDate(), 23, 59, 59)
+    return ws.find(w => today >= w.startDate && today <= end(w))?.weekNumber
+  }
+  const [selectedWeek, setSelectedWeek] = useState<number>(() => currentWeekNumber(generateWeeks(new Date().getFullYear())) ?? 1)
+  useEffect(() => {
+    setSelectedWeek(currentWeekNumber(weeks) ?? 1)
+  }, [weeks])
+  const weekOptionLabel = (w: { weekNumber: number; startDate: Date; endDate: Date }) =>
+    `Week ${w.weekNumber} \u00b7 ${w.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} \u2013 ${w.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+
   // Helper function to check if a driver was employed during a specific week
   const isDriverEmployedDuringWeek = (driver: any, weekStart: Date, weekEnd: Date): boolean => {
     // If driver has a hire date, they must be hired on or before the week ends
@@ -260,19 +275,14 @@ export default function PayrollPage() {
   }
 
   const goToCurrentWeek = () => {
-    const today = new Date()
-    const currentWeek = weeks.find(week =>
-      today >= week.startDate && today <= week.endDate
-    )
-    if (currentWeek) {
-      setExpandedWeeks(new Set([currentWeek.weekNumber]))
-      // Scroll to the week
-      const element = document.getElementById(`week-${currentWeek.weekNumber}`)
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }
+    const thisYear = new Date().getFullYear()
+    if (selectedYear !== thisYear) {
+      setSelectedYear(thisYear) // the effect above lands on this week
+      return
     }
+    setSelectedWeek(currentWeekNumber(weeks) ?? 1)
   }
+
 
   // Calculate week totals (only for drivers employed during that week)
   const getWeekTotals = (weekNumber: number) => {
@@ -389,7 +399,7 @@ export default function PayrollPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">Payroll</h1>
-              <p className="text-gray-600">52-week driver payroll overview</p>
+              <p className="text-gray-600">Weekly driver payroll</p>
             </div>
           </div>
           <div className="flex items-center justify-center min-h-[400px]">
@@ -462,7 +472,7 @@ export default function PayrollPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 style={{ fontSize: '24px', fontWeight: 600, color: 'var(--monday-text-primary)', letterSpacing: '-0.02em' }}>Payroll</h1>
-            <p style={{ fontSize: '14px', color: 'var(--monday-text-secondary)', marginTop: '2px' }}>52-week driver payroll overview</p>
+            <p style={{ fontSize: '14px', color: 'var(--monday-text-secondary)', marginTop: '2px' }}>Weekly driver payroll</p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -478,12 +488,6 @@ export default function PayrollPage() {
             </Button>
             <Button onClick={goToCurrentWeek} variant="outline" style={{ fontSize: '13px', fontWeight: 500 }}>
               Current Week
-            </Button>
-            <Button onClick={expandAll} variant="outline" style={{ fontSize: '13px', fontWeight: 500 }}>
-              Expand All
-            </Button>
-            <Button onClick={collapseAll} variant="outline" style={{ fontSize: '13px', fontWeight: 500 }}>
-              Collapse All
             </Button>
           </div>
         </div>
@@ -509,6 +513,42 @@ export default function PayrollPage() {
               )}
             </button>
           ))}
+        </div>
+
+        {/* Week picker */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Week</span>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="Previous week"
+            disabled={selectedWeek <= 1}
+            onClick={() => setSelectedWeek(w => Math.max(1, w - 1))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Select value={String(selectedWeek)} onValueChange={(v) => setSelectedWeek(Number(v))}>
+            <SelectTrigger className="w-[300px]" style={{ fontSize: '14px', fontWeight: 500 }}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="max-h-[360px]">
+              {weeks.map(w => (
+                <SelectItem key={w.weekNumber} value={String(w.weekNumber)}>
+                  {weekOptionLabel(w)}
+                  {w.weekNumber === currentWeekNumber(weeks) ? ' (this week)' : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="Next week"
+            disabled={selectedWeek >= weeks.length}
+            onClick={() => setSelectedWeek(w => Math.min(weeks.length, w + 1))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
 
         {/* Payroll Table */}
@@ -576,8 +616,8 @@ export default function PayrollPage() {
                   </tr>
                 </thead>
                 <tbody style={{ backgroundColor: 'var(--monday-bg-primary)' }}>
-                  {weeks.map((week, weekIndex) => {
-                    const isExpanded = expandedWeeks.has(week.weekNumber)
+                  {weeks.filter(w => w.weekNumber === selectedWeek).map((week, weekIndex) => {
+                    const isExpanded = true
                     const weekTotals = getWeekTotals(week.weekNumber)
                     const hasData = weekTotals.check_amount > 0
                     // Get drivers employed during this week
@@ -589,17 +629,11 @@ export default function PayrollPage() {
                         {/* Week Header Row */}
                         <tr
                           id={`week-${week.weekNumber}`}
-                          className="border-b cursor-pointer"
+                          className="border-b"
                           style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-secondary)' }}
-                          onClick={() => toggleWeek(week.weekNumber)}
                         >
                           <td colSpan={2} className="px-2 py-2" style={{ paddingLeft: '8px' }}>
                             <div className="flex items-center gap-2">
-                              {isExpanded ? (
-                                <ChevronDown className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--monday-blue)' }} />
-                              ) : (
-                                <ChevronRight className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--monday-blue)' }} />
-                              )}
                               <span className="whitespace-nowrap" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>
                                 Week {week.weekNumber} {week.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {week.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               </span>
