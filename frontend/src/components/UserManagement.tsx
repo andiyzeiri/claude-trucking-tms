@@ -28,6 +28,7 @@ interface User {
 const ALL_PAGES = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'loads', label: 'Loads' },
+  { id: 'loads-ai', label: 'Loads AI' },
   { id: 'drivers', label: 'Drivers' },
   { id: 'trucks', label: 'Trucks' },
   { id: 'customers', label: 'Customers' },
