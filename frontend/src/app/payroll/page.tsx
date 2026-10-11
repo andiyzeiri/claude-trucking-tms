@@ -17,6 +17,7 @@ import { usePayrollLayout, useSavePayrollLayout, useDriverOrder, useSaveDriverOr
 import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
 import { DebtView } from '@/components/payroll/debt-view'
 import { useDriverDebts } from '@/hooks/use-driver-debts'
+import { useEldConnection, useEldMileage } from '@/hooks/use-eld'
 
 
 // Generate 52 weeks for a given year using ISO week numbering
@@ -196,6 +197,24 @@ export default function PayrollPage() {
     setSelectedWeek(currentWeekNumber(weeks) ?? 1)
   }, [weeks])
 
+  // Total Miles row: what each truck drove in the selected week, from Peak ELD,
+  // keyed by TMS truck (Peak trucks are matched under Reports > Mileage).
+  const { data: eldConnection } = useEldConnection()
+  const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const selectedWeekObj = weeks.find(w => w.weekNumber === selectedWeek)
+  const { data: eldMileage } = useEldMileage(
+    selectedWeekObj ? ymd(selectedWeekObj.startDate) : '',
+    selectedWeekObj ? ymd(selectedWeekObj.endDate) : '',
+    !!eldConnection?.connected && view === 'payroll',
+  )
+  const eldMilesByTruck = useMemo(() => {
+    const m = new Map<number, number>()
+    eldMileage?.vehicles.forEach(v => {
+      if (v.truck_id) m.set(v.truck_id, (m.get(v.truck_id) || 0) + v.miles)
+    })
+    return m
+  }, [eldMileage])
+
   // A driver counts for a week if hired on or before its end and not
   // terminated before its start (so they're included in the last week they worked).
   const isDriverEmployedDuringWeek = (driver: any, weekStart: Date, weekEnd: Date): boolean => {
@@ -235,6 +254,12 @@ export default function PayrollPage() {
       if (ov !== undefined) return ov
       if (row.builtin) {
         if (row.key === 'debt_payment') return Number(debts?.schedule?.[`${selectedYear}-${weekNumber}`]?.[String(driverId)]) || 0
+        if (row.key === 'total_miles') {
+          // Only the week on screen is read from Peak; the truck is that week's pick, else the driver's usual truck.
+          if (weekNumber !== selectedWeek) return 0
+          const truckId = getOverride(driverId, weekNumber, 'truck_id') ?? settingsMap.get(driverId)?.truck_id
+          return truckId ? Math.round(eldMilesByTruck.get(Number(truckId)) || 0) : 0
+        }
         if (row.mode === 'auto') return Number(api?.[row.key]) || 0
         if (row.mode === 'fixed') return Number(settingsMap.get(driverId)?.[`${row.key}_weekly`]) || 0
         return 0 // variable: only what's entered for the week
@@ -268,7 +293,7 @@ export default function PayrollPage() {
         return data
       })
       .sort((a, b) => a.driver_name.localeCompare(b.driver_name))
-  }, [drivers, calculatedPayroll, overridesMap, payrollOverrides, driverSettings, companyRows, ownerRows, coOwnerRows, debts, selectedYear])
+  }, [drivers, calculatedPayroll, overridesMap, payrollOverrides, driverSettings, companyRows, ownerRows, coOwnerRows, debts, selectedYear, selectedWeek, eldMilesByTruck])
 
   const addInto = (totals: PayTotals, cell: WeekCell, tab: DriverTab) => {
     rowsFor(tab).forEach(row => {
@@ -850,7 +875,7 @@ function StatsPanel({ title, subtitle, all, company, owner, coOwner, driversLabe
     { label: 'Gross', f: money(t => t.earnings) },
     { label: 'Deductions', f: money(t => t.deductions), color: 'var(--monday-stuck)' },
     { label: 'Net Pay', f: money(t => t.check_amount), color: 'var(--monday-done)' },
-    { label: 'Miles', f: miles },
+    { label: 'Trip Miles', f: miles },
     { label: driversLabel, f: paid },
   ].map(t => ({ ...t, value: t.f(all), sub: split(t.f) }))
   return (

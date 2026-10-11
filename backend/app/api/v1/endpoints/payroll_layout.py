@@ -40,7 +40,10 @@ BUILTIN = [
     ("misc", "Misc", "deduction", "fixed", ("fixed", "variable")),
     # Filled from the driver's weekly debt deduction (Debt tab), capped at what they owe.
     ("debt_payment", "Debt Payment", "deduction", "auto", ("auto",)),
-    ("miles", "Miles", "info", "auto", ("auto",)),
+    # Trip Miles: from the loads. Total Miles: what the truck actually drove
+    # that week, from the ELD (Peak) - see app/api/v1/endpoints/eld.py.
+    ("miles", "Trip Miles", "info", "auto", ("auto",)),
+    ("total_miles", "Total Miles", "info", "auto", ("auto",)),
 ]
 BUILTIN_BY_KEY = {b[0]: b for b in BUILTIN}
 CUSTOM_KEY = re.compile(r"^custom_[a-z0-9]{4,20}$")
@@ -78,6 +81,8 @@ def normalize(rows: List[LayoutRow]) -> List[dict]:
             raise HTTPException(status_code=422, detail="Every row needs a name")
         if r.key in BUILTIN_BY_KEY:
             key, default_label, kind, _, modes = BUILTIN_BY_KEY[r.key]
+            if key == "miles" and label == "Miles":
+                label = default_label  # renamed to Trip Miles when Total Miles arrived
             mode = r.mode if r.mode in modes else modes[0]
             row = {"key": key, "label": label, "kind": kind, "mode": mode, "hidden": r.hidden, "builtin": True, "amounts": {}}
         else:
@@ -104,10 +109,14 @@ def normalize(rows: List[LayoutRow]) -> List[dict]:
         out.append(row)
     # Built-in rows can be hidden but never dropped; the page always sends all
     # of them, so a missing one is new since this layout was saved - show it,
-    # just above Miles.
+    # just above Trip Miles (Total Miles goes just below it).
     for b in default_rows():
         if b["key"] not in seen:
-            at = next((i for i, r in enumerate(out) if r["key"] == "miles"), len(out))
+            at = next((i for i, r in enumerate(out) if r["key"] == "miles"), None)
+            if at is None:
+                at = len(out)
+            elif b["key"] == "total_miles":
+                at += 1
             out.insert(at, b)
     return out
 
