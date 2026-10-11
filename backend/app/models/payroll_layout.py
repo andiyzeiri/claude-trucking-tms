@@ -23,5 +23,6 @@ class PayrollLayout(Base):
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     driver_type = Column(String(20), nullable=False, default="company")  # company | owner_operator | company_owner
     rows = Column(JSONB, nullable=False)
+    driver_order = Column(JSONB, nullable=True)  # driver ids, left to right, as dragged on the page
 
     __table_args__ = (UniqueConstraint("company_id", "driver_type", name="uq_payroll_layouts_company_type"),)

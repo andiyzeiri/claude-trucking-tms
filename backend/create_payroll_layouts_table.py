@@ -48,6 +48,9 @@ async def create_table():
         """))
         print("payroll_layouts: one layout per driver type")
 
+        await conn.execute(text("ALTER TABLE payroll_layouts ADD COLUMN IF NOT EXISTS driver_order JSONB;"))
+        print("payroll_layouts: driver_order column")
+
     await engine.dispose()
     print("payroll_layouts migration completed!")
 

@@ -50,3 +50,32 @@ export function useSavePayrollLayout(driverType: PayrollDriverType) {
     onSuccess: (rows) => queryClient.setQueryData(LAYOUT_KEY, rows),
   })
 }
+
+// Left-to-right order of the driver columns, per table (dragged on the page).
+const orderKey = (driverType: PayrollDriverType) => ['payroll-driver-order', driverType]
+
+export function useDriverOrder(driverType: PayrollDriverType) {
+  return useQuery<number[]>({
+    queryKey: orderKey(driverType),
+    queryFn: async () => (await api.get(`/v1/payroll-layout/driver-order?driver_type=${driverType}`)).data.driver_order,
+  })
+}
+
+export function useSaveDriverOrder(driverType: PayrollDriverType) {
+  const queryClient = useQueryClient()
+  const key = orderKey(driverType)
+  return useMutation({
+    mutationFn: async (order: number[]): Promise<number[]> =>
+      (await api.put(`/v1/payroll-layout/driver-order?driver_type=${driverType}`, { driver_order: order })).data.driver_order,
+    onMutate: async (order) => {
+      await queryClient.cancelQueries({ queryKey: key })
+      const previous = queryClient.getQueryData<number[]>(key)
+      queryClient.setQueryData(key, order)
+      return { previous }
+    },
+    onError: (_e, _order, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(key, ctx.previous)
+      toast.error('Could not save the driver order')
+    },
+  })
+}

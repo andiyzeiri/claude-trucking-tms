@@ -157,3 +157,38 @@ async def save_layout(
         layout.rows = rows
     await db.commit()
     return {"rows": rows}
+
+
+class DriverOrder(BaseModel):
+    driver_order: List[int]
+
+
+@router.get("/driver-order", response_model=DriverOrder)
+async def get_driver_order(
+    driver_type: DriverType = Query("company"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    layout = await _get(db, current_user.company_id, driver_type)
+    return {"driver_order": (layout.driver_order if layout is not None else None) or []}
+
+
+@router.put("/driver-order", response_model=DriverOrder)
+async def save_driver_order(
+    body: DriverOrder,
+    driver_type: DriverType = Query("company"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Order of the driver columns on the Payroll page; ids the page doesn't know are harmless."""
+    order = list(dict.fromkeys(body.driver_order))[:1000]
+    layout = await _get(db, current_user.company_id, driver_type)
+    if layout is None:
+        # No rows saved for this table yet: keep showing what it shows now.
+        fallback = await _get(db, current_user.company_id, "company") if driver_type != "company" else None
+        rows = fallback.rows if fallback is not None else default_rows()
+        db.add(PayrollLayout(company_id=current_user.company_id, driver_type=driver_type, rows=rows, driver_order=order))
+    else:
+        layout.driver_order = order
+    await db.commit()
+    return {"driver_order": order}

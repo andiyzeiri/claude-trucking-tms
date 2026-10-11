@@ -7,13 +7,13 @@ import { Input } from '@/components/ui/input'
 import { formatCurrency } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Calculator, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, EyeOff, ListChecks, Plus, RefreshCw, Settings, Trash2, X } from 'lucide-react'
+import { Calculator, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, EyeOff, GripVertical, ListChecks, Plus, RefreshCw, Settings, Trash2, X } from 'lucide-react'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
 import { useCalculatedPayroll } from '@/hooks/use-payroll'
 import { usePayrollOverrides, useSavePayrollOverride } from '@/hooks/use-payroll-overrides'
 import { useDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
-import { usePayrollLayout, useSavePayrollLayout, SWITCHABLE_ROWS, type PayrollRow } from '@/hooks/use-payroll-layout'
+import { usePayrollLayout, useSavePayrollLayout, useDriverOrder, useSaveDriverOrder, SWITCHABLE_ROWS, type PayrollRow } from '@/hooks/use-payroll-layout'
 import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
 
 
@@ -148,6 +148,11 @@ export default function PayrollPage() {
   const [amountsRowKey, setAmountsRowKey] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [driverTab, setDriverTab] = useState<DriverTab>('company')
+  // Driver columns can be dragged into any order; saved per table.
+  const { data: driverOrder } = useDriverOrder(driverTab)
+  const saveDriverOrder = useSaveDriverOrder(driverTab)
+  const [dragging, setDragging] = useState<number | null>(null)
+  const [dropTarget, setDropTarget] = useState<number | null>(null)
 
   const rowsFor = (tab: DriverTab): PayrollRow[] =>
     (tab === 'company' ? companyRows : tab === 'owner_operator' ? ownerRows : coOwnerRows) || []
@@ -401,7 +406,26 @@ export default function PayrollPage() {
 
   const week = weeks.find(w => w.weekNumber === selectedWeek)
   const employedIds = new Set(getDriversForWeek(selectedWeek).map(d => d.id))
-  const tabRows = payrollData.filter(d => employedIds.has(d.driver_id) && tabOf(d.driver_type) === driverTab)
+  // Saved column order first; drivers not placed yet follow alphabetically.
+  const orderIndex = new Map((driverOrder || []).map((id, i) => [id, i]))
+  const byColumnOrder = (a: DriverPayrollData, b: DriverPayrollData) =>
+    (orderIndex.get(a.driver_id) ?? Infinity) - (orderIndex.get(b.driver_id) ?? Infinity) || a.driver_name.localeCompare(b.driver_name)
+  const tabRows = payrollData
+    .filter(d => employedIds.has(d.driver_id) && tabOf(d.driver_type) === driverTab)
+    .sort(byColumnOrder)
+
+  // Drop the dragged driver in front of `targetId`. Orders every driver of
+  // this type, not just this week's, so absent drivers keep their place.
+  const moveDriver = (draggedId: number, targetId: number) => {
+    if (draggedId === targetId) return
+    const all = payrollData.filter(d => tabOf(d.driver_type) === driverTab).sort(byColumnOrder).map(d => d.driver_id)
+    const from = all.indexOf(draggedId)
+    if (from < 0) return
+    all.splice(from, 1)
+    const to = all.indexOf(targetId)
+    all.splice(to < 0 ? all.length : (from <= to ? to + 1 : to), 0, draggedId)
+    saveDriverOrder.mutate(all)
+  }
   const tabCount = (tab: DriverTab) => payrollData.filter(d => employedIds.has(d.driver_id) && tabOf(d.driver_type) === tab).length
   const tabNoun = TAB_BY_KEY[driverTab].noun
   const amountsRow = rows.find(r => r.key === amountsRowKey) || null
@@ -547,8 +571,26 @@ export default function PayrollPage() {
                       Week {selectedWeek} · {tabRows.length} {tabNoun}
                     </th>
                     {tabRows.map(d => (
-                      <th key={d.driver_id} className="px-3 py-2.5 text-left" style={{ ...cell, fontWeight: 600, color: 'var(--monday-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={d.driver_name}>
-                        {d.driver_name}
+                      <th
+                        key={d.driver_id}
+                        draggable
+                        onDragStart={(e) => { setDragging(d.driver_id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(d.driver_id)) }}
+                        onDragOver={(e) => { if (dragging !== null) { e.preventDefault(); setDropTarget(d.driver_id) } }}
+                        onDragLeave={() => setDropTarget(t => (t === d.driver_id ? null : t))}
+                        onDrop={(e) => { e.preventDefault(); if (dragging !== null) moveDriver(dragging, d.driver_id); setDragging(null); setDropTarget(null) }}
+                        onDragEnd={() => { setDragging(null); setDropTarget(null) }}
+                        className="px-3 py-2.5 text-left cursor-grab active:cursor-grabbing select-none"
+                        style={{
+                          ...cell, fontWeight: 600, color: 'var(--monday-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                          opacity: dragging === d.driver_id ? 0.4 : 1,
+                          boxShadow: dropTarget === d.driver_id && dragging !== d.driver_id ? 'inset 3px 0 0 var(--monday-done), inset -3px 0 0 var(--monday-done)' : undefined,
+                        }}
+                        title={`${d.driver_name} \u2014 drag to move`}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          <GripVertical className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'var(--monday-text-muted)' }} />
+                          {d.driver_name}
+                        </span>
                       </th>
                     ))}
                   </tr>
