@@ -22,6 +22,12 @@ export interface VehicleMiles {
   truck_number: string | null
   driver_name: string | null
   matched_by: 'manual' | 'unit' | 'vin' | null
+  // Only with odometer: first and last inspection (DVIR) readings in the range
+  odometer_miles?: number | null
+  start_odometer?: number | null
+  start_time?: string | null
+  end_odometer?: number | null
+  end_time?: string | null
 }
 
 export interface MileageReport {
@@ -83,10 +89,10 @@ export function useDisconnectEld() {
   })
 }
 
-export function useEldMileage(start: string, end: string, enabled: boolean) {
+export function useEldMileage(start: string, end: string, enabled: boolean, odometer = false) {
   return useQuery<MileageReport>({
-    queryKey: ['eld-mileage', 'trucks', start, end],
-    queryFn: async () => (await api.get('/v1/eld/mileage', { params: { start, end, tz: tz() } })).data,
+    queryKey: ['eld-mileage', 'trucks', start, end, odometer],
+    queryFn: async () => (await api.get('/v1/eld/mileage', { params: { start, end, tz: tz(), odometer } })).data,
     enabled: enabled && !!start && !!end,
     retry: false,
     staleTime: 5 * 60 * 1000,

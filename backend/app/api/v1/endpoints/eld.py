@@ -60,6 +60,12 @@ class VehicleMiles(BaseModel):
     truck_number: Optional[str] = None
     driver_name: Optional[str] = None
     matched_by: Optional[Literal["manual", "unit", "vin"]] = None
+    # With ?odometer=true: first and last inspection (DVIR) odometer in the range.
+    odometer_miles: Optional[float] = None
+    start_odometer: Optional[int] = None
+    start_time: Optional[datetime] = None
+    end_odometer: Optional[int] = None
+    end_time: Optional[datetime] = None
 
 
 class MileageOut(BaseModel):
@@ -198,15 +204,35 @@ async def mileage(
     start: date,
     end: date,
     tz: str = Query("America/Chicago", max_length=64),
+    odometer: bool = False,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Miles per truck for local days start..end (inclusive)."""
+    """Miles per truck for local days start..end (inclusive).
+
+    `miles` is Peak's IFTA (GPS) distance. With odometer=true each truck that
+    drove also gets its odometer at the first and last inspection in the
+    range, and odometer_miles = last - first (what Payroll's Total Miles uses).
+    """
     conn, key = await _api_key(db, current_user.company_id)
     start_ms, end_ms = _range_ms(start, end, tz)
+    spans: Dict[str, Optional[dict]] = {}
     try:
         vehicles, unit = await peak_eld.vehicles(key)
         miles = await peak_eld.miles_by_vehicle(key, start_ms, end_ms, unit)
+        if odometer:
+            gate = asyncio.Semaphore(5)
+
+            async def one(vid: str):
+                async with gate:
+                    try:
+                        spans[vid] = await peak_eld.odometer_span(key, vid, start_ms, end_ms, unit)
+                    except peak_eld.PeakError as e:
+                        if e.auth:
+                            raise
+                        spans[vid] = None  # this truck falls back to GPS miles
+
+            await asyncio.gather(*(one(vid) for vid, m in miles.items() if m > 0))
     except peak_eld.PeakError as e:
         await _record(db, conn, str(e))
         raise _peak_error(e)
@@ -235,6 +261,13 @@ async def mileage(
         if eld_id not in seen:
             out.append(_vehicle_row(eld_id, {"vehicleId": eld_id, "active": False}, m, manual, by_id, by_unit, by_vin))
 
+    for r in out:
+        span = spans.get(r.eld_id)
+        if span:
+            r.odometer_miles = span["miles"]
+            r.start_odometer, r.end_odometer = span["start_odometer"], span["end_odometer"]
+            r.start_time = datetime.fromtimestamp(span["start_time"] / 1000, timezone.utc)
+            r.end_time = datetime.fromtimestamp(span["end_time"] / 1000, timezone.utc)
     out.sort(key=lambda r: (-r.miles, r.unit))
     return MileageOut(
         start=start, end=end,

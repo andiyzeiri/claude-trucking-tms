@@ -172,6 +172,42 @@ async def miles_by_vehicle(api_key: str, start_ms: int, end_ms: int, unit: Optio
     return out
 
 
+async def odometer_span(api_key: str, vehicle_id: str, start_ms: int, end_ms: int, unit: Optional[str]) -> Optional[dict]:
+    """Odometer at the first and last DVIR (pre/post-trip inspection) in [start_ms, end_ms].
+
+    The Open API has no HOS log events, but every DVIR records the odometer,
+    so first-inspection-to-last-inspection is the week's odometer miles.
+    Returns None when fewer than two inspections in the range carry one.
+    """
+    rows, _ = await _get_all(api_key, f"/api/v0/maintenance/dvir/{vehicle_id}", {
+        "asc": "true", "orderBy": "date", "startTime": start_ms, "endTime": end_ms,
+    })
+    rows = sorted((r for r in rows if r.get("id") and r.get("date")), key=lambda r: r["date"])
+
+    async def reading(r: dict) -> Optional[Tuple[int, float]]:
+        detail = await _get(api_key, f"/api/v0/maintenance/dvir/{vehicle_id}/{r['id']}", {})
+        odo = detail.get("odometer")
+        return (int(detail.get("date") or r["date"]), float(odo)) if odo else None
+
+    async def first_reading(candidates: List[dict]) -> Optional[Tuple[int, float]]:
+        for r in candidates[:6]:  # a few inspections may have no odometer
+            got = await reading(r)
+            if got:
+                return got
+        return None
+
+    first = await first_reading(rows)
+    last = await first_reading(list(reversed(rows)))
+    if not first or not last or last[0] <= first[0] or last[1] < first[1]:
+        return None
+    to_mi = KM_TO_MI if (unit or "").strip().lower().startswith("k") else 1.0
+    return {
+        "start_time": first[0], "start_odometer": round(first[1] * to_mi),
+        "end_time": last[0], "end_odometer": round(last[1] * to_mi),
+        "miles": round((last[1] - first[1]) * to_mi, 1),
+    }
+
+
 async def miles_by_state(api_key: str, vehicle_id: str, start_ms: int, end_ms: int, unit: Optional[str]) -> Dict[str, float]:
     """State code -> miles one Peak vehicle drove in [start_ms, end_ms]."""
     rows, _ = await _get_all(api_key, f"/api/v0/vehicles/ifta/{vehicle_id}", {

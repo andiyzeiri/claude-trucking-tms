@@ -67,7 +67,10 @@ export default function MileageReport() {
 
   const [start, end] = preset === 'custom' ? custom : presetRange(preset)
   const connected = !!conn?.connected
-  const trucksQ = useEldMileage(start, end, connected)
+  // Odometer (first to last inspection) costs a few Peak calls per truck, so only for a month or less.
+  const days = (new Date(end).getTime() - new Date(start).getTime()) / 86400000 + 1
+  const withOdometer = days <= 31
+  const trucksQ = useEldMileage(start, end, connected, withOdometer)
   // Per-state miles cost one Peak call per truck, so only load them when asked for.
   const statesQ = useEldStateMiles(start, end, connected && (view === 'states' || open.size > 0))
   const setMatch = useSetEldTruckMatch()
@@ -95,9 +98,12 @@ export default function MileageReport() {
         states.forEach(s => rows.push([units[id]?.truck_number ?? '', units[id]?.unit ?? id, s.state, s.miles])))
       downloadCsv(`state-miles-${start}-to-${end}.csv`, rows)
     } else if (trucksQ.data) {
-      const rows: (string | number)[][] = [['Truck', 'Peak unit', 'VIN', 'Driver', 'Miles']]
-      vehicles.forEach(v => rows.push([v.truck_number ?? '', v.unit, v.vin ?? '', v.driver_name ?? '', v.miles]))
-      rows.push(['Total', '', '', '', trucksQ.data.total_miles])
+      const rows: (string | number)[][] = [['Truck', 'Peak unit', 'VIN', 'Driver', 'Start odometer', 'End odometer', 'Odometer miles', 'GPS miles']]
+      vehicles.forEach(v => rows.push([
+        v.truck_number ?? '', v.unit, v.vin ?? '', v.driver_name ?? '',
+        v.start_odometer ?? '', v.end_odometer ?? '', v.odometer_miles ?? '', v.miles,
+      ]))
+      rows.push(['Total', '', '', '', '', '', '', trucksQ.data.total_miles])
       downloadCsv(`truck-miles-${start}-to-${end}.csv`, rows)
     }
   }
@@ -220,18 +226,20 @@ export default function MileageReport() {
                   <th className="text-left font-medium px-4 py-3">Truck</th>
                   <th className="text-left font-medium px-4 py-3">Peak unit</th>
                   <th className="text-left font-medium px-4 py-3">Driver</th>
-                  <th className="text-right font-medium px-4 py-3">Miles</th>
+                  {withOdometer && <th className="text-right font-medium px-4 py-3">Odometer miles</th>}
+                  <th className="text-right font-medium px-4 py-3">GPS miles</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {vehicles.length === 0 && (
-                  <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">No miles in this period</td></tr>
+                  <tr><td colSpan={withOdometer ? 6 : 5} className="px-4 py-8 text-center text-gray-500">No miles in this period</td></tr>
                 )}
                 {vehicles.map(v => (
                   <TruckRow
                     key={v.eld_id}
                     v={v}
                     trucks={trucksQ.data!.trucks}
+                    withOdometer={withOdometer}
                     open={open.has(v.eld_id)}
                     onToggle={() => toggle(v.eld_id)}
                     states={statesQ.data?.by_vehicle[v.eld_id]}
@@ -245,6 +253,11 @@ export default function MileageReport() {
                   <tr>
                     <td />
                     <td className="px-4 py-3" colSpan={3}>Total</td>
+                    {withOdometer && (
+                      <td className="px-4 py-3 text-right">
+                        {fmtMiles(trucksQ.data.vehicles.reduce((sum, v) => sum + (v.odometer_miles ?? 0), 0))}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-right">{fmtMiles(trucksQ.data.total_miles)}</td>
                   </tr>
                 </tfoot>
@@ -298,8 +311,9 @@ export default function MileageReport() {
   )
 }
 
-function TruckRow({ v, trucks, open, onToggle, states, statesLoading, onMatch }: {
+function TruckRow({ v, trucks, withOdometer, open, onToggle, states, statesLoading, onMatch }: {
   v: VehicleMiles
+  withOdometer: boolean
   trucks: { id: number; truck_number: string }[]
   open: boolean
   onToggle: () => void
@@ -330,12 +344,22 @@ function TruckRow({ v, trucks, open, onToggle, states, statesLoading, onMatch }:
           {!v.active && <span className="ml-2 text-xs text-gray-400">inactive</span>}
         </td>
         <td className="px-4 py-2.5 text-gray-700">{v.driver_name ?? <span className="text-gray-400">—</span>}</td>
-        <td className="px-4 py-2.5 text-right font-medium">{fmtMiles(v.miles)}</td>
+        {withOdometer && (
+          <td
+            className="px-4 py-2.5 text-right font-medium"
+            title={v.odometer_miles != null
+              ? `${v.start_odometer?.toLocaleString()} (${v.start_time ? new Date(v.start_time).toLocaleString() : ''}) → ${v.end_odometer?.toLocaleString()} (${v.end_time ? new Date(v.end_time).toLocaleString() : ''})`
+              : 'No inspections with an odometer in this period'}
+          >
+            {v.odometer_miles != null ? fmtMiles(v.odometer_miles) : <span className="text-gray-400">—</span>}
+          </td>
+        )}
+        <td className="px-4 py-2.5 text-right text-gray-600">{fmtMiles(v.miles)}</td>
       </tr>
       {open && (
         <tr className="bg-gray-50/60">
           <td />
-          <td colSpan={4} className="px-4 py-3">
+          <td colSpan={withOdometer ? 5 : 4} className="px-4 py-3">
             {statesLoading ? (
               <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
             ) : states && states.length ? (

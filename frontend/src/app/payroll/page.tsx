@@ -206,14 +206,31 @@ export default function PayrollPage() {
     selectedWeekObj ? ymd(selectedWeekObj.startDate) : '',
     selectedWeekObj ? ymd(selectedWeekObj.endDate) : '',
     !!eldConnection?.connected && view === 'payroll',
+    true,
   )
+  // Odometer at the week's last inspection minus its first; Peak's GPS miles
+  // only when the truck has no inspections with an odometer that week.
   const eldMilesByTruck = useMemo(() => {
-    const m = new Map<number, number>()
+    const m = new Map<number, { miles: number; how: string }>()
+    const when = (iso?: string | null) =>
+      iso ? new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''
     eldMileage?.vehicles.forEach(v => {
-      if (v.truck_id) m.set(v.truck_id, (m.get(v.truck_id) || 0) + v.miles)
+      if (!v.truck_id) return
+      const odo = v.odometer_miles != null
+      m.set(v.truck_id, {
+        miles: odo ? v.odometer_miles! : v.miles,
+        how: odo
+          ? `Odometer ${v.start_odometer?.toLocaleString()} (${when(v.start_time)}) → ${v.end_odometer?.toLocaleString()} (${when(v.end_time)}), Peak unit ${v.unit}`
+          : `No inspections with an odometer this week - GPS miles from Peak unit ${v.unit}`,
+      })
     })
     return m
   }, [eldMileage])
+  // Hover text for a driver's Total Miles cell.
+  const totalMilesSource = (driverId: number): string | undefined => {
+    const truckId = getOverride(driverId, selectedWeek, 'truck_id') ?? driverSettings?.find((s: any) => s.driver_id === driverId)?.truck_id
+    return truckId ? eldMilesByTruck.get(Number(truckId))?.how : undefined
+  }
 
   // A driver counts for a week if hired on or before its end and not
   // terminated before its start (so they're included in the last week they worked).
@@ -258,7 +275,7 @@ export default function PayrollPage() {
           // Only the week on screen is read from Peak; the truck is that week's pick, else the driver's usual truck.
           if (weekNumber !== selectedWeek) return 0
           const truckId = getOverride(driverId, weekNumber, 'truck_id') ?? settingsMap.get(driverId)?.truck_id
-          return truckId ? Math.round(eldMilesByTruck.get(Number(truckId)) || 0) : 0
+          return truckId ? Math.round(eldMilesByTruck.get(Number(truckId))?.miles || 0) : 0
         }
         if (row.mode === 'auto') return Number(api?.[row.key]) || 0
         if (row.mode === 'fixed') return Number(settingsMap.get(driverId)?.[`${row.key}_weekly`]) || 0
@@ -733,6 +750,7 @@ export default function PayrollPage() {
                               key={d.driver_id}
                               className="px-3 py-2 cursor-pointer hover:bg-brand/5"
                               style={{ ...cell, color: shown.color }}
+                              title={row.key === 'total_miles' && !manual ? totalMilesSource(d.driver_id) : undefined}
                               onClick={() => !isEditing(selectedWeek, d.driver_id, row.key) && startEdit(selectedWeek, d.driver_id, row.key, signedOf(row, v || 0))}
                             >
                               {isEditing(selectedWeek, d.driver_id, row.key) ? (
