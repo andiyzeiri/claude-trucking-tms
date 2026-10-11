@@ -71,6 +71,33 @@ interface DriverPayrollData {
   }
 }
 
+// The table is split into company drivers and owner operators; anything not
+// marked owner_operator is treated as a company driver.
+type DriverTab = 'company' | 'owner_operator'
+const tabOf = (driverType: string): DriverTab => (driverType === 'owner_operator' ? 'owner_operator' : 'company')
+
+type PayTotals = {
+  gross: number
+  extra: number
+  dispatch_fee: number
+  insurance: number
+  fuel: number
+  parking: number
+  trailer: number
+  misc: number
+  adjustments: number
+  miles: number
+  check_amount: number
+  drivers_paid: number
+}
+
+const emptyTotals = (): PayTotals => ({
+  gross: 0, extra: 0, dispatch_fee: 0, insurance: 0, fuel: 0, parking: 0,
+  trailer: 0, misc: 0, adjustments: 0, miles: 0, check_amount: 0, drivers_paid: 0,
+})
+
+const deductionsOf = (t: PayTotals) => t.dispatch_fee + t.insurance + t.fuel + t.parking + t.trailer + t.misc
+
 type EditingCell = {
   weekNumber: number
   driverId: number
@@ -100,6 +127,7 @@ export default function PayrollPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, weekNumber: number, driverId: number} | null>(null)
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
+  const [driverTab, setDriverTab] = useState<DriverTab>('company')
   const [editValue, setEditValue] = useState<string>('')
 
   // Build overrides lookup from database
@@ -284,27 +312,16 @@ export default function PayrollPage() {
   }
 
 
-  // Calculate week totals (only for drivers employed during that week)
-  const getWeekTotals = (weekNumber: number) => {
-    const totals = {
-      gross: 0,
-      extra: 0,
-      dispatch_fee: 0,
-      insurance: 0,
-      fuel: 0,
-      parking: 0,
-      trailer: 0,
-      misc: 0,
-      adjustments: 0,
-      miles: 0,
-      check_amount: 0
-    }
-
+  // Calculate week totals (only for drivers employed during that week),
+  // optionally for one driver type.
+  const getWeekTotals = (weekNumber: number, tab?: DriverTab): PayTotals => {
+    const totals = emptyTotals()
     const employedDriverIds = new Set(getDriversForWeek(weekNumber).map(d => d.id))
 
     payrollData.forEach(driverData => {
       // Only include drivers who were employed during this week
       if (!employedDriverIds.has(driverData.driver_id)) return
+      if (tab && tabOf(driverData.driver_type) !== tab) return
 
       const weekData = driverData.weeks[weekNumber]
       if (weekData) {
@@ -319,45 +336,60 @@ export default function PayrollPage() {
         totals.adjustments += weekData.adjustments
         totals.miles += weekData.miles
         totals.check_amount += weekData.check_amount
+        if (weekData.check_amount !== 0) totals.drivers_paid += 1
       }
     })
 
     return totals
   }
 
-  // Calculate grand totals across all 52 weeks
-  const grandTotals = useMemo(() => {
-    const totals = {
-      gross: 0,
-      extra: 0,
-      dispatch_fee: 0,
-      insurance: 0,
-      fuel: 0,
-      parking: 0,
-      trailer: 0,
-      misc: 0,
-      adjustments: 0,
-      miles: 0,
-      check_amount: 0
-    }
-
+  // Totals across every week of the selected year, optionally for one driver type.
+  // drivers_paid here counts distinct drivers paid at least once.
+  const getYearTotals = (tab?: DriverTab): PayTotals => {
+    const totals = emptyTotals()
+    const paid = new Set<number>()
     weeks.forEach(week => {
-      const weekTotals = getWeekTotals(week.weekNumber)
-      totals.gross += weekTotals.gross
-      totals.extra += weekTotals.extra
-      totals.dispatch_fee += weekTotals.dispatch_fee
-      totals.insurance += weekTotals.insurance
-      totals.fuel += weekTotals.fuel
-      totals.parking += weekTotals.parking
-      totals.trailer += weekTotals.trailer
-      totals.misc += weekTotals.misc
-      totals.adjustments += weekTotals.adjustments
-      totals.miles += weekTotals.miles
-      totals.check_amount += weekTotals.check_amount
+      const employedDriverIds = new Set(getDriversForWeek(week.weekNumber).map(d => d.id))
+      payrollData.forEach(driverData => {
+        if (!employedDriverIds.has(driverData.driver_id)) return
+        if (tab && tabOf(driverData.driver_type) !== tab) return
+        const weekData = driverData.weeks[week.weekNumber]
+        if (!weekData) return
+        totals.gross += weekData.gross
+        totals.extra += weekData.extra
+        totals.dispatch_fee += weekData.dispatch_fee
+        totals.insurance += weekData.insurance
+        totals.fuel += weekData.fuel
+        totals.parking += weekData.parking
+        totals.trailer += weekData.trailer
+        totals.misc += weekData.misc
+        totals.adjustments += weekData.adjustments
+        totals.miles += weekData.miles
+        totals.check_amount += weekData.check_amount
+        if (weekData.check_amount !== 0) paid.add(driverData.driver_id)
+      })
     })
-
+    totals.drivers_paid = paid.size
     return totals
-  }, [payrollData, weeks])
+  }
+
+  // Stats cards at the top: the selected week and the whole year, each with
+  // the company driver / owner operator split.
+  const stats = useMemo(() => ({
+    week: {
+      all: getWeekTotals(selectedWeek),
+      company: getWeekTotals(selectedWeek, 'company'),
+      owner: getWeekTotals(selectedWeek, 'owner_operator'),
+    },
+    year: {
+      all: getYearTotals(),
+      company: getYearTotals('company'),
+      owner: getYearTotals('owner_operator'),
+    },
+  }), [payrollData, weeks, selectedWeek, drivers])
+
+  // Annual Total footer follows the selected tab.
+  const grandTotals = driverTab === 'company' ? stats.year.company : stats.year.owner
 
   // Close context menu when clicking outside
   // IMPORTANT: This must be before any early returns to maintain hook order
@@ -373,24 +405,6 @@ export default function PayrollPage() {
       document.removeEventListener('click', handleClick)
     }
   }, [contextMenu])
-
-  // Calculate stats for the current week
-  // IMPORTANT: This must be before any early returns to maintain hook order
-  const currentWeekStats = useMemo(() => {
-    const today = new Date()
-    const currentWeek = weeks.find(week =>
-      today >= week.startDate && today <= week.endDate
-    )
-    if (!currentWeek) return { total: 0, paid: 0, pending: 0, miles: 0 }
-
-    const totals = getWeekTotals(currentWeek.weekNumber)
-    return {
-      total: totals.check_amount,
-      paid: totals.check_amount > 0 ? totals.check_amount : 0,
-      pending: 0, // TODO: Add pending logic
-      miles: totals.miles
-    }
-  }, [payrollData, weeks])
 
   if (isLoading) {
     return (
@@ -551,6 +565,59 @@ export default function PayrollPage() {
           </Button>
         </div>
 
+        {/* Week + year stats */}
+        {drivers.length > 0 && (() => {
+          const week = weeks.find(w => w.weekNumber === selectedWeek)
+          const isThisYear = selectedYear === new Date().getFullYear()
+          return (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <StatsPanel
+                title={`Week ${selectedWeek}`}
+                subtitle={week ? `${week.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} \u2013 ${week.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
+                {...stats.week}
+                driversLabel="Drivers paid"
+              />
+              <StatsPanel
+                title={`${selectedYear}`}
+                subtitle={isThisYear ? 'Year to date' : 'Full year'}
+                {...stats.year}
+                driversLabel="Drivers paid this year"
+              />
+            </div>
+          )
+        })()}
+
+        {/* Driver type tabs */}
+        {drivers.length > 0 && (() => {
+          const employed = getDriversForWeek(selectedWeek)
+          const count = (tab: DriverTab) => employed.filter((d: any) => tabOf(d.driver_type || 'company') === tab).length
+          const tabs: { key: DriverTab; label: string }[] = [
+            { key: 'company', label: 'Company Drivers' },
+            { key: 'owner_operator', label: 'Owner Operators' },
+          ]
+          return (
+            <div className="flex items-center gap-1 border-b" style={{ borderColor: 'var(--monday-border-light)', marginBottom: '-8px' }}>
+              {tabs.map(t => (
+                <button
+                  key={t.key}
+                  onClick={() => setDriverTab(t.key)}
+                  className="px-4 py-2 text-sm transition-all"
+                  style={{
+                    color: driverTab === t.key ? 'var(--monday-done)' : 'var(--monday-text-secondary)',
+                    borderBottom: driverTab === t.key ? '3px solid var(--monday-done)' : '3px solid transparent',
+                    marginBottom: '-1px',
+                    fontWeight: driverTab === t.key ? 600 : 500,
+                    fontSize: '14px'
+                  }}
+                >
+                  {t.label}
+                  <span style={{ marginLeft: '6px', fontSize: '12px', opacity: 0.7 }}>({count(t.key)})</span>
+                </button>
+              ))}
+            </div>
+          )
+        })()}
+
         {/* Payroll Table */}
         {drivers.length === 0 ? (
           <div className="flex items-center justify-center min-h-[400px]">
@@ -618,11 +685,10 @@ export default function PayrollPage() {
                 <tbody style={{ backgroundColor: 'var(--monday-bg-primary)' }}>
                   {weeks.filter(w => w.weekNumber === selectedWeek).map((week, weekIndex) => {
                     const isExpanded = true
-                    const weekTotals = getWeekTotals(week.weekNumber)
-                    const hasData = weekTotals.check_amount > 0
-                    // Get drivers employed during this week
-                    const employedDrivers = getDriversForWeek(week.weekNumber)
-                    const employedDriverIds = new Set(employedDrivers.map(d => d.id))
+                    const weekTotals = getWeekTotals(week.weekNumber, driverTab)
+                    // Drivers of the selected type employed during this week
+                    const employedDriverIds = new Set(getDriversForWeek(week.weekNumber).map(d => d.id))
+                    const tabRows = payrollData.filter(d => employedDriverIds.has(d.driver_id) && tabOf(d.driver_type) === driverTab)
 
                     return (
                       <React.Fragment key={week.weekNumber}>
@@ -638,7 +704,7 @@ export default function PayrollPage() {
                                 Week {week.weekNumber} {week.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {week.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               </span>
                               <span style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
-                                ({employedDrivers.length} drivers)
+                                ({tabRows.length} {driverTab === 'company' ? 'company drivers' : 'owner operators'})
                               </span>
                             </div>
                           </td>
@@ -651,9 +717,14 @@ export default function PayrollPage() {
                         </tr>
 
                         {/* Driver Rows */}
-                        {isExpanded && payrollData
-                          .filter(driverData => employedDriverIds.has(driverData.driver_id))
-                          .map((driverData, driverIndex) => {
+                        {isExpanded && tabRows.length === 0 && (
+                          <tr>
+                            <td colSpan={12} className="px-3 py-6 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
+                              No {driverTab === 'company' ? 'company drivers' : 'owner operators'} this week.
+                            </td>
+                          </tr>
+                        )}
+                        {isExpanded && tabRows.map((driverData, driverIndex) => {
                           const weekData = driverData.weeks[week.weekNumber]
                           const isOwner = driverData.driver_type === 'owner_operator'
                           const rowBg = isOwner ? '#FFF8E1' : '#F0F7FF'
@@ -775,7 +846,7 @@ export default function PayrollPage() {
                 </tbody>
                 <tfoot>
                   <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
-                    <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>Annual Total</td>
+                    <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>Annual Total · {driverTab === 'company' ? 'Company' : 'Owner Ops'}</td>
                     <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-secondary)' }}></td>
                     <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(grandTotals.gross)}</td>
                     <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(grandTotals.extra)}</td>
@@ -844,5 +915,46 @@ export default function PayrollPage() {
         />
       </div>
     </Layout>
+  )
+}
+
+function StatsPanel({ title, subtitle, all, company, owner, driversLabel }: {
+  title: string
+  subtitle: string
+  all: PayTotals
+  company: PayTotals
+  owner: PayTotals
+  driversLabel: string
+}) {
+  const split = (c: string, o: string) => (
+    <div style={{ fontSize: '11px', color: 'var(--monday-text-muted)', marginTop: '4px', lineHeight: '15px' }}>
+      <div>Company {c}</div>
+      <div>Owner op {o}</div>
+    </div>
+  )
+  const money = (t: PayTotals, f: (t: PayTotals) => number) => formatCurrency(f(t))
+  const tiles = [
+    { label: 'Gross', value: money(all, t => t.gross + t.extra), sub: split(money(company, t => t.gross + t.extra), money(owner, t => t.gross + t.extra)) },
+    { label: 'Deductions', value: money(all, deductionsOf), sub: split(money(company, deductionsOf), money(owner, deductionsOf)), color: 'var(--monday-stuck)' },
+    { label: 'Net Pay', value: money(all, t => t.check_amount), sub: split(money(company, t => t.check_amount), money(owner, t => t.check_amount)), color: 'var(--monday-done)' },
+    { label: 'Miles', value: all.miles.toLocaleString(), sub: split(company.miles.toLocaleString(), owner.miles.toLocaleString()) },
+    { label: driversLabel, value: String(all.drivers_paid), sub: split(String(company.drivers_paid), String(owner.drivers_paid)) },
+  ]
+  return (
+    <div className="rounded-lg shadow-sm p-4" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
+      <div className="flex items-baseline gap-2 mb-3">
+        <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>{title}</span>
+        <span style={{ fontSize: '13px', color: 'var(--monday-text-secondary)' }}>{subtitle}</span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+        {tiles.map(t => (
+          <div key={t.label} className="rounded-md p-3" style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
+            <div style={{ fontSize: '11px', fontWeight: 500, color: 'var(--monday-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t.label}</div>
+            <div style={{ fontSize: '18px', fontWeight: 600, color: t.color || 'var(--monday-text-primary)', marginTop: '2px' }}>{t.value}</div>
+            {t.sub}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
