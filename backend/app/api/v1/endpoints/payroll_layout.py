@@ -1,5 +1,5 @@
 """
-Payroll page rows, per company: which line items show, in what order, and
+Payroll page rows, per company and driver type: which line items show, in what order, and
 how each is filled (see app/models/payroll_layout.py).
 
 The built-in rows always exist (they can be hidden, not deleted) and keep
@@ -11,7 +11,7 @@ import re
 import uuid
 from typing import Dict, List, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +23,7 @@ from app.models.user import User
 
 router = APIRouter()
 
+DriverType = Literal["company", "owner_operator"]
 Kind = Literal["earning", "deduction", "info"]
 Mode = Literal["auto", "fixed", "variable"]
 
@@ -105,18 +106,25 @@ def normalize(rows: List[LayoutRow]) -> List[dict]:
     return out
 
 
-async def _get(db: AsyncSession, company_id: int):
+async def _get(db: AsyncSession, company_id: int, driver_type: str):
     return (
-        await db.execute(select(PayrollLayout).where(PayrollLayout.company_id == company_id))
+        await db.execute(select(PayrollLayout).where(
+            PayrollLayout.company_id == company_id,
+            PayrollLayout.driver_type == driver_type,
+        ))
     ).scalar_one_or_none()
 
 
 @router.get("/", response_model=Layout)
 async def get_layout(
+    driver_type: DriverType = Query("company"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    layout = await _get(db, current_user.company_id)
+    layout = await _get(db, current_user.company_id, driver_type)
+    if layout is None and driver_type != "company":
+        # Owner operators start from the company drivers' rows until edited.
+        layout = await _get(db, current_user.company_id, "company")
     if layout is None:
         return {"rows": default_rows()}
     # Re-normalize so rows saved before a new built-in existed pick it up.
@@ -126,13 +134,21 @@ async def get_layout(
 @router.put("/", response_model=Layout)
 async def save_layout(
     body: Layout,
+    driver_type: DriverType = Query("company"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     rows = normalize(body.rows)
-    layout = await _get(db, current_user.company_id)
+    layout = await _get(db, current_user.company_id, driver_type)
+    if driver_type == "company" and await _get(db, current_user.company_id, "owner_operator") is None:
+        # Owner operators have been showing the company rows (see get_layout);
+        # pin those for them first so editing one table never changes the other.
+        db.add(PayrollLayout(
+            company_id=current_user.company_id, driver_type="owner_operator",
+            rows=layout.rows if layout is not None else default_rows(),
+        ))
     if layout is None:
-        db.add(PayrollLayout(company_id=current_user.company_id, rows=rows))
+        db.add(PayrollLayout(company_id=current_user.company_id, driver_type=driver_type, rows=rows))
     else:
         layout.rows = rows
     await db.commit()

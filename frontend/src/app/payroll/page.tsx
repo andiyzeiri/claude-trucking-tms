@@ -108,14 +108,15 @@ export default function PayrollPage() {
   const saveOverride = useSavePayrollOverride()
   const { data: trucksData } = useTrucks()
   const { data: driverSettings } = useDriverPayrollSettings()
-  const { data: layoutRows, isLoading: layoutLoading } = usePayrollLayout()
-  const saveLayout = useSavePayrollLayout()
+  // Company drivers and owner operators each have their own rows.
+  const { data: companyRows, isLoading: companyLayoutLoading } = usePayrollLayout('company')
+  const { data: ownerRows, isLoading: ownerLayoutLoading } = usePayrollLayout('owner_operator')
+  const saveCompanyLayout = useSavePayrollLayout('company')
+  const saveOwnerLayout = useSavePayrollLayout('owner_operator')
+  const layoutLoading = companyLayoutLoading || ownerLayoutLoading
   const drivers = driversData?.items || []
   const trucks = (trucksData?.items || []).filter((t: any) => t.type === 'truck')
 
-  const rows: PayrollRow[] = layoutRows || []
-  const visibleRows = rows.filter(r => !r.hidden)
-  const hiddenRows = rows.filter(r => r.hidden)
 
   const availableYears = useMemo(() => {
     const currentYear = new Date().getFullYear()
@@ -129,6 +130,12 @@ export default function PayrollPage() {
   const [amountsRowKey, setAmountsRowKey] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [driverTab, setDriverTab] = useState<DriverTab>('company')
+
+  const rowsFor = (tab: DriverTab): PayrollRow[] => (tab === 'company' ? companyRows : ownerRows) || []
+  const rows = rowsFor(driverTab) // the table being viewed
+  const saveLayout = driverTab === 'company' ? saveCompanyLayout : saveOwnerLayout
+  const visibleRows = rows.filter(r => !r.hidden)
+  const hiddenRows = rows.filter(r => r.hidden)
   const [newRow, setNewRow] = useState<{ label: string; kind: 'earning' | 'deduction'; mode: 'fixed' | 'variable' } | null>(null)
 
   // Build overrides lookup from database
@@ -218,7 +225,7 @@ export default function PayrollPage() {
           if (!api && !editedWeeks.has(`${driver.id}_${wn}`)) continue
           const values: Record<string, number> = {}
           let check = 0
-          rows.forEach(row => {
+          rowsFor(tabOf(driver.driver_type || 'company')).forEach(row => {
             const v = valueOf(row, driver.id, wn, api)
             values[row.key] = v
             if (row.hidden) return
@@ -230,10 +237,10 @@ export default function PayrollPage() {
         return data
       })
       .sort((a, b) => a.driver_name.localeCompare(b.driver_name))
-  }, [drivers, calculatedPayroll, overridesMap, payrollOverrides, driverSettings, layoutRows])
+  }, [drivers, calculatedPayroll, overridesMap, payrollOverrides, driverSettings, companyRows, ownerRows])
 
-  const addInto = (totals: PayTotals, cell: WeekCell) => {
-    rows.forEach(row => {
+  const addInto = (totals: PayTotals, cell: WeekCell, tab: DriverTab) => {
+    rowsFor(tab).forEach(row => {
       const v = cell.values[row.key] || 0
       totals.values[row.key] = (totals.values[row.key] || 0) + v
       if (row.hidden) return
@@ -252,7 +259,7 @@ export default function PayrollPage() {
       if (tab && tabOf(d.driver_type) !== tab) return
       const cell = d.weeks[weekNumber]
       if (!cell) return
-      addInto(totals, cell)
+      addInto(totals, cell, tabOf(d.driver_type))
       if (cell.check_amount !== 0) totals.drivers_paid += 1
     })
     return totals
@@ -270,7 +277,7 @@ export default function PayrollPage() {
         if (tab && tabOf(d.driver_type) !== tab) return
         const cell = d.weeks[week.weekNumber]
         if (!cell) return
-        addInto(totals, cell)
+        addInto(totals, cell, tabOf(d.driver_type))
         if (cell.check_amount !== 0) paid.add(d.driver_id)
       })
     })
@@ -291,7 +298,7 @@ export default function PayrollPage() {
       company: getYearTotals('company'),
       owner: getYearTotals('owner_operator'),
     },
-  }), [payrollData, weeks, selectedWeek, drivers])
+  }), [payrollData, weeks, selectedWeek, drivers, companyRows, ownerRows])
 
   const goToCurrentWeek = () => {
     const thisYear = new Date().getFullYear()
@@ -726,6 +733,7 @@ export default function PayrollPage() {
         <DriverSettingsModal isOpen={settingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
         <RowsDialog
           open={rowsDialogOpen}
+          title={driverTab === 'company' ? 'Company Drivers' : 'Owner Operators'}
           rows={rows}
           onClose={() => setRowsDialogOpen(false)}
           onSave={(next) => { saveLayout.mutate(next); setRowsDialogOpen(false) }}
@@ -734,7 +742,7 @@ export default function PayrollPage() {
         />
         <AmountsDialog
           row={amountsRow}
-          drivers={drivers.filter((d: any) => !d.date_terminated)}
+          drivers={drivers.filter((d: any) => !d.date_terminated && tabOf(d.driver_type || 'company') === driverTab)}
           onClose={() => setAmountsRowKey(null)}
           onSave={(amounts) => { if (amountsRow) updateRow(amountsRow.key, { amounts }); setAmountsRowKey(null) }}
         />
@@ -785,8 +793,9 @@ function StatsPanel({ title, subtitle, all, company, owner, driversLabel }: {
 }
 
 // Rename, reorder, show/hide, switch fixed/variable and delete rows, saved together.
-function RowsDialog({ open, rows, onClose, onSave, onAmounts, onDriverSettings }: {
+function RowsDialog({ open, title, rows, onClose, onSave, onAmounts, onDriverSettings }: {
   open: boolean
+  title: string
   rows: PayrollRow[]
   onClose: () => void
   onSave: (rows: PayrollRow[]) => void
@@ -811,9 +820,9 @@ function RowsDialog({ open, rows, onClose, onSave, onAmounts, onDriverSettings }
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Payroll rows</DialogTitle>
+          <DialogTitle>Payroll rows: {title}</DialogTitle>
           <DialogDescription>
-            These rows apply to every driver and every week. Hidden rows are left out of net pay.
+            These rows apply to every {title.toLowerCase().replace(/s$/, '')} and every week. Hidden rows are left out of net pay.
             Fixed rows take the same amount every week; variable rows are entered week by week.
           </DialogDescription>
         </DialogHeader>

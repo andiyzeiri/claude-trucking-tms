@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create payroll_layouts table: per-company Payroll page rows (custom items, fixed/variable, hidden)."""
+"""Create payroll_layouts table: per-company, per-driver-type Payroll page rows (custom items, fixed/variable, hidden)."""
 import asyncio
 import os
 import json
@@ -24,13 +24,29 @@ async def create_table():
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS payroll_layouts (
                 id SERIAL PRIMARY KEY,
-                company_id INTEGER NOT NULL UNIQUE REFERENCES companies(id),
+                company_id INTEGER NOT NULL REFERENCES companies(id),
+                driver_type VARCHAR(20) NOT NULL DEFAULT 'company',
                 rows JSONB NOT NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 updated_at TIMESTAMP WITH TIME ZONE
             );
         """))
         print("Created payroll_layouts table")
+
+        # One layout per driver type (company drivers / owner operators).
+        await conn.execute(text("""
+            ALTER TABLE payroll_layouts
+            ADD COLUMN IF NOT EXISTS driver_type VARCHAR(20) NOT NULL DEFAULT 'company';
+        """))
+        await conn.execute(text("ALTER TABLE payroll_layouts DROP CONSTRAINT IF EXISTS payroll_layouts_company_id_key;"))
+        await conn.execute(text("""
+            DO $$ BEGIN
+                ALTER TABLE payroll_layouts
+                ADD CONSTRAINT uq_payroll_layouts_company_type UNIQUE (company_id, driver_type);
+            EXCEPTION WHEN duplicate_object OR duplicate_table THEN null;
+            END $$;
+        """))
+        print("payroll_layouts: one layout per driver type")
 
     await engine.dispose()
     print("payroll_layouts migration completed!")

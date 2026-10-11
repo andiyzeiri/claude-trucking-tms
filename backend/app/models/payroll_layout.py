@@ -1,11 +1,12 @@
-from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy import Column, Integer, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from .base import Base
 
 
 class PayrollLayout(Base):
     """
-    Which line items the Payroll page shows, per company, in order.
+    Which line items the Payroll page shows, per company and driver type
+    (company drivers and owner operators each have their own rows), in order.
 
     `rows` is a list of {key, label, kind, mode, hidden, builtin, amounts}:
       kind    earning | deduction | info (miles - shown, never added to net pay)
@@ -19,5 +20,8 @@ class PayrollLayout(Base):
 
     __tablename__ = "payroll_layouts"
 
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, unique=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    driver_type = Column(String(20), nullable=False, default="company")  # company | owner_operator
     rows = Column(JSONB, nullable=False)
+
+    __table_args__ = (UniqueConstraint("company_id", "driver_type", name="uq_payroll_layouts_company_type"),)

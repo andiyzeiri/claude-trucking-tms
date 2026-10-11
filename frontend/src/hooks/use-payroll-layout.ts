@@ -19,20 +19,24 @@ export interface PayrollRow {
 // Built-in rows whose mode can be switched between fixed and variable.
 export const SWITCHABLE_ROWS = new Set(['insurance', 'parking', 'trailer', 'misc'])
 
-export const LAYOUT_KEY = ['payroll-layout']
+// Company drivers and owner operators each have their own rows.
+export type PayrollDriverType = 'company' | 'owner_operator'
 
-export function usePayrollLayout() {
+export const layoutKey = (driverType: PayrollDriverType) => ['payroll-layout', driverType]
+
+export function usePayrollLayout(driverType: PayrollDriverType) {
   return useQuery<PayrollRow[]>({
-    queryKey: LAYOUT_KEY,
-    queryFn: async () => (await api.get('/v1/payroll-layout/')).data.rows,
+    queryKey: layoutKey(driverType),
+    queryFn: async () => (await api.get(`/v1/payroll-layout/?driver_type=${driverType}`)).data.rows,
   })
 }
 
-export function useSavePayrollLayout() {
+export function useSavePayrollLayout(driverType: PayrollDriverType) {
   const queryClient = useQueryClient()
+  const LAYOUT_KEY = layoutKey(driverType)
   return useMutation({
     mutationFn: async (rows: PayrollRow[]): Promise<PayrollRow[]> =>
-      (await api.put('/v1/payroll-layout/', { rows })).data.rows,
+      (await api.put(`/v1/payroll-layout/?driver_type=${driverType}`, { rows })).data.rows,
     onMutate: async (rows) => {
       await queryClient.cancelQueries({ queryKey: LAYOUT_KEY })
       const previous = queryClient.getQueryData<PayrollRow[]>(LAYOUT_KEY)
