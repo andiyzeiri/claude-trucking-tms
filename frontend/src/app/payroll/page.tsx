@@ -377,8 +377,6 @@ export default function PayrollPage() {
   const employedIds = new Set(getDriversForWeek(selectedWeek).map(d => d.id))
   const tabRows = payrollData.filter(d => employedIds.has(d.driver_id) && tabOf(d.driver_type) === driverTab)
   const tabCount = (tab: DriverTab) => payrollData.filter(d => employedIds.has(d.driver_id) && tabOf(d.driver_type) === tab).length
-  const weekTotals = getWeekTotals(selectedWeek, driverTab)
-  const yearTotals = driverTab === 'company' ? stats.year.company : stats.year.owner
   const tabNoun = driverTab === 'company' ? 'company drivers' : 'owner operators'
   const amountsRow = rows.find(r => r.key === amountsRowKey) || null
 
@@ -388,7 +386,6 @@ export default function PayrollPage() {
   const border = '1px solid var(--monday-border-light)'
   const stickyLabel: React.CSSProperties = { position: 'sticky', left: 0, zIndex: 1, width: LABEL_W, minWidth: LABEL_W, borderRight: border, borderBottom: border }
   const cell: React.CSSProperties = { width: COL_W, minWidth: COL_W, borderRight: border, borderBottom: border, fontSize: '13px' }
-  const totalCell: React.CSSProperties = { ...cell, backgroundColor: 'var(--monday-bg-secondary)', fontWeight: 600 }
 
   return (
     <Layout>
@@ -528,8 +525,6 @@ export default function PayrollPage() {
                         {d.driver_name}
                       </th>
                     ))}
-                    <th className="px-3 py-2.5 text-left" style={{ ...totalCell, fontSize: '12px', color: 'var(--monday-text-secondary)' }}>Week Total</th>
-                    <th className="px-3 py-2.5 text-left" style={{ ...totalCell, fontSize: '12px', color: 'var(--monday-text-secondary)', borderRight: 'none' }}>{selectedYear} Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -570,8 +565,6 @@ export default function PayrollPage() {
                           </td>
                         )
                       })}
-                      <td style={totalCell}></td>
-                      <td style={{ ...totalCell, borderRight: 'none' }}></td>
                     </tr>
                   )}
 
@@ -645,8 +638,6 @@ export default function PayrollPage() {
                             </td>
                           )
                         })}
-                        <td className="px-3 py-2" style={{ ...totalCell, color: rowColor(row) }}>{fmtValue(row, weekTotals.values[row.key] || 0)}</td>
-                        <td className="px-3 py-2" style={{ ...totalCell, color: rowColor(row), borderRight: 'none' }}>{fmtValue(row, yearTotals.values[row.key] || 0)}</td>
                       </tr>
                     )
                   })}
@@ -692,8 +683,6 @@ export default function PayrollPage() {
                         )}
                       </td>
                       {tabRows.map(d => <td key={d.driver_id} style={cell}></td>)}
-                      <td style={totalCell}></td>
-                      <td style={{ ...totalCell, borderRight: 'none' }}></td>
                     </tr>
                   )}
 
@@ -708,8 +697,6 @@ export default function PayrollPage() {
                           {d.weeks[selectedWeek] ? formatCurrency(d.weeks[selectedWeek].check_amount) : '-'}
                         </td>
                       ))}
-                      <td className="px-3 py-2.5" style={{ ...cell, borderBottom: 'none', fontWeight: 700, color: 'var(--monday-done)' }}>{formatCurrency(weekTotals.check_amount)}</td>
-                      <td className="px-3 py-2.5" style={{ ...cell, borderBottom: 'none', borderRight: 'none', fontWeight: 700, color: 'var(--monday-done)' }}>{formatCurrency(yearTotals.check_amount)}</td>
                     </tr>
                   )}
                 </tbody>
