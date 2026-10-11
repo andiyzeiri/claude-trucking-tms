@@ -165,6 +165,10 @@ python3 create_payroll_layouts_table.py || echo "⚠️  create_payroll_layouts_
 echo "🔧 Creating driver debt tables..."
 python3 create_driver_debt_tables.py || echo "⚠️  create_driver_debt_tables.py had errors, continuing..."
 
+# Create eld_connections table (Peak ELD API key for Reports > Mileage)
+echo "🔧 Creating eld_connections table..."
+python3 create_eld_connections_table.py || echo "⚠️  create_eld_connections_table.py had errors, continuing..."
+
 # Note: Recurring expenses are generated via POST /api/v1/expenses/generate-recurring
 # This should be called daily via a cron job or on page load
 

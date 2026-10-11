@@ -5,7 +5,8 @@ import Layout from '@/components/layout/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatCurrency } from '@/lib/utils'
-import { Download, Search, ChevronRight, ChevronDown, TrendingUp, Users, Truck, Calendar } from 'lucide-react'
+import { Download, Search, ChevronRight, ChevronDown, TrendingUp, Users, Truck, Calendar, Gauge } from 'lucide-react'
+import MileageReport from '@/components/reports/mileage-report'
 import { useLoads } from '@/hooks/use-loads'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useExpenses } from '@/hooks/use-expenses'
@@ -131,7 +132,7 @@ interface ExpenseEntry {
   truck_id: number | null
 }
 
-type TabType = 'drivers' | 'owners' | 'equipment' | 'expenses'
+type TabType = 'drivers' | 'owners' | 'equipment' | 'expenses' | 'mileage'
 
 export default function ReportsPage() {
   // Fetch ALL data - use large limit to get everything
@@ -637,6 +638,7 @@ export default function ReportsPage() {
             <h1 className="text-2xl font-semibold text-gray-900">Reports</h1>
             <p className="text-gray-600">Financial reports grouped by driver and week</p>
           </div>
+          {activeTab !== 'mileage' && (
           <div className="flex gap-2">
             <Button onClick={expandAll} variant="outline">
               Expand All
@@ -649,9 +651,11 @@ export default function ReportsPage() {
               Export CSV
             </Button>
           </div>
+          )}
         </div>
 
         {/* Year Tabs */}
+        {activeTab !== 'mileage' && (
         <div className="bg-white border border-gray-200 rounded-lg p-1 inline-flex gap-1">
           <Calendar className="h-5 w-5 text-gray-500 my-auto mx-2" />
           {availableYears.map(year => (
@@ -668,6 +672,7 @@ export default function ReportsPage() {
             </button>
           ))}
         </div>
+        )}
 
         {/* Driver/Owner Tabs */}
         <div className="border-b border-gray-200">
@@ -716,10 +721,24 @@ export default function ReportsPage() {
               <TrendingUp className="h-4 w-4" />
               Expenses
             </button>
+            <button
+              onClick={() => setActiveTab('mileage')}
+              className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'mileage'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Gauge className="h-4 w-4" />
+              Mileage
+            </button>
           </nav>
         </div>
 
+        {activeTab === 'mileage' && <MileageReport />}
+
         {/* Search */}
+        {activeTab !== 'mileage' && (
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
           <Input
@@ -729,9 +748,10 @@ export default function ReportsPage() {
             className="pl-10"
           />
         </div>
+        )}
 
         {/* Summary Cards - Driver/Owner tabs */}
-        {activeTab !== 'expenses' && activeTab !== 'equipment' && (
+        {activeTab !== 'expenses' && activeTab !== 'equipment' && activeTab !== 'mileage' && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="text-sm text-gray-600 mb-1">Total Loads ({selectedYear})</div>
@@ -902,7 +922,7 @@ export default function ReportsPage() {
         )}
 
         {/* Data Table - Drivers/Owners */}
-        {activeTab !== 'expenses' && activeTab !== 'equipment' && (filteredData.length === 0 ? (
+        {activeTab !== 'expenses' && activeTab !== 'equipment' && activeTab !== 'mileage' && (filteredData.length === 0 ? (
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <TrendingUp className="h-16 w-16 text-gray-500 mx-auto mb-4" />

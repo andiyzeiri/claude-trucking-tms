@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useCompany } from '@/hooks/use-company'
 import UserManagement from '@/components/UserManagement'
 import EmailReportsCard from '@/components/settings/email-reports-card'
+import EldCard from '@/components/settings/eld-card'
 
 export default function SettingsPage() {
   const { user, isLoading: userLoading } = useAuth()
@@ -322,6 +323,9 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
         )}
+
+        {/* ELD (Peak) - API key for Reports > Mileage */}
+        {!isLoading && isAdmin && <EldCard />}
 
         {/* Emailed reports - admin only, matching the endpoints' guard */}
         {!isLoading && isAdmin && <EmailReportsCard />}
