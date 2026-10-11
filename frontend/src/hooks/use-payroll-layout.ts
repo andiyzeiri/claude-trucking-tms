@@ -19,8 +19,8 @@ export interface PayrollRow {
 // Built-in rows whose mode can be switched between fixed and variable.
 export const SWITCHABLE_ROWS = new Set(['insurance', 'parking', 'trailer', 'misc'])
 
-// Company drivers and owner operators each have their own rows.
-export type PayrollDriverType = 'company' | 'owner_operator'
+// Company drivers, owner operators and company owners each have their own rows.
+export type PayrollDriverType = 'company' | 'owner_operator' | 'company_owner'
 
 export const layoutKey = (driverType: PayrollDriverType) => ['payroll-layout', driverType]
 

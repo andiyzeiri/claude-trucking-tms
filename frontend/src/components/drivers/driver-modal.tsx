@@ -16,7 +16,7 @@ export interface DriverData {
   phone: string
   email: string
   status: 'available' | 'on_trip' | 'off_duty'
-  driver_type: 'company' | 'owner_operator'
+  driver_type: 'company' | 'owner_operator' | 'company_owner'
   date_hired?: string
   date_terminated?: string
   date_of_birth?: string
@@ -214,7 +214,7 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
 
           <div className="space-y-2">
             <Label htmlFor="driver_type">Driver Type</Label>
-            <Select value={formData.driver_type} onValueChange={(value: 'company' | 'owner_operator') =>
+            <Select value={formData.driver_type} onValueChange={(value: 'company' | 'owner_operator' | 'company_owner') =>
               setFormData({ ...formData, driver_type: value })}>
               <SelectTrigger>
                 <SelectValue />
@@ -222,6 +222,7 @@ export function DriverModal({ isOpen, onClose, onSave, driver, mode }: DriverMod
               <SelectContent>
                 <SelectItem value="company">Company Driver</SelectItem>
                 <SelectItem value="owner_operator">Owner Operator</SelectItem>
+                <SelectItem value="company_owner">Company Owner</SelectItem>
               </SelectContent>
             </Select>
           </div>

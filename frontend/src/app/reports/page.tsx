@@ -107,7 +107,7 @@ interface WeekData {
 interface DriverReportData {
   driver_id: number
   driver_name: string
-  driver_type: 'company' | 'owner_operator'
+  driver_type: 'company' | 'owner_operator' | 'company_owner'
   wasEmployed: boolean
   weeks: WeekData[]
   totals: {
@@ -574,7 +574,7 @@ export default function ReportsPage() {
         // Include drivers with no loads
         rows.push([
           driver.driver_name,
-          driver.driver_type === 'owner_operator' ? 'Owner Operator' : 'Company',
+          driver.driver_type === 'owner_operator' ? 'Owner Operator' : driver.driver_type === 'company_owner' ? 'Company Owner' : 'Company',
           selectedYear,
           'No loads',
           '0.00',
@@ -586,7 +586,7 @@ export default function ReportsPage() {
         driver.weeks.forEach(week => {
           rows.push([
             driver.driver_name,
-            driver.driver_type === 'owner_operator' ? 'Owner Operator' : 'Company',
+            driver.driver_type === 'owner_operator' ? 'Owner Operator' : driver.driver_type === 'company_owner' ? 'Company Owner' : 'Company',
             selectedYear,
             week.weekLabel,
             week.gross.toFixed(2),

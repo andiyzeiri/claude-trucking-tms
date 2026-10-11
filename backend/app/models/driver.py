@@ -15,6 +15,7 @@ class DriverStatus(str, enum.Enum):
 class DriverType(str, enum.Enum):
     COMPANY = "company"
     OWNER_OPERATOR = "owner_operator"
+    COMPANY_OWNER = "company_owner"
 
 
 class Driver(Base):
@@ -27,7 +28,7 @@ class Driver(Base):
     phone = Column(String)
     email = Column(String)
     status = Column(String, default="off_duty")
-    driver_type = Column(String, default="company", nullable=False)  # company or owner_operator
+    driver_type = Column(String, default="company", nullable=False)  # company, owner_operator or company_owner
 
     # Employment dates
     date_hired = Column(Date, nullable=True)

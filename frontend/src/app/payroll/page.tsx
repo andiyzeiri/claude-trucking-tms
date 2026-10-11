@@ -51,10 +51,17 @@ function generateWeeks(year: number) {
 
 type Week = ReturnType<typeof generateWeeks>[number]
 
-// The table is split into company drivers and owner operators; anything not
-// marked owner_operator is treated as a company driver.
-type DriverTab = 'company' | 'owner_operator'
-const tabOf = (driverType: string): DriverTab => (driverType === 'owner_operator' ? 'owner_operator' : 'company')
+// The table is split by driver type, each with its own rows; anything not
+// marked owner_operator or company_owner is treated as a company driver.
+type DriverTab = 'company' | 'owner_operator' | 'company_owner'
+const TABS: { key: DriverTab; label: string; noun: string; short: string }[] = [
+  { key: 'company', label: 'Company Drivers', noun: 'company drivers', short: 'Company' },
+  { key: 'owner_operator', label: 'Owner Operators', noun: 'owner operators', short: 'Owner op' },
+  { key: 'company_owner', label: 'Company Owners', noun: 'company owners', short: 'Co. owner' },
+]
+const TAB_BY_KEY = Object.fromEntries(TABS.map(t => [t.key, t])) as Record<DriverTab, (typeof TABS)[number]>
+const tabOf = (driverType: string): DriverTab =>
+  driverType === 'owner_operator' || driverType === 'company_owner' ? driverType : 'company'
 
 // One driver's pay for one week: a value per row key (hidden rows included,
 // so stats can still show miles), and net pay from the visible rows only.
@@ -117,12 +124,14 @@ export default function PayrollPage() {
   const saveOverride = useSavePayrollOverride()
   const { data: trucksData } = useTrucks()
   const { data: driverSettings } = useDriverPayrollSettings()
-  // Company drivers and owner operators each have their own rows.
+  // Each driver type has its own rows.
   const { data: companyRows, isLoading: companyLayoutLoading } = usePayrollLayout('company')
   const { data: ownerRows, isLoading: ownerLayoutLoading } = usePayrollLayout('owner_operator')
+  const { data: coOwnerRows, isLoading: coOwnerLayoutLoading } = usePayrollLayout('company_owner')
   const saveCompanyLayout = useSavePayrollLayout('company')
   const saveOwnerLayout = useSavePayrollLayout('owner_operator')
-  const layoutLoading = companyLayoutLoading || ownerLayoutLoading
+  const saveCoOwnerLayout = useSavePayrollLayout('company_owner')
+  const layoutLoading = companyLayoutLoading || ownerLayoutLoading || coOwnerLayoutLoading
   const drivers = driversData?.items || []
   const trucks = (trucksData?.items || []).filter((t: any) => t.type === 'truck')
 
@@ -140,9 +149,10 @@ export default function PayrollPage() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [driverTab, setDriverTab] = useState<DriverTab>('company')
 
-  const rowsFor = (tab: DriverTab): PayrollRow[] => (tab === 'company' ? companyRows : ownerRows) || []
+  const rowsFor = (tab: DriverTab): PayrollRow[] =>
+    (tab === 'company' ? companyRows : tab === 'owner_operator' ? ownerRows : coOwnerRows) || []
   const rows = rowsFor(driverTab) // the table being viewed
-  const saveLayout = driverTab === 'company' ? saveCompanyLayout : saveOwnerLayout
+  const saveLayout = driverTab === 'company' ? saveCompanyLayout : driverTab === 'owner_operator' ? saveOwnerLayout : saveCoOwnerLayout
   const visibleRows = rows.filter(r => !r.hidden)
   const hiddenRows = rows.filter(r => r.hidden)
   const [newRow, setNewRow] = useState<{ label: string; kind: 'earning' | 'deduction'; mode: 'fixed' | 'variable' } | null>(null)
@@ -246,7 +256,7 @@ export default function PayrollPage() {
         return data
       })
       .sort((a, b) => a.driver_name.localeCompare(b.driver_name))
-  }, [drivers, calculatedPayroll, overridesMap, payrollOverrides, driverSettings, companyRows, ownerRows])
+  }, [drivers, calculatedPayroll, overridesMap, payrollOverrides, driverSettings, companyRows, ownerRows, coOwnerRows])
 
   const addInto = (totals: PayTotals, cell: WeekCell, tab: DriverTab) => {
     rowsFor(tab).forEach(row => {
@@ -295,19 +305,21 @@ export default function PayrollPage() {
   }
 
   // Stats cards at the top: the selected week and the whole year, each with
-  // the company driver / owner operator split.
+  // the split by driver type.
   const stats = useMemo(() => ({
     week: {
       all: getWeekTotals(selectedWeek),
       company: getWeekTotals(selectedWeek, 'company'),
       owner: getWeekTotals(selectedWeek, 'owner_operator'),
+      coOwner: getWeekTotals(selectedWeek, 'company_owner'),
     },
     year: {
       all: getYearTotals(),
       company: getYearTotals('company'),
       owner: getYearTotals('owner_operator'),
+      coOwner: getYearTotals('company_owner'),
     },
-  }), [payrollData, weeks, selectedWeek, drivers, companyRows, ownerRows])
+  }), [payrollData, weeks, selectedWeek, drivers, companyRows, ownerRows, coOwnerRows])
 
   const goToCurrentWeek = () => {
     const thisYear = new Date().getFullYear()
@@ -391,7 +403,7 @@ export default function PayrollPage() {
   const employedIds = new Set(getDriversForWeek(selectedWeek).map(d => d.id))
   const tabRows = payrollData.filter(d => employedIds.has(d.driver_id) && tabOf(d.driver_type) === driverTab)
   const tabCount = (tab: DriverTab) => payrollData.filter(d => employedIds.has(d.driver_id) && tabOf(d.driver_type) === tab).length
-  const tabNoun = driverTab === 'company' ? 'company drivers' : 'owner operators'
+  const tabNoun = TAB_BY_KEY[driverTab].noun
   const amountsRow = rows.find(r => r.key === amountsRowKey) || null
 
   // Shared cell styles
@@ -507,7 +519,7 @@ export default function PayrollPage() {
 
             {/* Driver type tabs */}
             <div className="flex items-center gap-1 border-b" style={{ borderColor: 'var(--monday-border-light)', marginBottom: '-8px' }}>
-              {([['company', 'Company Drivers'], ['owner_operator', 'Owner Operators']] as [DriverTab, string][]).map(([key, label]) => (
+              {TABS.map(({ key, label }) => (
                 <button
                   key={key}
                   onClick={() => setDriverTab(key)}
@@ -724,7 +736,7 @@ export default function PayrollPage() {
         <DriverSettingsModal isOpen={settingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
         <RowsDialog
           open={rowsDialogOpen}
-          title={driverTab === 'company' ? 'Company Drivers' : 'Owner Operators'}
+          title={TAB_BY_KEY[driverTab].label}
           rows={rows}
           onClose={() => setRowsDialogOpen(false)}
           onSave={(next) => { saveLayout.mutate(next); setRowsDialogOpen(false) }}
@@ -742,28 +754,33 @@ export default function PayrollPage() {
   )
 }
 
-function StatsPanel({ title, subtitle, all, company, owner, driversLabel }: {
+function StatsPanel({ title, subtitle, all, company, owner, coOwner, driversLabel }: {
   title: string
   subtitle: string
   all: PayTotals
   company: PayTotals
   owner: PayTotals
+  coOwner: PayTotals
   driversLabel: string
 }) {
-  const split = (c: string, o: string) => (
+  // One line per driver type under each number.
+  const split = (f: (t: PayTotals) => string) => (
     <div style={{ fontSize: '11px', color: 'var(--monday-text-muted)', marginTop: '4px', lineHeight: '15px' }}>
-      <div>Company {c}</div>
-      <div>Owner op {o}</div>
+      <div>Company {f(company)}</div>
+      <div>Owner op {f(owner)}</div>
+      <div>Co. owner {f(coOwner)}</div>
     </div>
   )
+  const money = (f: (t: PayTotals) => number) => (t: PayTotals) => formatCurrency(f(t))
   const miles = (t: PayTotals) => (t.values.miles || 0).toLocaleString()
+  const paid = (t: PayTotals) => String(t.drivers_paid)
   const tiles = [
-    { label: 'Gross', value: formatCurrency(all.earnings), sub: split(formatCurrency(company.earnings), formatCurrency(owner.earnings)) },
-    { label: 'Deductions', value: formatCurrency(all.deductions), sub: split(formatCurrency(company.deductions), formatCurrency(owner.deductions)), color: 'var(--monday-stuck)' },
-    { label: 'Net Pay', value: formatCurrency(all.check_amount), sub: split(formatCurrency(company.check_amount), formatCurrency(owner.check_amount)), color: 'var(--monday-done)' },
-    { label: 'Miles', value: miles(all), sub: split(miles(company), miles(owner)) },
-    { label: driversLabel, value: String(all.drivers_paid), sub: split(String(company.drivers_paid), String(owner.drivers_paid)) },
-  ]
+    { label: 'Gross', f: money(t => t.earnings) },
+    { label: 'Deductions', f: money(t => t.deductions), color: 'var(--monday-stuck)' },
+    { label: 'Net Pay', f: money(t => t.check_amount), color: 'var(--monday-done)' },
+    { label: 'Miles', f: miles },
+    { label: driversLabel, f: paid },
+  ].map(t => ({ ...t, value: t.f(all), sub: split(t.f) }))
   return (
     <div className="rounded-lg shadow-sm p-4" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
       <div className="flex items-baseline gap-2 mb-3">
@@ -900,9 +917,7 @@ function AmountsDialog({ row, drivers, onClose, onSave }: {
     Object.entries(values).forEach(([id, s]) => { const n = parseFloat(s); if (n) amounts[id] = Math.round(n * 100) / 100 })
     onSave(amounts)
   }
-  const sorted = [...drivers].sort((a, b) =>
-    (tabOf(a.driver_type) === tabOf(b.driver_type) ? 0 : tabOf(a.driver_type) === 'company' ? -1 : 1) ||
-    `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`))
+  const sorted = [...drivers].sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`))
 
   return (
     <Dialog open={!!row} onOpenChange={(o) => !o && onClose()}>
@@ -923,7 +938,6 @@ function AmountsDialog({ row, drivers, onClose, onSave }: {
             <div key={d.id} className="flex items-center justify-between gap-3">
               <span className="text-sm">
                 {d.first_name} {d.last_name}
-                {tabOf(d.driver_type) === 'owner_operator' && <span className="ml-1 text-xs text-gray-500">(owner op)</span>}
               </span>
               <Input
                 type="number"

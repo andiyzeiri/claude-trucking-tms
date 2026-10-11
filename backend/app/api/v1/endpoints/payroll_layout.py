@@ -23,7 +23,8 @@ from app.models.user import User
 
 router = APIRouter()
 
-DriverType = Literal["company", "owner_operator"]
+DriverType = Literal["company", "owner_operator", "company_owner"]
+DRIVER_TYPES = ("company", "owner_operator", "company_owner")
 Kind = Literal["earning", "deduction", "info"]
 Mode = Literal["auto", "fixed", "variable"]
 
@@ -123,7 +124,8 @@ async def get_layout(
 ):
     layout = await _get(db, current_user.company_id, driver_type)
     if layout is None and driver_type != "company":
-        # Owner operators start from the company drivers' rows until edited.
+        # Owner operators and company owners start from the company drivers'
+        # rows until their own are edited.
         layout = await _get(db, current_user.company_id, "company")
     if layout is None:
         return {"rows": default_rows()}
@@ -140,13 +142,15 @@ async def save_layout(
 ):
     rows = normalize(body.rows)
     layout = await _get(db, current_user.company_id, driver_type)
-    if driver_type == "company" and await _get(db, current_user.company_id, "owner_operator") is None:
-        # Owner operators have been showing the company rows (see get_layout);
-        # pin those for them first so editing one table never changes the other.
-        db.add(PayrollLayout(
-            company_id=current_user.company_id, driver_type="owner_operator",
-            rows=layout.rows if layout is not None else default_rows(),
-        ))
+    if driver_type == "company":
+        # The other tables have been showing the company rows (see get_layout);
+        # pin those for them first so editing one table never changes another.
+        for other in DRIVER_TYPES[1:]:
+            if await _get(db, current_user.company_id, other) is None:
+                db.add(PayrollLayout(
+                    company_id=current_user.company_id, driver_type=other,
+                    rows=layout.rows if layout is not None else default_rows(),
+                ))
     if layout is None:
         db.add(PayrollLayout(company_id=current_user.company_id, driver_type=driver_type, rows=rows))
     else:
