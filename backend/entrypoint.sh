@@ -161,6 +161,10 @@ python3 create_report_recipients_table.py || echo "⚠️  create_report_recipie
 echo "🔧 Creating payroll_layouts table..."
 python3 create_payroll_layouts_table.py || echo "⚠️  create_payroll_layouts_table.py had errors, continuing..."
 
+# Create driver debt tables (Payroll > Debt tab)
+echo "🔧 Creating driver debt tables..."
+python3 create_driver_debt_tables.py || echo "⚠️  create_driver_debt_tables.py had errors, continuing..."
+
 # Note: Recurring expenses are generated via POST /api/v1/expenses/generate-recurring
 # This should be called daily via a cron job or on page load
 

@@ -21,6 +21,7 @@ from .journal_entry import JournalEntry, JournalLine
 from .accounting_mapping import AccountingMapping
 from .report_recipient import ReportRecipient
 from .payroll_layout import PayrollLayout
+from .driver_debt import DriverDebtEntry, DriverDebtPlan
 from .sms import LoadSmsMessage
 from .loads_ai import InboundEmail, IngestedDocument
 

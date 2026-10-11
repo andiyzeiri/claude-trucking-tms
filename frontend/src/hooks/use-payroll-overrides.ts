@@ -31,6 +31,8 @@ export function useSavePayrollOverride() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['payroll-overrides', variables.year] })
+      // Hand-entered payroll weeks change debt balances (Debt Payment row, pay weeks).
+      queryClient.invalidateQueries({ queryKey: ['driver-debts'] })
       if (variables.field === 'truck_id') {
         queryClient.invalidateQueries({ queryKey: ['payroll', 'calculated'] })
       }

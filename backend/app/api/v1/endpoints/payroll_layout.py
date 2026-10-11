@@ -38,6 +38,8 @@ BUILTIN = [
     ("parking", "Parking", "deduction", "fixed", ("fixed", "variable")),
     ("trailer", "Trailer", "deduction", "fixed", ("fixed", "variable")),
     ("misc", "Misc", "deduction", "fixed", ("fixed", "variable")),
+    # Filled from the driver's weekly debt deduction (Debt tab), capped at what they owe.
+    ("debt_payment", "Debt Payment", "deduction", "auto", ("auto",)),
     ("miles", "Miles", "info", "auto", ("auto",)),
 ]
 BUILTIN_BY_KEY = {b[0]: b for b in BUILTIN}
@@ -100,10 +102,13 @@ def normalize(rows: List[LayoutRow]) -> List[dict]:
             raise HTTPException(status_code=422, detail=f"Row {label!r} appears twice")
         seen.add(row["key"])
         out.append(row)
-    # Built-in rows can be hidden but never dropped.
+    # Built-in rows can be hidden but never dropped; the page always sends all
+    # of them, so a missing one is new since this layout was saved - show it,
+    # just above Miles.
     for b in default_rows():
         if b["key"] not in seen:
-            out.append({**b, "hidden": True})
+            at = next((i for i, r in enumerate(out) if r["key"] == "miles"), len(out))
+            out.insert(at, b)
     return out
 
 

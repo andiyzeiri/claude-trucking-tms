@@ -15,6 +15,8 @@ import { usePayrollOverrides, useSavePayrollOverride } from '@/hooks/use-payroll
 import { useDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
 import { usePayrollLayout, useSavePayrollLayout, useDriverOrder, useSaveDriverOrder, SWITCHABLE_ROWS, type PayrollRow } from '@/hooks/use-payroll-layout'
 import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
+import { DebtView } from '@/components/payroll/debt-view'
+import { useDriverDebts } from '@/hooks/use-driver-debts'
 
 
 // Generate 52 weeks for a given year using ISO week numbering
@@ -148,6 +150,10 @@ export default function PayrollPage() {
   const [amountsRowKey, setAmountsRowKey] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [driverTab, setDriverTab] = useState<DriverTab>('company')
+  // Top tabs: a year of payroll, or the Debt tab.
+  const [view, setView] = useState<'payroll' | 'debt'>('payroll')
+  // Debt Payment row amounts filled from each driver's weekly debt deduction.
+  const { data: debts } = useDriverDebts()
   // Driver columns can be dragged into any order; saved per table.
   const { data: driverOrder } = useDriverOrder(driverTab)
   const saveDriverOrder = useSaveDriverOrder(driverTab)
@@ -228,6 +234,7 @@ export default function PayrollPage() {
       const ov = getOverride(driverId, weekNumber, row.key)
       if (ov !== undefined) return ov
       if (row.builtin) {
+        if (row.key === 'debt_payment') return Number(debts?.schedule?.[`${selectedYear}-${weekNumber}`]?.[String(driverId)]) || 0
         if (row.mode === 'auto') return Number(api?.[row.key]) || 0
         if (row.mode === 'fixed') return Number(settingsMap.get(driverId)?.[`${row.key}_weekly`]) || 0
         return 0 // variable: only what's entered for the week
@@ -261,7 +268,7 @@ export default function PayrollPage() {
         return data
       })
       .sort((a, b) => a.driver_name.localeCompare(b.driver_name))
-  }, [drivers, calculatedPayroll, overridesMap, payrollOverrides, driverSettings, companyRows, ownerRows, coOwnerRows])
+  }, [drivers, calculatedPayroll, overridesMap, payrollOverrides, driverSettings, companyRows, ownerRows, coOwnerRows, debts, selectedYear])
 
   const addInto = (totals: PayTotals, cell: WeekCell, tab: DriverTab) => {
     rowsFor(tab).forEach(row => {
@@ -327,6 +334,7 @@ export default function PayrollPage() {
   }), [payrollData, weeks, selectedWeek, drivers, companyRows, ownerRows, coOwnerRows])
 
   const goToCurrentWeek = () => {
+    setView('payroll')
     const thisYear = new Date().getFullYear()
     if (selectedYear !== thisYear) {
       setSelectedYear(thisYear) // the effect above lands on this week
@@ -473,13 +481,13 @@ export default function PayrollPage() {
           {availableYears.map(year => (
             <button
               key={year}
-              onClick={() => setSelectedYear(year)}
+              onClick={() => { setSelectedYear(year); setView('payroll') }}
               className="px-4 py-2 text-sm transition-all relative"
               style={{
-                color: selectedYear === year ? 'var(--monday-done)' : 'var(--monday-text-secondary)',
-                borderBottom: selectedYear === year ? '3px solid var(--monday-done)' : '3px solid transparent',
+                color: view === 'payroll' && selectedYear === year ? 'var(--monday-done)' : 'var(--monday-text-secondary)',
+                borderBottom: view === 'payroll' && selectedYear === year ? '3px solid var(--monday-done)' : '3px solid transparent',
                 marginBottom: '-1px',
-                fontWeight: selectedYear === year ? 600 : 500,
+                fontWeight: view === 'payroll' && selectedYear === year ? 600 : 500,
                 fontSize: '14px'
               }}
             >
@@ -489,8 +497,28 @@ export default function PayrollPage() {
               )}
             </button>
           ))}
+          <button
+            onClick={() => setView('debt')}
+            className="px-4 py-2 text-sm transition-all relative ml-2"
+            style={{
+              color: view === 'debt' ? 'var(--monday-stuck)' : 'var(--monday-text-secondary)',
+              borderBottom: view === 'debt' ? '3px solid var(--monday-stuck)' : '3px solid transparent',
+              marginBottom: '-1px',
+              fontWeight: view === 'debt' ? 600 : 500,
+              fontSize: '14px'
+            }}
+          >
+            Debt
+            {(debts?.drivers || []).some(d => Number(d.balance) > 0) && (
+              <span style={{ marginLeft: '4px', fontSize: '12px', opacity: 0.7 }}>({(debts?.drivers || []).filter(d => Number(d.balance) > 0).length})</span>
+            )}
+          </button>
         </div>
 
+        {view === 'debt' ? (
+          <DebtView drivers={drivers} />
+        ) : (
+        <>
         {/* Week picker */}
         <div className="flex flex-wrap items-center gap-2">
           <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Week</span>
@@ -773,6 +801,8 @@ export default function PayrollPage() {
               </div>
             )}
           </>
+        )}
+        </>
         )}
 
         <DriverSettingsModal isOpen={settingsModalOpen} onClose={() => setSettingsModalOpen(false)} />

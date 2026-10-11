@@ -82,6 +82,7 @@ COPY create_loads_ai_tables.py ./
 COPY create_sms_tables.py ./
 COPY create_report_recipients_table.py ./
 COPY create_payroll_layouts_table.py ./
+COPY create_driver_debt_tables.py ./
 COPY entrypoint.sh ./
 
 # Copy scripts directory

@@ -47,7 +47,10 @@ export function useSavePayrollLayout(driverType: PayrollDriverType) {
       if (ctx?.previous) queryClient.setQueryData(LAYOUT_KEY, ctx.previous)
       toast.error(error.response?.data?.detail || 'Could not save payroll rows')
     },
-    onSuccess: (rows) => queryClient.setQueryData(LAYOUT_KEY, rows),
+    onSuccess: (rows) => {
+      queryClient.setQueryData(LAYOUT_KEY, rows)
+      queryClient.invalidateQueries({ queryKey: ['driver-debts'] }) // hiding Debt Payment stops payroll payments
+    },
   })
 }
 
