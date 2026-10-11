@@ -157,6 +157,10 @@ python3 create_sms_tables.py || echo "⚠️  create_sms_tables.py had errors, c
 echo "🔧 Creating report_recipients table..."
 python3 create_report_recipients_table.py || echo "⚠️  create_report_recipients_table.py had errors, continuing..."
 
+# Create payroll_layouts table (Payroll page rows: custom items, fixed/variable, hidden)
+echo "🔧 Creating payroll_layouts table..."
+python3 create_payroll_layouts_table.py || echo "⚠️  create_payroll_layouts_table.py had errors, continuing..."
+
 # Note: Recurring expenses are generated via POST /api/v1/expenses/generate-recurring
 # This should be called daily via a cron job or on page load
 

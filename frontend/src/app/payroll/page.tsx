@@ -6,14 +6,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatCurrency } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Calculator, ChevronLeft, ChevronRight, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, Edit2, Trash2, Copy, RefreshCw, Settings } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Calculator, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, EyeOff, ListChecks, Plus, RefreshCw, Settings, Trash2, X } from 'lucide-react'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
 import { useCalculatedPayroll } from '@/hooks/use-payroll'
 import { usePayrollOverrides, useSavePayrollOverride } from '@/hooks/use-payroll-overrides'
 import { useDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
-import { useColumnWidths } from '@/hooks/use-column-widths'
-import { ColumnWidthControl } from '@/components/ui/column-width-control'
+import { usePayrollLayout, useSavePayrollLayout, SWITCHABLE_ROWS, type PayrollRow } from '@/hooks/use-payroll-layout'
 import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
 
 
@@ -49,60 +49,56 @@ function generateWeeks(year: number) {
   return weeks
 }
 
-interface DriverPayrollData {
-  driver_id: number
-  driver_name: string
-  driver_type: string
-  truck_id?: number | null
-  weeks: {
-    [weekNumber: number]: {
-      gross: number
-      extra: number
-      dispatch_fee: number
-      insurance: number
-      fuel: number
-      parking: number
-      trailer: number
-      misc: number
-      adjustments: number  // Load adjustments (positive = bonuses, negative = deductions)
-      miles: number
-      check_amount: number
-    }
-  }
-}
+type Week = ReturnType<typeof generateWeeks>[number]
 
 // The table is split into company drivers and owner operators; anything not
 // marked owner_operator is treated as a company driver.
 type DriverTab = 'company' | 'owner_operator'
 const tabOf = (driverType: string): DriverTab => (driverType === 'owner_operator' ? 'owner_operator' : 'company')
 
+// One driver's pay for one week: a value per row key (hidden rows included,
+// so stats can still show miles), and net pay from the visible rows only.
+type WeekCell = { values: Record<string, number>; check_amount: number }
+
+interface DriverPayrollData {
+  driver_id: number
+  driver_name: string
+  driver_type: string
+  truck_id?: number | null
+  weeks: Record<number, WeekCell>
+}
+
 type PayTotals = {
-  gross: number
-  extra: number
-  dispatch_fee: number
-  insurance: number
-  fuel: number
-  parking: number
-  trailer: number
-  misc: number
-  adjustments: number
-  miles: number
+  values: Record<string, number>
+  earnings: number
+  deductions: number
   check_amount: number
   drivers_paid: number
 }
 
-const emptyTotals = (): PayTotals => ({
-  gross: 0, extra: 0, dispatch_fee: 0, insurance: 0, fuel: 0, parking: 0,
-  trailer: 0, misc: 0, adjustments: 0, miles: 0, check_amount: 0, drivers_paid: 0,
-})
+const emptyTotals = (): PayTotals => ({ values: {}, earnings: 0, deductions: 0, check_amount: 0, drivers_paid: 0 })
 
-const deductionsOf = (t: PayTotals) => t.dispatch_fee + t.insurance + t.fuel + t.parking + t.trailer + t.misc
+type EditingCell = { weekNumber: number; driverId: number; field: string } | null
 
-type EditingCell = {
-  weekNumber: number
-  driverId: number
-  field: string
-} | null
+const MODE_LABEL: Record<PayrollRow['mode'], string> = { auto: 'Auto', fixed: 'Fixed', variable: 'Variable' }
+const MODE_HELP: Record<PayrollRow['mode'], string> = {
+  auto: 'Calculated from loads and fuel cards',
+  fixed: 'Same amount every week, set per driver',
+  variable: 'Entered week by week',
+}
+
+const fmtShort = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+const weekOptionLabel = (w: Week) =>
+  `Week ${w.weekNumber} · ${fmtShort(w.startDate)} – ${w.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+
+const fmtValue = (row: PayrollRow, v: number | undefined) => {
+  if (v === undefined) return '-'
+  if (row.kind === 'info') return v ? v.toLocaleString() : '-'
+  if (row.kind === 'deduction') return v ? `(${formatCurrency(v)})` : '-'
+  return v ? formatCurrency(v) : '-'
+}
+
+const rowColor = (row: PayrollRow) => (row.kind === 'deduction' ? 'var(--monday-stuck)' : 'var(--monday-text-primary)')
 
 export default function PayrollPage() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
@@ -112,261 +108,170 @@ export default function PayrollPage() {
   const saveOverride = useSavePayrollOverride()
   const { data: trucksData } = useTrucks()
   const { data: driverSettings } = useDriverPayrollSettings()
+  const { data: layoutRows, isLoading: layoutLoading } = usePayrollLayout()
+  const saveLayout = useSavePayrollLayout()
   const drivers = driversData?.items || []
   const trucks = (trucksData?.items || []).filter((t: any) => t.type === 'truck')
-  const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([1])) // Week 1 expanded by default
 
-  // Available years for the tabs
+  const rows: PayrollRow[] = layoutRows || []
+  const visibleRows = rows.filter(r => !r.hidden)
+  const hiddenRows = rows.filter(r => r.hidden)
+
   const availableYears = useMemo(() => {
     const currentYear = new Date().getFullYear()
     const years = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2]
     return years.filter(y => y >= 2024) // Start from 2024
   }, [])
   const [editingCell, setEditingCell] = useState<EditingCell>(null)
-  const [sortField, setSortField] = useState<string>('weekNumber')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
-  const [contextMenu, setContextMenu] = useState<{x: number, y: number, weekNumber: number, driverId: number} | null>(null)
-  const [settingsModalOpen, setSettingsModalOpen] = useState(false)
-  const [driverTab, setDriverTab] = useState<DriverTab>('company')
   const [editValue, setEditValue] = useState<string>('')
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false)
+  const [rowsDialogOpen, setRowsDialogOpen] = useState(false)
+  const [amountsRowKey, setAmountsRowKey] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [driverTab, setDriverTab] = useState<DriverTab>('company')
+  const [newRow, setNewRow] = useState<{ label: string; kind: 'earning' | 'deduction'; mode: 'fixed' | 'variable' } | null>(null)
 
   // Build overrides lookup from database
   const overridesMap = useMemo(() => {
     const map: Record<string, number> = {}
-    if (payrollOverrides) {
-      payrollOverrides.forEach(o => {
-        map[`${o.driver_id}_${o.week_number}_${o.field}`] = o.value
-      })
-    }
+    payrollOverrides?.forEach(o => {
+      map[`${o.driver_id}_${o.week_number}_${o.field}`] = Number(o.value)
+    })
     return map
   }, [payrollOverrides])
 
-  const getOverride = (driverId: number, weekNum: number, field: string): number | undefined => {
-    return overridesMap[`${driverId}_${weekNum}_${field}`]
-  }
+  const getOverride = (driverId: number, weekNum: number, field: string): number | undefined =>
+    overridesMap[`${driverId}_${weekNum}_${field}`]
 
-  const isLoading = driversLoading || payrollLoading
-
-  // Column width management
-  const { columnWidths, adjustWidth } = useColumnWidths('payroll-table', {
-    driver: 200,
-    truck: 100,
-    gross: 100,
-    extra: 100,
-    dispatch_fee: 110,
-    insurance: 100,
-    fuel: 100,
-    parking: 100,
-    trailer: 100,
-    misc: 100,
-    miles: 90,
-    pay: 120
-  })
+  const isLoading = driversLoading || payrollLoading || layoutLoading
 
   const weeks = useMemo(() => generateWeeks(selectedYear), [selectedYear])
 
   // One week at a time, picked from the dropdown. Defaults to this week when
   // looking at the current year, else week 1.
-  const currentWeekNumber = (ws: ReturnType<typeof generateWeeks>) => {
+  const currentWeekNumber = (ws: Week[]) => {
     const today = new Date()
-    const end = (w: { endDate: Date }) => new Date(w.endDate.getFullYear(), w.endDate.getMonth(), w.endDate.getDate(), 23, 59, 59)
+    const end = (w: Week) => new Date(w.endDate.getFullYear(), w.endDate.getMonth(), w.endDate.getDate(), 23, 59, 59)
     return ws.find(w => today >= w.startDate && today <= end(w))?.weekNumber
   }
   const [selectedWeek, setSelectedWeek] = useState<number>(() => currentWeekNumber(generateWeeks(new Date().getFullYear())) ?? 1)
   useEffect(() => {
     setSelectedWeek(currentWeekNumber(weeks) ?? 1)
   }, [weeks])
-  const weekOptionLabel = (w: { weekNumber: number; startDate: Date; endDate: Date }) =>
-    `Week ${w.weekNumber} \u00b7 ${w.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} \u2013 ${w.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
 
-  // Helper function to check if a driver was employed during a specific week
+  // A driver counts for a week if hired on or before its end and not
+  // terminated before its start (so they're included in the last week they worked).
   const isDriverEmployedDuringWeek = (driver: any, weekStart: Date, weekEnd: Date): boolean => {
-    // If driver has a hire date, they must be hired on or before the week ends
-    if (driver.date_hired) {
-      const hireDate = new Date(driver.date_hired)
-      if (hireDate > weekEnd) {
-        return false // Driver wasn't hired yet
-      }
-    }
-
-    // If driver has a termination date, they must be terminated after the week starts
-    // (so they're included in the last week they worked)
-    if (driver.date_terminated) {
-      const terminationDate = new Date(driver.date_terminated)
-      if (terminationDate < weekStart) {
-        return false // Driver was already terminated before this week
-      }
-    }
-
+    if (driver.date_hired && new Date(driver.date_hired) > weekEnd) return false
+    if (driver.date_terminated && new Date(driver.date_terminated) < weekStart) return false
     return true
   }
 
-  // Get drivers employed during a specific week
   const getDriversForWeek = (weekNumber: number) => {
     const week = weeks.find(w => w.weekNumber === weekNumber)
     if (!week) return drivers
-
     return drivers.filter(driver => isDriverEmployedDuringWeek(driver, week.startDate, week.endDate))
   }
 
-  // Transform calculated payroll data into the format expected by the page
+  // Every driver's pay, week by week, from the calculated payroll (loads, fuel
+  // cards, driver settings), the row layout and any per-week edits.
   const payrollData: DriverPayrollData[] = useMemo(() => {
-    // Build settings lookup for truck assignments
     const settingsMap = new Map<number, any>()
-    if (driverSettings) {
-      driverSettings.forEach((s: any) => settingsMap.set(s.driver_id, s))
+    driverSettings?.forEach((s: any) => settingsMap.set(s.driver_id, s))
+
+    const apiMap = new Map<string, any>()
+    if (Array.isArray(calculatedPayroll)) {
+      calculatedPayroll.forEach((entry: any) => {
+        if (entry && typeof entry.driver_id === 'number' && typeof entry.week_number === 'number') {
+          apiMap.set(`${entry.driver_id}_${entry.week_number}`, entry)
+        }
+      })
+    }
+    // Driver-weeks with a hand-entered value but no loads still get a column.
+    const editedWeeks = new Set<string>()
+    payrollOverrides?.forEach(o => {
+      if (o.field !== 'truck_id') editedWeeks.add(`${o.driver_id}_${o.week_number}`)
+    })
+
+    const valueOf = (row: PayrollRow, driverId: number, weekNumber: number, api: any): number => {
+      const ov = getOverride(driverId, weekNumber, row.key)
+      if (ov !== undefined) return ov
+      if (row.builtin) {
+        if (row.mode === 'auto') return Number(api?.[row.key]) || 0
+        if (row.mode === 'fixed') return Number(settingsMap.get(driverId)?.[`${row.key}_weekly`]) || 0
+        return 0 // variable: only what's entered for the week
+      }
+      return row.mode === 'fixed' ? Number(row.amounts?.[String(driverId)]) || 0 : 0
     }
 
-    // Create a map from driver ID to driver data
-    const driverMap = new Map(
-      drivers.map(driver => [
-        driver.id,
-        {
+    return drivers
+      .map((driver: any) => {
+        const data: DriverPayrollData = {
           driver_id: driver.id,
           driver_name: `${driver.first_name} ${driver.last_name}`,
           driver_type: driver.driver_type || 'company',
           truck_id: settingsMap.get(driver.id)?.truck_id || null,
-          weeks: {} as DriverPayrollData['weeks']
+          weeks: {},
         }
-      ])
-    )
-
-    // Populate weeks data from calculated payroll (API data only, no localStorage)
-    if (calculatedPayroll && Array.isArray(calculatedPayroll)) {
-      calculatedPayroll.forEach(entry => {
-        if (!entry || typeof entry.driver_id !== 'number' || typeof entry.week_number !== 'number') {
-          console.warn('Invalid payroll entry:', entry)
-          return
+        for (let wn = 1; wn <= 53; wn++) {
+          const api = apiMap.get(`${driver.id}_${wn}`)
+          if (!api && !editedWeeks.has(`${driver.id}_${wn}`)) continue
+          const values: Record<string, number> = {}
+          let check = 0
+          rows.forEach(row => {
+            const v = valueOf(row, driver.id, wn, api)
+            values[row.key] = v
+            if (row.hidden) return
+            if (row.kind === 'earning') check += v
+            else if (row.kind === 'deduction') check -= v
+          })
+          data.weeks[wn] = { values, check_amount: check }
         }
-
-        const driverData = driverMap.get(entry.driver_id)
-        if (driverData) {
-          const ov = (field: string, apiVal: number) => {
-            const o = getOverride(entry.driver_id, entry.week_number, field)
-            return o !== undefined ? o : apiVal
-          }
-          const gross = ov('gross', Number(entry.gross) || 0)
-          const extra = ov('extra', Number(entry.extra) || 0)
-          const dispatch_fee = ov('dispatch_fee', Number(entry.dispatch_fee) || 0)
-          const insurance = ov('insurance', Number(entry.insurance) || 0)
-          const fuel = ov('fuel', Number(entry.fuel) || 0)
-          const parking = ov('parking', Number(entry.parking) || 0)
-          const trailer = ov('trailer', Number(entry.trailer) || 0)
-          const misc = ov('misc', Number(entry.misc) || 0)
-          const miles = ov('miles', Number(entry.miles) || 0)
-          const adjustments = Number(entry.adjustments) || 0
-
-          const check_amount = gross + extra - dispatch_fee - insurance - fuel - parking - trailer - misc
-
-          driverData.weeks[entry.week_number] = {
-            gross,
-            extra,
-            dispatch_fee,
-            insurance,
-            fuel,
-            parking,
-            trailer,
-            misc,
-            adjustments,
-            miles,
-            check_amount
-          }
-        }
+        return data
       })
-    }
+      .sort((a, b) => a.driver_name.localeCompare(b.driver_name))
+  }, [drivers, calculatedPayroll, overridesMap, payrollOverrides, driverSettings, layoutRows])
 
-    return Array.from(driverMap.values()).sort((a, b) => {
-      // Company drivers first, then owner operators
-      if (a.driver_type !== b.driver_type) {
-        return a.driver_type === 'company' ? -1 : 1
-      }
-      return a.driver_name.localeCompare(b.driver_name)
+  const addInto = (totals: PayTotals, cell: WeekCell) => {
+    rows.forEach(row => {
+      const v = cell.values[row.key] || 0
+      totals.values[row.key] = (totals.values[row.key] || 0) + v
+      if (row.hidden) return
+      if (row.kind === 'earning') totals.earnings += v
+      else if (row.kind === 'deduction') totals.deductions += v
     })
-  }, [drivers, calculatedPayroll, overridesMap, driverSettings])
-
-  const toggleWeek = (weekNumber: number) => {
-    const newExpanded = new Set(expandedWeeks)
-    if (newExpanded.has(weekNumber)) {
-      newExpanded.delete(weekNumber)
-    } else {
-      newExpanded.add(weekNumber)
-    }
-    setExpandedWeeks(newExpanded)
+    totals.check_amount += cell.check_amount
   }
 
-  const expandAll = () => {
-    setExpandedWeeks(new Set(weeks.map(w => w.weekNumber)))
-  }
-
-  const collapseAll = () => {
-    setExpandedWeeks(new Set())
-  }
-
-  const goToCurrentWeek = () => {
-    const thisYear = new Date().getFullYear()
-    if (selectedYear !== thisYear) {
-      setSelectedYear(thisYear) // the effect above lands on this week
-      return
-    }
-    setSelectedWeek(currentWeekNumber(weeks) ?? 1)
-  }
-
-
-  // Calculate week totals (only for drivers employed during that week),
-  // optionally for one driver type.
+  // Totals for one week (drivers employed that week), optionally for one driver type.
   const getWeekTotals = (weekNumber: number, tab?: DriverTab): PayTotals => {
     const totals = emptyTotals()
     const employedDriverIds = new Set(getDriversForWeek(weekNumber).map(d => d.id))
-
-    payrollData.forEach(driverData => {
-      // Only include drivers who were employed during this week
-      if (!employedDriverIds.has(driverData.driver_id)) return
-      if (tab && tabOf(driverData.driver_type) !== tab) return
-
-      const weekData = driverData.weeks[weekNumber]
-      if (weekData) {
-        totals.gross += weekData.gross
-        totals.extra += weekData.extra
-        totals.dispatch_fee += weekData.dispatch_fee
-        totals.insurance += weekData.insurance
-        totals.fuel += weekData.fuel
-        totals.parking += weekData.parking
-        totals.trailer += weekData.trailer
-        totals.misc += weekData.misc
-        totals.adjustments += weekData.adjustments
-        totals.miles += weekData.miles
-        totals.check_amount += weekData.check_amount
-        if (weekData.check_amount !== 0) totals.drivers_paid += 1
-      }
+    payrollData.forEach(d => {
+      if (!employedDriverIds.has(d.driver_id)) return
+      if (tab && tabOf(d.driver_type) !== tab) return
+      const cell = d.weeks[weekNumber]
+      if (!cell) return
+      addInto(totals, cell)
+      if (cell.check_amount !== 0) totals.drivers_paid += 1
     })
-
     return totals
   }
 
-  // Totals across every week of the selected year, optionally for one driver type.
-  // drivers_paid here counts distinct drivers paid at least once.
+  // Totals for every week of the selected year, optionally for one driver
+  // type. drivers_paid counts distinct drivers paid at least once.
   const getYearTotals = (tab?: DriverTab): PayTotals => {
     const totals = emptyTotals()
     const paid = new Set<number>()
     weeks.forEach(week => {
       const employedDriverIds = new Set(getDriversForWeek(week.weekNumber).map(d => d.id))
-      payrollData.forEach(driverData => {
-        if (!employedDriverIds.has(driverData.driver_id)) return
-        if (tab && tabOf(driverData.driver_type) !== tab) return
-        const weekData = driverData.weeks[week.weekNumber]
-        if (!weekData) return
-        totals.gross += weekData.gross
-        totals.extra += weekData.extra
-        totals.dispatch_fee += weekData.dispatch_fee
-        totals.insurance += weekData.insurance
-        totals.fuel += weekData.fuel
-        totals.parking += weekData.parking
-        totals.trailer += weekData.trailer
-        totals.misc += weekData.misc
-        totals.adjustments += weekData.adjustments
-        totals.miles += weekData.miles
-        totals.check_amount += weekData.check_amount
-        if (weekData.check_amount !== 0) paid.add(driverData.driver_id)
+      payrollData.forEach(d => {
+        if (!employedDriverIds.has(d.driver_id)) return
+        if (tab && tabOf(d.driver_type) !== tab) return
+        const cell = d.weeks[week.weekNumber]
+        if (!cell) return
+        addInto(totals, cell)
+        if (cell.check_amount !== 0) paid.add(d.driver_id)
       })
     })
     totals.drivers_paid = paid.size
@@ -388,33 +293,44 @@ export default function PayrollPage() {
     },
   }), [payrollData, weeks, selectedWeek, drivers])
 
-  // Annual Total footer follows the selected tab.
-  const grandTotals = driverTab === 'company' ? stats.year.company : stats.year.owner
-
-  // Close context menu when clicking outside
-  // IMPORTANT: This must be before any early returns to maintain hook order
-  useEffect(() => {
-    if (!contextMenu) {
-      return undefined
+  const goToCurrentWeek = () => {
+    const thisYear = new Date().getFullYear()
+    if (selectedYear !== thisYear) {
+      setSelectedYear(thisYear) // the effect above lands on this week
+      return
     }
+    setSelectedWeek(currentWeekNumber(weeks) ?? 1)
+  }
 
-    const handleClick = () => setContextMenu(null)
-    document.addEventListener('click', handleClick)
-
-    return () => {
-      document.removeEventListener('click', handleClick)
+  // --- row layout changes (saved company-wide) ---
+  const updateRow = (key: string, patch: Partial<PayrollRow>) =>
+    saveLayout.mutate(rows.map(r => (r.key === key ? { ...r, ...patch } : r)))
+  const deleteRow = (key: string) => saveLayout.mutate(rows.filter(r => r.key !== key))
+  const toggleMode = (row: PayrollRow) => {
+    if (row.mode === 'auto' || (row.builtin && !SWITCHABLE_ROWS.has(row.key))) return
+    updateRow(row.key, { mode: row.mode === 'fixed' ? 'variable' : 'fixed' })
+  }
+  const addRow = async () => {
+    if (!newRow || !newRow.label.trim()) return
+    const row: PayrollRow = { key: '', label: newRow.label.trim(), kind: newRow.kind, mode: newRow.mode, hidden: false, builtin: false, amounts: {} }
+    // Keep Miles last among the items when adding.
+    const milesAt = rows.findIndex(r => r.key === 'miles')
+    const next = milesAt >= 0 ? [...rows.slice(0, milesAt), row, ...rows.slice(milesAt)] : [...rows, row]
+    setNewRow(null)
+    const saved = await saveLayout.mutateAsync(next).catch(() => null)
+    if (saved && row.mode === 'fixed') {
+      const added = saved.find(r => !r.builtin && r.label === row.label && !rows.some(o => o.key === r.key))
+      if (added) setAmountsRowKey(added.key) // ask for the weekly amounts right away
     }
-  }, [contextMenu])
+  }
 
   if (isLoading) {
     return (
       <Layout>
         <div className="page-payroll space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">Payroll</h1>
-              <p className="text-gray-600">Weekly driver payroll</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Payroll</h1>
+            <p className="text-gray-600">Weekly driver payroll</p>
           </div>
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
@@ -427,32 +343,12 @@ export default function PayrollPage() {
     )
   }
 
-  const handleContextMenu = (e: React.MouseEvent, weekNumber: number, driverId: number) => {
-    e.preventDefault()
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      weekNumber,
-      driverId
-    })
-  }
-
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDirection('asc')
-    }
-  }
-
-  const isEditing = (weekNumber: number, driverId: number, field: string) => {
-    return editingCell?.weekNumber === weekNumber && editingCell?.driverId === driverId && editingCell?.field === field
-  }
+  const isEditing = (weekNumber: number, driverId: number, field: string) =>
+    editingCell?.weekNumber === weekNumber && editingCell?.driverId === driverId && editingCell?.field === field
 
   const startEdit = (weekNumber: number, driverId: number, field: string, currentValue: number) => {
     setEditingCell({ weekNumber, driverId, field })
-    setEditValue(currentValue.toString())
+    setEditValue(currentValue ? currentValue.toString() : '')
   }
 
   const stopEdit = () => {
@@ -462,7 +358,7 @@ export default function PayrollPage() {
         year: selectedYear,
         week_number: editingCell.weekNumber,
         field: editingCell.field,
-        value: parseFloat(editValue) || 0
+        value: parseFloat(editValue) || 0,
       })
     }
     setEditingCell(null)
@@ -470,31 +366,50 @@ export default function PayrollPage() {
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      stopEdit()
-    } else if (e.key === 'Escape') {
+    if (e.key === 'Enter') stopEdit()
+    else if (e.key === 'Escape') {
       setEditingCell(null)
       setEditValue('')
     }
   }
 
+  const week = weeks.find(w => w.weekNumber === selectedWeek)
+  const employedIds = new Set(getDriversForWeek(selectedWeek).map(d => d.id))
+  const tabRows = payrollData.filter(d => employedIds.has(d.driver_id) && tabOf(d.driver_type) === driverTab)
+  const tabCount = (tab: DriverTab) => payrollData.filter(d => employedIds.has(d.driver_id) && tabOf(d.driver_type) === tab).length
+  const weekTotals = getWeekTotals(selectedWeek, driverTab)
+  const yearTotals = driverTab === 'company' ? stats.year.company : stats.year.owner
+  const tabNoun = driverTab === 'company' ? 'company drivers' : 'owner operators'
+  const amountsRow = rows.find(r => r.key === amountsRowKey) || null
+
+  // Shared cell styles
+  const LABEL_W = 230
+  const COL_W = 140
+  const border = '1px solid var(--monday-border-light)'
+  const stickyLabel: React.CSSProperties = { position: 'sticky', left: 0, zIndex: 1, width: LABEL_W, minWidth: LABEL_W, borderRight: border, borderBottom: border }
+  const cell: React.CSSProperties = { width: COL_W, minWidth: COL_W, borderRight: border, borderBottom: border, fontSize: '13px' }
+  const totalCell: React.CSSProperties = { ...cell, backgroundColor: 'var(--monday-bg-secondary)', fontWeight: 600 }
 
   return (
     <Layout>
       <div className="page-payroll space-y-5">
-        {/* Header - QuickBooks style */}
-        <div className="flex items-center justify-between">
+        {/* Header */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 style={{ fontSize: '24px', fontWeight: 600, color: 'var(--monday-text-primary)', letterSpacing: '-0.02em' }}>Payroll</h1>
             <p style={{ fontSize: '14px', color: 'var(--monday-text-secondary)', marginTop: '2px' }}>Weekly driver payroll</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => setSettingsModalOpen(true)}
               style={{ backgroundColor: 'var(--monday-done)', borderColor: 'var(--monday-done)', color: 'white', fontWeight: 500, fontSize: '13px' }}
             >
               <Settings className="h-4 w-4 mr-2" />
               Driver Settings
+            </Button>
+            <Button onClick={() => setRowsDialogOpen(true)} variant="outline" style={{ fontSize: '13px', fontWeight: 500 }}>
+              <ListChecks className="h-4 w-4 mr-2" />
+              Edit Rows
             </Button>
             <Button onClick={() => refetchPayroll()} variant="outline" disabled={payrollLoading} style={{ fontSize: '13px', fontWeight: 500 }}>
               <RefreshCw className={`h-4 w-4 mr-2 ${payrollLoading ? 'animate-spin' : ''}`} />
@@ -506,7 +421,7 @@ export default function PayrollPage() {
           </div>
         </div>
 
-        {/* Year Tabs - QuickBooks style */}
+        {/* Year Tabs */}
         <div className="flex items-center gap-1 border-b" style={{ borderColor: 'var(--monday-border-light)' }}>
           {availableYears.map(year => (
             <button
@@ -515,7 +430,7 @@ export default function PayrollPage() {
               className="px-4 py-2 text-sm transition-all relative"
               style={{
                 color: selectedYear === year ? 'var(--monday-done)' : 'var(--monday-text-secondary)',
-                borderBottom: selectedYear === year ? `3px solid ${'var(--monday-done)'}` : '3px solid transparent',
+                borderBottom: selectedYear === year ? '3px solid var(--monday-done)' : '3px solid transparent',
                 marginBottom: '-1px',
                 fontWeight: selectedYear === year ? 600 : 500,
                 fontSize: '14px'
@@ -532,13 +447,7 @@ export default function PayrollPage() {
         {/* Week picker */}
         <div className="flex flex-wrap items-center gap-2">
           <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Week</span>
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label="Previous week"
-            disabled={selectedWeek <= 1}
-            onClick={() => setSelectedWeek(w => Math.max(1, w - 1))}
-          >
+          <Button variant="outline" size="sm" aria-label="Previous week" disabled={selectedWeek <= 1} onClick={() => setSelectedWeek(w => Math.max(1, w - 1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Select value={String(selectedWeek)} onValueChange={(v) => setSelectedWeek(Number(v))}>
@@ -554,71 +463,11 @@ export default function PayrollPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label="Next week"
-            disabled={selectedWeek >= weeks.length}
-            onClick={() => setSelectedWeek(w => Math.min(weeks.length, w + 1))}
-          >
+          <Button variant="outline" size="sm" aria-label="Next week" disabled={selectedWeek >= weeks.length} onClick={() => setSelectedWeek(w => Math.min(weeks.length, w + 1))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
-        {/* Week + year stats */}
-        {drivers.length > 0 && (() => {
-          const week = weeks.find(w => w.weekNumber === selectedWeek)
-          const isThisYear = selectedYear === new Date().getFullYear()
-          return (
-            <div className="grid gap-4 lg:grid-cols-2">
-              <StatsPanel
-                title={`Week ${selectedWeek}`}
-                subtitle={week ? `${week.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} \u2013 ${week.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
-                {...stats.week}
-                driversLabel="Drivers paid"
-              />
-              <StatsPanel
-                title={`${selectedYear}`}
-                subtitle={isThisYear ? 'Year to date' : 'Full year'}
-                {...stats.year}
-                driversLabel="Drivers paid this year"
-              />
-            </div>
-          )
-        })()}
-
-        {/* Driver type tabs */}
-        {drivers.length > 0 && (() => {
-          const employed = getDriversForWeek(selectedWeek)
-          const count = (tab: DriverTab) => employed.filter((d: any) => tabOf(d.driver_type || 'company') === tab).length
-          const tabs: { key: DriverTab; label: string }[] = [
-            { key: 'company', label: 'Company Drivers' },
-            { key: 'owner_operator', label: 'Owner Operators' },
-          ]
-          return (
-            <div className="flex items-center gap-1 border-b" style={{ borderColor: 'var(--monday-border-light)', marginBottom: '-8px' }}>
-              {tabs.map(t => (
-                <button
-                  key={t.key}
-                  onClick={() => setDriverTab(t.key)}
-                  className="px-4 py-2 text-sm transition-all"
-                  style={{
-                    color: driverTab === t.key ? 'var(--monday-done)' : 'var(--monday-text-secondary)',
-                    borderBottom: driverTab === t.key ? '3px solid var(--monday-done)' : '3px solid transparent',
-                    marginBottom: '-1px',
-                    fontWeight: driverTab === t.key ? 600 : 500,
-                    fontSize: '14px'
-                  }}
-                >
-                  {t.label}
-                  <span style={{ marginLeft: '6px', fontSize: '12px', opacity: 0.7 }}>({count(t.key)})</span>
-                </button>
-              ))}
-            </div>
-          )
-        })()}
-
-        {/* Payroll Table */}
         {drivers.length === 0 ? (
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
@@ -628,290 +477,279 @@ export default function PayrollPage() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
-              <table className="w-full" style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                <thead className="sticky top-0 z-10">
+          <>
+            {/* Week + year stats */}
+            <div className="grid gap-4 lg:grid-cols-2">
+              <StatsPanel
+                title={`Week ${selectedWeek}`}
+                subtitle={week ? `${fmtShort(week.startDate)} – ${week.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
+                {...stats.week}
+                driversLabel="Drivers paid"
+              />
+              <StatsPanel
+                title={`${selectedYear}`}
+                subtitle={selectedYear === new Date().getFullYear() ? 'Year to date' : 'Full year'}
+                {...stats.year}
+                driversLabel="Drivers paid this year"
+              />
+            </div>
+
+            {/* Driver type tabs */}
+            <div className="flex items-center gap-1 border-b" style={{ borderColor: 'var(--monday-border-light)', marginBottom: '-8px' }}>
+              {([['company', 'Company Drivers'], ['owner_operator', 'Owner Operators']] as [DriverTab, string][]).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setDriverTab(key)}
+                  className="px-4 py-2 text-sm transition-all"
+                  style={{
+                    color: driverTab === key ? 'var(--monday-done)' : 'var(--monday-text-secondary)',
+                    borderBottom: driverTab === key ? '3px solid var(--monday-done)' : '3px solid transparent',
+                    marginBottom: '-1px',
+                    fontWeight: driverTab === key ? 600 : 500,
+                    fontSize: '14px'
+                  }}
+                >
+                  {label}
+                  <span style={{ marginLeft: '6px', fontSize: '12px', opacity: 0.7 }}>({tabCount(key)})</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Payroll table: items down the side, one column per driver */}
+            <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border, backgroundColor: 'var(--monday-bg-primary)' }}>
+              <table style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
+                <thead>
                   <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
-                    <th className="px-3 py-2.5 text-left border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.driver}px`, minWidth: `${columnWidths.driver}px` }}>
-                      <ColumnWidthControl currentWidth={columnWidths.driver} onAdjust={(delta) => adjustWidth('driver', delta)} />
-                      Driver
+                    <th className="px-3 py-2.5 text-left" style={{ ...stickyLabel, backgroundColor: 'var(--monday-bg-secondary)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>
+                      Week {selectedWeek} · {tabRows.length} {tabNoun}
                     </th>
-                    <th className="px-3 py-2.5 text-left border-b border-r relative group" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.truck}px`, minWidth: `${columnWidths.truck}px` }}>
-                      <ColumnWidthControl currentWidth={columnWidths.truck} onAdjust={(delta) => adjustWidth('truck', delta)} />
-                      Truck
-                    </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.gross}px`, minWidth: `${columnWidths.gross}px` }} onClick={() => handleSort('gross')}>
-                      <ColumnWidthControl currentWidth={columnWidths.gross} onAdjust={(delta) => adjustWidth('gross', delta)} />
-                      <div className="flex items-center gap-1">Gross</div>
-                    </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.extra}px`, minWidth: `${columnWidths.extra}px` }} onClick={() => handleSort('extra')}>
-                      <ColumnWidthControl currentWidth={columnWidths.extra} onAdjust={(delta) => adjustWidth('extra', delta)} />
-                      <div className="flex items-center gap-1">Extra</div>
-                    </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.dispatch_fee}px`, minWidth: `${columnWidths.dispatch_fee}px` }} onClick={() => handleSort('dispatch_fee')}>
-                      <ColumnWidthControl currentWidth={columnWidths.dispatch_fee} onAdjust={(delta) => adjustWidth('dispatch_fee', delta)} />
-                      <div className="flex items-center gap-1">Dispatch</div>
-                    </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.insurance}px`, minWidth: `${columnWidths.insurance}px` }} onClick={() => handleSort('insurance')}>
-                      <ColumnWidthControl currentWidth={columnWidths.insurance} onAdjust={(delta) => adjustWidth('insurance', delta)} />
-                      <div className="flex items-center gap-1">Insurance</div>
-                    </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.fuel}px`, minWidth: `${columnWidths.fuel}px` }} onClick={() => handleSort('fuel')}>
-                      <ColumnWidthControl currentWidth={columnWidths.fuel} onAdjust={(delta) => adjustWidth('fuel', delta)} />
-                      <div className="flex items-center gap-1">Fuel</div>
-                    </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.parking}px`, minWidth: `${columnWidths.parking}px` }} onClick={() => handleSort('parking')}>
-                      <ColumnWidthControl currentWidth={columnWidths.parking} onAdjust={(delta) => adjustWidth('parking', delta)} />
-                      <div className="flex items-center gap-1">Parking</div>
-                    </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.trailer}px`, minWidth: `${columnWidths.trailer}px` }} onClick={() => handleSort('trailer')}>
-                      <ColumnWidthControl currentWidth={columnWidths.trailer} onAdjust={(delta) => adjustWidth('trailer', delta)} />
-                      <div className="flex items-center gap-1">Trailer</div>
-                    </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.misc}px`, minWidth: `${columnWidths.misc}px` }} onClick={() => handleSort('misc')}>
-                      <ColumnWidthControl currentWidth={columnWidths.misc} onAdjust={(delta) => adjustWidth('misc', delta)} />
-                      <div className="flex items-center gap-1">Misc</div>
-                    </th>
-                    <th className="relative group px-3 py-2.5 text-left cursor-pointer select-none" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', width: `${columnWidths.miles}px`, minWidth: `${columnWidths.miles}px` }} onClick={() => handleSort('miles')}>
-                      <ColumnWidthControl currentWidth={columnWidths.miles} onAdjust={(delta) => adjustWidth('miles', delta)} />
-                      <div className="flex items-center gap-1">Miles</div>
-                    </th>
-                    <th className="relative group px-3 py-2.5 text-left" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--monday-done)', textTransform: 'uppercase', letterSpacing: '0.03em', width: `${columnWidths.pay}px`, minWidth: `${columnWidths.pay}px`, backgroundColor: 'rgba(44, 160, 28, 0.08)' }}>
-                      <ColumnWidthControl currentWidth={columnWidths.pay} onAdjust={(delta) => adjustWidth('pay', delta)} />
-                      Net Pay
-                    </th>
+                    {tabRows.map(d => (
+                      <th key={d.driver_id} className="px-3 py-2.5 text-left" style={{ ...cell, fontWeight: 600, color: 'var(--monday-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={d.driver_name}>
+                        {d.driver_name}
+                      </th>
+                    ))}
+                    <th className="px-3 py-2.5 text-left" style={{ ...totalCell, fontSize: '12px', color: 'var(--monday-text-secondary)' }}>Week Total</th>
+                    <th className="px-3 py-2.5 text-left" style={{ ...totalCell, fontSize: '12px', color: 'var(--monday-text-secondary)', borderRight: 'none' }}>{selectedYear} Total</th>
                   </tr>
                 </thead>
-                <tbody style={{ backgroundColor: 'var(--monday-bg-primary)' }}>
-                  {weeks.filter(w => w.weekNumber === selectedWeek).map((week, weekIndex) => {
-                    const isExpanded = true
-                    const weekTotals = getWeekTotals(week.weekNumber, driverTab)
-                    // Drivers of the selected type employed during this week
-                    const employedDriverIds = new Set(getDriversForWeek(week.weekNumber).map(d => d.id))
-                    const tabRows = payrollData.filter(d => employedDriverIds.has(d.driver_id) && tabOf(d.driver_type) === driverTab)
+                <tbody>
+                  {tabRows.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-3 py-6 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
+                        No {tabNoun} this week.
+                      </td>
+                    </tr>
+                  )}
 
-                    return (
-                      <React.Fragment key={week.weekNumber}>
-                        {/* Week Header Row */}
-                        <tr
-                          id={`week-${week.weekNumber}`}
-                          className="border-b"
-                          style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-secondary)' }}
-                        >
-                          <td colSpan={2} className="px-2 py-2" style={{ paddingLeft: '8px' }}>
-                            <div className="flex items-center gap-2">
-                              <span className="whitespace-nowrap" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>
-                                Week {week.weekNumber} {week.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {week.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                              </span>
-                              <span style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
-                                ({tabRows.length} {driverTab === 'company' ? 'company drivers' : 'owner operators'})
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-2 py-2" colSpan={9}></td>
-                          <td className="px-2 py-2">
-                            <div style={{ fontSize: '13px', lineHeight: '18px', fontWeight: 600, color: 'var(--monday-done)' }}>
-                              {formatCurrency(weekTotals.check_amount)}
-                            </div>
-                          </td>
-                        </tr>
-
-                        {/* Driver Rows */}
-                        {isExpanded && tabRows.length === 0 && (
-                          <tr>
-                            <td colSpan={12} className="px-3 py-6 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
-                              No {driverTab === 'company' ? 'company drivers' : 'owner operators'} this week.
-                            </td>
-                          </tr>
-                        )}
-                        {isExpanded && tabRows.map((driverData, driverIndex) => {
-                          const weekData = driverData.weeks[week.weekNumber]
-                          const isOwner = driverData.driver_type === 'owner_operator'
-                          const rowBg = isOwner ? '#FFF8E1' : '#F0F7FF'
-                          const rowHoverBg = isOwner ? '#FFF0C2' : '#E0EFFF'
-
-                          return (
-                            <tr
-                              key={`${week.weekNumber}-${driverData.driver_id}`}
-                              className="transition-colors"
-                              style={{ borderTop: '2px solid #9CA3AF', borderBottom: '2px solid #9CA3AF', backgroundColor: rowBg }}
-                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = rowHoverBg }}
-                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = rowBg }}
-                              onContextMenu={(e) => handleContextMenu(e, week.weekNumber, driverData.driver_id)}
+                  {/* Truck */}
+                  {tabRows.length > 0 && (
+                    <tr>
+                      <td className="px-3 py-2" style={{ ...stickyLabel, backgroundColor: 'var(--monday-bg-primary)', fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>Truck</td>
+                      {tabRows.map(d => {
+                        const weekTruckOverride = getOverride(d.driver_id, selectedWeek, 'truck_id')
+                        const isOverridden = weekTruckOverride !== undefined
+                        return (
+                          <td key={d.driver_id} className="px-3 py-2" style={cell}>
+                            <select
+                              className="w-full bg-transparent text-sm border-0 p-0 focus:ring-0 cursor-pointer"
+                              style={isOverridden ? { fontStyle: 'italic', color: 'var(--monday-done)' } : {}}
+                              value={isOverridden ? weekTruckOverride || '' : (d.truck_id || '')}
+                              onChange={(e) => saveOverride.mutate({
+                                driver_id: d.driver_id,
+                                year: selectedYear,
+                                week_number: selectedWeek,
+                                field: 'truck_id',
+                                value: e.target.value ? parseInt(e.target.value) : 0,
+                              })}
                             >
-                              <td className="px-3 py-2.5" style={{ border: '1px solid #D1D5DB', fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>
-                                {driverData.driver_name}
-                              </td>
-                              <td className="px-3 py-2" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', border: '1px solid #D1D5DB' }}>
-                                {(() => {
-                                  const weekTruckOverride = getOverride(driverData.driver_id, week.weekNumber, 'truck_id')
-                                  const effectiveTruckId = weekTruckOverride !== undefined ? weekTruckOverride : (driverData.truck_id || '')
-                                  const isOverridden = weekTruckOverride !== undefined
-                                  return (
-                                    <select
-                                      className="w-full bg-transparent text-sm border-0 p-0 focus:ring-0 cursor-pointer"
-                                      style={isOverridden ? { fontStyle: 'italic', color: 'var(--monday-done)' } : {}}
-                                      value={effectiveTruckId}
-                                      onChange={(e) => {
-                                        const truckId = e.target.value ? parseInt(e.target.value) : 0
-                                        saveOverride.mutate({
-                                          driver_id: driverData.driver_id,
-                                          year: selectedYear,
-                                          week_number: week.weekNumber,
-                                          field: 'truck_id',
-                                          value: truckId
-                                        })
-                                      }}
-                                    >
-                                      <option value="">-</option>
-                                      {trucks.map((t: any) => (
-                                        <option key={t.id} value={t.id}>{t.truck_number}</option>
-                                      ))}
-                                    </select>
-                                  )
-                                })()}
-                              </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-brand/5 rounded" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'gross') && startEdit(week.weekNumber, driverData.driver_id, 'gross', weekData?.gross || 0)}>
-                                {isEditing(week.weekNumber, driverData.driver_id, 'gross') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
-                                ) : (
-                                  <span>{weekData ? formatCurrency(weekData.gross) : '-'}</span>
+                              <option value="">-</option>
+                              {trucks.map((t: any) => (
+                                <option key={t.id} value={t.id}>{t.truck_number}</option>
+                              ))}
+                            </select>
+                          </td>
+                        )
+                      })}
+                      <td style={totalCell}></td>
+                      <td style={{ ...totalCell, borderRight: 'none' }}></td>
+                    </tr>
+                  )}
+
+                  {/* Line items */}
+                  {tabRows.length > 0 && visibleRows.map(row => {
+                    const switchable = !row.builtin || SWITCHABLE_ROWS.has(row.key)
+                    return (
+                      <tr key={row.key || row.label} className="group">
+                        <td className="px-3 py-2" style={{ ...stickyLabel, backgroundColor: 'var(--monday-bg-primary)' }}>
+                          {confirmDelete === row.key ? (
+                            <div className="flex items-center gap-2" style={{ fontSize: '12px' }}>
+                              <span style={{ color: 'var(--monday-text-primary)' }}>Delete {row.label}?</span>
+                              <button className="text-red-600 font-semibold" onClick={() => { deleteRow(row.key); setConfirmDelete(null) }}>Delete</button>
+                              <button style={{ color: 'var(--monday-text-secondary)' }} onClick={() => setConfirmDelete(null)}>Cancel</button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="truncate" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>{row.label}</span>
+                              <button
+                                onClick={() => toggleMode(row)}
+                                disabled={!switchable || row.mode === 'auto'}
+                                title={MODE_HELP[row.mode] + (switchable && row.mode !== 'auto' ? ' — click to switch' : '')}
+                                className="rounded px-1.5 py-0.5"
+                                style={{
+                                  fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em',
+                                  backgroundColor: row.mode === 'fixed' ? 'rgba(0,115,234,0.1)' : row.mode === 'variable' ? 'rgba(253,171,61,0.18)' : 'var(--monday-bg-secondary)',
+                                  color: row.mode === 'fixed' ? '#0073ea' : row.mode === 'variable' ? '#b26b00' : 'var(--monday-text-muted)',
+                                  cursor: switchable && row.mode !== 'auto' ? 'pointer' : 'default',
+                                }}
+                              >
+                                {MODE_LABEL[row.mode]}
+                              </button>
+                              <span className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {row.mode === 'fixed' && (
+                                  <button
+                                    title="Set weekly amounts"
+                                    onClick={() => (row.builtin ? setSettingsModalOpen(true) : setAmountsRowKey(row.key))}
+                                    style={{ fontSize: '11px', color: '#0073ea' }}
+                                  >
+                                    Amounts
+                                  </button>
                                 )}
-                              </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-brand/5 rounded" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'extra') && startEdit(week.weekNumber, driverData.driver_id, 'extra', weekData?.extra || 0)}>
-                                {isEditing(week.weekNumber, driverData.driver_id, 'extra') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
-                                ) : (
-                                  <span>{weekData ? formatCurrency(weekData.extra) : '-'}</span>
-                                )}
-                              </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-brand/5 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'dispatch_fee') && startEdit(week.weekNumber, driverData.driver_id, 'dispatch_fee', weekData?.dispatch_fee || 0)}>
-                                {isEditing(week.weekNumber, driverData.driver_id, 'dispatch_fee') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
-                                ) : (
-                                  <span>{weekData && weekData.dispatch_fee > 0 ? `(${formatCurrency(weekData.dispatch_fee)})` : '-'}</span>
-                                )}
-                              </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-brand/5 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'insurance') && startEdit(week.weekNumber, driverData.driver_id, 'insurance', weekData?.insurance || 0)}>
-                                {isEditing(week.weekNumber, driverData.driver_id, 'insurance') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
-                                ) : (
-                                  <span>{weekData && weekData.insurance > 0 ? `(${formatCurrency(weekData.insurance)})` : '-'}</span>
-                                )}
-                              </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-brand/5 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'fuel') && startEdit(week.weekNumber, driverData.driver_id, 'fuel', weekData?.fuel || 0)}>
-                                {isEditing(week.weekNumber, driverData.driver_id, 'fuel') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
-                                ) : (
-                                  <span>{weekData && weekData.fuel > 0 ? `(${formatCurrency(weekData.fuel)})` : '-'}</span>
-                                )}
-                              </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-brand/5 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'parking') && startEdit(week.weekNumber, driverData.driver_id, 'parking', weekData?.parking || 0)}>
-                                {isEditing(week.weekNumber, driverData.driver_id, 'parking') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
-                                ) : (
-                                  <span>{weekData && weekData.parking > 0 ? `(${formatCurrency(weekData.parking)})` : '-'}</span>
-                                )}
-                              </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-brand/5 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'trailer') && startEdit(week.weekNumber, driverData.driver_id, 'trailer', weekData?.trailer || 0)}>
-                                {isEditing(week.weekNumber, driverData.driver_id, 'trailer') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
-                                ) : (
-                                  <span>{weekData && weekData.trailer > 0 ? `(${formatCurrency(weekData.trailer)})` : '-'}</span>
-                                )}
-                              </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-brand/5 rounded" style={{ fontSize: '13px', color: 'var(--monday-stuck)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'misc') && startEdit(week.weekNumber, driverData.driver_id, 'misc', weekData?.misc || 0)}>
-                                {isEditing(week.weekNumber, driverData.driver_id, 'misc') ? (
-                                  <Input type="number" step="0.01" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
-                                ) : (
-                                  <span>{weekData && weekData.misc > 0 ? `(${formatCurrency(weekData.misc)})` : '-'}</span>
-                                )}
-                              </td>
-                              <td className="px-3 py-2 text-left cursor-pointer hover:bg-brand/5 rounded" style={{ fontSize: '13px', color: 'var(--monday-text-primary)', border: '1px solid #D1D5DB' }} onClick={() => !isEditing(week.weekNumber, driverData.driver_id, 'miles') && startEdit(week.weekNumber, driverData.driver_id, 'miles', weekData?.miles || 0)}>
-                                {isEditing(week.weekNumber, driverData.driver_id, 'miles') ? (
-                                  <Input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
-                                ) : (
-                                  <span>{weekData ? weekData.miles.toLocaleString() : '-'}</span>
-                                )}
-                              </td>
-                              <td className="px-3 py-2 text-left" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--monday-done)', backgroundColor: 'rgba(232, 245, 230, 0.5)', border: '1px solid #D1D5DB' }}>
-                                {weekData ? formatCurrency(weekData.check_amount) : '-'}
-                              </td>
-                            </tr>
+                                <button
+                                  title={row.builtin ? `Hide ${row.label}` : `Delete ${row.label}`}
+                                  aria-label={row.builtin ? `Hide ${row.label}` : `Delete ${row.label}`}
+                                  onClick={() => (row.builtin ? updateRow(row.key, { hidden: true }) : setConfirmDelete(row.key))}
+                                  className="rounded p-0.5 hover:bg-red-50"
+                                >
+                                  <X className="h-3.5 w-3.5 text-red-500" />
+                                </button>
+                              </span>
+                            </div>
+                          )}
+                        </td>
+                        {tabRows.map(d => {
+                          const v = d.weeks[selectedWeek]?.values[row.key]
+                          const edited = getOverride(d.driver_id, selectedWeek, row.key) !== undefined
+                          return (
+                            <td
+                              key={d.driver_id}
+                              className="px-3 py-2 cursor-pointer hover:bg-brand/5"
+                              style={{ ...cell, color: rowColor(row), fontStyle: edited ? 'italic' : undefined }}
+                              title={edited ? 'Changed for this week only' : undefined}
+                              onClick={() => !isEditing(selectedWeek, d.driver_id, row.key) && startEdit(selectedWeek, d.driver_id, row.key, v || 0)}
+                            >
+                              {isEditing(selectedWeek, d.driver_id, row.key) ? (
+                                <Input type="number" step={row.kind === 'info' ? '1' : '0.01'} value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
+                              ) : (
+                                fmtValue(row, v)
+                              )}
+                            </td>
                           )
                         })}
-                      </React.Fragment>
+                        <td className="px-3 py-2" style={{ ...totalCell, color: rowColor(row) }}>{fmtValue(row, weekTotals.values[row.key] || 0)}</td>
+                        <td className="px-3 py-2" style={{ ...totalCell, color: rowColor(row), borderRight: 'none' }}>{fmtValue(row, yearTotals.values[row.key] || 0)}</td>
+                      </tr>
                     )
                   })}
+
+                  {/* Add a row */}
+                  {tabRows.length > 0 && (
+                    <tr>
+                      <td className="px-3 py-2" style={{ ...stickyLabel, backgroundColor: 'var(--monday-bg-primary)' }} colSpan={newRow ? 1 : 1}>
+                        {newRow ? (
+                          <div className="space-y-1.5">
+                            <Input
+                              autoFocus
+                              placeholder="Row name"
+                              value={newRow.label}
+                              maxLength={40}
+                              onChange={(e) => setNewRow({ ...newRow, label: e.target.value })}
+                              onKeyDown={(e) => { if (e.key === 'Enter') addRow(); if (e.key === 'Escape') setNewRow(null) }}
+                              className="h-7 text-sm"
+                            />
+                            <div className="flex gap-1">
+                              <select className="h-7 flex-1 rounded border text-xs px-1" value={newRow.kind} onChange={(e) => setNewRow({ ...newRow, kind: e.target.value as any })}>
+                                <option value="deduction">Deduction</option>
+                                <option value="earning">Earning</option>
+                              </select>
+                              <select className="h-7 flex-1 rounded border text-xs px-1" value={newRow.mode} onChange={(e) => setNewRow({ ...newRow, mode: e.target.value as any })}>
+                                <option value="fixed">Fixed</option>
+                                <option value="variable">Variable</option>
+                              </select>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button size="sm" className="h-7 flex-1" disabled={!newRow.label.trim()} onClick={addRow}>Add</Button>
+                              <Button size="sm" variant="outline" className="h-7 flex-1" onClick={() => setNewRow(null)}>Cancel</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            className="flex items-center gap-1"
+                            style={{ fontSize: '13px', color: 'var(--monday-done)', fontWeight: 500 }}
+                            onClick={() => setNewRow({ label: '', kind: 'deduction', mode: 'fixed' })}
+                          >
+                            <Plus className="h-4 w-4" /> Add row
+                          </button>
+                        )}
+                      </td>
+                      {tabRows.map(d => <td key={d.driver_id} style={cell}></td>)}
+                      <td style={totalCell}></td>
+                      <td style={{ ...totalCell, borderRight: 'none' }}></td>
+                    </tr>
+                  )}
+
+                  {/* Net pay */}
+                  {tabRows.length > 0 && (
+                    <tr style={{ backgroundColor: 'rgba(44, 160, 28, 0.08)' }}>
+                      <td className="px-3 py-2.5" style={{ ...stickyLabel, backgroundColor: '#eef7ec', borderBottom: 'none', fontSize: '12px', fontWeight: 700, color: 'var(--monday-done)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                        Net Pay
+                      </td>
+                      {tabRows.map(d => (
+                        <td key={d.driver_id} className="px-3 py-2.5" style={{ ...cell, borderBottom: 'none', fontWeight: 700, color: 'var(--monday-done)' }}>
+                          {d.weeks[selectedWeek] ? formatCurrency(d.weeks[selectedWeek].check_amount) : '-'}
+                        </td>
+                      ))}
+                      <td className="px-3 py-2.5" style={{ ...cell, borderBottom: 'none', fontWeight: 700, color: 'var(--monday-done)' }}>{formatCurrency(weekTotals.check_amount)}</td>
+                      <td className="px-3 py-2.5" style={{ ...cell, borderBottom: 'none', borderRight: 'none', fontWeight: 700, color: 'var(--monday-done)' }}>{formatCurrency(yearTotals.check_amount)}</td>
+                    </tr>
+                  )}
                 </tbody>
-                <tfoot>
-                  <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
-                    <td className="px-3 py-2.5 border-r font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>Annual Total · {driverTab === 'company' ? 'Company' : 'Owner Ops'}</td>
-                    <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-secondary)' }}></td>
-                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(grandTotals.gross)}</td>
-                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{formatCurrency(grandTotals.extra)}</td>
-                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-stuck)' }}>({formatCurrency(grandTotals.dispatch_fee)})</td>
-                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-stuck)' }}>({formatCurrency(grandTotals.insurance)})</td>
-                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-stuck)' }}>({formatCurrency(grandTotals.fuel)})</td>
-                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-stuck)' }}>({formatCurrency(grandTotals.parking)})</td>
-                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-stuck)' }}>({formatCurrency(grandTotals.trailer)})</td>
-                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-stuck)' }}>({formatCurrency(grandTotals.misc)})</td>
-                    <td className="px-3 py-2.5 border-r text-right font-bold" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>{grandTotals.miles.toLocaleString()}</td>
-                    <td className="px-3 py-2.5 text-right font-bold" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--monday-done)' }}>{formatCurrency(grandTotals.check_amount)}</td>
-                  </tr>
-                </tfoot>
               </table>
-          </div>
+            </div>
+
+            {hiddenRows.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2" style={{ fontSize: '12px', color: 'var(--monday-text-secondary)' }}>
+                <EyeOff className="h-3.5 w-3.5" />
+                Hidden (not counted in net pay):
+                {hiddenRows.map(r => (
+                  <button
+                    key={r.key}
+                    onClick={() => updateRow(r.key, { hidden: false })}
+                    className="rounded-full px-2 py-0.5 hover:underline"
+                    style={{ backgroundColor: 'var(--monday-bg-secondary)', color: 'var(--monday-text-primary)' }}
+                    title={`Show ${r.label} again`}
+                  >
+                    {r.label} +
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
-        {/* Context Menu */}
-        {contextMenu && (
-          <div
-            className="fixed bg-white shadow-lg rounded-lg border border-gray-200 py-1 z-50"
-            style={{
-              left: `${contextMenu.x}px`,
-              top: `${contextMenu.y}px`,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
-              onClick={() => {
-                // TODO: Add edit functionality
-                setContextMenu(null)
-              }}
-            >
-              <Edit2 className="h-4 w-4 text-brand" />
-              <span>Edit Payroll</span>
-            </button>
-            <button
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
-              onClick={() => {
-                // TODO: Add copy functionality
-                setContextMenu(null)
-              }}
-            >
-              <Copy className="h-4 w-4 text-green-600" />
-              <span>Copy to Next Week</span>
-            </button>
-            <div className="border-t border-gray-200 my-1"></div>
-            <button
-              className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 flex items-center gap-2 text-red-600"
-              onClick={() => {
-                // TODO: Add delete functionality
-                setContextMenu(null)
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-              <span>Clear Payroll</span>
-            </button>
-          </div>
-        )}
-
-        {/* Driver Settings Modal */}
-        <DriverSettingsModal
-          isOpen={settingsModalOpen}
-          onClose={() => setSettingsModalOpen(false)}
+        <DriverSettingsModal isOpen={settingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
+        <RowsDialog
+          open={rowsDialogOpen}
+          rows={rows}
+          onClose={() => setRowsDialogOpen(false)}
+          onSave={(next) => { saveLayout.mutate(next); setRowsDialogOpen(false) }}
+          onAmounts={(key) => { setRowsDialogOpen(false); setAmountsRowKey(key) }}
+          onDriverSettings={() => { setRowsDialogOpen(false); setSettingsModalOpen(true) }}
+        />
+        <AmountsDialog
+          row={amountsRow}
+          drivers={drivers.filter((d: any) => !d.date_terminated)}
+          onClose={() => setAmountsRowKey(null)}
+          onSave={(amounts) => { if (amountsRow) updateRow(amountsRow.key, { amounts }); setAmountsRowKey(null) }}
         />
       </div>
     </Layout>
@@ -932,12 +770,12 @@ function StatsPanel({ title, subtitle, all, company, owner, driversLabel }: {
       <div>Owner op {o}</div>
     </div>
   )
-  const money = (t: PayTotals, f: (t: PayTotals) => number) => formatCurrency(f(t))
+  const miles = (t: PayTotals) => (t.values.miles || 0).toLocaleString()
   const tiles = [
-    { label: 'Gross', value: money(all, t => t.gross + t.extra), sub: split(money(company, t => t.gross + t.extra), money(owner, t => t.gross + t.extra)) },
-    { label: 'Deductions', value: money(all, deductionsOf), sub: split(money(company, deductionsOf), money(owner, deductionsOf)), color: 'var(--monday-stuck)' },
-    { label: 'Net Pay', value: money(all, t => t.check_amount), sub: split(money(company, t => t.check_amount), money(owner, t => t.check_amount)), color: 'var(--monday-done)' },
-    { label: 'Miles', value: all.miles.toLocaleString(), sub: split(company.miles.toLocaleString(), owner.miles.toLocaleString()) },
+    { label: 'Gross', value: formatCurrency(all.earnings), sub: split(formatCurrency(company.earnings), formatCurrency(owner.earnings)) },
+    { label: 'Deductions', value: formatCurrency(all.deductions), sub: split(formatCurrency(company.deductions), formatCurrency(owner.deductions)), color: 'var(--monday-stuck)' },
+    { label: 'Net Pay', value: formatCurrency(all.check_amount), sub: split(formatCurrency(company.check_amount), formatCurrency(owner.check_amount)), color: 'var(--monday-done)' },
+    { label: 'Miles', value: miles(all), sub: split(miles(company), miles(owner)) },
     { label: driversLabel, value: String(all.drivers_paid), sub: split(String(company.drivers_paid), String(owner.drivers_paid)) },
   ]
   return (
@@ -956,5 +794,165 @@ function StatsPanel({ title, subtitle, all, company, owner, driversLabel }: {
         ))}
       </div>
     </div>
+  )
+}
+
+// Rename, reorder, show/hide, switch fixed/variable and delete rows, saved together.
+function RowsDialog({ open, rows, onClose, onSave, onAmounts, onDriverSettings }: {
+  open: boolean
+  rows: PayrollRow[]
+  onClose: () => void
+  onSave: (rows: PayrollRow[]) => void
+  onAmounts: (key: string) => void
+  onDriverSettings: () => void
+}) {
+  const [draft, setDraft] = useState<PayrollRow[]>(rows)
+  useEffect(() => { if (open) setDraft(rows) }, [open, rows])
+
+  const patch = (i: number, p: Partial<PayrollRow>) => setDraft(d => d.map((r, j) => (j === i ? { ...r, ...p } : r)))
+  const move = (i: number, by: number) => setDraft(d => {
+    const j = i + by
+    if (j < 0 || j >= d.length) return d
+    const next = [...d]
+    ;[next[i], next[j]] = [next[j], next[i]]
+    return next
+  })
+  const add = () => setDraft(d => [...d, { key: '', label: 'New row', kind: 'deduction', mode: 'fixed', hidden: false, builtin: false, amounts: {} }])
+  const changed = JSON.stringify(draft) !== JSON.stringify(rows)
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Payroll rows</DialogTitle>
+          <DialogDescription>
+            These rows apply to every driver and every week. Hidden rows are left out of net pay.
+            Fixed rows take the same amount every week; variable rows are entered week by week.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5">
+          {draft.map((r, i) => {
+            const switchable = !r.builtin || SWITCHABLE_ROWS.has(r.key)
+            return (
+              <div key={r.key || `new-${i}`} className="flex flex-wrap items-center gap-2 rounded-md border px-2 py-1.5" style={{ opacity: r.hidden ? 0.55 : 1 }}>
+                <div className="flex flex-col">
+                  <button aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)} className="disabled:opacity-30"><ChevronUp className="h-3.5 w-3.5" /></button>
+                  <button aria-label="Move down" disabled={i === draft.length - 1} onClick={() => move(i, 1)} className="disabled:opacity-30"><ChevronDown className="h-3.5 w-3.5" /></button>
+                </div>
+                <Input value={r.label} maxLength={40} onChange={(e) => patch(i, { label: e.target.value })} className="h-8 w-40 text-sm" />
+                {r.builtin ? (
+                  <span className="w-24 text-xs text-gray-500">{r.kind === 'info' ? 'Info only' : r.kind === 'earning' ? 'Earning' : 'Deduction'}</span>
+                ) : (
+                  <select className="h-8 w-24 rounded border text-xs px-1" value={r.kind} onChange={(e) => patch(i, { kind: e.target.value as any })}>
+                    <option value="deduction">Deduction</option>
+                    <option value="earning">Earning</option>
+                  </select>
+                )}
+                {switchable ? (
+                  <select className="h-8 w-24 rounded border text-xs px-1" value={r.mode} onChange={(e) => patch(i, { mode: e.target.value as any })}>
+                    <option value="fixed">Fixed</option>
+                    <option value="variable">Variable</option>
+                  </select>
+                ) : (
+                  <span className="w-24 text-xs text-gray-500" title={MODE_HELP[r.mode]}>{MODE_LABEL[r.mode]}</span>
+                )}
+                {r.mode === 'fixed' && (
+                  <button
+                    className="text-xs text-blue-600 hover:underline disabled:text-gray-400 disabled:no-underline"
+                    disabled={!r.builtin && (!r.key || changed)}
+                    title={!r.builtin && (!r.key || changed) ? 'Save first' : 'Weekly amount per driver'}
+                    onClick={() => (r.builtin ? onDriverSettings() : onAmounts(r.key))}
+                  >
+                    Amounts
+                  </button>
+                )}
+                <label className="ml-auto flex items-center gap-1 text-xs">
+                  <input type="checkbox" checked={!r.hidden} onChange={(e) => patch(i, { hidden: !e.target.checked })} />
+                  Show
+                </label>
+                {!r.builtin && (
+                  <button aria-label={`Delete ${r.label}`} onClick={() => setDraft(d => d.filter((_, j) => j !== i))} className="rounded p-1 hover:bg-red-50">
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        <div className="flex items-center justify-between pt-2">
+          <Button variant="outline" size="sm" onClick={add}><Plus className="h-4 w-4 mr-1" /> Add row</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button disabled={!changed || draft.some(r => !r.label.trim())} onClick={() => onSave(draft)}>Save</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Weekly amount per driver for a fixed custom row.
+function AmountsDialog({ row, drivers, onClose, onSave }: {
+  row: PayrollRow | null
+  drivers: any[]
+  onClose: () => void
+  onSave: (amounts: Record<string, number>) => void
+}) {
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [fillAll, setFillAll] = useState('')
+  useEffect(() => {
+    if (!row) return
+    const v: Record<string, string> = {}
+    drivers.forEach(d => { const a = row.amounts?.[String(d.id)]; v[String(d.id)] = a ? String(a) : '' })
+    setValues(v)
+    setFillAll('')
+  }, [row?.key])
+
+  const save = () => {
+    const amounts: Record<string, number> = {}
+    Object.entries(values).forEach(([id, s]) => { const n = parseFloat(s); if (n) amounts[id] = Math.round(n * 100) / 100 })
+    onSave(amounts)
+  }
+  const sorted = [...drivers].sort((a, b) =>
+    (tabOf(a.driver_type) === tabOf(b.driver_type) ? 0 : tabOf(a.driver_type) === 'company' ? -1 : 1) ||
+    `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`))
+
+  return (
+    <Dialog open={!!row} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{row?.label}: weekly amounts</DialogTitle>
+          <DialogDescription>
+            {row?.kind === 'earning' ? 'Added to' : 'Taken out of'} each driver&apos;s pay every week. Leave blank for none.
+            You can still change a single week by clicking its cell in the table.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex items-center gap-2 pb-2 border-b">
+          <Input type="number" step="0.01" placeholder="Same amount for all" value={fillAll} onChange={(e) => setFillAll(e.target.value)} className="h-8 text-sm" />
+          <Button size="sm" variant="outline" disabled={!fillAll} onClick={() => setValues(v => Object.fromEntries(Object.keys(v).map(k => [k, fillAll])))}>Apply to all</Button>
+        </div>
+        <div className="space-y-1">
+          {sorted.map(d => (
+            <div key={d.id} className="flex items-center justify-between gap-3">
+              <span className="text-sm">
+                {d.first_name} {d.last_name}
+                {tabOf(d.driver_type) === 'owner_operator' && <span className="ml-1 text-xs text-gray-500">(owner op)</span>}
+              </span>
+              <Input
+                type="number"
+                step="0.01"
+                value={values[String(d.id)] ?? ''}
+                onChange={(e) => setValues(v => ({ ...v, [String(d.id)]: e.target.value }))}
+                className="h-8 w-32 text-sm"
+              />
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={save}>Save</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
