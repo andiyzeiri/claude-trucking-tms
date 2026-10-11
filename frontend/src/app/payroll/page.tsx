@@ -91,14 +91,23 @@ const fmtShort = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', da
 const weekOptionLabel = (w: Week) =>
   `Week ${w.weekNumber} · ${fmtShort(w.startDate)} – ${w.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
 
-const fmtValue = (row: PayrollRow, v: number | undefined) => {
-  if (v === undefined) return '-'
-  if (row.kind === 'info') return v ? v.toLocaleString() : '-'
-  if (row.kind === 'deduction') return v ? `(${formatCurrency(v)})` : '-'
-  return v ? formatCurrency(v) : '-'
-}
+// Deduction rows store what's taken out as a positive number (that's how the
+// calculated fuel, dispatch, insurance... arrive). On screen every cell is
+// signed by its effect on net pay: negative = comes out of pay, positive =
+// added to pay. So typing -50 in a deduction row takes out $50 and +50 adds $50.
+const signedOf = (row: PayrollRow, stored: number) => (row.kind === 'deduction' ? -stored : stored)
+const storedOf = (row: PayrollRow, signed: number) => (row.kind === 'deduction' ? -signed : signed)
 
-const rowColor = (row: PayrollRow) => (row.kind === 'deduction' ? 'var(--monday-stuck)' : 'var(--monday-text-primary)')
+// Negative: red in parentheses. Positive: green when typed in for the week,
+// plain when calculated (e.g. Gross).
+const cellDisplay = (row: PayrollRow, stored: number | undefined, manual: boolean): { text: string; color: string } => {
+  const plain = 'var(--monday-text-primary)'
+  if (stored === undefined || !stored) return { text: '-', color: plain }
+  if (row.kind === 'info') return { text: stored.toLocaleString(), color: plain }
+  const v = signedOf(row, stored)
+  if (v < 0) return { text: `(${formatCurrency(-v)})`, color: 'var(--monday-stuck)' }
+  return { text: formatCurrency(v), color: manual ? 'var(--monday-done)' : plain }
+}
 
 export default function PayrollPage() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
@@ -356,12 +365,14 @@ export default function PayrollPage() {
 
   const stopEdit = () => {
     if (editingCell && editValue !== '') {
+      const row = rows.find(r => r.key === editingCell.field)
+      const typed = parseFloat(editValue) || 0
       saveOverride.mutate({
         driver_id: editingCell.driverId,
         year: selectedYear,
         week_number: editingCell.weekNumber,
         field: editingCell.field,
-        value: parseFloat(editValue) || 0,
+        value: row ? storedOf(row, typed) : typed,
       })
     }
     setEditingCell(null)
@@ -608,19 +619,19 @@ export default function PayrollPage() {
                         </td>
                         {tabRows.map(d => {
                           const v = d.weeks[selectedWeek]?.values[row.key]
-                          const edited = getOverride(d.driver_id, selectedWeek, row.key) !== undefined
+                          const manual = getOverride(d.driver_id, selectedWeek, row.key) !== undefined
+                          const shown = cellDisplay(row, v, manual)
                           return (
                             <td
                               key={d.driver_id}
                               className="px-3 py-2 cursor-pointer hover:bg-brand/5"
-                              style={{ ...cell, color: rowColor(row), fontStyle: edited ? 'italic' : undefined }}
-                              title={edited ? 'Changed for this week only' : undefined}
-                              onClick={() => !isEditing(selectedWeek, d.driver_id, row.key) && startEdit(selectedWeek, d.driver_id, row.key, v || 0)}
+                              style={{ ...cell, color: shown.color }}
+                              onClick={() => !isEditing(selectedWeek, d.driver_id, row.key) && startEdit(selectedWeek, d.driver_id, row.key, signedOf(row, v || 0))}
                             >
                               {isEditing(selectedWeek, d.driver_id, row.key) ? (
                                 <Input type="number" step={row.kind === 'info' ? '1' : '0.01'} value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={stopEdit} onKeyDown={handleKeyDown} autoFocus className="h-7 text-sm" />
                               ) : (
-                                fmtValue(row, v)
+                                shown.text
                               )}
                             </td>
                           )
