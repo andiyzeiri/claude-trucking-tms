@@ -313,10 +313,6 @@ export default function PayrollPage() {
   const updateRow = (key: string, patch: Partial<PayrollRow>) =>
     saveLayout.mutate(rows.map(r => (r.key === key ? { ...r, ...patch } : r)))
   const deleteRow = (key: string) => saveLayout.mutate(rows.filter(r => r.key !== key))
-  const toggleMode = (row: PayrollRow) => {
-    if (row.mode === 'auto' || (row.builtin && !SWITCHABLE_ROWS.has(row.key))) return
-    updateRow(row.key, { mode: row.mode === 'fixed' ? 'variable' : 'fixed' })
-  }
   const addRow = async () => {
     if (!newRow || !newRow.label.trim()) return
     const row: PayrollRow = { key: '', label: newRow.label.trim(), kind: newRow.kind, mode: newRow.mode, hidden: false, builtin: false, amounts: {} }
@@ -554,7 +550,6 @@ export default function PayrollPage() {
                           <td key={d.driver_id} className="px-3 py-2" style={cell}>
                             <select
                               className="w-full bg-transparent text-sm border-0 p-0 focus:ring-0 cursor-pointer"
-                              style={isOverridden ? { fontStyle: 'italic', color: 'var(--monday-done)' } : {}}
                               value={isOverridden ? weekTruckOverride || '' : (d.truck_id || '')}
                               onChange={(e) => saveOverride.mutate({
                                 driver_id: d.driver_id,
@@ -577,7 +572,6 @@ export default function PayrollPage() {
 
                   {/* Line items */}
                   {tabRows.length > 0 && visibleRows.map(row => {
-                    const switchable = !row.builtin || SWITCHABLE_ROWS.has(row.key)
                     return (
                       <tr key={row.key || row.label} className="group">
                         <td className="px-3 py-2" style={{ ...stickyLabel, backgroundColor: 'var(--monday-bg-primary)' }}>
@@ -590,20 +584,6 @@ export default function PayrollPage() {
                           ) : (
                             <div className="flex items-center gap-2">
                               <span className="truncate" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>{row.label}</span>
-                              <button
-                                onClick={() => toggleMode(row)}
-                                disabled={!switchable || row.mode === 'auto'}
-                                title={MODE_HELP[row.mode] + (switchable && row.mode !== 'auto' ? ' — click to switch' : '')}
-                                className="rounded px-1.5 py-0.5"
-                                style={{
-                                  fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em',
-                                  backgroundColor: row.mode === 'fixed' ? 'rgba(0,115,234,0.1)' : row.mode === 'variable' ? 'rgba(253,171,61,0.18)' : 'var(--monday-bg-secondary)',
-                                  color: row.mode === 'fixed' ? '#0073ea' : row.mode === 'variable' ? '#b26b00' : 'var(--monday-text-muted)',
-                                  cursor: switchable && row.mode !== 'auto' ? 'pointer' : 'default',
-                                }}
-                              >
-                                {MODE_LABEL[row.mode]}
-                              </button>
                               <span className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 {row.mode === 'fixed' && (
                                   <button
