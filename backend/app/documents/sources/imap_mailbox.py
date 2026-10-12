@@ -73,6 +73,20 @@ def _is_readable(content_type: str, size: int, is_inline: bool) -> bool:
     return True
 
 
+def _actual_type(payload: bytes, filename: Optional[str]) -> Optional[str]:
+    """The readable type of a mislabelled attachment, from its bytes (or a .pdf name)."""
+    head = payload[:1024]
+    if b"%PDF-" in head:
+        return "application/pdf"
+    if head.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if (filename or "").lower().endswith(".pdf") and b"%PDF" in payload[:4096]:
+        return "application/pdf"
+    return None
+
+
 def _walk_parts(msg: Message) -> Iterator[Message]:
     """
     Yield leaf parts, descending into forwarded messages.
@@ -121,6 +135,12 @@ def extract_attachments(msg: Message) -> tuple[List[SourceAttachment], int]:
         if not payload:
             continue
 
+        # Automated senders (broker portals like Load Entourage) often label a
+        # PDF application/octet-stream or similar: go by what the file is.
+        if content_type not in READABLE_TYPES:
+            actual = _actual_type(payload, filename)
+            if actual:
+                content_type = actual
         if not _is_readable(content_type, len(payload), is_inline):
             skipped += 1
             continue
@@ -312,7 +332,7 @@ def _parse_message(raw: bytes, uid: bytes) -> SourceMessage:
     )
 
 
-def fetch_recent(reader: "ImapMailboxReader", days: int, known_ids, limit: int = 10) -> List[SourceMessage]:
+def fetch_recent(reader: "ImapMailboxReader", days: int, known_ids, limit: int = 10, recheck_ids=()) -> List[SourceMessage]:
     """
     Every message from the last `days` days that isn't in `known_ids`,
     oldest first, read or unread. Nothing is marked as read.
@@ -322,6 +342,8 @@ def fetch_recent(reader: "ImapMailboxReader", days: int, known_ids, limit: int =
     down - is still picked up; dedup is by Message-ID against `known_ids`.
     On Gmail the "All Mail" folder is used, so an archived message counts
     too; messages the mailbox sent itself are skipped.
+
+    recheck_ids: messages to read again (after the new ones, within `limit`).
     """
     import datetime as _dt
 
@@ -353,6 +375,7 @@ def fetch_recent(reader: "ImapMailboxReader", days: int, known_ids, limit: int =
 
         own = reader.username.strip().lower()
         new_uids = []
+        again_uids = []
         # Headers only first: cheap, and enough to skip what we've already seen.
         for i in range(0, len(uids), 100):
             chunk = b",".join(uids[i:i + 100])
@@ -372,11 +395,14 @@ def fetch_recent(reader: "ImapMailboxReader", days: int, known_ids, limit: int =
                     continue
                 if own and own in (_decode(hdr.get("From")) or "").lower():
                     continue  # sent by this mailbox, not received
-                new_uids.append(uid)
+                (again_uids if mid in recheck_ids else new_uids).append(uid)
 
         logger.info("loads-ai: %s message(s) in the last %s day(s) of %s, %s new", len(uids), days, reader.username, len(new_uids))
         out: List[SourceMessage] = []
-        for uid in new_uids[:limit]:
+        if again_uids:
+            logger.info("loads-ai: re-reading %s earlier message(s) of %s that had no readable attachment",
+                        len(again_uids), reader.username)
+        for uid in (new_uids + again_uids)[:limit]:
             try:
                 status, payload = conn.uid("fetch", uid, "(BODY.PEEK[])")
                 if status != "OK" or not payload or not isinstance(payload[0], tuple):

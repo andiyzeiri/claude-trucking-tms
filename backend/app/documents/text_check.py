@@ -29,7 +29,7 @@ _MONEY = re.compile(r"\$\s?\d[\d,]*(\.\d{2})?|\b\d[\d,]*\.\d{2}\s?(usd)\b", re.I
 
 def pdf_text(content: bytes, pages: int = PAGES) -> str:
     """Text layer of the first pages of a PDF ('' for scans, images, errors)."""
-    if not content.startswith(b"%PDF"):
+    if b"%PDF" not in content[:1024]:
         return ""
     try:
         from pypdf import PdfReader

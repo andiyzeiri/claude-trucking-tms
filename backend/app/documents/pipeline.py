@@ -82,6 +82,8 @@ def sniff_content_type(content: bytes) -> Optional[str]:
     for magic, media_type in _MAGIC:
         if content.startswith(magic):
             return media_type
+    if b"%PDF-" in content[:1024]:
+        return "application/pdf"  # a few stray bytes before the header still open fine
     if content[:4] == b"RIFF" and content[8:12] == b"WEBP":
         return "image/webp"
     # iPhone photos: ISO-BMFF 'ftyp' box with a HEIF brand.
@@ -114,6 +116,7 @@ class IngestSummary:
     revisions: int = 0
     not_loads: int = 0
     rescanned: int = 0
+    rechecked_emails: int = 0
     needs_review: int = 0
     failed: int = 0
     errors: List[str] = field(default_factory=list)
@@ -139,6 +142,7 @@ class IngestSummary:
             "missing_ratecons": self.missing_ratecons,
             "pods_merged": self.pods_merged,
             "rescanned": self.rescanned,
+            "rechecked_emails": self.rechecked_emails,
             "revisions": self.revisions,
             "not_loads": self.not_loads,
             "needs_review": self.needs_review,
@@ -665,9 +669,14 @@ async def ingest_message(
     remaining_documents: int,
     mode: str = "auto",
     mailbox: Optional[str] = None,
+    recheck: bool = False,
 ) -> int:
     """
     Record one message and process its attachments.
+
+    recheck: the message was recorded before with nothing readable on it
+    (Scan now reads it again in case an attachment was missed); its row is
+    reused instead of being skipped as already handled.
 
     Returns how many documents it consumed from the per-cycle budget.
     """
@@ -689,7 +698,24 @@ async def ingest_message(
             session.add(email_row)
     except IntegrityError:
         # Already ingested on an earlier poll. Expected, not an error.
-        return 0
+        existing = None
+        if recheck and message.attachments:
+            existing = (
+                await session.execute(
+                    select(InboundEmail).where(
+                        InboundEmail.company_id == company_id,
+                        InboundEmail.message_id == message.message_id,
+                        InboundEmail.status == InboundEmailStatus.SKIPPED,
+                    )
+                )
+            ).scalars().first()
+        if existing is None:
+            return 0
+        email_row = existing
+        email_row.attachment_count = len(message.attachments)
+        summary.rechecked_emails += 1
+        logger.info("loads-ai: re-read email %r - %s attachment(s) found this time",
+                    message.subject, len(message.attachments))
 
     summary.messages_new += 1
     used = 0
@@ -772,8 +798,14 @@ async def _poll_mailbox(
     budget: int,
     days: Optional[int] = None,
     max_messages: Optional[int] = None,
+    recheck_empty: bool = False,
 ) -> int:
-    """Read one inbox and process its new mail. Returns the remaining document budget."""
+    """
+    Read one inbox and process its new mail. Returns the remaining document budget.
+
+    recheck_empty (Scan now): also read again the messages of the last
+    `days` days that were recorded with nothing readable on them.
+    """
     days = settings.LOADS_AI_LOOKBACK_DAYS if days is None else days
     reader = ImapMailboxReader(
         host=settings.LOADS_AI_IMAP_HOST,
@@ -793,11 +825,26 @@ async def _poll_mailbox(
             )
         ).scalars().all()
     )
+    recheck = set()
+    if recheck_empty:
+        recheck = set(
+            (
+                await session.execute(
+                    select(InboundEmail.message_id).where(
+                        InboundEmail.company_id == company_id,
+                        InboundEmail.mailbox == username,
+                        InboundEmail.status == InboundEmailStatus.SKIPPED,
+                        InboundEmail.created_at >= datetime.utcnow() - timedelta(days=days + 1),
+                    )
+                )
+            ).scalars().all()
+        )
     try:
         # imaplib is blocking; keep it off the event loop. Reads by date, read
         # or unread, and never marks anything read.
         messages = await run_in_threadpool(
-            fetch_recent, reader, days, known, max_messages or settings.LOADS_AI_MAX_MESSAGES_PER_POLL
+            fetch_recent, reader, days, known - recheck, max_messages or settings.LOADS_AI_MAX_MESSAGES_PER_POLL,
+            recheck,
         )
     except MailboxError as e:
         summary.errors.append(f"{username}: {e}")
@@ -814,7 +861,8 @@ async def _poll_mailbox(
             summary.notes.append("Per-cycle document limit reached; remaining mail stays unread.")
             break
         try:
-            budget -= await ingest_message(session, company_id, message, summary, budget, mode=mode, mailbox=username)
+            budget -= await ingest_message(session, company_id, message, summary, budget, mode=mode, mailbox=username,
+                                           recheck=message.message_id in recheck)
             await session.commit()
         except Exception as e:
             await session.rollback()
@@ -881,11 +929,11 @@ async def run_ingestion(session: AsyncSession, full_day: bool = False) -> Ingest
     # With a dedicated pods inbox, the main inbox is rate confirmations only;
     # with a single shared inbox, each document is classified.
     budget = await _poll_mailbox(
-        session, company_id, mailbox, password, main_mode, summary, budget, days, max_messages
+        session, company_id, mailbox, password, main_mode, summary, budget, days, max_messages, full_day
     )
     if has_pod_inbox:
         budget = await _poll_mailbox(
-            session, company_id, pod_mailbox, pod_password, "pod", summary, budget, days, max_messages
+            session, company_id, pod_mailbox, pod_password, "pod", summary, budget, days, max_messages, full_day
         )
     if full_day:
         await rescan_today(session, company_id, main_mode, pod_mailbox if has_pod_inbox else None, summary, budget)
@@ -895,7 +943,7 @@ async def run_ingestion(session: AsyncSession, full_day: bool = False) -> Ingest
 
 
 # Scan now reads a whole day, so it may do more than a timed cycle.
-FULL_DAY_MAX_MESSAGES = 150
+FULL_DAY_MAX_MESSAGES = 300
 FULL_DAY_MAX_DOCUMENTS = 60
 # Statuses a rescan looks at again. POD_ATTACHED is left alone: that file is
 # already some load's POD and moving it is a person's call.

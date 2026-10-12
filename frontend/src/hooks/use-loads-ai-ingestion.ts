@@ -39,6 +39,8 @@ export interface IngestSummary {
   pods_merged?: number
   /** Today's files read again by Scan now */
   rescanned?: number
+  /** Earlier emails read again because no attachment was found the first time */
+  rechecked_emails?: number
   needs_review: number
   failed: number
   errors: string[]
@@ -129,7 +131,8 @@ export function usePollMailbox() {
       const bits: string[] = []
       if (s.messages_new) bits.push(`${s.messages_new} new email(s)`)
       if (s.loads_created) bits.push(`${s.loads_created} AI load(s) added`)
-      if (s.rescanned) bits.push(`${s.rescanned} of today's file(s) re-checked`)
+      if (s.rescanned) bits.push(`${s.rescanned} earlier file(s) re-checked`)
+      if (s.rechecked_emails) bits.push(`${s.rechecked_emails} earlier email(s) had a missed attachment`)
       if (s.unverified_created) bits.push(`${s.unverified_created} Highway load(s) waiting for ratecon`)
       if (s.pods_attached) bits.push(`${s.pods_attached} POD(s) attached`)
       if (s.revisions) bits.push(`${s.revisions} revised ratecon(s) to review`)
