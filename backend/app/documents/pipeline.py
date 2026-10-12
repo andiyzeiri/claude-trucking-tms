@@ -632,13 +632,17 @@ async def process_document(
 
 async def _ratecon_sent_to_pods(session: AsyncSession, company_id: int, c, content: bytes, sender: Optional[str]) -> bool:
     """
-    A file on pods@ that is plainly a rate confirmation: the model is sure,
-    it's a typed PDF titled as one, and no driver sent it (a driver's POD
-    packet can include the rate confirmation page - that stays a POD).
+    A file on pods@ that is plainly a rate confirmation: the model reads it
+    as one and either its typed text is titled as one, or the model is very
+    sure and it's a digital document rather than a scan or photo (e.g. DHL
+    "semail.pdf" printouts, which carry no title text). And no driver sent
+    it: a driver's POD packet can include the rate confirmation page - that
+    stays a POD.
     """
     if c.doc_type != "ratecon" or c.confidence < 0.9:
         return False
-    if not await run_in_threadpool(ratecon_title, content):
+    sure_digital = c.confidence >= 0.95 and not c.appears_scanned
+    if not sure_digital and not await run_in_threadpool(ratecon_title, content):
         return False
     return await _driver_by_email(session, company_id, sender or "") is None
 
@@ -1025,7 +1029,12 @@ async def rescan_today(
         titled = await run_in_threadpool(ratecon_title, content)
         attempts = doc.attempt_count or 0
         older = (email_row.received_at or doc.created_at.replace(tzinfo=None)) < start_utc
-        if doc.status in _RESCAN_IF_TITLED or older:
+        if on_pods:
+            # Read as a rate confirmation but filed as a POD: read again and
+            # let _ratecon_sent_to_pods decide.
+            if attempts >= settings.LOADS_AI_MAX_ATTEMPTS + 1:
+                continue
+        elif doc.status in _RESCAN_IF_TITLED or older:
             if not titled or attempts >= settings.LOADS_AI_MAX_ATTEMPTS + 1:
                 continue
         elif attempts >= settings.LOADS_AI_MAX_ATTEMPTS or (attempts >= 2 and not titled):
