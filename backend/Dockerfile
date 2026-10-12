@@ -84,6 +84,7 @@ COPY create_report_recipients_table.py ./
 COPY create_payroll_layouts_table.py ./
 COPY create_driver_debt_tables.py ./
 COPY create_eld_connections_table.py ./
+COPY create_fuel_card_tables.py ./
 COPY entrypoint.sh ./
 
 # Copy scripts directory

@@ -12,6 +12,7 @@ from app.config import settings
 from app.api.v1.api import api_router
 from app.health import router as health_router
 from app.services.dedicated_lane_scheduler import generate_loads_from_dedicated_lanes
+from app.services.fuel_card_sync import sync_all as sync_fuel_cards
 from app.documents.pipeline import run_ingestion_job, run_retry_job
 from app.sms.pod_reminders import run_pod_reminder_job
 
@@ -39,6 +40,19 @@ async def lifespan(app: FastAPI):
         id='generate_dedicated_loads',
         name='Generate loads from dedicated lanes',
         replace_existing=True
+    )
+
+    # Fuel card feed (WEX Fleet One / EFS): WEX drops a transaction file on
+    # its SFTP server each day; new files are imported into Fuel. Files and
+    # swipes already imported are skipped.
+    scheduler.add_job(
+        sync_fuel_cards,
+        IntervalTrigger(hours=3),
+        id="fuel_card_sync",
+        name="Import fuel card transactions",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
     )
 
     # Loads AI mailbox poller. Only scheduled when ingestion is switched on,
