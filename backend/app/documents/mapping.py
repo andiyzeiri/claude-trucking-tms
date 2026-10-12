@@ -26,7 +26,7 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from difflib import SequenceMatcher
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -231,16 +231,25 @@ def compose_location(
     return ", ".join(parts) or None
 
 
+_NUMBER = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+")
+
+
 def parse_int(value: Optional[str]) -> Optional[int]:
+    """
+    '516.0 mi' -> 516, '1,234 Miles' -> 1234.
+
+    The first number in the text, rounded. Keeping every digit would turn
+    '516.0' into 5160.
+    """
     text = _clean(value)
     if not text:
         return None
-    digits = re.sub(r"[^\d]", "", text)
-    if not digits:
+    match = _NUMBER.search(text)
+    if not match:
         return None
     try:
-        return int(digits)
-    except ValueError:
+        return int(Decimal(match.group(0).replace(",", "")).to_integral_value(rounding=ROUND_HALF_UP))
+    except InvalidOperation:
         return None
 
 
