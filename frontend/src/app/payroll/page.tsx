@@ -1019,13 +1019,13 @@ function StatsPanel({ title, subtitle, all, company, owner, coOwner }: {
   )
   const money = (f: (t: PayTotals) => number) => (t: PayTotals) => formatCurrency(f(t))
   const signed = (n: number) => (n < 0 ? `(${formatCurrency(-n)})` : formatCurrency(n))
-  // Net Pay: what the company keeps - company drivers' Company Net plus owner
-  // operators' dispatch fee.
+  // Net Profit: what the company keeps - company drivers' Company Net plus
+  // owner operators' dispatch fee.
   const net = all.company_net + all.dispatch_income
   const tiles = [
     { label: 'Gross', value: money(t => t.earnings)(all), sub: split(money(t => t.earnings)), color: undefined as string | undefined },
     {
-      label: 'Net Pay',
+      label: 'Net Profit',
       value: signed(net),
       color: net < 0 ? 'var(--monday-stuck)' : 'var(--monday-done)',
       sub: (
