@@ -49,6 +49,7 @@ from app.documents.unverified import (
 )
 from app.documents import revisions
 from app.documents.lumper import apply_lumper, lumper_total
+from app.documents.text_check import ratecon_title
 from app.services.mileage import fill_miles
 from app.services.pdf_convert import image_to_jpeg, image_to_pdf, is_image
 from app.documents.sources.imap_mailbox import ImapMailboxReader, MailboxError, fetch_recent
@@ -492,6 +493,19 @@ async def process_document(
         extractor = get_extractor()
         classified = await extractor.classify(doc_bytes)
         c = classified.classification
+        if c.doc_type != "ratecon" and mode != "pod" and model_type == "application/pdf":
+            # A typed PDF titled as a rate confirmation is one, even when the
+            # carrier's e-signature made the model read it as a signed POD
+            # (DHL / Load Entourage). Not on a shared inbox when a driver sent
+            # it: a POD packet may include the rate confirmation page.
+            title = await run_in_threadpool(ratecon_title, model_content)
+            if title and (mode == "ratecon" or await _driver_by_email(session, company_id, sender or "") is None):
+                logger.info("loads-ai: %s read as %s but its text says %r - treated as a rate confirmation",
+                            document.original_filename, c.doc_type, title)
+                c = c.model_copy(update={
+                    "doc_type": "ratecon",
+                    "reasoning": f"Typed PDF titled \"{title}\" (first read as {c.doc_type}: {c.reasoning or ''})".strip()[:500],
+                })
         document.doc_type = c.doc_type
         document.doc_type_confidence = c.confidence
 

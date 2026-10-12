@@ -256,12 +256,18 @@ on broker letterhead titled "Rate Confirmation", "Load Confirmation", \
 "Carrier Confirmation" or "Carrier Agreement", listing a linehaul rate or \
 total pay, pickup and delivery appointments, and terms. It may carry a \
 typed or e-signature from the carrier accepting the rate - that does not \
-make it a POD.
+make it a POD. Broker portals (e.g. DHL through Load Entourage) send the \
+accepted copy with signature blocks for both broker and carrier, a \
+"signed"/"accepted" stamp and date, and POD/paperwork instructions in the \
+terms; it is still a "ratecon". A document that states what the carrier \
+will be paid is a rate confirmation, not a POD.
 - "pod" is a proof of delivery: paperwork signed at delivery. Typically a \
 scanned or phone-photographed bill of lading or delivery receipt with a \
 handwritten receiver/consignee signature, often with a date, a "received in \
 good order" line, piece counts, stamps, seal numbers or handwritten notes. \
-A bill of lading that has been signed by the receiver IS a "pod".
+A bill of lading that has been signed by the receiver IS a "pod". Only a \
+signature for receiving the freight at delivery makes something a POD; a \
+carrier or dispatcher signing to accept a rate does not.
 - "bol" is a bill of lading with no receiver's signature (e.g. a blank or \
 shipper-only copy).
 - "invoice" is a bill requesting payment.
