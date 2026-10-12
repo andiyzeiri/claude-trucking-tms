@@ -35,10 +35,10 @@ from app.documents.pipeline import IngestSummary, resolve_company, scan_state, s
 from app.models.company import Company
 from app.models.customer import Customer
 from app.models.load import Load
-from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, DocumentStatus, IngestedDocument
+from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, DocumentStatus, InboundEmail, IngestedDocument
 from app.sms.ai_loads import view as ai_view
 from app.sms.assignment import notify_ai_load_assigned
-from app.documents import revisions
+from app.documents import pod_email, revisions
 from app.documents.load_times import describe_time
 from app.documents.unverified import merge_pod_into, verify_with
 from app.sms.ai_loads import parse_wall_clock
@@ -1095,6 +1095,83 @@ async def attach_missing_ratecon(
 
 
 # --- "Request POD" button ---------------------------------------------------
+
+class PodEmailCandidate(BaseModel):
+    email: str
+    source: str
+    checked: bool
+    note: Optional[str] = None
+
+
+class PodEmailPreview(BaseModel):
+    from_address: Optional[str] = None
+    candidates: List[PodEmailCandidate] = []
+    subject: str
+    body: str
+    attachment_name: Optional[str] = None
+    can_send: bool
+    blocker: Optional[str] = None
+    last_sent_at: Optional[str] = None
+    last_sent_to: List[str] = []
+
+
+class PodEmailSend(BaseModel):
+    to: List[str]
+    cc: List[str] = []
+    subject: str
+    body: str
+
+
+class PodEmailResult(BaseModel):
+    sent_to: List[str]
+    sent_at: str
+
+
+async def _pod_email_context(db: AsyncSession, company_id: int, ai_load_id: int):
+    doc = await _get_ai_load(db, company_id, ai_load_id)
+    email_row = await db.get(InboundEmail, doc.inbound_email_id) if doc.inbound_email_id else None
+    company = await _get_company(db, company_id)
+    return doc, email_row, company
+
+
+@router.get("/loads/{ai_load_id}/pod-email", response_model=PodEmailPreview)
+async def pod_email_preview(
+    ai_load_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_loads_ai_user),
+):
+    """Who the POD could go to (rate confirmation's sender, CC, emails printed on it) and the default message."""
+    doc, email_row, company = await _pod_email_context(db, current_user.company_id, ai_load_id)
+    p = await pod_email.build_preview(doc, email_row, company.name, company.email)
+    draft = doc.draft or {}
+    return PodEmailPreview(
+        from_address=p.from_address,
+        candidates=[PodEmailCandidate(**vars(c)) for c in p.candidates],
+        subject=p.subject, body=p.body, attachment_name=p.attachment_name,
+        can_send=p.can_send, blocker=p.blocker,
+        last_sent_at=draft.get("pod_emailed_at"), last_sent_to=list(draft.get("pod_emailed_to") or []),
+    )
+
+
+@router.post("/loads/{ai_load_id}/pod-email", response_model=PodEmailResult)
+async def pod_email_send(
+    ai_load_id: int,
+    payload: PodEmailSend,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_loads_ai_user),
+):
+    """Email the POD from pods@ to the people picked on the page."""
+    user_id = current_user.id
+    doc, email_row, company = await _pod_email_context(db, current_user.company_id, ai_load_id)
+    try:
+        sent_to = await pod_email.send(doc, email_row, payload.to, payload.cc, payload.subject, payload.body, company.name)
+    except pod_email.PodEmailError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    pod_email.record_sent(doc, sent_to, user_id)
+    await db.commit()
+    logger.info("pod-email: AI load %s POD emailed to %s by user %s", doc.id, sent_to, user_id)
+    return PodEmailResult(sent_to=sent_to, sent_at=doc.draft["pod_emailed_at"])
+
 
 class PodRequestResponse(BaseModel):
     sent: bool

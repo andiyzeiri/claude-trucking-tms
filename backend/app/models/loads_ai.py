@@ -95,6 +95,8 @@ class InboundEmail(Base):
 
     from_address = Column(String)
     to_address = Column(String)
+    cc_address = Column(Text)   # CC header, so a POD can be emailed back to everyone on it
+    reply_to = Column(Text)
     subject = Column(Text)
     received_at = Column(DateTime)
 

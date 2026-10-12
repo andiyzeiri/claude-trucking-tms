@@ -86,6 +86,7 @@ COPY create_driver_debt_tables.py ./
 COPY create_eld_connections_table.py ./
 COPY add_pay_structure_columns.py ./
 COPY add_driver_pay_rate_versions.py ./
+COPY add_inbound_email_cc.py ./
 COPY entrypoint.sh ./
 
 # Copy scripts directory

@@ -26,6 +26,7 @@ import api from '@/lib/api'
 import { useAuth } from '@/hooks/use-auth'
 import { useLoadsAISettings } from '@/hooks/use-loads-ai-settings'
 import { InboxField } from '@/components/loads-ai/inbox-field'
+import { PodEmailDialog } from '@/components/loads-ai/pod-email-dialog'
 import {
   useExtractDocument,
   extractionErrorMessage,
@@ -643,6 +644,7 @@ export default function LoadsAIPageInline() {
   const [factoringFilter, setFactoringFilter] = useState<'invoice' | 'ratecon' | 'pod' | null>(null)
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, loadId?: number, type: 'load' | 'general'} | null>(null)
   const [pdfModal, setPdfModal] = useState<{url: string, loadId: number, type: 'pod' | 'ratecon'} | null>(null)
+  const [podEmailFor, setPodEmailFor] = useState<{ id: number; label: string } | null>(null)
   const [sortField, setSortField] = useState<keyof EditableLoad>('pickup_date')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const groupMenuRef = useRef<HTMLDivElement>(null)
@@ -2807,6 +2809,22 @@ export default function LoadsAIPageInline() {
                 >
                   Replace
                 </label>
+                {!load.isNew && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setPodEmailFor({ id: load.id, label: String((load as any).broker_load_number || load.load_number || '') })
+                    }}
+                    className="inline-flex items-center gap-1 rounded border border-blue-300 bg-white px-1.5 py-0.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                    title={(load as any).pod_emailed_at
+                      ? `Emailed ${new Date((load as any).pod_emailed_at).toLocaleString()} to ${((load as any).pod_emailed_to || []).join(', ')}`
+                      : 'Email the POD to the broker from pods@'}
+                  >
+                    <Mail className="h-3 w-3" />
+                    {(load as any).pod_emailed_at ? 'Emailed ✓' : 'Email POD'}
+                  </button>
+                )}
               </>
             ) : (
               <>
@@ -3735,6 +3753,8 @@ export default function LoadsAIPageInline() {
         )}
 
         {/* PDF Viewer Modal */}
+        <PodEmailDialog aiLoadId={podEmailFor?.id ?? null} loadLabel={podEmailFor?.label || ''} onClose={() => setPodEmailFor(null)} />
+
         {pdfModal && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"

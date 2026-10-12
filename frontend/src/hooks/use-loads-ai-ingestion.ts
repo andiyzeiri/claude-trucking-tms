@@ -309,6 +309,57 @@ export function useRequestPod() {
   })
 }
 
+// --- Email the POD to the broker ---------------------------------------------
+
+export interface PodEmailCandidate {
+  email: string
+  /** sender | reply_to | cc | ratecon (printed on the rate confirmation) */
+  source: string
+  checked: boolean
+  note: string | null
+}
+
+export interface PodEmailPreview {
+  from_address: string | null
+  candidates: PodEmailCandidate[]
+  subject: string
+  body: string
+  attachment_name: string | null
+  can_send: boolean
+  blocker: string | null
+  last_sent_at: string | null
+  last_sent_to: string[]
+}
+
+export function usePodEmailPreview(aiLoadId: number | null) {
+  return useQuery({
+    queryKey: ['loads-ai-pod-email', aiLoadId],
+    queryFn: async (): Promise<PodEmailPreview> =>
+      (await api.get(`/v1/loads-ai/loads/${aiLoadId}/pod-email`)).data,
+    enabled: aiLoadId != null,
+    retry: false,
+    staleTime: 0,
+  })
+}
+
+export function useSendPodEmail() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: { id: number; to: string[]; cc: string[]; subject: string; body: string }) =>
+      (await api.post(`/v1/loads-ai/loads/${v.id}/pod-email`, { to: v.to, cc: v.cc, subject: v.subject, body: v.body },
+        { timeout: 60_000 })).data as { sent_to: string[]; sent_at: string },
+    onSuccess: (r) => {
+      toast.success(`POD emailed to ${r.sent_to.join(', ')}`)
+      queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY })
+      queryClient.invalidateQueries({ queryKey: ['loads-ai-pod-email'] })
+    },
+    onError: (error: any) => {
+      const detail = error?.response?.data?.detail
+      toast.error(typeof detail === 'string' ? detail : 'Could not email the POD')
+    },
+  })
+}
+
 // --- Revised rate confirmations ------------------------------------------------
 
 export function useRevisionAction() {

@@ -690,6 +690,8 @@ async def ingest_message(
         message_id=message.message_id,
         from_address=message.from_address,
         to_address=message.to_address,
+        cc_address=message.cc_address,
+        reply_to=message.reply_to,
         subject=message.subject,
         received_at=message.received_at,
         attachment_count=len(message.attachments),

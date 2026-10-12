@@ -28,6 +28,8 @@ class SourceMessage:
     message_id: str
     from_address: Optional[str] = None
     to_address: Optional[str] = None
+    cc_address: Optional[str] = None
+    reply_to: Optional[str] = None
     subject: Optional[str] = None
     received_at: Optional[datetime] = None
     attachments: List[SourceAttachment] = field(default_factory=list)
