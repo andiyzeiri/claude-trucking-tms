@@ -106,9 +106,13 @@ type PayTotals = {
   deductions: number
   check_amount: number
   drivers_paid: number
+  company_net: number // company drivers with a Pay Structure: Gross - deductions - their pay
+  dispatch_income: number // owner operators' dispatch fee
 }
 
-const emptyTotals = (): PayTotals => ({ values: {}, earnings: 0, deductions: 0, check_amount: 0, drivers_paid: 0 })
+const emptyTotals = (): PayTotals => ({
+  values: {}, earnings: 0, deductions: 0, check_amount: 0, drivers_paid: 0, company_net: 0, dispatch_income: 0,
+})
 
 type EditingCell = { weekNumber: number; driverId: number; field: string } | null
 
@@ -376,6 +380,10 @@ export default function PayrollPage() {
       else if (row.kind === 'deduction') totals.deductions += v
     })
     totals.check_amount += cell.check_amount
+    totals.company_net += cell.pay?.company_net || 0
+    if (tab === 'owner_operator' && rowsFor(tab).some(r => r.key === 'dispatch_fee' && !r.hidden)) {
+      totals.dispatch_income += cell.values.dispatch_fee || 0
+    }
   }
 
   // Totals for one week (drivers employed that week), optionally for one driver type.
@@ -656,13 +664,11 @@ export default function PayrollPage() {
                 title={`Week ${selectedWeek}`}
                 subtitle={week ? `${fmtShort(week.startDate)} – ${week.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
                 {...stats.week}
-                driversLabel="Drivers paid"
               />
               <StatsPanel
                 title={`${selectedYear}`}
                 subtitle={selectedYear === new Date().getFullYear() ? 'Year to date' : 'Full year'}
                 {...stats.year}
-                driversLabel="Drivers paid this year"
               />
             </div>
 
@@ -995,14 +1001,13 @@ export default function PayrollPage() {
   )
 }
 
-function StatsPanel({ title, subtitle, all, company, owner, coOwner, driversLabel }: {
+function StatsPanel({ title, subtitle, all, company, owner, coOwner }: {
   title: string
   subtitle: string
   all: PayTotals
   company: PayTotals
   owner: PayTotals
   coOwner: PayTotals
-  driversLabel: string
 }) {
   // One line per driver type under each number.
   const split = (f: (t: PayTotals) => string) => (
@@ -1013,22 +1018,31 @@ function StatsPanel({ title, subtitle, all, company, owner, coOwner, driversLabe
     </div>
   )
   const money = (f: (t: PayTotals) => number) => (t: PayTotals) => formatCurrency(f(t))
-  const miles = (t: PayTotals) => (t.values.miles || 0).toLocaleString()
-  const paid = (t: PayTotals) => String(t.drivers_paid)
+  const signed = (n: number) => (n < 0 ? `(${formatCurrency(-n)})` : formatCurrency(n))
+  // Net Pay: what the company keeps - company drivers' Company Net plus owner
+  // operators' dispatch fee.
+  const net = all.company_net + all.dispatch_income
   const tiles = [
-    { label: 'Gross', f: money(t => t.earnings) },
-    { label: 'Deductions', f: money(t => t.deductions), color: 'var(--monday-stuck)' },
-    { label: 'Net Pay', f: money(t => t.check_amount), color: 'var(--monday-done)' },
-    { label: 'Trip Miles', f: miles },
-    { label: driversLabel, f: paid },
-  ].map(t => ({ ...t, value: t.f(all), sub: split(t.f) }))
+    { label: 'Gross', value: money(t => t.earnings)(all), sub: split(money(t => t.earnings)), color: undefined as string | undefined },
+    {
+      label: 'Net Pay',
+      value: signed(net),
+      color: net < 0 ? 'var(--monday-stuck)' : 'var(--monday-done)',
+      sub: (
+        <div style={{ fontSize: '11px', color: 'var(--monday-text-muted)', marginTop: '4px', lineHeight: '15px' }}>
+          <div>Company drivers net {signed(all.company_net)}</div>
+          <div>Owner op dispatch {signed(all.dispatch_income)}</div>
+        </div>
+      ),
+    },
+  ]
   return (
     <div className="rounded-lg shadow-sm p-4" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
       <div className="flex items-baseline gap-2 mb-3">
         <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>{title}</span>
         <span style={{ fontSize: '13px', color: 'var(--monday-text-secondary)' }}>{subtitle}</span>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {tiles.map(t => (
           <div key={t.label} className="rounded-md p-3" style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
             <div style={{ fontSize: '11px', fontWeight: 500, color: 'var(--monday-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t.label}</div>
