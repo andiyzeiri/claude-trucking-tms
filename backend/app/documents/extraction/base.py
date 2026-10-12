@@ -64,5 +64,5 @@ class DocumentExtractor(Protocol):
     async def classify(self, doc: DocumentBytes) -> ClassificationResult:
         ...
 
-    async def extract_ratecon(self, doc: DocumentBytes) -> RateconResult:
+    async def extract_ratecon(self, doc: DocumentBytes, instruction: Optional[str] = None) -> RateconResult:
         ...

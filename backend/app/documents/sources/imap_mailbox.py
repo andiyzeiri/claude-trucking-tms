@@ -87,6 +87,47 @@ def _actual_type(payload: bytes, filename: Optional[str]) -> Optional[str]:
     return None
 
 
+DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+MAX_ATTACHMENT_TEXT = 30000
+
+
+def docx_text(payload: bytes) -> str:
+    """Plain text of a .docx (a zip of XML): paragraphs and table cells, one per line. '' if unreadable."""
+    import html as _html
+    import io
+    import zipfile
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(payload)) as z:
+            xml = z.read("word/document.xml").decode("utf-8", errors="ignore")
+    except Exception:
+        return ""
+    xml = re.sub(r"<w:tab/>", "\t", xml)
+    xml = re.sub(r"<w:br[^>]*/>|</w:p>|</w:tc>", "\n", xml)
+    text = _html.unescape(re.sub(r"<[^>]+>", "", xml))
+    return "\n".join(line.strip() for line in text.splitlines() if line.strip())
+
+
+def attachment_text(msg: Message) -> str:
+    """Text of the message's Word attachments, each under its file name."""
+    out = []
+    for part in _walk_parts(msg):
+        filename = _decode(part.get_filename()) or ""
+        ctype = (part.get_content_type() or "").lower()
+        if ctype != DOCX_TYPE and not filename.lower().endswith(".docx"):
+            continue
+        try:
+            payload = part.get_payload(decode=True) or b""
+        except Exception:
+            continue
+        if not payload.startswith(b"PK") or len(payload) > MAX_ATTACHMENT_BYTES:
+            continue
+        text = docx_text(payload)
+        if text:
+            out.append(f"=== {filename or 'Word document'} ===\n{text}")
+    return "\n\n".join(out)[:MAX_ATTACHMENT_TEXT]
+
+
 def _walk_parts(msg: Message) -> Iterator[Message]:
     """
     Yield leaf parts, descending into forwarded messages.
@@ -261,6 +302,7 @@ class ImapMailboxReader:
                             attachments=attachments,
                             skipped_attachments=skipped,
                             body_text=body_text(msg),
+                            attachment_text=attachment_text(msg),
                         )
                     )
 
@@ -333,6 +375,7 @@ def _parse_message(raw: bytes, uid: bytes) -> SourceMessage:
         attachments=attachments,
         skipped_attachments=skipped,
         body_text=body_text(msg),
+        attachment_text=attachment_text(msg),
     )
 
 

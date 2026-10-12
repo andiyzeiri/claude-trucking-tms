@@ -150,6 +150,10 @@ class DocumentClassification(BaseModel):
     lumper_vendor: Optional[str] = Field(
         default=None, description="Company on the lumper receipt (e.g. 'Capstone Logistics'), if shown."
     )
+    amazon_appointment: bool = Field(
+        default=False,
+        description="True if this is an Amazon delivery appointment page (Amazon LSP Portal, Carrier Central or Relay) showing an Appointment ID, a destination FC code (e.g. 'MDW6') and a scheduled delivery date/time.",
+    )
 
 
 class RateconExtraction(BaseModel):
@@ -245,6 +249,19 @@ fields.
 fuel surcharge and accessorials separately, fill each in as well as the total.
 """
 
+AMAZON_APPOINTMENT_INSTRUCTION = """\
+This is an Amazon delivery appointment page, not a rate confirmation. It \
+states no rate: leave every money field null. Put the Appointment ID in \
+broker_load_number and in delivery_number. destination_company is "Amazon" \
+followed by the Destination FC code, e.g. "Amazon MDW6"; fill the \
+destination address fields only if an address is printed. delivery_date and \
+delivery_time come from "Delivery date" (the scheduled arrival); copy the \
+time with its zone, e.g. "10:00 CDT". Leave the origin and pickup fields null \
+unless the page prints them. equipment_type: the Freight type and Load type \
+as printed (e.g. "Truck Load, Palletized"). List the Appointment Reference \
+Code as "Appt" and every PRO, BOL and PO number in reference_numbers.\
+"""
+
 CLASSIFICATION_SYSTEM_PROMPT = """\
 You classify freight documents for a trucking company's TMS. The two that \
 matter most are rate confirmations and proofs of delivery, and they must not \
@@ -282,6 +299,11 @@ paying someone to unload the trailer, frequently paid by Comdata, EFS or \
 fuel card check. Set lumper_receipt when one is present and lumper_amount \
 to the total actually charged. A rate confirmation that merely mentions \
 lumper reimbursement is NOT a lumper receipt.
+
+Amazon appointments: a screenshot or printout of an Amazon delivery \
+appointment (LSP Portal / Carrier Central / Relay page with "Appointment ID", \
+"Destination FC", "Delivery date", PO and PRO lists) states no rate, so it is \
+"other" - set amazon_appointment. It books a load, so it is never a POD.
 
 Report has_signature and appears_scanned honestly - they are strong evidence \
 for a POD. Always list every reference number you can read; they are used to \

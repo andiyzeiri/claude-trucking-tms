@@ -97,6 +97,7 @@ class InboundEmail(Base):
     to_address = Column(String)
     cc_address = Column(Text)   # CC header, so a POD can be emailed back to everyone on it
     reply_to = Column(Text)
+    attachment_text = Column(Text)  # Word attachments' text (e.g. the BOL with an Amazon appointment)
     subject = Column(Text)
     received_at = Column(DateTime)
 

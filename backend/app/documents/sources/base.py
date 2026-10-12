@@ -39,3 +39,6 @@ class SourceMessage:
     # Plain text of the message body (HTML stripped), for notification emails
     # that carry information but no attachment (e.g. Highway load notices).
     body_text: str = ""
+    # Text of Word (.docx) attachments - not documents the model reads, but
+    # e.g. the bill of lading sent along with an Amazon appointment.
+    attachment_text: str = ""

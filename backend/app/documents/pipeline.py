@@ -39,6 +39,7 @@ from app.documents.extraction.base import (
     ExtractionUnavailable,
 )
 from app.documents.extraction.registry import get_extractor
+from app.documents.extraction.schemas import AMAZON_APPOINTMENT_INSTRUCTION
 from app.documents.mapping import build_load_draft
 from app.documents.sources.base import SourceAttachment, SourceMessage
 from app.documents.sources.highway import parse_highway_notification
@@ -516,6 +517,14 @@ async def process_document(
         document.doc_type = c.doc_type
         document.doc_type_confidence = c.confidence
 
+        # An Amazon delivery appointment books a load though it states no
+        # rate: built like a rate confirmation, rate left for a person.
+        amazon = await _amazon_appointment(session, company_id, c, mode, sender)
+        if amazon:
+            logger.info("loads-ai: %s is an Amazon appointment - building a load without a rate",
+                        document.original_filename)
+            mode = "ratecon"
+
         if mode == "pod" and await _ratecon_sent_to_pods(session, company_id, c, model_content, sender):
             # A broker's rate confirmation that reached pods@ (e.g. Load
             # Entourage mailing the accepted copy there): build the load.
@@ -523,7 +532,7 @@ async def process_document(
                         document.original_filename)
             mode = "ratecon"
 
-        if mode == "ratecon" and c.doc_type != "ratecon":
+        if mode == "ratecon" and c.doc_type != "ratecon" and not amazon:
             # ratecons@ gets every attachment the dispatcher receives. PODs
             # and signed BOLs reach pods@ on their own; the rest isn't a load.
             document.extraction = {"classification": c.model_dump()}
@@ -549,7 +558,7 @@ async def process_document(
                     pod_read = None
                 await _build_pod_only(session, company_id, document, c, pod_read, summary, sender=sender)
             return
-        if mode == "auto" and c.doc_type in ("invoice", "bol", "other") and c.confidence >= 0.6:
+        if mode == "auto" and not amazon and c.doc_type in ("invoice", "bol", "other") and c.confidence >= 0.6:
             document.extraction = {"classification": c.model_dump()}
             document.draft = None
             document.status = DocumentStatus.NOT_A_LOAD
@@ -559,7 +568,14 @@ async def process_document(
 
         # Rate confirmation - or, on a shared inbox, genuinely unclear, which
         # is read as one so a real load is never silently dropped.
-        result = await extractor.extract_ratecon(doc_bytes)
+        if amazon:
+            instruction = AMAZON_APPOINTMENT_INSTRUCTION
+            bol = await _email_attachment_text(session, document)
+            if bol:
+                instruction += AMAZON_BOL_INSTRUCTION + bol
+            result = await extractor.extract_ratecon(doc_bytes, instruction=instruction)
+        else:
+            result = await extractor.extract_ratecon(doc_bytes)
     except (ExtractionError, ExtractionUnavailable) as e:
         document.status = DocumentStatus.FAILED
         document.last_error = str(e)[:2000]
@@ -583,6 +599,8 @@ async def process_document(
     )
     mapped = build_load_draft(result.extraction, customers=list(customers))
     draft = vars(mapped.draft).copy()
+    if amazon:
+        _amazon_draft(draft, mapped.warnings)
     # Attach the source document as the AI load's rate confirmation, in the
     # same /uploads/s3 form the Ratecon column already opens.
     if document.s3_key:
@@ -647,6 +665,53 @@ async def _ratecon_sent_to_pods(session: AsyncSession, company_id: int, c, conte
     return await _driver_by_email(session, company_id, sender or "") is None
 
 
+async def _amazon_appointment(session: AsyncSession, company_id: int, c, mode: str, sender: Optional[str]) -> bool:
+    """
+    An Amazon delivery appointment page (LSP Portal / Carrier Central): no
+    rate on it, but it is the load. Not when a driver sent it to pods@ - that
+    stays with the driver's paperwork.
+    """
+    if c.doc_type == "ratecon" or not getattr(c, "amazon_appointment", False):
+        return False
+    if mode == "pod":
+        return await _driver_by_email(session, company_id, sender or "") is None
+    return True
+
+
+AMAZON_BOL_INSTRUCTION = """
+
+The same email carried the Word documents below. If one is the bill of \
+lading for this appointment (same FC, appointment ID, PO or PRO numbers - \
+when there are several, use only the one that matches), fill the origin \
+(shipper) company, address, pickup date and time from it, and the \
+destination address from its consignee, and add its numbers to \
+reference_numbers. If none matches this appointment, ignore them.
+
+"""
+
+
+async def _email_attachment_text(session: AsyncSession, document: IngestedDocument) -> str:
+    if not document.inbound_email_id:
+        return ""
+    row = await session.get(InboundEmail, document.inbound_email_id)
+    return (row.attachment_text or "") if row is not None else ""
+
+
+def _amazon_draft(draft: dict, warnings: list) -> None:
+    """Amazon appointment: the FC as the delivery, and say what's left to fill in."""
+    receiver = (draft.get("receiver_name") or "").strip()
+    if not draft.get("delivery_location") and receiver:
+        draft["delivery_location"] = receiver  # "Amazon MDW6" until someone adds the address
+    keep = [w for w in warnings if not w.startswith(("No rate could be read", "No pickup location", "No delivery location",
+                                                       "No broker name", "Broker "))]
+    missing = [label for label, key in (("rate", "rate"), ("pickup", "pickup_location"), ("customer", "customer_id"))
+               if not draft.get(key)]
+    note = "Amazon appointment - no rate on it."
+    if missing:
+        note += " Fill in the " + ", ".join(missing) + " before dispatching."
+    warnings[:] = [note] + keep
+
+
 def _was_pod_only(doc: IngestedDocument) -> bool:
     """A temporary POD load (Missing ratecons), as opposed to a deleted AI load."""
     f = doc.draft if isinstance(doc.draft, dict) else {}
@@ -692,6 +757,7 @@ async def ingest_message(
         to_address=message.to_address,
         cc_address=message.cc_address,
         reply_to=message.reply_to,
+        attachment_text=message.attachment_text or None,
         subject=message.subject,
         received_at=message.received_at,
         attachment_count=len(message.attachments),
@@ -704,6 +770,21 @@ async def ingest_message(
             session.add(email_row)
     except IntegrityError:
         # Already ingested on an earlier poll. Expected, not an error.
+        if recheck and message.attachment_text:
+            # Read again for its Word attachments (Amazon appointment BOL).
+            row = (
+                await session.execute(
+                    select(InboundEmail).where(
+                        InboundEmail.company_id == company_id,
+                        InboundEmail.message_id == message.message_id,
+                        InboundEmail.attachment_text.is_(None),
+                    )
+                )
+            ).scalars().first()
+            if row is not None:
+                row.attachment_text = message.attachment_text
+                await session.flush()
+                logger.info("loads-ai: kept the Word attachment text of %r", message.subject)
         existing = None
         if recheck and message.attachments:
             existing = (
@@ -845,6 +926,7 @@ async def _poll_mailbox(
                 )
             ).scalars().all()
         )
+        recheck |= await _amazon_emails_without_text(session, company_id, username, days + 1)
     try:
         # imaplib is blocking; keep it off the event loop. Reads by date, read
         # or unread, and never marks anything read.
@@ -985,6 +1067,8 @@ async def rescan_today(
                               confirmation
       pods@, last RESCAN_DAYS days, filed as a POD though the model read it
       as a rate confirmation -> built when _ratecon_sent_to_pods agrees
+      last RESCAN_DAYS days, an Amazon appointment page filed as not a load
+                           -> read again, built without a rate
     A deleted AI load is never brought back.
 
     The file is read from its stored copy, so it doesn't matter whether the
@@ -1008,6 +1092,9 @@ async def rescan_today(
                 IngestedDocument.s3_key.isnot(None),
                 or_(
                     and_(IngestedDocument.status.in_(_RESCAN_ALWAYS), received >= start_utc),
+                    # possibly an Amazon appointment page filed as not a load
+                    and_(IngestedDocument.status == DocumentStatus.NOT_A_LOAD, IngestedDocument.doc_type == "other",
+                         received >= start_utc - timedelta(days=RESCAN_DAYS)),
                     and_(IngestedDocument.status.in_(_RESCAN_ALWAYS + _RESCAN_IF_TITLED), pod_like,
                          received >= start_utc - timedelta(days=RESCAN_DAYS)),
                 ),
@@ -1023,15 +1110,22 @@ async def rescan_today(
         on_pods = bool(pod_inbox) and (email_row.mailbox or "").strip().lower() == pod_inbox
         if doc.status == DocumentStatus.DISMISSED and not _was_pod_only(doc):
             continue  # a deleted AI load stays deleted
-        if on_pods and (doc.status not in _RESCAN_IF_TITLED or doc.doc_type != "ratecon"):
+        amazon = _filed_amazon_appointment(doc)
+        if on_pods and not amazon and (doc.status not in _RESCAN_IF_TITLED or doc.doc_type != "ratecon"):
             continue  # pods@: only files the model already read as a rate confirmation
+        older = (email_row.received_at or doc.created_at.replace(tzinfo=None)) < start_utc
+        if older and doc.doc_type == "other" and not amazon:
+            continue  # selected only in case it was an Amazon appointment
         content = await run_in_threadpool(s3_service.download_bytes, doc.s3_key)
         if not content:
             continue
         titled = await run_in_threadpool(ratecon_title, content)
         attempts = doc.attempt_count or 0
-        older = (email_row.received_at or doc.created_at.replace(tzinfo=None)) < start_utc
-        if on_pods:
+        if amazon:
+            # Amazon appointment that went to not-a-load before the exception existed.
+            if attempts >= settings.LOADS_AI_MAX_ATTEMPTS + 2:
+                continue
+        elif on_pods:
             # Read as a rate confirmation but filed as a POD: read again and
             # let _ratecon_sent_to_pods decide.
             if attempts >= settings.LOADS_AI_MAX_ATTEMPTS + 1:
@@ -1056,6 +1150,40 @@ async def rescan_today(
             await session.rollback()
             logger.exception("loads-ai: rescan of document %s crashed", doc.id)
     return budget
+
+
+_AMAZON_READ = re.compile(r"amazon|lsp portal|carrier central|destination fc", re.IGNORECASE)
+
+
+def _filed_amazon_appointment(doc: IngestedDocument) -> bool:
+    """Not a load, but the model's notes say it was an Amazon appointment page."""
+    if doc.status != DocumentStatus.NOT_A_LOAD:
+        return False
+    c = (doc.extraction or {}).get("classification") if isinstance(doc.extraction, dict) else None
+    if not isinstance(c, dict):
+        return False
+    if c.get("amazon_appointment"):
+        return True
+    return bool(_AMAZON_READ.search(c.get("reasoning") or "")) and "appointment" in (c.get("reasoning") or "").lower()
+
+
+async def _amazon_emails_without_text(session: AsyncSession, company_id: int, mailbox: str, days: int) -> set:
+    """Message-IDs of emails whose Amazon appointment went to not-a-load before their Word BOL was kept."""
+    rows = (
+        await session.execute(
+            select(IngestedDocument, InboundEmail.message_id)
+            .join(InboundEmail, InboundEmail.id == IngestedDocument.inbound_email_id)
+            .where(
+                IngestedDocument.company_id == company_id,
+                IngestedDocument.status == DocumentStatus.NOT_A_LOAD,
+                IngestedDocument.doc_type == "other",
+                InboundEmail.mailbox == mailbox,
+                InboundEmail.attachment_text.is_(None),
+                InboundEmail.created_at >= datetime.utcnow() - timedelta(days=days),
+            )
+        )
+    ).all()
+    return {mid for doc, mid in rows if _filed_amazon_appointment(doc)}
 
 
 async def run_ingestion_job() -> None:

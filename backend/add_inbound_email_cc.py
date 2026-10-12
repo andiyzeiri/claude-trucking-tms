@@ -21,7 +21,9 @@ async def main():
     async with engine.begin() as conn:
         await conn.execute(text("ALTER TABLE inbound_emails ADD COLUMN IF NOT EXISTS cc_address TEXT"))
         await conn.execute(text("ALTER TABLE inbound_emails ADD COLUMN IF NOT EXISTS reply_to TEXT"))
-        print("inbound_emails: cc_address / reply_to ready")
+        # Text of Word attachments, e.g. the BOL sent with an Amazon appointment.
+        await conn.execute(text("ALTER TABLE inbound_emails ADD COLUMN IF NOT EXISTS attachment_text TEXT"))
+        print("inbound_emails: cc_address / reply_to / attachment_text ready")
     await engine.dispose()
 
 

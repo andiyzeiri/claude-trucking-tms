@@ -238,12 +238,13 @@ class AnthropicExtractor:
         )
         return ClassificationResult(classification=classification, usage=usage)
 
-    async def extract_ratecon(self, doc: DocumentBytes) -> RateconResult:
+    async def extract_ratecon(self, doc: DocumentBytes, instruction: Optional[str] = None) -> RateconResult:
+        """instruction: replaces the default ask, for documents that book a load without being a rate confirmation."""
         payload, usage, raw = await self._call(
             doc,
             EXTRACTION_SYSTEM_PROMPT,
             strict_json_schema(RateconExtraction),
-            "Extract the rate confirmation fields from this document.",
+            instruction or "Extract the rate confirmation fields from this document.",
         )
         try:
             extraction = RateconExtraction.model_validate(payload)
