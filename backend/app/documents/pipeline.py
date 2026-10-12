@@ -27,7 +27,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
@@ -512,6 +512,13 @@ async def process_document(
         document.doc_type = c.doc_type
         document.doc_type_confidence = c.confidence
 
+        if mode == "pod" and await _ratecon_sent_to_pods(session, company_id, c, model_content, sender):
+            # A broker's rate confirmation that reached pods@ (e.g. Load
+            # Entourage mailing the accepted copy there): build the load.
+            logger.info("loads-ai: %s came in on the PODs inbox but is a rate confirmation - building a load",
+                        document.original_filename)
+            mode = "ratecon"
+
         if mode == "ratecon" and c.doc_type != "ratecon":
             # ratecons@ gets every attachment the dispatcher receives. PODs
             # and signed BOLs reach pods@ on their own; the rest isn't a load.
@@ -617,6 +624,25 @@ async def process_document(
         document.original_filename,
         document.id,
     )
+
+
+async def _ratecon_sent_to_pods(session: AsyncSession, company_id: int, c, content: bytes, sender: Optional[str]) -> bool:
+    """
+    A file on pods@ that is plainly a rate confirmation: the model is sure,
+    it's a typed PDF titled as one, and no driver sent it (a driver's POD
+    packet can include the rate confirmation page - that stays a POD).
+    """
+    if c.doc_type != "ratecon" or c.confidence < 0.9:
+        return False
+    if not await run_in_threadpool(ratecon_title, content):
+        return False
+    return await _driver_by_email(session, company_id, sender or "") is None
+
+
+def _was_pod_only(doc: IngestedDocument) -> bool:
+    """A temporary POD load (Missing ratecons), as opposed to a deleted AI load."""
+    f = doc.draft if isinstance(doc.draft, dict) else {}
+    return bool(f.get("pod_url")) and not f.get("ratecon_url")
 
 
 def _not_a_ratecon_reason(c) -> str:
@@ -874,7 +900,11 @@ FULL_DAY_MAX_DOCUMENTS = 60
 # Statuses a rescan looks at again. POD_ATTACHED is left alone: that file is
 # already some load's POD and moving it is a person's call.
 _RESCAN_ALWAYS = (DocumentStatus.NOT_A_LOAD, DocumentStatus.FAILED)
-_RESCAN_IF_TITLED = (DocumentStatus.POD_ONLY, DocumentStatus.POD_UNMATCHED)
+_RESCAN_IF_TITLED = (DocumentStatus.POD_ONLY, DocumentStatus.POD_UNMATCHED, DocumentStatus.DISMISSED)
+# Files read as a POD (or couldn't tell) - where a misread rate confirmation
+# ends up. Looked at for RESCAN_DAYS; anything else only for today.
+_POD_LIKE = ("pod", "bol", "unknown", "ratecon")
+RESCAN_DAYS = 7
 
 # One ingestion at a time (timer or Scan now): both read the same mail.
 _ingest_lock = asyncio.Lock()
@@ -889,14 +919,19 @@ async def rescan_today(
     budget: int,
 ) -> int:
     """
-    Today's documents from the rate confirmations inbox (company time) that
-    didn't become a load, read again with the current rules - so a rate
-    confirmation first read as a POD or as not-a-load gets built.
+    Documents that didn't become a load,
+    read again with the current rules - so a rate confirmation first read as
+    a POD or as not-a-load gets built.
 
-      not a load / failed  -> read again once (and while the PDF's own text
-                              says it's a rate confirmation)
-      POD kept waiting for a ratecon / unmatched POD -> only when the PDF's
-                              text says it's a rate confirmation
+      today (company time), not a load / failed -> read again once (and while
+                              the PDF's own text says it's a rate confirmation)
+      last RESCAN_DAYS days, filed as a POD - kept waiting for a ratecon,
+      unmatched, not a load, or removed by hand from Missing ratecons ->
+                              when the PDF's own text says it's a rate
+                              confirmation
+      pods@, last RESCAN_DAYS days, filed as a POD though the model read it
+      as a rate confirmation -> built when _ratecon_sent_to_pods agrees
+    A deleted AI load is never brought back.
 
     The file is read from its stored copy, so it doesn't matter whether the
     email was opened or already processed. Returns the remaining budget.
@@ -908,15 +943,20 @@ async def rescan_today(
     tz = ZoneInfo("America/Chicago")
     start = datetime.now(tz).replace(hour=0, minute=0, second=0, microsecond=0)
     start_utc = start.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+    received = func.coalesce(InboundEmail.received_at, IngestedDocument.created_at)
+    pod_like = IngestedDocument.doc_type.in_(_POD_LIKE)
     rows = (
         await session.execute(
             select(IngestedDocument, InboundEmail)
             .join(InboundEmail, InboundEmail.id == IngestedDocument.inbound_email_id)
             .where(
                 IngestedDocument.company_id == company_id,
-                IngestedDocument.status.in_(_RESCAN_ALWAYS + _RESCAN_IF_TITLED),
                 IngestedDocument.s3_key.isnot(None),
-                func.coalesce(InboundEmail.received_at, IngestedDocument.created_at) >= start_utc,
+                or_(
+                    and_(IngestedDocument.status.in_(_RESCAN_ALWAYS), received >= start_utc),
+                    and_(IngestedDocument.status.in_(_RESCAN_ALWAYS + _RESCAN_IF_TITLED), pod_like,
+                         received >= start_utc - timedelta(days=RESCAN_DAYS)),
+                ),
             )
             .order_by(IngestedDocument.id)
         )
@@ -926,15 +966,19 @@ async def rescan_today(
         if budget <= 0:
             summary.notes.append("Document limit reached; scan again to look at the rest of today's files.")
             break
-        if pod_inbox and (email_row.mailbox or "").strip().lower() == pod_inbox:
-            continue  # sent to pods@ - PODs by design
+        on_pods = bool(pod_inbox) and (email_row.mailbox or "").strip().lower() == pod_inbox
+        if doc.status == DocumentStatus.DISMISSED and not _was_pod_only(doc):
+            continue  # a deleted AI load stays deleted
+        if on_pods and (doc.status not in _RESCAN_IF_TITLED or doc.doc_type != "ratecon"):
+            continue  # pods@: only files the model already read as a rate confirmation
         content = await run_in_threadpool(s3_service.download_bytes, doc.s3_key)
         if not content:
             continue
         titled = await run_in_threadpool(ratecon_title, content)
         attempts = doc.attempt_count or 0
-        if doc.status in _RESCAN_IF_TITLED:
-            if not titled:
+        older = (email_row.received_at or doc.created_at.replace(tzinfo=None)) < start_utc
+        if doc.status in _RESCAN_IF_TITLED or older:
+            if not titled or attempts >= settings.LOADS_AI_MAX_ATTEMPTS + 1:
                 continue
         elif attempts >= settings.LOADS_AI_MAX_ATTEMPTS or (attempts >= 2 and not titled):
             continue  # already had its second look
@@ -944,7 +988,8 @@ async def rescan_today(
         try:
             if content.startswith(b"%PDF"):
                 doc.content_type = "application/pdf"
-            await process_document(session, company_id, doc, content, summary, mode=mode, sender=email_row.from_address)
+            await process_document(session, company_id, doc, content, summary,
+                                   mode="pod" if on_pods else mode, sender=email_row.from_address)
             await session.commit()
             if doc.status != before:
                 logger.info("loads-ai: rescan of document %s (%s): %s -> %s", doc.id, doc.original_filename, before, doc.status)
