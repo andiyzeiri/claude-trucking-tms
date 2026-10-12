@@ -31,7 +31,7 @@ from app.documents.extraction.base import (
 )
 from app.documents.extraction.registry import get_extractor
 from app.documents.mapping import build_load_draft, extraction_field_map, rank_customers
-from app.documents.pipeline import resolve_company, run_ingestion
+from app.documents.pipeline import IngestSummary, resolve_company, scan_state, start_full_scan
 from app.models.company import Company
 from app.models.customer import Customer
 from app.models.load import Load
@@ -462,24 +462,38 @@ class IngestSummaryResponse(BaseModel):
     notes: List[str]
 
 
-@router.post("/poll", response_model=IngestSummaryResponse)
+class ScanStatusResponse(BaseModel):
+    running: bool = False
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
+    summary: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+
+@router.post("/poll", response_model=ScanStatusResponse)
 async def poll_mailbox_now(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_loads_ai_user),
 ):
     """
-    Run one ingestion cycle immediately.
-
-    Same code path the scheduler uses, so what you see here is what the
-    timer does. Returns a summary rather than raising, so a misconfigured
-    mailbox reports the reason instead of a 500.
+    Scan now: read every email since yesterday (opened or not), build loads
+    from new rate confirmations, and take another look at today's files that
+    didn't become a load. Runs in the background - a full day can take
+    minutes - so this returns at once; poll GET /poll for the result.
     """
-    # Captured before the run: a rollback inside it expires current_user,
-    # and reading an expired attribute afterwards raises MissingGreenlet.
-    user_id = current_user.id
-    summary = await run_ingestion(db)
-    logger.info("loads-ai: manual poll by user %s -> %s", user_id, summary.as_dict())
-    return IngestSummaryResponse(**summary.as_dict())
+    company_id = current_user.company_id
+    if not settings.LOADS_AI_INGESTION_ENABLED:
+        return ScanStatusResponse(running=False, summary=IngestSummary(enabled=False).as_dict())
+    state = start_full_scan(company_id)
+    logger.info("loads-ai: Scan now by user %s (company %s)", current_user.id, company_id)
+    return ScanStatusResponse(**state)
+
+
+@router.get("/poll", response_model=ScanStatusResponse)
+async def scan_status(current_user: User = Depends(get_loads_ai_user)):
+    """Progress / result of the latest Scan now."""
+    state = scan_state(current_user.company_id)
+    return ScanStatusResponse(**state) if state else ScanStatusResponse()
 
 
 class IngestedDocumentResponse(BaseModel):

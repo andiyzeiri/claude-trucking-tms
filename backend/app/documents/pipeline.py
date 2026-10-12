@@ -18,6 +18,7 @@ must never produce a second AI load. Two unique constraints do that work:
 Both are enforced by the database, not by checking first and hoping.
 """
 
+import asyncio
 import hashlib
 from datetime import datetime, timedelta
 import re
@@ -112,6 +113,7 @@ class IngestSummary:
     pods_merged: int = 0
     revisions: int = 0
     not_loads: int = 0
+    rescanned: int = 0
     needs_review: int = 0
     failed: int = 0
     errors: List[str] = field(default_factory=list)
@@ -136,6 +138,7 @@ class IngestSummary:
             "lumpers_found": self.lumpers_found,
             "missing_ratecons": self.missing_ratecons,
             "pods_merged": self.pods_merged,
+            "rescanned": self.rescanned,
             "revisions": self.revisions,
             "not_loads": self.not_loads,
             "needs_review": self.needs_review,
@@ -741,8 +744,11 @@ async def _poll_mailbox(
     mode: str,
     summary: IngestSummary,
     budget: int,
+    days: Optional[int] = None,
+    max_messages: Optional[int] = None,
 ) -> int:
-    """Read one inbox and process its unread mail. Returns the remaining document budget."""
+    """Read one inbox and process its new mail. Returns the remaining document budget."""
+    days = settings.LOADS_AI_LOOKBACK_DAYS if days is None else days
     reader = ImapMailboxReader(
         host=settings.LOADS_AI_IMAP_HOST,
         port=settings.LOADS_AI_IMAP_PORT,
@@ -765,7 +771,7 @@ async def _poll_mailbox(
         # imaplib is blocking; keep it off the event loop. Reads by date, read
         # or unread, and never marks anything read.
         messages = await run_in_threadpool(
-            fetch_recent, reader, settings.LOADS_AI_LOOKBACK_DAYS, known, settings.LOADS_AI_MAX_MESSAGES_PER_POLL
+            fetch_recent, reader, days, known, max_messages or settings.LOADS_AI_MAX_MESSAGES_PER_POLL
         )
     except MailboxError as e:
         summary.errors.append(f"{username}: {e}")
@@ -792,9 +798,13 @@ async def _poll_mailbox(
     return budget
 
 
-async def run_ingestion(session: AsyncSession) -> IngestSummary:
+async def run_ingestion(session: AsyncSession, full_day: bool = False) -> IngestSummary:
     """
     One poll cycle: read the mailbox, create loads.
+
+    full_day (Scan now): read every email since yesterday, with higher caps,
+    then give today's rate confirmations inbox documents that didn't become a
+    load another look (rescan_today).
 
     Every exit path returns a summary rather than raising, so the scheduler
     cannot be killed by a bad message or an unreachable mail server.
@@ -839,17 +849,109 @@ async def run_ingestion(session: AsyncSession) -> IngestSummary:
     if has_pod_inbox:
         summary.mailbox = f"{mailbox}, {pod_mailbox}"
 
-    budget = settings.LOADS_AI_MAX_DOCUMENTS_PER_POLL
+    budget = FULL_DAY_MAX_DOCUMENTS if full_day else settings.LOADS_AI_MAX_DOCUMENTS_PER_POLL
+    days, max_messages = (1, FULL_DAY_MAX_MESSAGES) if full_day else (None, None)
+    main_mode = "ratecon" if has_pod_inbox else "auto"
     # With a dedicated pods inbox, the main inbox is rate confirmations only;
     # with a single shared inbox, each document is classified.
     budget = await _poll_mailbox(
-        session, company_id, mailbox, password, "ratecon" if has_pod_inbox else "auto", summary, budget
+        session, company_id, mailbox, password, main_mode, summary, budget, days, max_messages
     )
     if has_pod_inbox:
-        await _poll_mailbox(session, company_id, pod_mailbox, pod_password, "pod", summary, budget)
+        budget = await _poll_mailbox(
+            session, company_id, pod_mailbox, pod_password, "pod", summary, budget, days, max_messages
+        )
+    if full_day:
+        await rescan_today(session, company_id, main_mode, pod_mailbox if has_pod_inbox else None, summary, budget)
 
     logger.info("loads-ai: ingestion cycle %s", summary.as_dict())
     return summary
+
+
+# Scan now reads a whole day, so it may do more than a timed cycle.
+FULL_DAY_MAX_MESSAGES = 150
+FULL_DAY_MAX_DOCUMENTS = 60
+# Statuses a rescan looks at again. POD_ATTACHED is left alone: that file is
+# already some load's POD and moving it is a person's call.
+_RESCAN_ALWAYS = (DocumentStatus.NOT_A_LOAD, DocumentStatus.FAILED)
+_RESCAN_IF_TITLED = (DocumentStatus.POD_ONLY, DocumentStatus.POD_UNMATCHED)
+
+# One ingestion at a time (timer or Scan now): both read the same mail.
+_ingest_lock = asyncio.Lock()
+
+
+async def rescan_today(
+    session: AsyncSession,
+    company_id: int,
+    mode: str,
+    pod_mailbox: Optional[str],
+    summary: IngestSummary,
+    budget: int,
+) -> int:
+    """
+    Today's documents from the rate confirmations inbox (company time) that
+    didn't become a load, read again with the current rules - so a rate
+    confirmation first read as a POD or as not-a-load gets built.
+
+      not a load / failed  -> read again once (and while the PDF's own text
+                              says it's a rate confirmation)
+      POD kept waiting for a ratecon / unmatched POD -> only when the PDF's
+                              text says it's a rate confirmation
+
+    The file is read from its stored copy, so it doesn't matter whether the
+    email was opened or already processed. Returns the remaining budget.
+    """
+    from zoneinfo import ZoneInfo
+
+    if not settings.USE_S3:
+        return budget
+    tz = ZoneInfo("America/Chicago")
+    start = datetime.now(tz).replace(hour=0, minute=0, second=0, microsecond=0)
+    start_utc = start.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+    rows = (
+        await session.execute(
+            select(IngestedDocument, InboundEmail)
+            .join(InboundEmail, InboundEmail.id == IngestedDocument.inbound_email_id)
+            .where(
+                IngestedDocument.company_id == company_id,
+                IngestedDocument.status.in_(_RESCAN_ALWAYS + _RESCAN_IF_TITLED),
+                IngestedDocument.s3_key.isnot(None),
+                func.coalesce(InboundEmail.received_at, IngestedDocument.created_at) >= start_utc,
+            )
+            .order_by(IngestedDocument.id)
+        )
+    ).all()
+    pod_inbox = (pod_mailbox or "").strip().lower()
+    for doc, email_row in rows:
+        if budget <= 0:
+            summary.notes.append("Document limit reached; scan again to look at the rest of today's files.")
+            break
+        if pod_inbox and (email_row.mailbox or "").strip().lower() == pod_inbox:
+            continue  # sent to pods@ - PODs by design
+        content = await run_in_threadpool(s3_service.download_bytes, doc.s3_key)
+        if not content:
+            continue
+        titled = await run_in_threadpool(ratecon_title, content)
+        attempts = doc.attempt_count or 0
+        if doc.status in _RESCAN_IF_TITLED:
+            if not titled:
+                continue
+        elif attempts >= settings.LOADS_AI_MAX_ATTEMPTS or (attempts >= 2 and not titled):
+            continue  # already had its second look
+        before = doc.status
+        budget -= 1
+        summary.rescanned += 1
+        try:
+            if content.startswith(b"%PDF"):
+                doc.content_type = "application/pdf"
+            await process_document(session, company_id, doc, content, summary, mode=mode, sender=email_row.from_address)
+            await session.commit()
+            if doc.status != before:
+                logger.info("loads-ai: rescan of document %s (%s): %s -> %s", doc.id, doc.original_filename, before, doc.status)
+        except Exception:
+            await session.rollback()
+            logger.exception("loads-ai: rescan of document %s crashed", doc.id)
+    return budget
 
 
 async def run_ingestion_job() -> None:
@@ -858,12 +960,57 @@ async def run_ingestion_job() -> None:
 
     if not settings.LOADS_AI_INGESTION_ENABLED:
         return
+    if _ingest_lock.locked():
+        return  # a Scan now is running; the next tick catches up
 
-    async with AsyncSessionLocal() as session:
-        try:
-            await run_ingestion(session)
-        except Exception:
-            logger.exception("loads-ai: ingestion job crashed")
+    async with _ingest_lock:
+        async with AsyncSessionLocal() as session:
+            try:
+                await run_ingestion(session)
+            except Exception:
+                logger.exception("loads-ai: ingestion job crashed")
+
+
+# Scan now runs in the background (a full day can take minutes - longer than
+# a web request may stay open); the page asks for its progress.
+_scans: dict = {}  # company_id -> {"running", "started_at", "finished_at", "summary", "error"}
+
+
+def scan_state(company_id: int) -> Optional[dict]:
+    return _scans.get(company_id)
+
+
+def start_full_scan(company_id: int) -> dict:
+    """Start a full-day scan unless one is already running; returns its state."""
+    state = _scans.get(company_id)
+    if state and state["running"]:
+        return state
+    state = {"running": True, "started_at": datetime.utcnow().isoformat() + "Z",
+             "finished_at": None, "summary": None, "error": None}
+    _scans[company_id] = state
+    task = asyncio.create_task(_full_scan(state))
+    _scan_tasks.add(task)
+    task.add_done_callback(_scan_tasks.discard)
+    return state
+
+
+_scan_tasks: set = set()  # keeps a reference so the task isn't garbage collected
+
+
+async def _full_scan(state: dict) -> None:
+    from app.database import AsyncSessionLocal
+
+    try:
+        async with _ingest_lock:
+            async with AsyncSessionLocal() as session:
+                summary = await run_ingestion(session, full_day=True)
+        state["summary"] = summary.as_dict()
+    except Exception as e:
+        logger.exception("loads-ai: full-day scan crashed")
+        state["error"] = str(e)[:300] or "Scan failed"
+    finally:
+        state["running"] = False
+        state["finished_at"] = datetime.utcnow().isoformat() + "Z"
 
 
 async def retry_failed_documents(session: AsyncSession) -> dict:

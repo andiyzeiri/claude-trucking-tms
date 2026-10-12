@@ -37,6 +37,8 @@ export interface IngestSummary {
   revisions?: number
   missing_ratecons?: number
   pods_merged?: number
+  /** Today's files read again by Scan now */
+  rescanned?: number
   needs_review: number
   failed: number
   errors: string[]
@@ -82,15 +84,34 @@ export function useIngestedDocuments() {
   })
 }
 
+interface ScanStatus {
+  running: boolean
+  summary: IngestSummary | null
+  error: string | null
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
 export function usePollMailbox() {
   const queryClient = useQueryClient()
 
   const mutation = useMutation({
     mutationFn: async (): Promise<IngestSummary> => {
-      // A cycle reads mail and runs a model call per document, so it can take
-      // well over the default axios timeout.
-      const response = await api.post('/v1/loads-ai/poll', {}, { timeout: 300_000 })
-      return response.data
+      // The server scans the whole day in the background (it can take a few
+      // minutes, longer than a request may stay open); wait for it here.
+      let state: ScanStatus = (await api.post('/v1/loads-ai/poll', {})).data
+      const until = Date.now() + 30 * 60_000
+      while (state.running && Date.now() < until) {
+        await sleep(4000)
+        try {
+          state = (await api.get('/v1/loads-ai/poll')).data
+        } catch {
+          // a dropped status check doesn't stop the scan; try again
+        }
+      }
+      if (state.running) throw new Error('The scan is still running - check back in a few minutes.')
+      if (state.error || !state.summary) throw new Error(state.error || 'The scan failed.')
+      return state.summary
     },
     onSuccess: (s) => {
       queryClient.invalidateQueries({ queryKey: ['loads-ai-documents'] })
@@ -100,38 +121,30 @@ export function usePollMailbox() {
       queryClient.invalidateQueries({ queryKey: UNVERIFIED_KEY })
       queryClient.invalidateQueries({ queryKey: MISSING_RATECONS_KEY })
 
-      if (s.errors.length) {
-        toast.error(s.errors[0])
-        return
-      }
       if (!s.enabled) {
         toast.error('Email ingestion is switched off on the server')
         return
       }
-      if (s.messages_new === 0) {
-        toast.success('No new email with attachments')
-        return
-      }
-      const bits = [`${s.messages_new} new email(s)`]
+      if (s.errors.length) toast.error(s.errors[0])
+      const bits: string[] = []
+      if (s.messages_new) bits.push(`${s.messages_new} new email(s)`)
       if (s.loads_created) bits.push(`${s.loads_created} AI load(s) added`)
+      if (s.rescanned) bits.push(`${s.rescanned} of today's file(s) re-checked`)
       if (s.unverified_created) bits.push(`${s.unverified_created} Highway load(s) waiting for ratecon`)
       if (s.pods_attached) bits.push(`${s.pods_attached} POD(s) attached`)
       if (s.revisions) bits.push(`${s.revisions} revised ratecon(s) to review`)
       if (s.missing_ratecons) bits.push(`${s.missing_ratecons} POD(s) waiting for a ratecon`)
       if (s.pods_unmatched) bits.push(`${s.pods_unmatched} POD(s) need matching`)
       if (s.needs_review) bits.push(`${s.needs_review} need review`)
-      if (s.duplicates) bits.push(`${s.duplicates} duplicate(s) skipped`)
+      if (!bits.length) {
+        if (!s.errors.length) toast.success('Scanned today\'s email - nothing missed')
+        return
+      }
       toast.success(bits.join(' · '))
     },
     onError: (error: any) => {
       const detail = error?.response?.data?.detail
-      toast.error(
-        typeof detail === 'string'
-          ? detail
-          : error?.code === 'ECONNABORTED'
-          ? 'Reading the mailbox timed out.'
-          : 'Failed to check the mailbox.'
-      )
+      toast.error(typeof detail === 'string' ? detail : error?.message || 'Failed to scan the mailbox.')
     },
   })
 

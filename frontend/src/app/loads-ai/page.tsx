@@ -3029,7 +3029,7 @@ export default function LoadsAIPageInline() {
             </div>
             <Button variant="outline" onClick={handlePollMailbox} disabled={isPolling}>
               <RefreshCw className={`h-4 w-4 mr-2 ${isPolling ? 'animate-spin' : ''}`} />
-              {isPolling ? 'Checking mail…' : 'Check email now'}
+              {isPolling ? 'Scanning today…' : 'Scan now'}
             </Button>
           </div>
 
