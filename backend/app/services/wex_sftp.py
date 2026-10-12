@@ -85,9 +85,13 @@ def _connect(host: str, port: int, username: str, password: str):
         if transport:
             transport.close()
         raise SftpError("WEX SFTP rejected the username or password", auth=True)
-    except (paramiko.SSHException, OSError) as e:
+    except (paramiko.SSHException, OSError, EOFError) as e:
         if transport:
             transport.close()
+        if "banner" in str(e).lower():
+            # Connected, then dropped before SSH even started: the server only
+            # accepts approved IP addresses.
+            raise SftpError(f"{host} closed the connection before login - WEX probably needs to whitelist our IP address")
         raise SftpError(f"Couldn't connect to {host} ({e.__class__.__name__})")
 
 
