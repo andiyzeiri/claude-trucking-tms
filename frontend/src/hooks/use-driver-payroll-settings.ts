@@ -82,6 +82,7 @@ export function useCreateOrUpdateDriverPayrollSettings() {
       queryClient.invalidateQueries({ queryKey: ['driver-payroll-settings'] })
       queryClient.invalidateQueries({ queryKey: ['driver-payroll-settings', variables.driver_id] })
       queryClient.invalidateQueries({ queryKey: ['payroll', 'calculated'] })
+      queryClient.invalidateQueries({ queryKey: ['driver-debts'] }) // fixed amounts feed unpaid-week debt
       toast.success('Driver settings updated successfully')
     },
     onError: (error: any) => {
@@ -110,6 +111,7 @@ export function useUpdateDriverPayrollSettings() {
       queryClient.invalidateQueries({ queryKey: ['driver-payroll-settings'] })
       queryClient.invalidateQueries({ queryKey: ['driver-payroll-settings', driverId] })
       queryClient.invalidateQueries({ queryKey: ['payroll', 'calculated'] })
+      queryClient.invalidateQueries({ queryKey: ['driver-debts'] }) // fixed amounts feed unpaid-week debt
       toast.success('Driver settings updated successfully')
     },
     onError: (error: any) => {

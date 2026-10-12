@@ -7,7 +7,7 @@ import api from '@/lib/api'
 export interface DebtHistoryItem {
   id: number | null // hand-entered rows can be deleted
   date: string // YYYY-MM-DD
-  kind: 'debt' | 'payment' | 'payroll'
+  kind: 'debt' | 'payment' | 'payroll' | 'unpaid' // unpaid: fixed deductions in a week with no gross
   amount: string
   note: string | null
   week: string | null // "2026-41" for payroll payments
@@ -31,6 +31,8 @@ export interface DebtSummary {
   drivers: DriverDebt[]
   // "2026-41" -> { driver_id: amount } the Debt Payment row filled in automatically
   schedule: Record<string, Record<string, string>>
+  // "2026-41" -> { driver_id: amount } fixed deductions with no gross to take them from, added to debt
+  unpaid?: Record<string, Record<string, string>>
 }
 
 export const DEBTS_KEY = ['driver-debts']

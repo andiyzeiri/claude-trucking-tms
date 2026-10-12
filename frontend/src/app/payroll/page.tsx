@@ -75,6 +75,9 @@ const tabOf = (driverType: string): DriverTab =>
 type WeekCell = {
   values: Record<string, number>
   check_amount: number
+  // Fixed deductions in a week with no gross: nothing to pay them from, so they
+  // went to the driver's debt (Debt tab). Net Pay is 0 that week.
+  to_debt?: number
   pay?: { structure: PayStructure; nets: Record<PayStructure, number>; set: Record<PayStructure, boolean>; company_net: number }
 }
 
@@ -317,7 +320,8 @@ export default function PayrollPage() {
         }
         for (let wn = 1; wn <= 53; wn++) {
           const api = apiMap.get(`${driver.id}_${wn}`)
-          if (!api && !editedWeeks.has(`${driver.id}_${wn}`)) continue
+          const toDebt = Number(debts?.unpaid?.[`${selectedYear}-${wn}`]?.[String(driver.id)]) || 0
+          if (!api && !editedWeeks.has(`${driver.id}_${wn}`) && !toDebt) continue
           const values: Record<string, number> = {}
           let check = 0
           let deductions = 0
@@ -334,7 +338,9 @@ export default function PayrollPage() {
           // fixed a week, per mile on Trip Miles, or a percentage of Gross - and
           // the company keeps Gross minus every deduction minus that pay.
           const ps = settingsMap.get(driver.id)
-          if (tab === 'company' && ps?.pay_structure) {
+          if (toDebt) {
+            data.weeks[wn] = { values, check_amount: 0, to_debt: toDebt }
+          } else if (tab === 'company' && ps?.pay_structure) {
             const r2 = (n: number) => Math.round(n * 100) / 100
             const nets: Record<PayStructure, number> = {
               fixed: Number(ps.pay_fixed) || 0,
@@ -890,6 +896,14 @@ export default function PayrollPage() {
                         return (
                           <td key={d.driver_id} className="px-3 py-2.5 align-top" style={{ ...cell, borderBottom: 'none', fontWeight: 700, color: 'var(--monday-done)' }}>
                             {wk ? formatCurrency(wk.check_amount) : '-'}
+                            {wk?.to_debt ? (
+                              <div
+                                style={{ fontSize: '11px', fontWeight: 600, color: 'var(--monday-stuck)', marginTop: '3px' }}
+                                title="No gross this week, so the fixed deductions were added to this driver's debt (Debt tab). Type 0 in a cell to waive it."
+                              >
+                                ({formatCurrency(wk.to_debt)}) to debt
+                              </div>
+                            ) : null}
                             {/* What net pay would be under the other pay structures */}
                             {wk?.pay && (
                               <div style={{ fontSize: '11px', fontWeight: 400, color: 'var(--monday-text-muted)', marginTop: '3px', lineHeight: '15px' }}>

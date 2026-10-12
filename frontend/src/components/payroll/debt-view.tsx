@@ -33,6 +33,7 @@ const todayIso = () => {
 const describe = (h: DebtHistoryItem) => {
   if (h.kind === 'debt') return h.note ? `Debt: ${h.note}` : 'Debt'
   if (h.kind === 'payment') return h.note ? `Payment: ${h.note}` : 'Payment'
+  if (h.kind === 'unpaid') return h.note || 'Unpaid fixed deductions (no gross)'
   const [, wk] = (h.week || '').split('-')
   return Number(h.amount) < 0 ? `Payroll week ${wk} (added to debt)` : `Taken from pay, week ${wk}`
 }
@@ -199,7 +200,7 @@ export function DebtView({ drivers }: { drivers: any[] }) {
                             )}
                             {d.history.map((h, i) => {
                               const amt = Number(h.amount)
-                              const addsDebt = h.kind === 'debt' || amt < 0
+                              const addsDebt = h.kind === 'debt' || h.kind === 'unpaid' || amt < 0
                               return (
                                 <tr key={`${h.kind}-${h.id ?? h.week}-${i}`} style={{ borderTop: '1px solid var(--monday-border-light)' }}>
                                   <td className="py-1.5 pr-3" style={{ fontSize: '12px' }}>{fmtDate(h.date)}</td>
@@ -219,6 +220,9 @@ export function DebtView({ drivers }: { drivers: any[] }) {
                                         <Trash2 className="h-3.5 w-3.5 text-red-500" />
                                       </button>
                                     ))}
+                                    {h.kind === 'unpaid' && (
+                                      <span style={{ color: 'var(--monday-text-muted)' }} title="Type 0 in that week's cell on the Payroll page to waive it">from payroll</span>
+                                    )}
                                     {h.kind === 'payroll' && (
                                       <span style={{ color: 'var(--monday-text-muted)' }} title="Change it on the Payroll page, Debt Payment row">from payroll</span>
                                     )}
