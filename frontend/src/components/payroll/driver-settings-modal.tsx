@@ -87,6 +87,7 @@ export function DriverSettingsModal({ isOpen, onClose }: DriverSettingsModalProp
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Driver Payroll Settings</DialogTitle>
+          <p className="text-sm text-gray-500">Rate changes apply from this week on. Earlier weeks keep the rates they had.</p>
         </DialogHeader>
 
         {isLoading ? (

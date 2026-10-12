@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, Numeric, String, ForeignKey
+from sqlalchemy import Column, Date, ForeignKey, Integer, Numeric, String, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from .base import Base
 
@@ -39,3 +40,22 @@ class DriverPayrollSettings(Base):
     driver = relationship("Driver", backref="payroll_settings")
     company = relationship("Company")
     truck = relationship("Truck")
+
+
+class DriverPayRateVersion(Base):
+    """
+    A driver's pay rates from effective_from onward (app/services/pay_rates.py).
+
+    Saved whenever a rate in DriverPayrollSettings changes, so a new rate
+    applies from the week it was changed and earlier weeks keep the old one.
+    values holds the rate fields (pay_rates.RATE_FIELDS) as strings.
+    """
+
+    __tablename__ = "driver_pay_rate_versions"
+    __table_args__ = (UniqueConstraint("driver_id", "effective_from", name="uq_driver_pay_rate_version"),)
+
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    driver_id = Column(Integer, ForeignKey("drivers.id", ondelete="CASCADE"), nullable=False, index=True)
+    effective_from = Column(Date, nullable=False)
+    values = Column(JSONB, nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"))

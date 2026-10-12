@@ -44,6 +44,7 @@ from app.models.payroll_layout import PayrollLayout
 from app.models.payroll_override import PayrollOverride
 from app.models.user import User
 from app.api.v1.endpoints.payroll_layout import default_rows
+from app.services import pay_rates
 
 router = APIRouter()
 
@@ -148,6 +149,7 @@ async def build_summary(db: AsyncSession, company_id: int, today: Optional[date]
         )).scalars()
     }
     layouts = await _layouts(db, company_id)
+    rate_book = await pay_rates.RateBook.load(db, company_id)  # rates in effect each week
     drivers = {d.id: d for d in (await db.execute(select(Driver).where(Driver.company_id == company_id))).scalars()}
 
     # Hand-entered payroll values: driver -> (year, week) -> field -> amount
@@ -189,15 +191,13 @@ async def build_summary(db: AsyncSession, company_id: int, today: Optional[date]
         ]
         st = settings.get(driver_id)
 
-        def fixed_amount(r: dict) -> Decimal:
+        def fixed_amount(r: dict, week_end: date) -> Decimal:
             if r.get("mode") != "fixed":
                 return Decimal(0)
             if r.get("builtin"):
-                return Decimal(str(getattr(st, f"{r['key']}_weekly", 0) or 0)) if st else Decimal(0)
+                return rate_book.money(driver_id, st, week_end, f"{r['key']}_weekly") if st else Decimal(0)
             return Decimal(str((r.get("amounts") or {}).get(str(driver_id), 0) or 0))
 
-        if not any(fixed_amount(r) for r in rows) and not typed_by_week.get(driver_id):
-            continue
         begin = driver.date_hired or first_seen.get(driver_id)
         if begin is None:
             continue  # no hire date and never worked: nothing to charge
@@ -211,7 +211,7 @@ async def build_summary(db: AsyncSession, company_id: int, today: Optional[date]
             typed_wk = typed_by_week[driver_id].get(wk, {})
             total, items = Decimal(0), []
             for r in rows:
-                amt = typed_wk[r["key"]] if r["key"] in typed_wk else fixed_amount(r)
+                amt = typed_wk[r["key"]] if r["key"] in typed_wk else fixed_amount(r, _week_end(*wk))
                 if amt:
                     total += amt
                     items.append(f"{r.get('label') or r['key']} ${amt.quantize(CENT)}")

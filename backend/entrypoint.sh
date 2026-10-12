@@ -121,6 +121,10 @@ python3 add_pay_type_columns.py || echo "⚠️  add_pay_type_columns.py had err
 echo "🔧 Adding pay structure columns..."
 python3 add_pay_structure_columns.py || echo "⚠️  add_pay_structure_columns.py had errors, continuing..."
 
+# Dated driver pay rates (a change applies from that week on)
+echo "🔧 Creating driver_pay_rate_versions..."
+python3 add_driver_pay_rate_versions.py || echo "⚠️  add_driver_pay_rate_versions.py had errors, continuing..."
+
 # Add insurance columns to trucks
 echo "🔧 Adding insurance columns to trucks..."
 python3 add_truck_insurance_columns.py || echo "⚠️  add_truck_insurance_columns.py had errors, continuing..."

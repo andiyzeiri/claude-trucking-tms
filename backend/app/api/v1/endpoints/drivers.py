@@ -114,6 +114,8 @@ async def delete_driver(
     from app.models.fuel import Fuel
     from sqlalchemy import delete as sql_delete
 
+    from app.models.driver_payroll_settings import DriverPayRateVersion
+    await db.execute(sql_delete(DriverPayRateVersion).where(DriverPayRateVersion.driver_id == driver_id))
     await db.execute(sql_delete(DriverPayrollSettings).where(DriverPayrollSettings.driver_id == driver_id))
     await db.execute(sql_delete(PayrollOverride).where(PayrollOverride.driver_id == driver_id))
     # Unlink fuel entries from this driver (don't delete them, they belong to trucks)

@@ -44,6 +44,22 @@ export interface DriverPayrollSettingsInput {
 
 export type PayStructure = 'fixed' | 'per_mile' | 'percent'
 
+// Dated pay rates per driver, oldest first (backend app/services/pay_rates.py).
+// A changed rate applies from the week it was changed; a pay week uses the
+// latest version dated on or before its Sunday. Drivers with none use their
+// current settings for every week.
+export type RateVersion = { effective_from: string } & Partial<Record<
+  'dispatch_fee_percent' | 'insurance_weekly' | 'parking_weekly' | 'trailer_weekly' | 'misc_weekly' |
+  'pay_structure' | 'pay_fixed' | 'pay_per_mile' | 'pay_percent', string | null>>
+
+export function useDriverRateVersions() {
+  return useQuery<Record<string, RateVersion[]>>({
+    queryKey: ['driver-pay-rate-versions'],
+    queryFn: async () => (await api.get('/v1/driver-payroll-settings/rate-versions')).data,
+    retry: false,
+  })
+}
+
 // Get all driver payroll settings
 export function useDriverPayrollSettings() {
   return useQuery({
@@ -83,6 +99,7 @@ export function useCreateOrUpdateDriverPayrollSettings() {
       queryClient.invalidateQueries({ queryKey: ['driver-payroll-settings', variables.driver_id] })
       queryClient.invalidateQueries({ queryKey: ['payroll', 'calculated'] })
       queryClient.invalidateQueries({ queryKey: ['driver-debts'] }) // fixed amounts feed unpaid-week debt
+      queryClient.invalidateQueries({ queryKey: ['driver-pay-rate-versions'] })
       toast.success('Driver settings updated successfully')
     },
     onError: (error: any) => {
@@ -112,6 +129,7 @@ export function useUpdateDriverPayrollSettings() {
       queryClient.invalidateQueries({ queryKey: ['driver-payroll-settings', driverId] })
       queryClient.invalidateQueries({ queryKey: ['payroll', 'calculated'] })
       queryClient.invalidateQueries({ queryKey: ['driver-debts'] }) // fixed amounts feed unpaid-week debt
+      queryClient.invalidateQueries({ queryKey: ['driver-pay-rate-versions'] })
       toast.success('Driver settings updated successfully')
     },
     onError: (error: any) => {

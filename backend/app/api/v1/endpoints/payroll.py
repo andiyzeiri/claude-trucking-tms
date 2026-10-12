@@ -2,12 +2,13 @@ from typing import List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from app.database import get_db
 from app.models.payroll import Payroll
 from app.models.load import Load
 from app.models.driver import Driver
 from app.models.driver_payroll_settings import DriverPayrollSettings
+from app.services import pay_rates
 from app.models.fuel import Fuel
 from app.models.payroll_override import PayrollOverride
 from app.schemas.payroll import PayrollCreate, PayrollUpdate, PayrollResponse, CalculatedPayrollResponse
@@ -256,7 +257,9 @@ async def calculate_payroll_from_loads(
         else:
             data["truck_id"] = default_truck
 
-    # Apply driver settings and calculate deductions
+    # Apply driver settings and calculate deductions, with the rates in effect
+    # that week (a changed rate only applies from the week it was changed).
+    rate_book = await pay_rates.RateBook.load(db, current_user.company_id)
     for key, data in payroll_data.items():
         driver_id = data["driver_id"]
         settings = driver_settings.get(driver_id)
@@ -265,11 +268,13 @@ async def calculate_payroll_from_loads(
 
         # Calculate deductions based on driver settings
         if settings:
-            dispatch_fee = gross * (float(settings.dispatch_fee_percent) / 100)
-            insurance = float(settings.insurance_weekly)
-            parking = float(settings.parking_weekly)
-            trailer = float(settings.trailer_weekly)
-            misc = float(settings.misc_weekly)
+            week_end = date.fromisoformat(data["week_end"][:10])
+            rate = lambda field: float(rate_book.money(driver_id, settings, week_end, field))
+            dispatch_fee = gross * (rate("dispatch_fee_percent") / 100)
+            insurance = rate("insurance_weekly")
+            parking = rate("parking_weekly")
+            trailer = rate("trailer_weekly")
+            misc = rate("misc_weekly")
         else:
             dispatch_fee = 0
             insurance = 0

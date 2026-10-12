@@ -12,7 +12,7 @@ import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
 import { useCalculatedPayroll } from '@/hooks/use-payroll'
 import { usePayrollOverrides, useSavePayrollOverride } from '@/hooks/use-payroll-overrides'
-import { useDriverPayrollSettings, useCreateOrUpdateDriverPayrollSettings, type PayStructure } from '@/hooks/use-driver-payroll-settings'
+import { useDriverPayrollSettings, useCreateOrUpdateDriverPayrollSettings, useDriverRateVersions, type PayStructure } from '@/hooks/use-driver-payroll-settings'
 import { usePayrollLayout, useSavePayrollLayout, useDriverOrder, useSaveDriverOrder, SWITCHABLE_ROWS, type PayrollRow } from '@/hooks/use-payroll-layout'
 import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
 import { DebtView } from '@/components/payroll/debt-view'
@@ -154,6 +154,7 @@ export default function PayrollPage() {
   const { data: trucksData } = useTrucks()
   const { data: driverSettings } = useDriverPayrollSettings()
   const savePaySettings = useCreateOrUpdateDriverPayrollSettings()
+  const { data: rateVersions } = useDriverRateVersions()
   const [payDriverId, setPayDriverId] = useState<number | null>(null) // Pay Structure dialog
   // Each driver type has its own rows.
   const { data: companyRows, isLoading: companyLayoutLoading } = usePayrollLayout('company')
@@ -238,6 +239,22 @@ export default function PayrollPage() {
   )
   // Odometer at the week's last inspection minus its first; Peak's GPS miles
   // only when the truck has no inspections with an odometer that week.
+  // A driver's settings with the rates in effect for week `wn` (a changed rate
+  // applies from the week it was changed; earlier weeks keep the old one).
+  const ratesAt = (driverId: number, wn: number): any => {
+    const current = driverSettings?.find((s: any) => s.driver_id === driverId)
+    const versions = rateVersions?.[String(driverId)]
+    const week = weeks.find(w => w.weekNumber === wn)
+    if (!versions?.length || !week) return current
+    const end = ymd(week.endDate)
+    let found = null
+    for (const v of versions) {
+      if (v.effective_from <= end) found = v
+      else break
+    }
+    return found ? { ...current, ...found } : current
+  }
+
   const eldMilesByTruck = useMemo(() => {
     const m = new Map<number, { miles: number; how: string }>()
     const when = (iso?: string | null) =>
@@ -307,7 +324,7 @@ export default function PayrollPage() {
           return truckId ? Math.round(eldMilesByTruck.get(Number(truckId))?.miles || 0) : 0
         }
         if (row.mode === 'auto') return Number(api?.[row.key]) || 0
-        if (row.mode === 'fixed') return Number(settingsMap.get(driverId)?.[`${row.key}_weekly`]) || 0
+        if (row.mode === 'fixed') return Number(ratesAt(driverId, weekNumber)?.[`${row.key}_weekly`]) || 0
         return 0 // variable: only what's entered for the week
       }
       return row.mode === 'fixed' ? Number(row.amounts?.[String(driverId)]) || 0 : 0
@@ -341,7 +358,7 @@ export default function PayrollPage() {
           // Company drivers with a Pay Structure: Net Pay is the driver's pay -
           // fixed a week, per mile on Trip Miles, or a percentage of Gross - and
           // the company keeps Gross minus every deduction minus that pay.
-          const ps = settingsMap.get(driver.id)
+          const ps = ratesAt(driver.id, wn)
           if (toDebt) {
             data.weeks[wn] = { values, check_amount: 0, to_debt: toDebt }
           } else if (tab === 'company' && ps?.pay_structure) {
@@ -369,7 +386,7 @@ export default function PayrollPage() {
         return data
       })
       .sort((a, b) => a.driver_name.localeCompare(b.driver_name))
-  }, [drivers, calculatedPayroll, overridesMap, payrollOverrides, driverSettings, companyRows, ownerRows, coOwnerRows, debts, selectedYear, selectedWeek, eldMilesByTruck])
+  }, [drivers, calculatedPayroll, overridesMap, payrollOverrides, driverSettings, companyRows, ownerRows, coOwnerRows, debts, selectedYear, selectedWeek, eldMilesByTruck, rateVersions])
 
   const addInto = (totals: PayTotals, cell: WeekCell, tab: DriverTab) => {
     rowsFor(tab).forEach(row => {
@@ -771,7 +788,7 @@ export default function PayrollPage() {
                     <tr>
                       <td className="px-3 py-2" style={{ ...stickyLabel, backgroundColor: 'var(--monday-bg-primary)', fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>Pay Structure</td>
                       {tabRows.map(d => {
-                        const text = payStructureText(driverSettings?.find((s: any) => s.driver_id === d.driver_id))
+                        const text = payStructureText(ratesAt(d.driver_id, selectedWeek))
                         return (
                           <td
                             key={d.driver_id}
@@ -1184,7 +1201,8 @@ function PayStructureDialog({ driver, settings, saving, onClose, onSave }: {
           <DialogTitle>Pay structure: {driver?.first_name} {driver?.last_name}</DialogTitle>
           <DialogDescription>
             The one you pick is the driver&apos;s Net Pay. Company Net below it is Gross minus every deduction minus
-            that pay. Rates you set for the other two show under Net Pay so you can compare.
+            that pay. Rates you set for the other two show under Net Pay so you can compare. Changes apply from this
+            week on; earlier weeks keep the rates they had.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
