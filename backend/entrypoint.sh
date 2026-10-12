@@ -117,6 +117,10 @@ python3 add_expense_group_column.py || echo "⚠️  add_expense_group_column.py
 echo "🔧 Adding pay_type columns..."
 python3 add_pay_type_columns.py || echo "⚠️  add_pay_type_columns.py had errors, continuing..."
 
+# Pay structure (fixed / per mile / percent) for company drivers on Payroll
+echo "🔧 Adding pay structure columns..."
+python3 add_pay_structure_columns.py || echo "⚠️  add_pay_structure_columns.py had errors, continuing..."
+
 # Add insurance columns to trucks
 echo "🔧 Adding insurance columns to trucks..."
 python3 add_truck_insurance_columns.py || echo "⚠️  add_truck_insurance_columns.py had errors, continuing..."

@@ -78,7 +78,8 @@ async def create_or_update_driver_settings(
 
     if existing_settings:
         # Update existing settings
-        for field, value in settings.dict(exclude={'driver_id'}).items():
+        # Only what was sent, so saving one setting never resets the others.
+        for field, value in settings.dict(exclude={'driver_id'}, exclude_unset=True).items():
             setattr(existing_settings, field, value)
         await db.commit()
         await db.refresh(existing_settings)

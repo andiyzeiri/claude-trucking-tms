@@ -12,7 +12,7 @@ import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks } from '@/hooks/use-trucks'
 import { useCalculatedPayroll } from '@/hooks/use-payroll'
 import { usePayrollOverrides, useSavePayrollOverride } from '@/hooks/use-payroll-overrides'
-import { useDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
+import { useDriverPayrollSettings, useCreateOrUpdateDriverPayrollSettings, type PayStructure } from '@/hooks/use-driver-payroll-settings'
 import { usePayrollLayout, useSavePayrollLayout, useDriverOrder, useSaveDriverOrder, SWITCHABLE_ROWS, type PayrollRow } from '@/hooks/use-payroll-layout'
 import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
 import { DebtView } from '@/components/payroll/debt-view'
@@ -68,7 +68,24 @@ const tabOf = (driverType: string): DriverTab =>
 
 // One driver's pay for one week: a value per row key (hidden rows included,
 // so stats can still show miles), and net pay from the visible rows only.
-type WeekCell = { values: Record<string, number>; check_amount: number }
+// pay: company drivers with a Pay Structure - net pay under each structure
+// (check_amount is the chosen one); `set` says which ones have a rate.
+type WeekCell = {
+  values: Record<string, number>
+  check_amount: number
+  pay?: { structure: PayStructure; nets: Record<PayStructure, number>; set: Record<PayStructure, boolean> }
+}
+
+const PAY_STRUCTURES: PayStructure[] = ['fixed', 'per_mile', 'percent']
+const PAY_LABEL: Record<PayStructure, string> = { fixed: 'Fixed', per_mile: 'Per mile', percent: 'Percentage' }
+
+// Short description of a driver's pay structure for the Pay Structure row.
+function payStructureText(s: any): string | null {
+  if (!s?.pay_structure) return null
+  if (s.pay_structure === 'fixed') return `Fixed ${formatCurrency(Number(s.pay_fixed) || 0)}`
+  if (s.pay_structure === 'per_mile') return `$${(Number(s.pay_per_mile) || 0).toFixed(3).replace(/0$/, '')} / mile`
+  return `${Number(s.pay_percent) || 0}% of gross`
+}
 
 interface DriverPayrollData {
   driver_id: number
@@ -127,6 +144,8 @@ export default function PayrollPage() {
   const saveOverride = useSavePayrollOverride()
   const { data: trucksData } = useTrucks()
   const { data: driverSettings } = useDriverPayrollSettings()
+  const savePaySettings = useCreateOrUpdateDriverPayrollSettings()
+  const [payDriverId, setPayDriverId] = useState<number | null>(null) // Pay Structure dialog
   // Each driver type has its own rows.
   const { data: companyRows, isLoading: companyLayoutLoading } = usePayrollLayout('company')
   const { data: ownerRows, isLoading: ownerLayoutLoading } = usePayrollLayout('owner_operator')
@@ -299,14 +318,38 @@ export default function PayrollPage() {
           if (!api && !editedWeeks.has(`${driver.id}_${wn}`)) continue
           const values: Record<string, number> = {}
           let check = 0
-          rowsFor(tabOf(driver.driver_type || 'company')).forEach(row => {
+          const tab = tabOf(driver.driver_type || 'company')
+          const tabLayout = rowsFor(tab)
+          tabLayout.forEach(row => {
             const v = valueOf(row, driver.id, wn, api)
             values[row.key] = v
             if (row.hidden) return
             if (row.kind === 'earning') check += v
             else if (row.kind === 'deduction') check -= v
           })
-          data.weeks[wn] = { values, check_amount: check }
+          // Company drivers with a Pay Structure are paid that instead of Gross:
+          // fixed a week, per mile on Trip Miles, or a percentage of Gross.
+          const ps = settingsMap.get(driver.id)
+          if (tab === 'company' && ps?.pay_structure) {
+            const grossCounted = tabLayout.some(r => r.key === 'gross' && !r.hidden)
+            const base = check - (grossCounted ? values.gross || 0 : 0)
+            const r2 = (n: number) => Math.round(n * 100) / 100
+            const pays: Record<PayStructure, number> = {
+              fixed: Number(ps.pay_fixed) || 0,
+              per_mile: r2((Number(ps.pay_per_mile) || 0) * (values.miles || 0)),
+              percent: r2(((Number(ps.pay_percent) || 0) / 100) * (values.gross || 0)),
+            }
+            const nets = Object.fromEntries(PAY_STRUCTURES.map(k => [k, base + pays[k]])) as Record<PayStructure, number>
+            const set = {
+              fixed: ps.pay_fixed != null && ps.pay_fixed !== '',
+              per_mile: ps.pay_per_mile != null && ps.pay_per_mile !== '',
+              percent: ps.pay_percent != null && ps.pay_percent !== '',
+            }
+            values.driver_pay = pays[ps.pay_structure as PayStructure]
+            data.weeks[wn] = { values, check_amount: nets[ps.pay_structure as PayStructure], pay: { structure: ps.pay_structure, nets, set } }
+          } else {
+            data.weeks[wn] = { values, check_amount: check }
+          }
         }
         return data
       })
@@ -706,6 +749,27 @@ export default function PayrollPage() {
                     </tr>
                   )}
 
+                  {/* Pay structure (company drivers): what each driver is paid */}
+                  {tabRows.length > 0 && driverTab === 'company' && (
+                    <tr>
+                      <td className="px-3 py-2" style={{ ...stickyLabel, backgroundColor: 'var(--monday-bg-primary)', fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>Pay Structure</td>
+                      {tabRows.map(d => {
+                        const text = payStructureText(driverSettings?.find((s: any) => s.driver_id === d.driver_id))
+                        return (
+                          <td
+                            key={d.driver_id}
+                            className="px-3 py-2 cursor-pointer hover:bg-brand/5"
+                            style={{ ...cell, color: text ? 'var(--monday-text-primary)' : 'var(--monday-text-muted)' }}
+                            onClick={() => setPayDriverId(d.driver_id)}
+                            title="Set how this driver is paid"
+                          >
+                            {text ?? 'Set pay'}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )}
+
                   {/* Line items */}
                   {tabRows.length > 0 && visibleRows.map(row => {
                     return (
@@ -816,11 +880,24 @@ export default function PayrollPage() {
                       <td className="px-3 py-2.5" style={{ ...stickyLabel, backgroundColor: '#eef7ec', borderBottom: 'none', fontSize: '12px', fontWeight: 700, color: 'var(--monday-done)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                         Net Pay
                       </td>
-                      {tabRows.map(d => (
-                        <td key={d.driver_id} className="px-3 py-2.5" style={{ ...cell, borderBottom: 'none', fontWeight: 700, color: 'var(--monday-done)' }}>
-                          {d.weeks[selectedWeek] ? formatCurrency(d.weeks[selectedWeek].check_amount) : '-'}
-                        </td>
-                      ))}
+                      {tabRows.map(d => {
+                        const wk = d.weeks[selectedWeek]
+                        return (
+                          <td key={d.driver_id} className="px-3 py-2.5 align-top" style={{ ...cell, borderBottom: 'none', fontWeight: 700, color: 'var(--monday-done)' }}>
+                            {wk ? formatCurrency(wk.check_amount) : '-'}
+                            {/* What net pay would be under the other pay structures */}
+                            {wk?.pay && (
+                              <div style={{ fontSize: '11px', fontWeight: 400, color: 'var(--monday-text-muted)', marginTop: '3px', lineHeight: '15px' }}>
+                                {PAY_STRUCTURES.filter(k => k !== wk.pay!.structure).map(k => (
+                                  <div key={k}>
+                                    {PAY_LABEL[k]}: {wk.pay!.set[k] ? formatCurrency(wk.pay!.nets[k]) : 'no rate'}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                        )
+                      })}
                     </tr>
                   )}
                 </tbody>
@@ -858,6 +935,13 @@ export default function PayrollPage() {
           onSave={(next) => { saveLayout.mutate(next); setRowsDialogOpen(false) }}
           onAmounts={(key) => { setRowsDialogOpen(false); setAmountsRowKey(key) }}
           onDriverSettings={() => { setRowsDialogOpen(false); setSettingsModalOpen(true) }}
+        />
+        <PayStructureDialog
+          driver={drivers.find((d: any) => d.id === payDriverId) || null}
+          settings={driverSettings?.find((s: any) => s.driver_id === payDriverId)}
+          saving={savePaySettings.isPending}
+          onClose={() => setPayDriverId(null)}
+          onSave={(data) => payDriverId && savePaySettings.mutate({ driver_id: payDriverId, ...data }, { onSuccess: () => setPayDriverId(null) })}
         />
         <AmountsDialog
           row={amountsRow}
@@ -1012,6 +1096,94 @@ function RowsDialog({ open, title, rows, onClose, onSave, onAmounts, onDriverSet
 }
 
 // Weekly amount per driver for a fixed custom row.
+// Pay Structure for one company driver: pick fixed / per mile / percentage and
+// set a rate for each (the others show under Net Pay for comparison).
+function PayStructureDialog({ driver, settings, saving, onClose, onSave }: {
+  driver: any | null
+  settings: any
+  saving: boolean
+  onClose: () => void
+  onSave: (data: { pay_structure: PayStructure | null; pay_fixed: number | null; pay_per_mile: number | null; pay_percent: number | null }) => void
+}) {
+  const [structure, setStructure] = useState<PayStructure | null>(null)
+  const [rates, setRates] = useState<Record<PayStructure, string>>({ fixed: '', per_mile: '', percent: '' })
+  useEffect(() => {
+    if (!driver) return
+    const str = (v: any) => (v === null || v === undefined || v === '' ? '' : String(Number(v)))
+    setStructure(settings?.pay_structure ?? null)
+    setRates({ fixed: str(settings?.pay_fixed), per_mile: str(settings?.pay_per_mile), percent: str(settings?.pay_percent) })
+  }, [driver?.id, settings?.pay_structure, settings?.pay_fixed, settings?.pay_per_mile, settings?.pay_percent])
+
+  const num = (s: string) => (s.trim() === '' || isNaN(parseFloat(s)) ? null : parseFloat(s))
+  const invalid = (structure && num(rates[structure]) === null) || (num(rates.percent) ?? 0) > 100
+  const fields: { key: PayStructure; label: string; prefix?: string; suffix: string; step: string; help: string }[] = [
+    { key: 'fixed', label: 'Fixed', prefix: '$', suffix: 'a week', step: '0.01', help: 'The same amount every week' },
+    { key: 'per_mile', label: 'Per mile', prefix: '$', suffix: 'a mile', step: '0.001', help: 'Times the week\u2019s Trip Miles' },
+    { key: 'percent', label: 'Percentage', suffix: '% of gross', step: '0.01', help: 'Of the week\u2019s Gross' },
+  ]
+
+  return (
+    <Dialog open={!!driver} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Pay structure: {driver?.first_name} {driver?.last_name}</DialogTitle>
+          <DialogDescription>
+            The one you pick is paid instead of Gross, and Net Pay shows it. Rates you set for the other two show
+            under Net Pay so you can compare.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          {fields.map(f => (
+            <label
+              key={f.key}
+              className={`flex items-center gap-3 rounded-md border p-3 cursor-pointer ${structure === f.key ? 'border-brand bg-brand/5' : 'border-gray-200'}`}
+            >
+              <input type="radio" name="pay-structure" checked={structure === f.key} onChange={() => setStructure(f.key)} />
+              <div className="flex-1">
+                <div className="text-sm font-medium">{f.label}</div>
+                <div className="text-xs text-gray-500">{f.help}</div>
+              </div>
+              <div className="flex items-center gap-1 text-sm">
+                {f.prefix && <span className="text-gray-500">{f.prefix}</span>}
+                <Input
+                  type="number"
+                  min="0"
+                  step={f.step}
+                  value={rates[f.key]}
+                  onChange={(e) => setRates(r => ({ ...r, [f.key]: e.target.value }))}
+                  onFocus={() => !structure && setStructure(f.key)}
+                  className="h-8 w-24 text-sm"
+                />
+                <span className="text-gray-500 whitespace-nowrap">{f.suffix}</span>
+              </div>
+            </label>
+          ))}
+        </div>
+        <div className="flex items-center justify-between gap-2 pt-2">
+          {settings?.pay_structure ? (
+            <Button
+              variant="ghost"
+              className="text-gray-500"
+              onClick={() => onSave({ pay_structure: null, pay_fixed: num(rates.fixed), pay_per_mile: num(rates.per_mile), pay_percent: num(rates.percent) })}
+            >
+              Remove (pay Gross)
+            </Button>
+          ) : <span />}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button
+              disabled={!structure || !!invalid || saving}
+              onClick={() => onSave({ pay_structure: structure, pay_fixed: num(rates.fixed), pay_per_mile: num(rates.per_mile), pay_percent: num(rates.percent) })}
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function AmountsDialog({ row, drivers, onClose, onSave }: {
   row: PayrollRow | null
   drivers: any[]

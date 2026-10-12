@@ -16,6 +16,12 @@ export interface DriverPayrollSettings {
   parking_weekly: number
   trailer_weekly: number
   misc_weekly: number
+  // Company drivers' Pay Structure row on Payroll (null = paid Gross as before).
+  // Money arrives as decimal strings or numbers; read with Number().
+  pay_structure?: PayStructure | null
+  pay_fixed?: number | string | null
+  pay_per_mile?: number | string | null
+  pay_percent?: number | string | null
   created_at: string
   updated_at?: string
 }
@@ -30,7 +36,13 @@ export interface DriverPayrollSettingsInput {
   parking_weekly?: number
   trailer_weekly?: number
   misc_weekly?: number
+  pay_structure?: PayStructure | null
+  pay_fixed?: number | null
+  pay_per_mile?: number | null
+  pay_percent?: number | null
 }
+
+export type PayStructure = 'fixed' | 'per_mile' | 'percent'
 
 // Get all driver payroll settings
 export function useDriverPayrollSettings() {
