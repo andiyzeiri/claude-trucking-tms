@@ -68,12 +68,14 @@ const tabOf = (driverType: string): DriverTab =>
 
 // One driver's pay for one week: a value per row key (hidden rows included,
 // so stats can still show miles), and net pay from the visible rows only.
-// pay: company drivers with a Pay Structure - net pay under each structure
-// (check_amount is the chosen one); `set` says which ones have a rate.
+// pay: company drivers with a Pay Structure. Their Net Pay (check_amount) is
+// just the driver's pay under the chosen structure; `nets` is the pay under
+// each structure, `set` says which have a rate, and company_net is Gross minus
+// every deduction minus that pay.
 type WeekCell = {
   values: Record<string, number>
   check_amount: number
-  pay?: { structure: PayStructure; nets: Record<PayStructure, number>; set: Record<PayStructure, boolean> }
+  pay?: { structure: PayStructure; nets: Record<PayStructure, number>; set: Record<PayStructure, boolean>; company_net: number }
 }
 
 const PAY_STRUCTURES: PayStructure[] = ['fixed', 'per_mile', 'percent']
@@ -318,6 +320,7 @@ export default function PayrollPage() {
           if (!api && !editedWeeks.has(`${driver.id}_${wn}`)) continue
           const values: Record<string, number> = {}
           let check = 0
+          let deductions = 0
           const tab = tabOf(driver.driver_type || 'company')
           const tabLayout = rowsFor(tab)
           tabLayout.forEach(row => {
@@ -325,28 +328,30 @@ export default function PayrollPage() {
             values[row.key] = v
             if (row.hidden) return
             if (row.kind === 'earning') check += v
-            else if (row.kind === 'deduction') check -= v
+            else if (row.kind === 'deduction') { check -= v; deductions += v }
           })
-          // Company drivers with a Pay Structure are paid that instead of Gross:
-          // fixed a week, per mile on Trip Miles, or a percentage of Gross.
+          // Company drivers with a Pay Structure: Net Pay is the driver's pay -
+          // fixed a week, per mile on Trip Miles, or a percentage of Gross - and
+          // the company keeps Gross minus every deduction minus that pay.
           const ps = settingsMap.get(driver.id)
           if (tab === 'company' && ps?.pay_structure) {
-            const grossCounted = tabLayout.some(r => r.key === 'gross' && !r.hidden)
-            const base = check - (grossCounted ? values.gross || 0 : 0)
             const r2 = (n: number) => Math.round(n * 100) / 100
-            const pays: Record<PayStructure, number> = {
+            const nets: Record<PayStructure, number> = {
               fixed: Number(ps.pay_fixed) || 0,
               per_mile: r2((Number(ps.pay_per_mile) || 0) * (values.miles || 0)),
               percent: r2(((Number(ps.pay_percent) || 0) / 100) * (values.gross || 0)),
             }
-            const nets = Object.fromEntries(PAY_STRUCTURES.map(k => [k, base + pays[k]])) as Record<PayStructure, number>
             const set = {
               fixed: ps.pay_fixed != null && ps.pay_fixed !== '',
               per_mile: ps.pay_per_mile != null && ps.pay_per_mile !== '',
               percent: ps.pay_percent != null && ps.pay_percent !== '',
             }
-            values.driver_pay = pays[ps.pay_structure as PayStructure]
-            data.weeks[wn] = { values, check_amount: nets[ps.pay_structure as PayStructure], pay: { structure: ps.pay_structure, nets, set } }
+            const pay = nets[ps.pay_structure as PayStructure]
+            values.driver_pay = pay
+            data.weeks[wn] = {
+              values, check_amount: pay,
+              pay: { structure: ps.pay_structure, nets, set, company_net: r2((values.gross || 0) - deductions - pay) },
+            }
           } else {
             data.weeks[wn] = { values, check_amount: check }
           }
@@ -900,6 +905,28 @@ export default function PayrollPage() {
                       })}
                     </tr>
                   )}
+
+                  {/* Company drivers with a Pay Structure: Gross - all deductions - Net Pay */}
+                  {tabRows.length > 0 && driverTab === 'company' && tabRows.some(d => d.weeks[selectedWeek]?.pay) && (
+                    <tr>
+                      <td
+                        className="px-3 py-2.5"
+                        style={{ ...stickyLabel, backgroundColor: 'var(--monday-bg-primary)', fontSize: '12px', fontWeight: 700, color: 'var(--monday-text-primary)', textTransform: 'uppercase', letterSpacing: '0.03em' }}
+                        title="Gross minus every deduction minus the driver's Net Pay"
+                      >
+                        Company Net
+                      </td>
+                      {tabRows.map(d => {
+                        const pay = d.weeks[selectedWeek]?.pay
+                        const v = pay?.company_net
+                        return (
+                          <td key={d.driver_id} className="px-3 py-2.5" style={{ ...cell, fontWeight: 700, color: v === undefined ? 'var(--monday-text-muted)' : v < 0 ? 'var(--monday-stuck)' : 'var(--monday-text-primary)' }}>
+                            {v === undefined ? '-' : v < 0 ? `(${formatCurrency(-v)})` : formatCurrency(v)}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1128,8 +1155,8 @@ function PayStructureDialog({ driver, settings, saving, onClose, onSave }: {
         <DialogHeader>
           <DialogTitle>Pay structure: {driver?.first_name} {driver?.last_name}</DialogTitle>
           <DialogDescription>
-            The one you pick is paid instead of Gross, and Net Pay shows it. Rates you set for the other two show
-            under Net Pay so you can compare.
+            The one you pick is the driver&apos;s Net Pay. Company Net below it is Gross minus every deduction minus
+            that pay. Rates you set for the other two show under Net Pay so you can compare.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
