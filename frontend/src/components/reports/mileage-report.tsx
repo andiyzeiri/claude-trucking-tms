@@ -348,7 +348,7 @@ function TruckRow({ v, trucks, withOdometer, open, onToggle, states, statesLoadi
           <td
             className="px-4 py-2.5 text-right font-medium"
             title={v.odometer_miles != null
-              ? `${v.start_odometer?.toLocaleString()} (${v.start_time ? new Date(v.start_time).toLocaleString() : ''}) → ${v.end_odometer?.toLocaleString()} (${v.end_time ? new Date(v.end_time).toLocaleString() : ''})`
+              ? `${v.start_odometer?.toLocaleString()} (${v.start_time ? new Date(v.start_time).toLocaleString() : ''}) → ${v.end_odometer?.toLocaleString()} (${v.end_time ? new Date(v.end_time).toLocaleString() : ''}) — ${v.odometer_source === 'eld' ? 'live ELD odometer' : 'first and last inspection (DVIR)'}`
               : 'No inspections with an odometer in this period'}
           >
             {v.odometer_miles != null ? fmtMiles(v.odometer_miles) : <span className="text-gray-400">—</span>}

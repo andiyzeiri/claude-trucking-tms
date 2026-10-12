@@ -26,7 +26,7 @@ from app.database import get_db
 from app.models.eld_connection import EldConnection
 from app.models.truck import Truck
 from app.models.user import User
-from app.services import peak_eld, secret_box
+from app.services import eld_odometer, peak_eld, secret_box
 
 router = APIRouter()
 
@@ -60,7 +60,9 @@ class VehicleMiles(BaseModel):
     truck_number: Optional[str] = None
     driver_name: Optional[str] = None
     matched_by: Optional[Literal["manual", "unit", "vin"]] = None
-    # With ?odometer=true: first and last inspection (DVIR) odometer in the range.
+    # With ?odometer=true: odometer at the start and end of the range, from
+    # recorded live ELD readings ("eld") or else the first/last inspection ("dvir").
+    odometer_source: Optional[Literal["eld", "dvir"]] = None
     odometer_miles: Optional[float] = None
     start_odometer: Optional[int] = None
     start_time: Optional[datetime] = None
@@ -184,6 +186,10 @@ async def connect(
     conn.last_error = None
     await db.commit()
     await db.refresh(conn)
+    try:
+        await eld_odometer.record(db, conn)  # start the odometer history right away
+    except Exception:
+        await db.rollback()
     return _conn_out(conn)
 
 
@@ -210,13 +216,21 @@ async def mileage(
 ):
     """Miles per truck for local days start..end (inclusive).
 
-    `miles` is Peak's IFTA (GPS) distance. With odometer=true each truck that
-    drove also gets its odometer at the first and last inspection in the
-    range, and odometer_miles = last - first (what Payroll's Total Miles uses).
+    `miles` is Peak's IFTA (GPS) distance. With odometer=true each truck also
+    gets its odometer at the start and end of the range and odometer_miles =
+    end - start (what Payroll's Total Miles uses): from the recorded live ELD
+    odometer when recording covers the range, else the first and last
+    inspection (DVIR) in it.
     """
     conn, key = await _api_key(db, current_user.company_id)
     start_ms, end_ms = _range_ms(start, end, tz)
     spans: Dict[str, Optional[dict]] = {}
+    recorded: Dict[str, dict] = {}
+    if odometer:
+        recorded = await eld_odometer.spans(
+            db, conn,
+            datetime.fromtimestamp(start_ms / 1000, timezone.utc), datetime.fromtimestamp(end_ms / 1000, timezone.utc),
+        )
     try:
         vehicles, unit = await peak_eld.vehicles(key)
         miles = await peak_eld.miles_by_vehicle(key, start_ms, end_ms, unit)
@@ -232,7 +246,7 @@ async def mileage(
                             raise
                         spans[vid] = None  # this truck falls back to GPS miles
 
-            await asyncio.gather(*(one(vid) for vid, m in miles.items() if m > 0))
+            await asyncio.gather(*(one(vid) for vid, m in miles.items() if m > 0 and vid not in recorded))
     except peak_eld.PeakError as e:
         await _record(db, conn, str(e))
         raise _peak_error(e)
@@ -262,8 +276,15 @@ async def mileage(
             out.append(_vehicle_row(eld_id, {"vehicleId": eld_id, "active": False}, m, manual, by_id, by_unit, by_vin))
 
     for r in out:
-        span = spans.get(r.eld_id)
-        if span:
+        if r.eld_id in recorded:
+            span = recorded[r.eld_id]
+            r.odometer_source = "eld"
+            r.odometer_miles = span["miles"]
+            r.start_odometer, r.end_odometer = span["start_odometer"], span["end_odometer"]
+            r.start_time, r.end_time = span["start_time"], span["end_time"]
+        elif spans.get(r.eld_id):
+            span = spans[r.eld_id]
+            r.odometer_source = "dvir"
             r.odometer_miles = span["miles"]
             r.start_odometer, r.end_odometer = span["start_odometer"], span["end_odometer"]
             r.start_time = datetime.fromtimestamp(span["start_time"] / 1000, timezone.utc)

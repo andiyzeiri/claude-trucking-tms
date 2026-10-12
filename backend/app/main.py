@@ -13,6 +13,7 @@ from app.api.v1.api import api_router
 from app.health import router as health_router
 from app.services.dedicated_lane_scheduler import generate_loads_from_dedicated_lanes
 from app.services.fuel_card_sync import sync_all as sync_fuel_cards
+from app.services.eld_odometer import record_all as record_eld_odometers
 from app.documents.pipeline import run_ingestion_job, run_retry_job
 from app.sms.pod_reminders import run_pod_reminder_job
 
@@ -40,6 +41,18 @@ async def lifespan(app: FastAPI):
         id='generate_dedicated_loads',
         name='Generate loads from dedicated lanes',
         replace_existing=True
+    )
+
+    # Peak ELD: record each truck's live odometer, so a week's Total Miles is
+    # end-of-week odometer minus start-of-week odometer.
+    scheduler.add_job(
+        record_eld_odometers,
+        IntervalTrigger(minutes=10),
+        id="eld_odometer",
+        name="Record ELD odometers",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
     )
 
     # Fuel card feed (WEX Fleet One / EFS): WEX drops a transaction file on

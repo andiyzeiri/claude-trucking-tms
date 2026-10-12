@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from .base import Base
 
@@ -23,3 +23,25 @@ class EldConnection(Base):
     connected_by = Column(Integer, ForeignKey("users.id"))
     last_ok_at = Column(DateTime(timezone=True))
     last_error = Column(String(255))
+    # When odometer recording started (app/services/eld_odometer.py); weeks
+    # starting after this get Total Miles from the recorded odometer.
+    odometer_since = Column(DateTime(timezone=True))
+
+
+class EldOdometerReading(Base):
+    """
+    A truck's odometer as reported live by the ELD (Peak /api/v0/locations),
+    recorded every few minutes. recorded_at is the ELD's own location time, so
+    a parked truck isn't recorded again until it reports something new.
+    Odometer is stored in miles.
+    """
+
+    __tablename__ = "eld_odometer_readings"
+    __table_args__ = (
+        UniqueConstraint("company_id", "eld_vehicle_id", "recorded_at", name="uq_eld_odometer_reading"),
+    )
+
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    eld_vehicle_id = Column(String(64), nullable=False)
+    recorded_at = Column(DateTime(timezone=True), nullable=False)
+    odometer = Column(Numeric(12, 1), nullable=False)

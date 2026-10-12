@@ -22,7 +22,9 @@ export interface VehicleMiles {
   truck_number: string | null
   driver_name: string | null
   matched_by: 'manual' | 'unit' | 'vin' | null
-  // Only with odometer: first and last inspection (DVIR) readings in the range
+  // Only with odometer: odometer at the start and end of the range, from recorded
+  // live ELD readings ('eld') or else the first/last inspection ('dvir')
+  odometer_source?: 'eld' | 'dvir' | null
   odometer_miles?: number | null
   start_odometer?: number | null
   start_time?: string | null

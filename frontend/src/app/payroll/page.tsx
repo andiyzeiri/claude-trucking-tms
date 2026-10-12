@@ -220,7 +220,8 @@ export default function PayrollPage() {
       m.set(v.truck_id, {
         miles: odo ? v.odometer_miles! : v.miles,
         how: odo
-          ? `Odometer ${v.start_odometer?.toLocaleString()} (${when(v.start_time)}) → ${v.end_odometer?.toLocaleString()} (${when(v.end_time)}), Peak unit ${v.unit}`
+          ? `Odometer ${v.start_odometer?.toLocaleString()} (${when(v.start_time)}) → ${v.end_odometer?.toLocaleString()} (${when(v.end_time)}), ` +
+            (v.odometer_source === 'eld' ? `live ELD odometer, Peak unit ${v.unit}` : `first and last inspection (DVIR) of the week, Peak unit ${v.unit}`)
           : `No inspections with an odometer this week - GPS miles from Peak unit ${v.unit}`,
       })
     })

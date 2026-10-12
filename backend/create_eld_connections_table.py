@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create eld_connections (Peak ELD API key, Reports > Mileage)."""
+"""Create eld_connections (Peak ELD API key, Reports > Mileage) and eld_odometer_readings."""
 import asyncio
 import os
 import json
@@ -37,6 +37,21 @@ async def create_tables():
             );
         """))
         print("Created eld_connections table")
+        await conn.execute(text("ALTER TABLE eld_connections ADD COLUMN IF NOT EXISTS odometer_since TIMESTAMP WITH TIME ZONE;"))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS eld_odometer_readings (
+                id SERIAL PRIMARY KEY,
+                company_id INTEGER NOT NULL REFERENCES companies(id),
+                eld_vehicle_id VARCHAR(64) NOT NULL,
+                recorded_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                odometer NUMERIC(12, 1) NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE,
+                CONSTRAINT uq_eld_odometer_reading UNIQUE (company_id, eld_vehicle_id, recorded_at)
+            );
+        """))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_eld_odometer_lookup ON eld_odometer_readings(company_id, eld_vehicle_id, recorded_at);"))
+        print("Created eld_odometer_readings table")
 
     await engine.dispose()
     print("eld_connections migration completed!")

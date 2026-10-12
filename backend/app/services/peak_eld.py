@@ -50,14 +50,14 @@ def _key_id(api_key: str) -> str:
     return hashlib.sha256(api_key.encode()).hexdigest()[:16]
 
 
-async def _get(api_key: str, path: str, params: Dict[str, Any]) -> Dict[str, Any]:
+async def _get(api_key: str, path: str, params: Dict[str, Any], cache: bool = True) -> Dict[str, Any]:
     kid = _key_id(api_key)
     failures, open_until = _breaker.get(kid, (0, 0.0))
     if open_until > time.monotonic():
         raise PeakError("Peak ELD isn't responding - try again in a minute")
 
     cache_key = (kid, path, tuple(sorted((k, str(v)) for k, v in params.items())))
-    hit = _cache.get(cache_key)
+    hit = _cache.get(cache_key) if cache else None
     if hit and hit[0] > time.monotonic():
         return hit[1]
 
@@ -169,6 +169,17 @@ async def miles_by_vehicle(api_key: str, start_ms: int, end_ms: int, unit: Optio
         vid = str(r.get("id") or r.get("vehicleId") or "")
         if vid:
             out[vid] = out.get(vid, 0.0) + _to_miles(r.get("distance"), unit)
+    return out
+
+
+async def live_odometers(api_key: str, unit: Optional[str]) -> List[Tuple[str, int, float]]:
+    """(Peak vehicle id, location time ms, odometer in miles) for every truck, as of now."""
+    data = await _get(api_key, "/api/v0/locations", {}, cache=False)
+    out = []
+    for v in data.get("vehicles") or []:
+        vid, when, odo = str(v.get("id") or ""), v.get("locationTime"), v.get("odometer")
+        if vid and when and odo:
+            out.append((vid, int(when), _to_miles(odo, unit)))
     return out
 
 
