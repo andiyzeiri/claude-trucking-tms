@@ -24,4 +24,3 @@ requests>=2.31
 pillow>=10.4.0
 pillow-heif>=0.18.0
 pypdf>=4.0.0
-paramiko>=3.4,<4

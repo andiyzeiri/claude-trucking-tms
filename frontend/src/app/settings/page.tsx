@@ -12,7 +12,6 @@ import { useCompany } from '@/hooks/use-company'
 import UserManagement from '@/components/UserManagement'
 import EmailReportsCard from '@/components/settings/email-reports-card'
 import EldCard from '@/components/settings/eld-card'
-import FuelCardCard from '@/components/settings/fuel-card-card'
 
 export default function SettingsPage() {
   const { user, isLoading: userLoading } = useAuth()
@@ -327,9 +326,6 @@ export default function SettingsPage() {
 
         {/* ELD (Peak) - API key for Reports > Mileage */}
         {!isLoading && isAdmin && <EldCard />}
-
-        {/* Fuel card (WEX Fleet One / EFS) - card swipes into Fuel */}
-        {!isLoading && isAdmin && <FuelCardCard />}
 
         {/* Emailed reports - admin only, matching the endpoints' guard */}
         {!isLoading && isAdmin && <EmailReportsCard />}
