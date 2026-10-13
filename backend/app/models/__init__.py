@@ -23,6 +23,7 @@ from .report_recipient import ReportRecipient
 from .payroll_layout import PayrollLayout
 from .driver_debt import DriverDebtEntry, DriverDebtPlan
 from .eld_connection import EldConnection, EldOdometerReading
+from .fuel_card import FuelCardConnection, FuelCardTransaction
 from .sms import LoadSmsMessage
 from .loads_ai import InboundEmail, IngestedDocument
 
@@ -53,6 +54,8 @@ __all__ = [
     "PayrollLayout",
     "EldConnection",
     "EldOdometerReading",
+    "FuelCardConnection",
+    "FuelCardTransaction",
     "InboundEmail",
     "IngestedDocument",
     "LoadSmsMessage",
