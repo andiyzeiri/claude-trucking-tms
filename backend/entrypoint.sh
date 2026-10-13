@@ -183,6 +183,7 @@ python3 create_eld_connections_table.py || echo "⚠️  create_eld_connections_
 # Create fuel card tables (WEX Fleet One / EFS feed into Fuel)
 echo "🔧 Creating fuel card tables..."
 python3 create_fuel_card_tables.py || echo "⚠️  create_fuel_card_tables.py had errors, continuing..."
+python3 backfill_shippers_receivers.py || echo "⚠️  backfill_shippers_receivers.py had errors, continuing..."
 
 # Note: Recurring expenses are generated via POST /api/v1/expenses/generate-recurring
 # This should be called daily via a cron job or on page load

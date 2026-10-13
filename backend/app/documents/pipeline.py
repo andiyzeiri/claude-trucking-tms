@@ -40,6 +40,7 @@ from app.documents.extraction.base import (
 )
 from app.documents.extraction.registry import get_extractor
 from app.documents.extraction.schemas import AMAZON_APPOINTMENT_INSTRUCTION
+from app.documents.facilities import sync_places_safely
 from app.documents.mapping import build_load_draft
 from app.documents.sources.base import SourceAttachment, SourceMessage
 from app.documents.sources.highway import parse_highway_notification
@@ -709,6 +710,8 @@ async def process_document(
         summary.pods_merged += 1
     elif await _adopt_unmatched_pod(session, company_id, document):
         summary.pods_attached += 1
+    # Its pickup and delivery companies onto the Shippers / Receivers pages.
+    await sync_places_safely(session, company_id, [document])
     logger.info(
         "loads-ai: AI load %s ready from %s (document #%s)",
         draft.get("load_number") or draft.get("broker_load_number") or "(no number)",

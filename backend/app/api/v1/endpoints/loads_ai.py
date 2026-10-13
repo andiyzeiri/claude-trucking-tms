@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.security import get_current_admin_user, get_loads_ai_user
 from app.database import get_db
+from app.documents.facilities import sync_places_safely
 from app.documents.extraction.base import (
     DocumentBytes,
     ExtractionError,
@@ -839,6 +840,8 @@ async def update_ai_load(
     # Reassign rather than mutate in place: SQLAlchemy does not track
     # changes inside a plain JSONB dict.
     doc.draft = merged
+    if {"shipper_name", "receiver_name", "pickup_location", "delivery_location"} & changes.keys():
+        await sync_places_safely(db, current_user.company_id, [doc])
     await db.commit()
     await db.refresh(doc)
     # Text the driver only when the assignment actually changes; the page
