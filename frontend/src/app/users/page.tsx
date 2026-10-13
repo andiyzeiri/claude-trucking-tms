@@ -24,6 +24,7 @@ import {
   Settings,
   Calculator,
   Receipt,
+  Warehouse,
   Fuel,
   CalendarDays,
   Sparkles
@@ -82,6 +83,8 @@ const ALL_PAGES = [
   { id: 'trucks', name: 'Equipment', icon: Truck, description: 'Trucks and trailers' },
   { id: 'drivers', name: 'Drivers', icon: Users, description: 'Driver roster management' },
   { id: 'customers', name: 'Customers', icon: Building2, description: 'Customer relationships' },
+  { id: 'shippers', name: 'Shippers', icon: Warehouse, description: 'Shipper locations' },
+  { id: 'receivers', name: 'Receivers', icon: Warehouse, description: 'Receiver locations' },
   { id: 'fuel', name: 'Fuel', icon: Fuel, description: 'Fuel expense tracking' },
   { id: 'payroll', name: 'Payroll', icon: Calculator, description: 'Driver payroll management' },
   { id: 'invoices', name: 'Invoices', icon: FileText, description: 'Invoice generation' },
@@ -95,7 +98,7 @@ const ALL_PAGES = [
 const ROLE_PAGES: Record<string, string[]> = {
   company_admin: ALL_PAGES.map(p => p.id),
   super_admin: ALL_PAGES.map(p => p.id),
-  dispatcher: ['dashboard', 'dispatch', 'loads', 'trucks', 'drivers', 'customers', 'invoices', 'reports'],
+  dispatcher: ['dashboard', 'dispatch', 'loads', 'trucks', 'drivers', 'customers', 'shippers', 'receivers', 'invoices', 'reports'],
   driver: ['dashboard', 'loads'],
   customer: ['dashboard', 'loads', 'invoices'],
   viewer: ['dashboard', 'dispatch', 'loads', 'trucks', 'drivers', 'customers', 'invoices', 'reports'],
