@@ -72,6 +72,8 @@ async def create_tables():
             );
         """))
         await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fuel_card_tx_company_status ON fuel_card_transactions(company_id, status);"))
+        # A swipe moved to another truck by hand (two trucks sharing a card).
+        await conn.execute(text("ALTER TABLE fuel_card_transactions ADD COLUMN IF NOT EXISTS manual_truck BOOLEAN NOT NULL DEFAULT FALSE;"))
         print("Created fuel_card_transactions table")
 
     await engine.dispose()

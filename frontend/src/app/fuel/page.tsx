@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
-import { ChevronRight, ChevronDown, ChevronLeft, Truck, BarChart3, GripVertical, Plus, X } from 'lucide-react'
+import { ChevronRight, ChevronDown, ChevronLeft, Truck, BarChart3, GripVertical, Plus, X, CreditCard } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { useTrucks, useCreateTruck, useDeleteTruck } from '@/hooks/use-trucks'
@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/utils'
 import { Fuel } from '@/types'
 import { useColumnWidths } from '@/hooks/use-column-widths'
 import { ColumnWidthControl } from '@/components/ui/column-width-control'
+import { FuelCardsView } from '@/components/fuel/fuel-cards-view'
 
 type EditingCell = {
   weekNumber: number
@@ -97,8 +98,8 @@ interface FuelEntryWithWeek extends Fuel {
   weekNumber: number
 }
 
-// Tab type - either 'summary' or a year number
-type TabType = 'summary' | number
+// Tab type - 'summary', 'cards' (WEX cards) or a year number
+type TabType = 'summary' | 'cards' | number
 
 export default function FuelPage() {
   const { data: trucksData, isLoading: trucksLoading } = useTrucks()
@@ -249,7 +250,7 @@ export default function FuelPage() {
 
   // Filter fuel entries by selected year (only for year tab view)
   const fuelEntries: FuelEntryWithWeek[] = useMemo(() => {
-    if (activeTab === 'summary') return []
+    if (typeof activeTab !== 'number') return []
     return fuelEntriesWithYear.filter(entry => entry.isoYear === activeTab)
   }, [fuelEntriesWithYear, activeTab])
 
@@ -1236,6 +1237,20 @@ export default function FuelPage() {
             Summary
           </button>
 
+          {/* Cards Tab: WEX cards, their trucks and transactions */}
+          <button
+            onClick={() => setActiveTab('cards')}
+            className="px-4 py-2 text-sm font-medium transition-all relative flex items-center gap-2"
+            style={{
+              color: activeTab === 'cards' ? 'var(--monday-cornflower)' : 'var(--monday-text-secondary)',
+              borderBottom: activeTab === 'cards' ? '2px solid var(--monday-cornflower)' : '2px solid transparent',
+              marginBottom: '-1px'
+            }}
+          >
+            <CreditCard className="h-4 w-4" />
+            Cards
+          </button>
+
           {/* Divider */}
           <div className="h-6 w-px bg-gray-300 mx-2"></div>
 
@@ -1260,7 +1275,9 @@ export default function FuelPage() {
         </div>
 
         {/* Content based on active tab */}
-        {activeTab === 'summary' ? renderSummaryView() : renderWeeklyView()}
+        {activeTab === 'summary' ? renderSummaryView()
+          : activeTab === 'cards' ? <FuelCardsView trucks={activeTrucks} />
+          : renderWeeklyView()}
       </div>
     </Layout>
   )

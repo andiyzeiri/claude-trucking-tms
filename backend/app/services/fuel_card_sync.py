@@ -240,6 +240,71 @@ async def reprocess_waiting(db: AsyncSession, conn: FuelCardConnection) -> int:
     return done
 
 
+class TruckChoiceError(ValueError):
+    """A truck change a person has to fix (shown as is)."""
+
+
+async def _move(db: AsyncSession, company_id: int, tx: FuelCardTransaction, truck: Truck, created: List[Fuel]) -> None:
+    """Put a swipe - and the Fuel entry it became - on `truck`."""
+    if tx.status == "needs_truck":
+        tx.status = await _make_fuel(db, company_id, tx, truck, created)
+        return
+    tx.truck_id = truck.id
+    if tx.fuel_id:
+        fuel = await db.get(Fuel, tx.fuel_id)
+        if fuel is not None and fuel.company_id == company_id:
+            fuel.truck_id = truck.id
+            fuel.driver_id = truck.current_driver_id
+
+
+async def set_transaction_truck(db: AsyncSession, conn: FuelCardConnection, tx: FuelCardTransaction,
+                                truck_id: Optional[int]) -> None:
+    """
+    One swipe on a chosen truck (e.g. two trucks sharing a card), or with
+    truck_id None back on the card's truck. Moves its Fuel entry too, so the
+    Fuel page and payroll follow.
+    """
+    if tx.status == "not_fuel":
+        raise TruckChoiceError("This transaction has no fuel or DEF on it")
+    trucks = await _trucks(db, conn)
+    if truck_id is None:
+        truck = trucks.resolve(tx.card_last6, tx.unit)
+        if truck is None:
+            raise TruckChoiceError("This card has no truck yet - assign the card a truck first")
+        tx.manual_truck = False
+    else:
+        truck = trucks.by_id.get(truck_id)
+        if truck is None:
+            raise TruckChoiceError("Truck not found")
+        tx.manual_truck = True
+    created: List[Fuel] = []
+    await _move(db, conn.company_id, tx, truck, created)
+    await db.commit()
+    await _post_ledger(created)
+
+
+async def apply_card_truck(db: AsyncSession, conn: FuelCardConnection, card_last6: str) -> int:
+    """After a card's truck changes: move its earlier swipes (not ones set by hand) to it."""
+    trucks = await _trucks(db, conn)
+    rows = (await db.execute(
+        select(FuelCardTransaction).where(
+            FuelCardTransaction.company_id == conn.company_id,
+            FuelCardTransaction.card_last6 == card_last6,
+            FuelCardTransaction.manual_truck.is_(False),
+            FuelCardTransaction.status.in_(("imported", "linked")),
+        )
+    )).scalars().all()
+    created: List[Fuel] = []
+    moved = 0
+    for tx in rows:
+        truck = trucks.resolve(tx.card_last6, tx.unit)
+        if truck is not None and truck.id != tx.truck_id:
+            await _move(db, conn.company_id, tx, truck, created)
+            moved += 1
+    await db.commit()
+    return moved
+
+
 async def sync_all() -> None:
     """Scheduler job: sync every connected company. Never raises."""
     from app.database import AsyncSessionLocal

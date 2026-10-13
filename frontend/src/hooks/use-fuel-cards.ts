@@ -46,6 +46,21 @@ export interface FuelCardTransaction {
   truck_id: number | null
   truck_number: string | null
   fuel_id: number | null
+  manual_truck: boolean  // put on another truck by hand (two trucks sharing a card)
+}
+
+// A card seen in the WEX files and the truck it's assigned to (Fuel > Cards).
+export interface FuelCard {
+  card_last6: string
+  truck_id: number | null
+  truck_number: string | null
+  transactions: number
+  needs_truck: number
+  manual: number
+  total: string
+  last_used: string | null
+  last_unit: string | null
+  last_driver: string | null
 }
 
 const CONNECTION_KEY = ['fuel-card-connection']
@@ -56,6 +71,7 @@ function refreshAfterImport(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ['fuel'] })
   queryClient.invalidateQueries({ queryKey: ['payroll'] })
   queryClient.invalidateQueries({ queryKey: ['fuel-card-transactions'] })
+  queryClient.invalidateQueries({ queryKey: ['fuel-cards'] })
 }
 
 const syncMessage = (r: FuelCardSync) => {
@@ -123,10 +139,40 @@ export function useFuelCardTransactions(status: FuelCardTransaction['status'] | 
   })
 }
 
+export function useFuelCards(enabled = true) {
+  return useQuery<FuelCard[]>({
+    queryKey: ['fuel-cards'],
+    queryFn: async () => (await api.get('/v1/fuel-cards/cards')).data,
+    enabled,
+  })
+}
+
+export function useCardTransactions(card: string | null) {
+  return useQuery<FuelCardTransaction[]>({
+    queryKey: ['fuel-card-transactions', 'card', card],
+    queryFn: async () => (await api.get('/v1/fuel-cards/transactions', { params: { card, limit: 2000 } })).data,
+    enabled: !!card,
+  })
+}
+
+// One swipe on a different truck; truck_id null = back to the card's truck.
+export function useSetTransactionTruck() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, truck_id }: { id: number; truck_id: number | null }): Promise<FuelCardTransaction> =>
+      (await api.put(`/v1/fuel-cards/transactions/${id}/truck`, { truck_id })).data,
+    onSuccess: (tx) => {
+      refreshAfterImport(queryClient)
+      toast.success(tx.manual_truck ? `Moved to truck ${tx.truck_number}` : `Back on the card's truck (${tx.truck_number})`)
+    },
+    onError: (error: any) => toast.error(errorText(error, 'Could not change the truck')),
+  })
+}
+
 export function useSetCardTruck() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (body: { card_last6: string; truck_id: number | null }): Promise<FuelCardConnection> =>
+    mutationFn: async (body: { card_last6: string; truck_id: number | null; apply_to_existing?: boolean }): Promise<FuelCardConnection> =>
       (await api.put('/v1/fuel-cards/card-map', body)).data,
     onSuccess: (conn) => {
       queryClient.setQueryData(CONNECTION_KEY, conn)

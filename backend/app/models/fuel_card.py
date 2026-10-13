@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, false
 from sqlalchemy.dialects.postgresql import JSONB
 from .base import Base
 
@@ -69,3 +69,6 @@ class FuelCardTransaction(Base):
     status = Column(String(20), nullable=False)
     truck_id = Column(Integer, ForeignKey("trucks.id"))
     fuel_id = Column(Integer, ForeignKey("fuel.id", ondelete="SET NULL"))
+    # Truck picked for this one swipe on the Fuel page's Cards tab (two trucks
+    # sharing a card); otherwise it follows the card's truck.
+    manual_truck = Column(Boolean, nullable=False, default=False, server_default=false())

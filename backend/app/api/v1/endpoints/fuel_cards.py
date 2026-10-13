@@ -76,11 +76,31 @@ class TransactionOut(BaseModel):
     truck_id: Optional[int] = None
     truck_number: Optional[str] = None
     fuel_id: Optional[int] = None
+    manual_truck: bool = False
 
 
 class CardMapIn(BaseModel):
     card_last6: str = Field(..., min_length=4, max_length=6, pattern=r"^\d+$")
     truck_id: Optional[int] = None  # null = match by the UNIT prompt again
+    # Also move the card's earlier swipes (except ones set by hand) to this truck.
+    apply_to_existing: bool = False
+
+
+class CardOut(BaseModel):
+    card_last6: str
+    truck_id: Optional[int] = None      # the card's truck (Cards tab)
+    truck_number: Optional[str] = None
+    transactions: int
+    needs_truck: int
+    manual: int                         # swipes put on another truck by hand
+    total: Decimal                      # fuel + DEF
+    last_used: Optional[datetime] = None
+    last_unit: Optional[str] = None
+    last_driver: Optional[str] = None
+
+
+class TransactionTruckIn(BaseModel):
+    truck_id: Optional[int] = None  # null = back to the card's truck
 
 
 async def _connection(db: AsyncSession, company_id: int) -> Optional[FuelCardConnection]:
@@ -190,7 +210,8 @@ async def sync_now(
 @router.get("/transactions", response_model=List[TransactionOut])
 async def list_transactions(
     status: Optional[str] = Query(None, pattern="^(imported|linked|needs_truck|not_fuel)$"),
-    limit: int = Query(200, ge=1, le=1000),
+    card: Optional[str] = Query(None, pattern=r"^\d{4,6}$"),
+    limit: int = Query(200, ge=1, le=2000),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -199,18 +220,78 @@ async def list_transactions(
     )
     if status:
         q = q.where(FuelCardTransaction.status == status)
-    q = q.order_by(FuelCardTransaction.transaction_date.desc().nullslast()).limit(limit)
-    out = []
-    for tx, truck_number in (await db.execute(q)).all():
-        out.append(TransactionOut(
-            id=tx.id, external_id=tx.external_id, transaction_date=tx.transaction_date,
-            card_last6=tx.card_last6, unit=tx.unit, driver_prompt=tx.driver_prompt, location=tx.location,
-            fuel_gallons=tx.fuel_gallons or 0, fuel_amount=tx.fuel_amount or 0,
-            def_gallons=tx.def_gallons or 0, def_amount=tx.def_amount or 0,
-            other_items=tx.other_items, net_total=tx.net_total or 0, status=tx.status,
-            truck_id=tx.truck_id, truck_number=truck_number, fuel_id=tx.fuel_id,
-        ))
-    return out
+    if card:
+        q = q.where(FuelCardTransaction.card_last6 == card)
+    q = q.order_by(FuelCardTransaction.transaction_date.desc().nullslast(), FuelCardTransaction.id.desc()).limit(limit)
+    return [_tx_out(tx, truck_number) for tx, truck_number in (await db.execute(q)).all()]
+
+
+def _tx_out(tx: FuelCardTransaction, truck_number: Optional[str]) -> TransactionOut:
+    return TransactionOut(
+        id=tx.id, external_id=tx.external_id, transaction_date=tx.transaction_date,
+        card_last6=tx.card_last6, unit=tx.unit, driver_prompt=tx.driver_prompt, location=tx.location,
+        fuel_gallons=tx.fuel_gallons or 0, fuel_amount=tx.fuel_amount or 0,
+        def_gallons=tx.def_gallons or 0, def_amount=tx.def_amount or 0,
+        other_items=tx.other_items, net_total=tx.net_total or 0, status=tx.status,
+        truck_id=tx.truck_id, truck_number=truck_number, fuel_id=tx.fuel_id,
+        manual_truck=bool(tx.manual_truck),
+    )
+
+
+@router.get("/cards", response_model=List[CardOut])
+async def list_cards(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Every card seen in the WEX files, with the truck it's assigned to."""
+    conn = await _connection(db, current_user.company_id)
+    card_map = (conn.card_map if conn else None) or {}
+    trucks = {t.id: t.truck_number for t in (await db.execute(
+        select(Truck).where(Truck.company_id == current_user.company_id)
+    )).scalars().all()}
+    rows = (await db.execute(
+        select(FuelCardTransaction).where(FuelCardTransaction.company_id == current_user.company_id)
+        .order_by(FuelCardTransaction.transaction_date.desc().nullslast(), FuelCardTransaction.id.desc())
+    )).scalars().all()
+    cards: dict = {}
+    for tx in rows:
+        key = tx.card_last6 or ""
+        c = cards.get(key)
+        if c is None:  # newest swipe first
+            pinned = card_map.get(key)
+            c = cards[key] = CardOut(
+                card_last6=key, truck_id=int(pinned) if pinned else None,
+                truck_number=trucks.get(int(pinned)) if pinned else None,
+                transactions=0, needs_truck=0, manual=0, total=Decimal(0),
+                last_used=tx.transaction_date, last_unit=tx.unit, last_driver=tx.driver_prompt,
+            )
+        c.transactions += 1
+        c.needs_truck += tx.status == "needs_truck"
+        c.manual += bool(tx.manual_truck)
+        if tx.status != "not_fuel":
+            c.total += Decimal(tx.fuel_amount or 0) + Decimal(tx.def_amount or 0)
+    return sorted(cards.values(), key=lambda c: c.card_last6)
+
+
+@router.put("/transactions/{tx_id}/truck", response_model=TransactionOut)
+async def set_transaction_truck(
+    tx_id: int,
+    body: TransactionTruckIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Put one swipe (and its Fuel entry) on a different truck, or back on the card's truck."""
+    conn = await _connection(db, current_user.company_id)
+    tx = await db.get(FuelCardTransaction, tx_id)
+    if conn is None or tx is None or tx.company_id != current_user.company_id:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    try:
+        await fuel_card_sync.set_transaction_truck(db, conn, tx, body.truck_id)
+    except fuel_card_sync.TruckChoiceError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    await db.refresh(tx)
+    truck = await db.get(Truck, tx.truck_id) if tx.truck_id else None
+    return _tx_out(tx, truck.truck_number if truck else None)
 
 
 @router.put("/card-map", response_model=ConnectionOut)
@@ -234,5 +315,7 @@ async def set_card_truck(
         mapping[body.card_last6] = body.truck_id
     conn.card_map = mapping
     await db.commit()
+    if body.apply_to_existing:
+        await fuel_card_sync.apply_card_truck(db, conn, body.card_last6)
     await fuel_card_sync.reprocess_waiting(db, conn)
     return await _out(db, conn)
