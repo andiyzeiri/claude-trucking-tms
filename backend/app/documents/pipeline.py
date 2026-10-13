@@ -379,6 +379,15 @@ async def _attach_pod_to_ai_load(
 
     if len(matches) == 1 and pod_url:
         target, hit = matches[0]
+        theirs = all_refs(target)
+        if target.status == DocumentStatus.POD_ONLY and refs - theirs and theirs - refs:
+            # Matched another missing-ratecon load only on numbers both papers
+            # share - twin loads (same shipper, consignee and product) print
+            # the same item code and weights - while this paper carries its
+            # own numbers (shipper's / pickup / seal), as does the other: a
+            # different load, kept as its own missing-ratecon load. (A re-sent
+            # copy of the same POD has no numbers the first one lacks.)
+            return True
         if (target.draft or {}).get("pod_url"):
             document.status = DocumentStatus.POD_UNMATCHED
             document.warnings = [f"Proof of delivery for load {label(target)}, which already has a POD - kept the existing one.{lumper_note}"]
@@ -403,6 +412,64 @@ async def _attach_pod_to_ai_load(
         return True
     summary.pods_unmatched += 1
     return False
+
+
+async def _adopt_unmatched_pod(session: AsyncSession, company_id: int, ai_load: IngestedDocument) -> bool:
+    """
+    A rate confirmation just became `ai_load`: a POD that came in before it
+    and couldn't be placed then (e.g. it matched a twin load that already had
+    its POD) is attached now - if it shares a number with this load that no
+    other load has.
+    """
+    if (ai_load.draft or {}).get("pod_url"):
+        return False
+    mine = all_refs(ai_load)
+    if not mine:
+        return False
+    since = datetime.utcnow() - timedelta(days=14)
+    pods = (
+        await session.execute(
+            select(IngestedDocument).where(
+                IngestedDocument.company_id == company_id,
+                IngestedDocument.status == DocumentStatus.POD_UNMATCHED,
+                IngestedDocument.created_at >= since,
+                IngestedDocument.s3_key.isnot(None),
+            ).order_by(IngestedDocument.created_at.desc())
+        )
+    ).scalars().all()
+    if not pods:
+        return False
+    others = set()
+    for doc in await _company_docs_for_refs(session, company_id, ai_load.id):
+        others |= all_refs(doc)
+    for pod in pods:
+        hit = (all_refs(pod) & mine) - others
+        if not hit:
+            continue
+        merged = dict(ai_load.draft)
+        merged["pod_url"] = f"/api/v1/uploads/s3/{pod.s3_key}"
+        merged.setdefault("pod_source", "email")
+        ai_load.draft = merged
+        pod.status = DocumentStatus.POD_ATTACHED
+        pod.warnings = [f"Attached as the POD for load {merged.get('load_number') or merged.get('broker_load_number') or ai_load.id} "
+                        f"when its rate confirmation arrived (matched {', '.join(sorted(hit))})."]
+        logger.info("loads-ai: earlier POD %s attached to AI load %s", pod.original_filename, ai_load.id)
+        return True
+    return False
+
+
+async def _company_docs_for_refs(session: AsyncSession, company_id: int, exclude_id: int):
+    """Every other load a POD's numbers could belong to."""
+    return (
+        await session.execute(
+            select(IngestedDocument).where(
+                IngestedDocument.company_id == company_id,
+                IngestedDocument.status.in_(MATCHABLE_STATUSES),
+                IngestedDocument.id != exclude_id,
+                IngestedDocument.draft.isnot(None),
+            )
+        )
+    ).scalars().all()
 
 
 async def _build_pod_only(
@@ -640,6 +707,8 @@ async def process_document(
     # ...and its POD may already be here, as a missing-ratecon load.
     if await merge_pod_only(session, company_id, document):
         summary.pods_merged += 1
+    elif await _adopt_unmatched_pod(session, company_id, document):
+        summary.pods_attached += 1
     logger.info(
         "loads-ai: AI load %s ready from %s (document #%s)",
         draft.get("load_number") or draft.get("broker_load_number") or "(no number)",

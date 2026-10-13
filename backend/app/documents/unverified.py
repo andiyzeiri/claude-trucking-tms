@@ -174,13 +174,18 @@ async def merge_pod_only(session: AsyncSession, company_id: int, ai_load: Ingest
     mine = all_refs(ai_load)
     if not mine:
         return None
+    # The one sharing the most numbers: twin loads' PODs share item codes and
+    # weights, but only the right one carries this load's pickup number too.
+    best, best_hits = None, 0
     for doc in await _company_docs(session, company_id, (DocumentStatus.POD_ONLY,)):
-        if not (all_refs(doc) & mine):
-            continue
-        merge_pod_into(doc, ai_load)
-        logger.info("loads-ai: POD-only load %s merged into AI load %s", doc.id, ai_load.id)
-        return doc
-    return None
+        hits = len(all_refs(doc) & mine)
+        if hits > best_hits:
+            best, best_hits = doc, hits
+    if best is None:
+        return None
+    merge_pod_into(best, ai_load)
+    logger.info("loads-ai: POD-only load %s merged into AI load %s", best.id, ai_load.id)
+    return best
 
 
 POD_FIELDS = ("pod_url", "pod_pages", "pod_source", "pod_window_started", "pod_page_count",
