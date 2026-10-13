@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { useTrucks, useCreateTruck, useDeleteTruck } from '@/hooks/use-trucks'
 import { useFuel, useCreateFuel, useUpdateFuel, useDeleteFuel } from '@/hooks/use-fuel'
+import { useEldConnection, useEldMileage } from '@/hooks/use-eld'
 import { formatCurrency } from '@/lib/utils'
 import { Fuel } from '@/types'
 import { useColumnWidths } from '@/hooks/use-column-widths'
@@ -17,31 +18,6 @@ type EditingCell = {
   truckId: number
   field: string
 } | null
-
-// Helper to get previous entry's ending miles for a truck
-// Looks through all entries (sorted by year/week) to find the most recent prior entry
-// that has an actual odometer reading (skips weeks where the truck didn't move)
-function getPreviousEndingMiles(
-  sortedEntriesByTruck: Map<number, Array<{ isoYear: number, weekNumber: number, odometer: number | null }>>,
-  currentYear: number,
-  weekNum: number,
-  truckId: number
-): number | null {
-  const truckEntries = sortedEntriesByTruck.get(truckId)
-  if (!truckEntries || truckEntries.length === 0) return null
-
-  // Find the most recent entry BEFORE the current week that has an odometer reading
-  // Entries are sorted by year desc, week desc
-  for (const entry of truckEntries) {
-    // Check if this entry is before the current week
-    if (entry.isoYear < currentYear || (entry.isoYear === currentYear && entry.weekNumber < weekNum)) {
-      if (entry.odometer !== null && entry.odometer > 0) {
-        return entry.odometer
-      }
-    }
-  }
-  return null
-}
 
 // Helper to get week number from date (ISO 8601)
 function getWeekNumber(date: Date): number {
@@ -135,7 +111,6 @@ export default function FuelPage() {
   const { columnWidths, adjustWidth } = useColumnWidths('fuel-table', {
     drag: 20,
     truck: 120,
-    endingMiles: 110,
     weeklyMiles: 100,
     gallons: 90,
     pricePerGal: 90,
@@ -368,41 +343,37 @@ export default function FuelPage() {
     return weeks
   }, [selectedYear])
 
+  // Weekly Miles: what each truck drove in the selected week from Peak ELD -
+  // the same numbers as Payroll's Total Miles (Peak trucks are matched to TMS
+  // trucks under Reports > Mileage).
+  const { data: eldConnection } = useEldConnection()
+  const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const weekStart = getDateFromWeekNumber(selectedWeek, selectedYear)
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekStart.getDate() + 6)
+  const { data: eldMileage, isLoading: eldLoading } = useEldMileage(
+    ymd(weekStart), ymd(weekEnd), !!eldConnection?.connected && typeof activeTab === 'number', true,
+  )
+  const eldMilesByTruck = useMemo(() => {
+    const m = new Map<number, { miles: number; how: string }>()
+    eldMileage?.vehicles.forEach(v => {
+      if (!v.truck_id) return
+      const odo = v.odometer_miles != null
+      m.set(v.truck_id, {
+        miles: odo ? v.odometer_miles! : v.miles,
+        how: odo
+          ? `Odometer ${v.start_odometer?.toLocaleString()} → ${v.end_odometer?.toLocaleString()} (${v.odometer_source === 'eld' ? 'live ELD odometer' : 'first and last inspection of the week'}), Peak unit ${v.unit}`
+          : `GPS miles from Peak unit ${v.unit}`,
+      })
+    })
+    return m
+  }, [eldMileage])
+
   // Changing year lands on this week (current year) or week 1, as on Payroll.
   useEffect(() => {
     if (typeof activeTab === 'number') setSelectedWeek(activeTab === thisIsoYear ? thisWeek : 1)
     setExpanded(new Set())
   }, [activeTab, thisIsoYear, thisWeek])
-
-  // Create sorted entries by truck for weekly miles calculation (uses ALL fuel data, not filtered)
-  const sortedEntriesByTruck = useMemo(() => {
-    const truckMap = new Map<number, Array<{ isoYear: number, weekNumber: number, odometer: number | null }>>()
-
-    // Process ALL fuel entries (not just filtered by year)
-    fuelEntriesWithYear.forEach(entry => {
-      if (!entry.truck_id) return
-
-      if (!truckMap.has(entry.truck_id)) {
-        truckMap.set(entry.truck_id, [])
-      }
-
-      truckMap.get(entry.truck_id)!.push({
-        isoYear: entry.isoYear,
-        weekNumber: entry.weekNumber,
-        odometer: entry.odometer ? Number(entry.odometer) : null
-      })
-    })
-
-    // Sort each truck's entries by year desc, week desc (most recent first)
-    truckMap.forEach((entries) => {
-      entries.sort((a, b) => {
-        if (a.isoYear !== b.isoYear) return b.isoYear - a.isoYear
-        return b.weekNumber - a.weekNumber
-      })
-    })
-
-    return truckMap
-  }, [fuelEntriesWithYear])
 
   // Every fuel entry per week and truck, oldest first. A truck can have
   // several in a week (one per card swipe from the WEX import).
@@ -577,6 +548,8 @@ export default function FuelPage() {
 
   const renderFuelRow = (weekNum: number, truck: any, rowIndex: number) => {
     const entry = fuelByWeekAndTruck[weekNum]?.[truck.id]
+    const eld = eldMilesByTruck.get(truck.id)
+    const weeklyMiles = eld?.miles || 0
 
     const isEditingField = (field: string) =>
       editingCell?.weekNumber === weekNum &&
@@ -640,42 +613,10 @@ export default function FuelPage() {
           </div>
         </td>
 
-        {/* Ending Miles */}
-        <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.endingMiles}px`, minWidth: `${columnWidths.endingMiles}px` }}>
-          {isEditingField('odometer') ? (
-            <input
-              type="number"
-              className="w-full px-2 py-1 border rounded text-right text-sm"
-              style={{ borderColor: 'var(--monday-border)' }}
-              value={editValues.odometer || ''}
-              onChange={(e) => handleCellChange('odometer', parseInt(e.target.value) || 0)}
-              onBlur={handleCellBlur}
-              onKeyDown={handleKeyDown}
-              autoFocus
-            />
-          ) : (
-            <div
-              onClick={() => handleCellClick(weekNum, truck.id, 'odometer')}
-              className="cursor-pointer rounded px-1.5 py-0.5"
-              style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}
-            >
-              {entry?.odometer ? Number(entry.odometer).toLocaleString() : '-'}
-            </div>
-          )}
-        </td>
-
-        {/* Weekly Miles (calculated) */}
+        {/* Weekly Miles (Peak ELD, as on Payroll) */}
         <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.weeklyMiles}px`, minWidth: `${columnWidths.weeklyMiles}px` }}>
-          <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
-            {(() => {
-              const currentMiles = entry?.odometer ? Number(entry.odometer) : null
-              const prevMiles = getPreviousEndingMiles(sortedEntriesByTruck, selectedYear, weekNum, truck.id)
-              if (currentMiles !== null && prevMiles !== null) {
-                const weeklyMiles = currentMiles - prevMiles
-                return weeklyMiles.toLocaleString()
-              }
-              return '-'
-            })()}
+          <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }} title={eld?.how || (eldConnection?.connected ? 'No Peak ELD miles for this truck this week (match Peak trucks under Reports > Mileage)' : 'Connect Peak ELD to see miles')}>
+            {weeklyMiles > 0 ? weeklyMiles.toLocaleString() : '-'}
           </div>
         </td>
 
@@ -711,14 +652,8 @@ export default function FuelPage() {
             style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-secondary)' }}
           >
             {(() => {
-              const currentMiles = entry?.odometer ? Number(entry.odometer) : null
-              const prevMiles = getPreviousEndingMiles(sortedEntriesByTruck, selectedYear, weekNum, truck.id)
               const gallons = Number(entry?.gallons) || 0
-              if (currentMiles !== null && prevMiles !== null && gallons > 0) {
-                const weeklyMiles = currentMiles - prevMiles
-                if (weeklyMiles > 0) return (weeklyMiles / gallons).toFixed(2)
-              }
-              return '-'
+              return weeklyMiles > 0 && gallons > 0 ? (weeklyMiles / gallons).toFixed(2) : '-'
             })()}
           </div>
         </td>
@@ -800,13 +735,7 @@ export default function FuelPage() {
               const fuelPrice = Number(entry?.total_amount) || 0
               const defPrice = Number(entry?.def_price) || 0
               const total = fuelPrice + defPrice
-              const currentMiles = entry?.odometer ? Number(entry.odometer) : null
-              const prevMiles = getPreviousEndingMiles(sortedEntriesByTruck, selectedYear, weekNum, truck.id)
-              if (currentMiles !== null && prevMiles !== null && total > 0) {
-                const weeklyMiles = currentMiles - prevMiles
-                if (weeklyMiles > 0) return `$${(total / weeklyMiles).toFixed(3)}`
-              }
-              return '-'
+              return weeklyMiles > 0 && total > 0 ? `$${(total / weeklyMiles).toFixed(3)}` : '-'
             })()}
           </div>
         </td>
@@ -1055,13 +984,6 @@ export default function FuelPage() {
   }
 
   // Render Weekly View (existing view)
-  // Miles a truck drove in a week: its ending odometer minus the last one before.
-  const weekMilesOf = (weekNum: number, truckId: number): number => {
-    const current = fuelByWeekAndTruck[weekNum]?.[truckId]?.odometer
-    const prev = getPreviousEndingMiles(sortedEntriesByTruck, selectedYear, weekNum, truckId)
-    return current && prev !== null && Number(current) > prev ? Number(current) - prev : 0
-  }
-
   // Totals for a set of weeks, over the trucks on the page.
   const totalsFor = (weeks: number[]) => {
     const activeTruckIds = new Set(activeTrucks.map(t => t.id))
@@ -1070,8 +992,11 @@ export default function FuelPage() {
     const fuel = entries.reduce((sum, e) => sum + (Number(e.total_amount) || 0), 0)
     const def = entries.reduce((sum, e) => sum + (Number(e.def_price) || 0), 0)
     const gallons = entries.reduce((sum, e) => sum + (Number(e.gallons) || 0), 0)
-    const miles = weeks.reduce((sum, w) => sum + activeTrucks.reduce((s2, t) => s2 + weekMilesOf(w, t.id), 0), 0)
-    return { fuel, def, total: fuel + def, gallons, miles, fills: entries.length }
+    // Miles only for the selected week (Peak ELD is read one week at a time).
+    const miles = weeks.length === 1 && weeks[0] === selectedWeek
+      ? activeTrucks.reduce((sum, t) => sum + (eldMilesByTruck.get(t.id)?.miles || 0), 0)
+      : 0
+    return { fuel, def, total: fuel + def, gallons, miles, fills: entries.length, weeks: weeks.length }
   }
 
   const renderStats = (title: string, subtitle: string, t: ReturnType<typeof totalsFor>) => {
@@ -1079,7 +1004,9 @@ export default function FuelPage() {
       { label: 'Total', value: formatCurrency(t.total), sub: `Fuel ${formatCurrency(t.fuel)} · DEF ${formatCurrency(t.def)}`, color: 'var(--monday-done)' },
       { label: 'Gallons', value: t.gallons.toLocaleString('en-US', { maximumFractionDigits: 1 }), sub: `${t.fills} fuel ${t.fills === 1 ? 'entry' : 'entries'}` },
       { label: 'Avg Price/Gal', value: t.gallons > 0 ? `$${(t.fuel / t.gallons).toFixed(3)}` : '-', sub: 'Fuel only' },
-      { label: 'Miles', value: t.miles.toLocaleString(), sub: t.miles > 0 ? `$${(t.total / t.miles).toFixed(3)}/mi · ${t.gallons > 0 ? (t.miles / t.gallons).toFixed(2) : '-'} MPG` : 'From ending miles' },
+      t.weeks === 1
+        ? { label: 'Miles (ELD)', value: eldLoading && eldConnection?.connected ? '…' : t.miles.toLocaleString(), sub: t.miles > 0 ? `$${(t.total / t.miles).toFixed(3)}/mi · ${t.gallons > 0 ? (t.miles / t.gallons).toFixed(2) : '-'} MPG` : (eldConnection?.connected ? 'Same as Payroll Total Miles' : 'Connect Peak ELD for miles') }
+        : { label: 'Avg per week', value: formatCurrency(t.weeks ? t.total / t.weeks : 0), sub: `Over ${t.weeks} week${t.weeks === 1 ? '' : 's'}` },
     ]
     return (
       <div className="rounded-lg shadow-sm p-4" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
@@ -1114,9 +1041,6 @@ export default function FuelPage() {
           <td className="border-r" style={{ borderColor: 'var(--monday-border-light)' }}></td>
           <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', ...muted }}>
             <span style={{ paddingLeft: '20px' }}>{day}</span>
-          </td>
-          <td className="px-3 py-1.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', ...muted }}>
-            {e.odometer ? Number(e.odometer).toLocaleString() : '-'}
           </td>
           <td className="px-3 py-1.5 border-r" style={{ borderColor: 'var(--monday-border-light)', ...muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={e.location || ''}>
             {e.location || ''}
@@ -1192,7 +1116,6 @@ export default function FuelPage() {
               <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.drag}px`, minWidth: `${columnWidths.drag}px`, backgroundColor: 'var(--monday-bg-secondary)' }}></th>
                 {th('truck', 'Truck', 'left')}
-                {th('endingMiles', 'Ending Miles')}
                 {th('weeklyMiles', 'Weekly Miles')}
                 {th('gallons', 'Gallons')}
                 {th('mpg', 'MPG')}
@@ -1206,7 +1129,7 @@ export default function FuelPage() {
             <tbody>
               {activeTrucks.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-3 py-6 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
+                  <td colSpan={10} className="px-3 py-6 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
                     No trucks yet. Add one with Add Truck.
                   </td>
                 </tr>
@@ -1223,7 +1146,6 @@ export default function FuelPage() {
                 <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
                   <td className="border-r" style={{ borderColor: 'var(--monday-border-light)' }}></td>
                   <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>Week {selectedWeek} total</td>
-                  {footCell('')}
                   {footCell(week.miles ? week.miles.toLocaleString() : '-')}
                   {footCell(week.gallons ? week.gallons.toFixed(1) : '-')}
                   {footCell(week.miles && week.gallons ? (week.miles / week.gallons).toFixed(2) : '-')}
