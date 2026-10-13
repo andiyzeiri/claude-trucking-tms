@@ -2,10 +2,10 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Layout from '@/components/layout/layout'
-import { ChevronRight, ChevronDown, ChevronLeft, Truck, BarChart3, GripVertical, Plus, X, CreditCard } from 'lucide-react'
+import { ChevronRight, ChevronDown, ChevronLeft, Truck, BarChart3, GripVertical, Plus, X, CreditCard, Ban } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { useTrucks, useCreateTruck, useDeleteTruck } from '@/hooks/use-trucks'
+import { useTrucks, useCreateTruck, useDeleteTruck, useUpdateTruck } from '@/hooks/use-trucks'
 import { useFuel, useCreateFuel, useUpdateFuel, useDeleteFuel } from '@/hooks/use-fuel'
 import { useEldConnection, useEldMileage } from '@/hooks/use-eld'
 import { formatCurrency } from '@/lib/utils'
@@ -109,6 +109,7 @@ export default function FuelPage() {
   const deleteFuel = useDeleteFuel()
   const createTruck = useCreateTruck()
   const deleteTruck = useDeleteTruck()
+  const updateTruck = useUpdateTruck()
   const { columnWidths, adjustWidth } = useColumnWidths('fuel-table', {
     drag: 20,
     truck: 120,
@@ -133,15 +134,18 @@ export default function FuelPage() {
     } catch { return [] }
   })
 
+  // Saved drag order, with trucks whose owner uses their own fuel card always last
   const activeTrucks = useMemo(() => {
-    if (truckOrder.length === 0) return activeTrucksUnordered
     const orderMap = new Map(truckOrder.map((id, idx) => [id, idx]))
     return [...activeTrucksUnordered].sort((a, b) => {
+      const ownCard = Number(!!a.own_fuel_card) - Number(!!b.own_fuel_card)
+      if (ownCard !== 0) return ownCard
       const aIdx = orderMap.get(a.id) ?? 999999
       const bIdx = orderMap.get(b.id) ?? 999999
       return aIdx - bIdx
     })
   }, [activeTrucksUnordered, truckOrder])
+  const ownCardTruckIds = useMemo(() => new Set(activeTrucks.filter(t => t.own_fuel_card).map(t => t.id)), [activeTrucks])
 
   // Drag state for reordering
   const dragTruckId = useRef<number | null>(null)
@@ -189,6 +193,10 @@ export default function FuelPage() {
     })
     setNewTruckNumber('')
     setShowAddTruck(false)
+  }
+
+  const handleToggleOwnCard = (truck: any) => {
+    updateTruck.mutate({ id: truck.id, data: { own_fuel_card: !truck.own_fuel_card } as any })
   }
 
   const handleDeleteTruck = async (truckId: number, truckNumber: string) => {
@@ -322,8 +330,8 @@ export default function FuelPage() {
 
     return Array.from(truckMap.values())
       .filter(t => t.entryCount > 0 || t.totalGallons > 0 || t.totalFuelPrice > 0)
-      .sort((a, b) => a.truck_number.localeCompare(b.truck_number))
-  }, [fuelEntriesWithYear, trucks])
+      .sort((a, b) => Number(ownCardTruckIds.has(a.truck_id)) - Number(ownCardTruckIds.has(b.truck_id)) || a.truck_number.localeCompare(b.truck_number))
+  }, [fuelEntriesWithYear, trucks, ownCardTruckIds])
 
   // Calculate grand totals for summary
   const summaryTotals = useMemo(() => {
@@ -552,6 +560,9 @@ export default function FuelPage() {
     const eld = eldMilesByTruck.get(truck.id)
     const weeklyMiles = eld?.miles || 0
 
+    const ownCard = !!truck.own_fuel_card
+    const rowBg = ownCard ? 'rgba(220, 38, 38, 0.10)' : 'var(--monday-bg-primary)'
+
     const isEditingField = (field: string) =>
       editingCell?.weekNumber === weekNum &&
       editingCell?.truckId === truck.id &&
@@ -573,13 +584,15 @@ export default function FuelPage() {
         }}
         style={{
           borderColor: 'var(--monday-border-light)',
-          backgroundColor: 'var(--monday-bg-primary)'
+          backgroundColor: rowBg,
+          color: ownCard ? '#dc2626' : undefined
         }}
+        title={ownCard ? 'Owner uses their own fuel card (not in the totals)' : undefined}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)'
+          e.currentTarget.style.backgroundColor = ownCard ? 'rgba(220, 38, 38, 0.16)' : 'var(--monday-bg-hover)'
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)'
+          e.currentTarget.style.backgroundColor = rowBg
         }}
       >
         {/* Drag handle */}
@@ -589,9 +602,10 @@ export default function FuelPage() {
 
         {/* Truck */}
         <td className="px-3 py-2.5 border-r group/truck" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.truck}px`, minWidth: `${columnWidths.truck}px` }}>
-          <div className="flex items-center gap-2" style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
-            <Truck className="h-3.5 w-3.5 text-gray-500" />
+          <div className="flex items-center gap-2" style={{ fontSize: '13px', lineHeight: '18px', color: ownCard ? '#dc2626' : 'var(--monday-text-primary)', fontWeight: ownCard ? 600 : undefined }}>
+            <Truck className="h-3.5 w-3.5" style={{ color: ownCard ? '#dc2626' : 'var(--monday-text-muted)' }} />
             {truck.truck_number}
+            {ownCard && <span style={{ fontSize: '10px', fontWeight: 600 }}>OWN CARD</span>}
             {fillCount(weekNum, truck.id) > 1 && (
               <button
                 onClick={(e) => { e.stopPropagation(); toggleExpanded(truck.id) }}
@@ -604,8 +618,17 @@ export default function FuelPage() {
               </button>
             )}
             <button
-              onClick={(e) => { e.stopPropagation(); handleDeleteTruck(truck.id, truck.truck_number) }}
+              onClick={(e) => { e.stopPropagation(); handleToggleOwnCard(truck) }}
+              disabled={updateTruck.isPending}
               className="p-0.5 rounded hover:bg-red-50 opacity-0 group-hover/truck:opacity-100 transition-opacity ml-auto"
+              style={{ color: ownCard ? 'var(--monday-done)' : '#dc2626' }}
+              title={ownCard ? 'Back to company fuel card' : 'Owner uses their own fuel card (red it out, move to bottom)'}
+            >
+              {ownCard ? <CreditCard className="h-3 w-3" /> : <Ban className="h-3 w-3" />}
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDeleteTruck(truck.id, truck.truck_number) }}
+              className="p-0.5 rounded hover:bg-red-50 opacity-0 group-hover/truck:opacity-100 transition-opacity"
               style={{ color: 'var(--monday-stuck)' }}
               title="Delete truck"
             >
@@ -881,12 +904,12 @@ export default function FuelPage() {
                       <tr
                         key={truck.truck_id}
                         className="border-b transition-colors"
-                        style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}
+                        style={{ borderColor: 'var(--monday-border-light)', backgroundColor: ownCardTruckIds.has(truck.truck_id) ? 'rgba(220, 38, 38, 0.10)' : 'var(--monday-bg-primary)' }}
                         onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--monday-bg-primary)' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ownCardTruckIds.has(truck.truck_id) ? 'rgba(220, 38, 38, 0.10)' : 'var(--monday-bg-primary)' }}
                       >
                         <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
-                          <div className="flex items-center gap-2" style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }}>
+                          <div className="flex items-center gap-2" style={{ fontSize: '13px', lineHeight: '18px', color: ownCardTruckIds.has(truck.truck_id) ? '#dc2626' : 'var(--monday-text-primary)' }}>
                             <Truck className="h-3.5 w-3.5 text-gray-500" />
                             {truck.truck_number}
                           </div>
@@ -987,7 +1010,8 @@ export default function FuelPage() {
   // Render Weekly View (existing view)
   // Totals for a set of weeks, over the trucks on the page.
   const totalsFor = (weeks: number[]) => {
-    const activeTruckIds = new Set(activeTrucks.map(t => t.id))
+    // Own-card trucks are left out: their miles have no fuel against them here
+    const activeTruckIds = new Set(activeTrucks.filter(t => !t.own_fuel_card).map(t => t.id))
     const set = new Set(weeks)
     const entries = fuelEntries.filter(e => set.has(e.weekNumber) && e.truck_id && activeTruckIds.has(e.truck_id))
     const fuel = entries.reduce((sum, e) => sum + (Number(e.total_amount) || 0), 0)
@@ -995,7 +1019,7 @@ export default function FuelPage() {
     const gallons = entries.reduce((sum, e) => sum + (Number(e.gallons) || 0), 0)
     // Miles only for the selected week (Peak ELD is read one week at a time).
     const miles = weeks.length === 1 && weeks[0] === selectedWeek
-      ? activeTrucks.reduce((sum, t) => sum + (eldMilesByTruck.get(t.id)?.miles || 0), 0)
+      ? activeTrucks.filter(t => !t.own_fuel_card).reduce((sum, t) => sum + (eldMilesByTruck.get(t.id)?.miles || 0), 0)
       : 0
     return { fuel, def, total: fuel + def, gallons, miles, fills: entries.length, weeks: weeks.length }
   }

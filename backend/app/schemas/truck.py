@@ -23,6 +23,7 @@ class TruckBase(BaseModel):
     physical_damage_insurance: Optional[Decimal] = None
     miles: Optional[int] = None
     mpg: Optional[Decimal] = None
+    own_fuel_card: bool = False
 
 
 class TruckCreate(TruckBase):
@@ -47,6 +48,7 @@ class TruckUpdate(BaseModel):
     physical_damage_insurance: Optional[Decimal] = None
     miles: Optional[int] = None
     mpg: Optional[Decimal] = None
+    own_fuel_card: Optional[bool] = None
 
 
 class TruckResponse(TruckBase):

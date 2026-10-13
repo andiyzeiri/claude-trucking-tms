@@ -88,6 +88,7 @@ COPY add_pay_structure_columns.py ./
 COPY add_driver_pay_rate_versions.py ./
 COPY add_inbound_email_cc.py ./
 COPY add_customer_type.py ./
+COPY add_truck_own_fuel_card.py ./
 COPY create_fuel_card_tables.py ./
 COPY entrypoint.sh ./
 
