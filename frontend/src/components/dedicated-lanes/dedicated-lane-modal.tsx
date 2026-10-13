@@ -9,7 +9,7 @@ import { X } from 'lucide-react'
 import { DedicatedLane, DedicatedLaneCreate, useCreateDedicatedLane, useUpdateDedicatedLane } from '@/hooks/use-dedicated-lanes'
 import { useCustomers } from '@/hooks/use-customers'
 import { useDrivers } from '@/hooks/use-drivers'
-import { useTrucks } from '@/hooks/use-trucks'
+import { useTrucks, pickableTrucks } from '@/hooks/use-trucks'
 
 interface DedicatedLaneModalProps {
   lane: DedicatedLane | null
@@ -268,9 +268,9 @@ export function DedicatedLaneModal({ lane, onClose }: DedicatedLaneModalProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No truck assigned</SelectItem>
-                  {trucks.map((truck) => (
+                  {pickableTrucks(trucks, formData.truck_id).map((truck) => (
                     <SelectItem key={truck.id} value={String(truck.id)}>
-                      {truck.unit_number}
+                      {truck.truck_number}
                     </SelectItem>
                   ))}
                 </SelectContent>

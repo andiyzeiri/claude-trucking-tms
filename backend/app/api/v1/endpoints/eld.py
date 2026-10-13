@@ -294,7 +294,10 @@ async def mileage(
         start=start, end=end,
         total_miles=round(sum(r.miles for r in out), 1),
         vehicles=out,
-        trucks=sorted((TruckOption(id=t.id, truck_number=t.truck_number) for t in trucks), key=lambda t: t.truck_number),
+        # Matching choices: sold / not-leased trucks only when a Peak truck is already matched to one.
+        trucks=sorted((TruckOption(id=t.id, truck_number=t.truck_number) for t in trucks
+                       if t.status not in ("sold", "not_leased") or t.id in {r.truck_id for r in out}),
+                      key=lambda t: t.truck_number),
     )
 
 

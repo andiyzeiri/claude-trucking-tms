@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { pickableTrucks } from '@/hooks/use-trucks'
 import Link from 'next/link'
 import { ChevronDown, ChevronRight, CreditCard } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
@@ -14,7 +15,7 @@ import {
   useSetTransactionTruck,
 } from '@/hooks/use-fuel-cards'
 
-type TruckOption = { id: number; truck_number: string }
+type TruckOption = { id: number; truck_number: string; status?: string }
 
 const border = '1px solid var(--monday-border-light)'
 const headCell: React.CSSProperties = { fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', borderBottom: border }
@@ -119,7 +120,7 @@ export function FuelCardsView({ trucks }: { trucks: TruckOption[] }) {
                       onChange={(e) => changeCardTruck(card, e.target.value)}
                     >
                       <option value="">No truck (use unit keyed)</option>
-                      {trucks.map(t => <option key={t.id} value={t.id}>{t.truck_number}</option>)}
+                      {pickableTrucks(trucks, card.truck_id).map(t => <option key={t.id} value={t.id}>{t.truck_number}</option>)}
                     </select>
                   </td>
                   <td className="px-3 py-2.5" style={{ ...bodyCell, color: 'var(--monday-text-secondary)' }}>
@@ -214,7 +215,7 @@ function CardTransactions({ card, trucks }: { card: FuelCard; trucks: TruckOptio
                             : `Unit keyed${!tx.manual_truck && tx.truck_number ? ` (${tx.truck_number})` : ''}`}
                         </option>
                       )}
-                      {trucks.map(t => <option key={t.id} value={t.id}>{t.truck_number}</option>)}
+                      {pickableTrucks(trucks, value).map(t => <option key={t.id} value={t.id}>{t.truck_number}</option>)}
                     </select>
                   )}
                 </td>

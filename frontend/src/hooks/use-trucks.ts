@@ -89,3 +89,10 @@ export function useDeleteTruck() {
     },
   })
 }
+/** Sold (company) and Not Leased (owner-operator) equipment is out of service. */
+export const isInService = (t: { status?: string }) => t.status !== 'sold' && t.status !== 'not_leased'
+
+/** Trucks to offer in a picker: those in service, plus the one already chosen. */
+export function pickableTrucks<T extends { id: number; status?: string }>(trucks: T[], current?: number | string | null): T[] {
+  return trucks.filter(t => isInService(t) || (current != null && current !== '' && String(t.id) === String(current)))
+}

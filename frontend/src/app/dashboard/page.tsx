@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { isInService } from '@/hooks/use-trucks'
 import { useQuery } from '@tanstack/react-query'
 import Layout from '@/components/layout/layout'
 import { useAuth } from '@/hooks/use-auth'
@@ -241,7 +242,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" style={{ color: 'var(--monday-purple)' }}>
-                {isLoading ? '...' : trucks?.length || 0}
+                {isLoading ? '...' : (Array.isArray(trucks) ? trucks : trucks?.items || []).filter(isInService).length}
               </div>
               <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>
                 Fleet vehicles

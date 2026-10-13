@@ -5,7 +5,7 @@ import Layout from '@/components/layout/layout'
 import { ChevronRight, ChevronDown, ChevronLeft, Truck, BarChart3, GripVertical, Plus, X, CreditCard, Ban } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { useTrucks, useCreateTruck, useDeleteTruck, useUpdateTruck } from '@/hooks/use-trucks'
+import { useTrucks, useCreateTruck, useDeleteTruck, useUpdateTruck, isInService } from '@/hooks/use-trucks'
 import { useFuel, useCreateFuel, useUpdateFuel, useDeleteFuel } from '@/hooks/use-fuel'
 import { useEldConnection, useEldMileage } from '@/hooks/use-eld'
 import { formatCurrency } from '@/lib/utils'
@@ -1091,6 +1091,8 @@ export default function FuelPage() {
 
   const renderWeeklyView = () => {
     const week = totalsFor([selectedWeek])
+    // Sold / not-leased trucks only in weeks they have fuel in (history stays visible)
+    const weekTrucks = activeTrucks.filter(t => isInService(t) || fillCount(selectedWeek, t.id) > 0)
     const isCurrentYear = selectedYear === thisIsoYear
     const yearWeeks = isCurrentYear ? allWeeks.filter(w => w <= thisWeek) : allWeeks
     const th = (key: string, label: string, align: 'left' | 'right' = 'right') => (
@@ -1152,21 +1154,21 @@ export default function FuelPage() {
               </tr>
             </thead>
             <tbody>
-              {activeTrucks.length === 0 && (
+              {weekTrucks.length === 0 && (
                 <tr>
                   <td colSpan={10} className="px-3 py-6 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
                     No trucks yet. Add one with Add Truck.
                   </td>
                 </tr>
               )}
-              {activeTrucks.map((truck, truckIndex) => (
+              {weekTrucks.map((truck, truckIndex) => (
                 <React.Fragment key={truck.id}>
                   {renderFuelRow(selectedWeek, truck, truckIndex)}
                   {expanded.has(truck.id) && fillCount(selectedWeek, truck.id) > 1 && renderFillRows(selectedWeek, truck)}
                 </React.Fragment>
               ))}
             </tbody>
-            {activeTrucks.length > 0 && (
+            {weekTrucks.length > 0 && (
               <tfoot>
                 <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
                   <td className="border-r" style={{ borderColor: 'var(--monday-border-light)' }}></td>

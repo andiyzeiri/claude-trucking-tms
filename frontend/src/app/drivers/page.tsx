@@ -8,7 +8,7 @@ import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
 import { DriverModal, DriverData } from '@/components/drivers/driver-modal'
 import { Plus, Users, Phone, Mail, Edit, Trash2, Check, Truck } from 'lucide-react'
 import { useDrivers, useCreateDriver, useUpdateDriver, useDeleteDriver } from '@/hooks/use-drivers'
-import { useTrucks } from '@/hooks/use-trucks'
+import { useTrucks, pickableTrucks } from '@/hooks/use-trucks'
 import { useDriverPayrollSettings, useCreateOrUpdateDriverPayrollSettings, useUpdateDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
 
 type TabType = 'drivers' | 'owners'
@@ -346,7 +346,7 @@ export default function DriversPage() {
             }}
           >
             <option value="">-</option>
-            {activeTrucks.map((t: any) => (
+            {pickableTrucks(activeTrucks, currentTruckId).map((t: any) => (
               <option key={t.id} value={t.id}>{t.truck_number}</option>
             ))}
           </select>

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Calculator, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, EyeOff, GripVertical, ListChecks, Plus, RefreshCw, Settings, Trash2, X } from 'lucide-react'
 import { useDrivers } from '@/hooks/use-drivers'
-import { useTrucks } from '@/hooks/use-trucks'
+import { useTrucks, pickableTrucks } from '@/hooks/use-trucks'
 import { useCalculatedPayroll } from '@/hooks/use-payroll'
 import { usePayrollOverrides, useSavePayrollOverride } from '@/hooks/use-payroll-overrides'
 import { useDriverPayrollSettings, useCreateOrUpdateDriverPayrollSettings, useDriverRateVersions, type PayStructure } from '@/hooks/use-driver-payroll-settings'
@@ -773,7 +773,7 @@ export default function PayrollPage() {
                               })}
                             >
                               <option value="">-</option>
-                              {trucks.map((t: any) => (
+                              {pickableTrucks(trucks, isOverridden ? weekTruckOverride : d.truck_id).map((t: any) => (
                                 <option key={t.id} value={t.id}>{t.truck_number}</option>
                               ))}
                             </select>

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { AlertTriangle, CheckCircle2, CreditCard, Loader2, RefreshCw } from 'lucide-react'
-import { useTrucks } from '@/hooks/use-trucks'
+import { useTrucks, isInService } from '@/hooks/use-trucks'
 import {
   useFuelCardConnection, useConnectFuelCard, useSyncFuelCard, useDisconnectFuelCard,
   useFuelCardTransactions, useSetCardTruck,
@@ -227,7 +227,7 @@ function NeedsTruck({ count }: { count: number }) {
                 className="border border-gray-300 rounded-md px-2 py-1 bg-white"
               >
                 <option value="">Pick truck…</option>
-                {trucks.map((t: any) => <option key={t.id} value={t.id}>{t.truck_number}</option>)}
+                {trucks.filter(isInService).map((t: any) => <option key={t.id} value={t.id}>{t.truck_number}</option>)}
               </select>
             </div>
           ))}
