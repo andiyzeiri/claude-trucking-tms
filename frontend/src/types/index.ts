@@ -48,6 +48,8 @@ export interface Customer {
   state?: string
   zip_code?: string
   status: 'active' | 'inactive'
+  // Brokers / Customers tabs; anything entered before the split is a broker
+  customer_type?: 'broker' | 'customer'
   created_at: string
   updated_at: string
 }

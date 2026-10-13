@@ -19,6 +19,7 @@ export interface CustomerData {
   state?: string
   zip_code?: string
   status: 'active' | 'inactive'
+  customer_type?: 'broker' | 'customer'
   created_at?: string
 }
 
@@ -28,6 +29,7 @@ interface CustomerModalProps {
   onSave: (customer: CustomerData) => void
   customer?: CustomerData | null
   mode: 'create' | 'edit'
+  noun?: string  // 'Broker' or 'Customer'
 }
 
 const states = [
@@ -38,7 +40,7 @@ const states = [
   'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
 ]
 
-export function CustomerModal({ isOpen, onClose, onSave, customer, mode }: CustomerModalProps) {
+export function CustomerModal({ isOpen, onClose, onSave, customer, mode, noun = 'Customer' }: CustomerModalProps) {
   const [formData, setFormData] = useState<CustomerData>({
     name: '',
     mc: '',
@@ -93,7 +95,7 @@ export function CustomerModal({ isOpen, onClose, onSave, customer, mode }: Custo
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {mode === 'create' ? 'Add New Customer' : 'Edit Customer'}
+            {mode === 'create' ? `Add New ${noun}` : `Edit ${noun}`}
           </DialogTitle>
         </DialogHeader>
 
@@ -206,7 +208,7 @@ export function CustomerModal({ isOpen, onClose, onSave, customer, mode }: Custo
             Cancel
           </Button>
           <Button onClick={handleSave}>
-            {mode === 'create' ? 'Add Customer' : 'Save Changes'}
+            {mode === 'create' ? `Add ${noun}` : 'Save Changes'}
           </Button>
         </DialogFooter>
       </DialogContent>

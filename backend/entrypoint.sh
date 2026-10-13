@@ -125,6 +125,7 @@ python3 add_pay_structure_columns.py || echo "⚠️  add_pay_structure_columns.
 echo "🔧 Creating driver_pay_rate_versions..."
 python3 add_driver_pay_rate_versions.py || echo "⚠️  add_driver_pay_rate_versions.py had errors, continuing..."
 python3 add_inbound_email_cc.py || echo "⚠️  add_inbound_email_cc.py had errors, continuing..."
+python3 add_customer_type.py || echo "⚠️  add_customer_type.py had errors, continuing..."
 
 # Add insurance columns to trucks
 echo "🔧 Adding insurance columns to trucks..."

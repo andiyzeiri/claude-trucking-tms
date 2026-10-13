@@ -8,20 +8,34 @@ import { DataTable, Column } from '@/components/ui/data-table'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
 import { formatDate } from '@/lib/utils'
 import { CustomerModal, CustomerData } from '@/components/customers/customer-modal'
-import { Plus, Building2, Phone, Mail, MapPin, Edit, Trash2, User } from 'lucide-react'
+import { Plus, Building2, Phone, Mail, MapPin, Edit, Trash2, User, ArrowRightLeft } from 'lucide-react'
 import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer } from '@/hooks/use-customers'
+
+type CustomerTab = 'broker' | 'customer'
+const TAB_LABEL: Record<CustomerTab, { tab: string; noun: string }> = {
+  broker: { tab: 'Brokers', noun: 'Broker' },
+  customer: { tab: 'Customers', noun: 'Customer' },
+}
+// Anything entered before Brokers and Customers were split is a broker.
+const typeOf = (c: { customer_type?: string }): CustomerTab => (c.customer_type === 'customer' ? 'customer' : 'broker')
 
 export default function CustomersPage() {
   // Fetch customers from API
   const { data: customersData, isLoading } = useCustomers()
   const rawCustomers = customersData?.items || []
+  const [tab, setTab] = useState<CustomerTab>('broker')
+  const { noun } = TAB_LABEL[tab]
+  const counts = useMemo(() => ({
+    broker: rawCustomers.filter(c => typeOf(c) === 'broker').length,
+    customer: rawCustomers.filter(c => typeOf(c) === 'customer').length,
+  }), [rawCustomers])
 
-  // Sort customers alphabetically by name
+  // This tab's rows, alphabetically by name
   const customers = useMemo(() => {
-    return [...rawCustomers].sort((a, b) =>
+    return rawCustomers.filter(c => typeOf(c) === tab).sort((a, b) =>
       (a.name || '').localeCompare(b.name || '')
     )
-  }, [rawCustomers])
+  }, [rawCustomers, tab])
   const createCustomer = useCreateCustomer()
   const updateCustomer = useUpdateCustomer()
   const deleteCustomer = useDeleteCustomer()
@@ -57,8 +71,14 @@ export default function CustomersPage() {
     }
     closeContextMenu()
   }
+  const handleContextMove = () => {
+    if (contextMenu.row?.id) {
+      updateCustomer.mutate({ id: contextMenu.row.id, data: { customer_type: tab === 'broker' ? 'customer' : 'broker' } as any })
+    }
+    closeContextMenu()
+  }
   const handleContextDelete = () => {
-    if (contextMenu.row && confirm('Delete customer?')) {
+    if (contextMenu.row && confirm(`Delete ${noun.toLowerCase()}?`)) {
       deleteCustomer.mutate(contextMenu.row.id!)
     }
     closeContextMenu()
@@ -74,7 +94,9 @@ export default function CustomersPage() {
       city: customerData.city,
       state: customerData.state,
       zip_code: customerData.zip_code,
-      status: customerData.status
+      status: customerData.status,
+      // New ones go on the tab they were added from
+      ...(modalMode === 'create' ? { customer_type: tab } : {}),
     }
 
     if (modalMode === 'create') {
@@ -85,7 +107,7 @@ export default function CustomersPage() {
     setIsModalOpen(false)
   }
   const calculateGroupTotals = (rows: CustomerData[]) => ({
-    'name': <span className="text-sm font-medium text-gray-900">{rows.length} customer{rows.length !== 1 ? 's' : ''}</span>
+    'name': <span className="text-sm font-medium text-gray-900">{rows.length} {noun.toLowerCase()}{rows.length !== 1 ? 's' : ''}</span>
   })
   const totals = useMemo(() => ({
     total: customers.length
@@ -159,12 +181,33 @@ export default function CustomersPage() {
               <Building2 className="mr-3 h-8 w-8" style={{ color: 'var(--monday-stuck)' }} />
               Customers
             </h1>
-            <p style={{ color: 'var(--monday-text-secondary)' }}>Manage your customer relationships</p>
+            <p style={{ color: 'var(--monday-text-secondary)' }}>Manage your brokers and customers</p>
           </div>
           <Button className="hover:opacity-90" style={{ backgroundColor: 'var(--monday-cornflower)', color: 'white' }} onClick={handleCreateCustomer}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Customer
+            Add {noun}
           </Button>
+        </div>
+
+        {/* Brokers / Customers */}
+        <div className="flex items-center gap-1 border-b" style={{ borderColor: 'var(--monday-border-light)' }}>
+          {(['broker', 'customer'] as CustomerTab[]).map(key => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className="px-4 py-2 text-sm transition-all"
+              style={{
+                color: tab === key ? 'var(--monday-done)' : 'var(--monday-text-secondary)',
+                borderBottom: tab === key ? '3px solid var(--monday-done)' : '3px solid transparent',
+                marginBottom: '-1px',
+                fontWeight: tab === key ? 600 : 500,
+                fontSize: '14px'
+              }}
+            >
+              {TAB_LABEL[key].tab}
+              <span style={{ marginLeft: '6px', fontSize: '12px', opacity: 0.7 }}>({counts[key]})</span>
+            </button>
+          ))}
         </div>
 
         <DataTable data={customers} columns={columns} onRowRightClick={handleRowRightClick} calculateGroupTotals={calculateGroupTotals} />
@@ -174,7 +217,7 @@ export default function CustomersPage() {
             <table className="w-full table-auto">
               <tbody><tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
                 <td className="px-3 py-2 text-sm border-r" style={{ width: '160px', borderColor: 'var(--monday-border-light)' }}>
-                  <span className="font-medium" style={{ color: 'var(--monday-text-primary)' }}>{totals.total} Customer{totals.total !== 1 ? 's' : ''}</span>
+                  <span className="font-medium" style={{ color: 'var(--monday-text-primary)' }}>{totals.total} {noun}{totals.total !== 1 ? 's' : ''}</span>
                 </td>
                 <td className="px-3 py-2 text-sm border-r" style={{ width: '120px', borderColor: 'var(--monday-border-light)' }}></td>
                 <td className="px-3 py-2 text-sm border-r" style={{ width: '140px', borderColor: 'var(--monday-border-light)' }}></td>
@@ -192,11 +235,13 @@ export default function CustomersPage() {
           onSave={handleSaveCustomer}
           customer={editingCustomer}
           mode={modalMode}
+          noun={noun}
         />
 
         <ContextMenu x={contextMenu.x} y={contextMenu.y} isVisible={contextMenu.isVisible} onClose={closeContextMenu}>
-          <ContextMenuItem onClick={handleContextEdit} icon={<Edit className="h-4 w-4" />}>Edit Customer</ContextMenuItem>
-          <ContextMenuItem onClick={handleContextDelete} icon={<Trash2 className="h-4 w-4" />} className="text-red-600 hover:bg-red-50">Delete Customer</ContextMenuItem>
+          <ContextMenuItem onClick={handleContextEdit} icon={<Edit className="h-4 w-4" />}>Edit {noun}</ContextMenuItem>
+          <ContextMenuItem onClick={handleContextMove} icon={<ArrowRightLeft className="h-4 w-4" />}>Move to {tab === 'broker' ? 'Customers' : 'Brokers'}</ContextMenuItem>
+          <ContextMenuItem onClick={handleContextDelete} icon={<Trash2 className="h-4 w-4" />} className="text-red-600 hover:bg-red-50">Delete {noun}</ContextMenuItem>
         </ContextMenu>
       </div>
     </Layout>

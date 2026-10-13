@@ -18,6 +18,10 @@ class Customer(Base):
     billing_address = Column(Text)
     payment_terms = Column(String)  # Net 30, Net 60, etc.
     credit_limit = Column(String)
+    # "broker" (loads booked through a broker) or "customer" (shipper billed
+    # directly) - the Brokers and Customers tabs. Everything entered before
+    # the split is a broker.
+    customer_type = Column(String(20), nullable=False, default="broker", server_default="broker")
 
     # Multi-tenant
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
