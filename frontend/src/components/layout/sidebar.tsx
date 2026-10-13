@@ -18,13 +18,13 @@ import {
   LogOut,
   Calculator,
   Receipt,
-  Warehouse,
   Fuel as FuelIcon,
   Shield,
   CalendarDays,
   BookOpen,
   ChevronDown,
   Sparkles,
+  Route,
 } from 'lucide-react'
 
 // Navigation items with page IDs that match the permissions system
@@ -37,8 +37,8 @@ const navigation = [
   { name: 'Equipment', href: '/trucks', icon: Truck, pageId: 'trucks' },
   { name: 'Drivers', href: '/drivers', icon: Users, pageId: 'drivers' },
   { name: 'Customers', href: '/customers', icon: Building2, pageId: 'customers' },
-  { name: 'Shippers', href: '/shippers', icon: Warehouse, pageId: 'shippers' },
-  { name: 'Receivers', href: '/receivers', icon: Warehouse, pageId: 'receivers' },
+  // Lanes holds Shippers and Receivers too; it keeps their 'shippers' permission id.
+  { name: 'Lanes', href: '/lanes', icon: Route, pageId: 'shippers' },
   { name: 'Fuel', href: '/fuel', icon: FuelIcon, pageId: 'fuel' },
   { name: 'Payroll', href: '/payroll', icon: Calculator, pageId: 'payroll' },
   { name: 'Invoices', href: '/invoices', icon: FileText, pageId: 'invoices' },
@@ -100,7 +100,9 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const allowedPages = getAllowedPages(user)
 
   // Filter navigation items based on allowed pages
-  const filteredNavigation = navigation.filter(item => allowedPages.includes(item.pageId))
+  const filteredNavigation = navigation.filter(item =>
+    allowedPages.includes(item.pageId) || (item.pageId === 'shippers' && allowedPages.includes('receivers'))
+  )
 
   return (
     <div
