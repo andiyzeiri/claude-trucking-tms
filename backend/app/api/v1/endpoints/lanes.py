@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from statistics import median
 from typing import List, Optional
@@ -148,6 +148,9 @@ async def lane_history(
 
     lanes = {}
     for source, rid, number, broker, pick, dele, miles, rate, when in runs:
+        # created_at is timezone-aware, pickup dates are wall-clock: compare as naive UTC.
+        if isinstance(when, datetime) and when.tzinfo is not None:
+            when = when.astimezone(timezone.utc).replace(tzinfo=None)
         o, d = _place(pick), _place(dele)
         if not o or not d:
             continue
