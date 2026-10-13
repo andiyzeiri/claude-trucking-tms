@@ -10,6 +10,19 @@ class TruckStatus(str, enum.Enum):
     IN_TRANSIT = "in_transit"
     MAINTENANCE = "maintenance"
     OUT_OF_SERVICE = "out_of_service"
+    IN_USE = "in_use"
+    SOLD = "sold"              # company equipment only
+    NOT_LEASED = "not_leased"  # owner-operator equipment only
+
+
+class TruckOwnership(str, enum.Enum):
+    COMPANY = "company"
+    OWNER_OPERATOR = "owner_operator"
+
+
+# Statuses that belong to one kind of ownership.
+STATUS_OWNERSHIP = {TruckStatus.SOLD.value: TruckOwnership.COMPANY.value,
+                    TruckStatus.NOT_LEASED.value: TruckOwnership.OWNER_OPERATOR.value}
 
 
 class TruckType(str, enum.Enum):
@@ -28,6 +41,8 @@ class Truck(Base):
     year = Column(Integer)
     license_plate = Column(String)
     status = Column(String, default="available")
+    # Whose equipment: the company's own, or an owner-operator's leased on
+    ownership = Column(String(20), nullable=False, default="company", server_default="company")
     value = Column(Numeric(12, 2), default=0)
     cargo_insurance = Column(Numeric(10, 2), default=0)
     liability_insurance = Column(Numeric(10, 2), default=0)

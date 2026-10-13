@@ -84,7 +84,9 @@ export interface Truck {
   year?: number
   vin?: string
   license_plate?: string
-  status: 'available' | 'in_use' | 'maintenance' | 'out_of_service'
+  status: 'available' | 'in_use' | 'in_transit' | 'maintenance' | 'out_of_service' | 'sold' | 'not_leased'
+  /** Company equipment or an owner-operator's */
+  ownership?: 'company' | 'owner_operator'
   /** Owner fuels on their own card: red and at the bottom of the Fuel page */
   own_fuel_card?: boolean
   created_at: string

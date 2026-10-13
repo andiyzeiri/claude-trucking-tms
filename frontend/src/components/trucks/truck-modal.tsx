@@ -20,8 +20,22 @@ export interface TruckData {
   mpg: number
   registration: string
   inspection: string
-  status: 'available' | 'in_use' | 'maintenance'
+  status: TruckStatus
+  ownership: TruckOwnership
   driver: string | null
+}
+
+export type TruckOwnership = 'company' | 'owner_operator'
+export type TruckStatus = 'available' | 'in_use' | 'in_transit' | 'maintenance' | 'out_of_service' | 'sold' | 'not_leased'
+
+export const OWNERSHIP_LABEL: Record<TruckOwnership, string> = { company: 'Company', owner_operator: 'Owner Operator' }
+export const STATUS_LABEL: Record<TruckStatus, string> = {
+  available: 'Available', in_use: 'In Use', in_transit: 'In Transit', maintenance: 'Maintenance',
+  out_of_service: 'Out of Service', sold: 'Sold', not_leased: 'Not Leased',
+}
+// Sold is only for company equipment, Not Leased only for owner-operators'.
+export function statusesFor(ownership: TruckOwnership): TruckStatus[] {
+  return ['available', 'in_use', 'maintenance', 'out_of_service', ownership === 'company' ? 'sold' : 'not_leased']
 }
 
 interface TruckModalProps {
@@ -50,6 +64,7 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalP
     registration: '',
     inspection: '',
     status: 'available',
+    ownership: 'company',
     driver: null
   })
 
@@ -72,6 +87,7 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalP
         registration: '',
         inspection: '',
         status: 'available',
+        ownership: 'company',
         driver: null
       })
     }
@@ -87,7 +103,7 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalP
     if (formData.year < 1990 || formData.year > new Date().getFullYear() + 1) {
       newErrors.year = 'Year must be between 1990 and next year'
     }
-    if (formData.mileage < 0) newErrors.mileage = 'Mileage must be 0 or greater'
+    if (formData.miles < 0) newErrors.miles = 'Miles must be 0 or greater'
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -105,7 +121,7 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalP
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {mode === 'create' ? 'Add New Truck' : 'Edit Truck'}
+            {mode === 'create' ? 'Add Equipment' : `Edit ${formData.type === 'trailer' ? 'Trailer' : 'Truck'}`}
           </DialogTitle>
         </DialogHeader>
 
@@ -120,6 +136,25 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalP
               <SelectContent>
                 <SelectItem value="truck">Truck</SelectItem>
                 <SelectItem value="trailer">Trailer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ownership">Whose equipment</Label>
+            <Select value={formData.ownership} onValueChange={(value: TruckOwnership) =>
+              setFormData({
+                ...formData,
+                ownership: value,
+                // Sold / Not Leased don't carry over to the other kind of equipment
+                status: statusesFor(value).includes(formData.status) ? formData.status : 'available',
+              })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="company">Company {formData.type === 'trailer' ? 'trailer' : 'truck'}</SelectItem>
+                <SelectItem value="owner_operator">Owner Operator</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -245,15 +280,18 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalP
 
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
-            <Select value={formData.status} onValueChange={(value: 'available' | 'in_use' | 'maintenance') =>
+            <Select value={formData.status} onValueChange={(value: TruckStatus) =>
               setFormData({ ...formData, status: value })}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="available">Available</SelectItem>
-                <SelectItem value="in_use">In Use</SelectItem>
-                <SelectItem value="maintenance">Maintenance</SelectItem>
+                {(statusesFor(formData.ownership).includes(formData.status)
+                  ? statusesFor(formData.ownership)
+                  : [formData.status, ...statusesFor(formData.ownership)]
+                ).map(st => (
+                  <SelectItem key={st} value={st}>{STATUS_LABEL[st] || st}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

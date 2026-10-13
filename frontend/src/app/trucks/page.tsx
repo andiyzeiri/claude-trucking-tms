@@ -1,27 +1,16 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
-import { TruckModal, TruckData } from '@/components/trucks/truck-modal'
+import { TruckModal, TruckData, OWNERSHIP_LABEL, STATUS_LABEL } from '@/components/trucks/truck-modal'
 import { Plus, Truck as TruckIcon, Edit, Trash2, FileText } from 'lucide-react'
 import { useTrucks, useCreateTruck, useUpdateTruck } from '@/hooks/use-trucks'
 
-// Helper functions for localStorage
-const getTruckTypes = (): Record<number, 'truck' | 'trailer'> => {
-  if (typeof window === 'undefined') return {}
-  const stored = localStorage.getItem('truck-types')
-  return stored ? JSON.parse(stored) : {}
-}
-
-const saveTruckType = (truckId: number, type: 'truck' | 'trailer') => {
-  if (typeof window === 'undefined') return
-  const types = getTruckTypes()
-  types[truckId] = type
-  localStorage.setItem('truck-types', JSON.stringify(types))
-}
+// Sold (company) and Not Leased (owner-operator) units are kept for history, at the bottom.
+const INACTIVE = new Set(['sold', 'not_leased'])
 
 export default function TrucksPage() {
   // Fetch trucks from API
@@ -30,25 +19,14 @@ export default function TrucksPage() {
   const createTruck = useCreateTruck()
   const updateTruck = useUpdateTruck()
 
-  // Merge truck data with localStorage types
-  const [trucks, setTrucks] = useState<any[]>([])
+  const trucks: any[] = rawTrucks
 
-  useEffect(() => {
-    if (rawTrucks.length > 0) {
-      const truckTypes = getTruckTypes()
-      const mergedTrucks = rawTrucks.map(truck => ({
-        ...truck,
-        type: truckTypes[truck.id] || 'truck'
-      }))
-      setTrucks(mergedTrucks)
-    }
-  }, [rawTrucks.length])
-
-  // Separate trucks and trailers
+  // Trucks and trailers; within each, sold / not leased last
   const { trucksOnly, trailersOnly } = useMemo(() => {
+    const order = (list: any[]) => [...list].sort((a, b) => Number(INACTIVE.has(a.status)) - Number(INACTIVE.has(b.status)))
     return {
-      trucksOnly: trucks.filter(t => t.type === 'truck'),
-      trailersOnly: trucks.filter(t => t.type === 'trailer')
+      trucksOnly: order(trucks.filter(t => (t.type || 'truck') === 'truck')),
+      trailersOnly: order(trucks.filter(t => t.type === 'trailer'))
     }
   }, [trucks])
 
@@ -82,12 +60,13 @@ export default function TrucksPage() {
       model: truck.model || '',
       year: truck.year || new Date().getFullYear(),
       vin: truck.vin || '',
-      value: 0,
-      miles: 0,
-      mpg: 0,
+      value: Number(truck.value) || 0,
+      miles: Number(truck.miles) || 0,
+      mpg: Number(truck.mpg) || 0,
       registration: '',
       inspection: '',
       status: truck.status,
+      ownership: truck.ownership || 'company',
       driver: null
     }
     setEditingTruck(truckData)
@@ -111,25 +90,16 @@ export default function TrucksPage() {
       year: truckData.year,
       vin: truckData.vin,
       status: truckData.status,
+      ownership: truckData.ownership,
       value: truckData.value || 0,
       miles: truckData.miles || 0,
       mpg: truckData.mpg || 0
     }
 
     if (modalMode === 'create') {
-      createTruck.mutate(backendData as any, {
-        onSuccess: (data) => {
-          // Save the type to localStorage after truck is created
-          saveTruckType(data.id, truckData.type)
-        }
-      })
+      createTruck.mutate(backendData as any)
     } else if (editingTruck?.id) {
-      updateTruck.mutate({ id: editingTruck.id, data: backendData as any }, {
-        onSuccess: () => {
-          // Save the type to localStorage after truck is updated
-          saveTruckType(editingTruck.id, truckData.type)
-        }
-      })
+      updateTruck.mutate({ id: editingTruck.id, data: backendData as any })
     }
     setIsModalOpen(false)
   }
@@ -164,13 +134,16 @@ export default function TrucksPage() {
 
 
   const renderEquipmentRow = (item: any, index: number) => {
+    const inactive = INACTIVE.has(item.status)
+    const ownerOp = item.ownership === 'owner_operator'
     return (
       <tr
         key={item.id}
         className="border-b transition-colors cursor-pointer"
         style={{
           borderColor: 'var(--monday-border-light)',
-          backgroundColor: 'var(--monday-bg-primary)'
+          backgroundColor: 'var(--monday-bg-primary)',
+          opacity: inactive ? 0.55 : 1
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = 'var(--monday-bg-hover)'
@@ -182,7 +155,15 @@ export default function TrucksPage() {
         onContextMenu={(e) => handleRowRightClick(item, e)}
       >
         <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
-          <span className="font-medium" style={{ fontSize: '13px', color: 'var(--monday-cornflower)' }}>{item.truck_number}</span>
+          <span className="font-medium" style={{ fontSize: '13px', color: 'var(--monday-cornflower)', textDecoration: inactive ? 'line-through' : undefined }}>{item.truck_number}</span>
+        </td>
+        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style={{
+            backgroundColor: ownerOp ? 'rgba(162, 93, 220, 0.15)' : 'rgba(87, 155, 252, 0.15)',
+            color: ownerOp ? 'var(--monday-purple)' : 'var(--monday-cornflower)'
+          }}>
+            {ownerOp ? OWNERSHIP_LABEL.owner_operator : OWNERSHIP_LABEL.company}
+          </span>
         </td>
         <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
           {item.year || 'N/A'}
@@ -226,15 +207,17 @@ export default function TrucksPage() {
         <td className="px-3 py-2.5" style={{ borderColor: 'var(--monday-border-light)' }}>
           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style={{
             backgroundColor: item.status === 'available' ? 'rgba(0, 200, 117, 0.15)' :
-              item.status === 'in_use' ? 'rgba(27, 42, 65, 0.15)' :
+              item.status === 'in_use' || item.status === 'in_transit' ? 'rgba(27, 42, 65, 0.15)' :
               item.status === 'maintenance' ? 'rgba(253, 171, 61, 0.15)' :
+              inactive ? 'rgba(128, 128, 128, 0.18)' :
               'rgba(226, 68, 92, 0.15)',
             color: item.status === 'available' ? 'var(--monday-done)' :
-              item.status === 'in_use' ? 'var(--monday-cornflower)' :
+              item.status === 'in_use' || item.status === 'in_transit' ? 'var(--monday-cornflower)' :
               item.status === 'maintenance' ? 'var(--monday-working)' :
+              inactive ? 'var(--monday-text-secondary)' :
               'var(--monday-stuck)'
           }}>
-            {item.status}
+            {STATUS_LABEL[item.status as keyof typeof STATUS_LABEL] || item.status}
           </span>
         </td>
       </tr>
@@ -260,6 +243,7 @@ export default function TrucksPage() {
             <thead>
               <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Unit #</th>
+                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Whose</th>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Year</th>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Make</th>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Model</th>
@@ -275,7 +259,7 @@ export default function TrucksPage() {
             <tbody>
               {/* Trucks Section Header */}
               <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
-                <td colSpan={11} className="px-3 py-2 font-semibold" style={{ fontSize: '14px', color: 'var(--monday-text-primary)', borderBottom: '1px solid var(--monday-border-light)' }}>
+                <td colSpan={12} className="px-3 py-2 font-semibold" style={{ fontSize: '14px', color: 'var(--monday-text-primary)', borderBottom: '1px solid var(--monday-border-light)' }}>
                   <div className="flex items-center gap-2">
                     <TruckIcon className="h-4 w-4" style={{ color: 'var(--monday-cornflower)' }} />
                     Trucks ({trucksOnly.length})
@@ -288,7 +272,7 @@ export default function TrucksPage() {
 
               {trucksOnly.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-3 py-4 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
+                  <td colSpan={12} className="px-3 py-4 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
                     No trucks added yet
                   </td>
                 </tr>
@@ -296,7 +280,7 @@ export default function TrucksPage() {
 
               {/* Trailers Section Header */}
               <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
-                <td colSpan={11} className="px-3 py-2 font-semibold" style={{ fontSize: '14px', color: 'var(--monday-text-primary)', borderBottom: '1px solid var(--monday-border-light)' }}>
+                <td colSpan={12} className="px-3 py-2 font-semibold" style={{ fontSize: '14px', color: 'var(--monday-text-primary)', borderBottom: '1px solid var(--monday-border-light)' }}>
                   <div className="flex items-center gap-2">
                     <TruckIcon className="h-4 w-4" style={{ color: 'var(--monday-purple)' }} />
                     Trailers ({trailersOnly.length})
@@ -309,7 +293,7 @@ export default function TrucksPage() {
 
               {trailersOnly.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-3 py-4 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
+                  <td colSpan={12} className="px-3 py-4 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
                     No trailers added yet
                   </td>
                 </tr>
