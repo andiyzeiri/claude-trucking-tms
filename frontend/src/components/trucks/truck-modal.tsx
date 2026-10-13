@@ -44,13 +44,15 @@ interface TruckModalProps {
   onSave: (truck: TruckData) => void
   truck?: TruckData | null
   mode: 'create' | 'edit'
+  /** Ownership for new equipment (the tab it was added from) */
+  defaultOwnership?: TruckOwnership
 }
 
 const truckMakes = ['Freightliner', 'Peterbilt', 'Kenworth', 'Mack', 'International', 'Volvo', 'Western Star']
 const trailerMakes = ['Great Dane', 'Utility', 'Wabash', 'Hyundai', 'Vanguard', 'Stoughton', 'Kentucky', 'Fontaine', 'MAC', 'Wilson', 'East', 'Trail King', 'Reitnouer', 'Manac', 'Polar', 'Heil']
 const drivers = ['John Smith', 'Jane Doe', 'Mike Johnson', 'Sarah Wilson', 'David Brown']
 
-export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalProps) {
+export function TruckModal({ isOpen, onClose, onSave, truck, mode, defaultOwnership = 'company' }: TruckModalProps) {
   const [formData, setFormData] = useState<TruckData>({
     type: 'truck',
     unit_number: '',
@@ -87,12 +89,12 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalP
         registration: '',
         inspection: '',
         status: 'available',
-        ownership: 'company',
+        ownership: defaultOwnership,
         driver: null
       })
     }
     setErrors({})
-  }, [truck, mode, isOpen])
+  }, [truck, mode, isOpen, defaultOwnership])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -322,7 +324,7 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode }: TruckModalP
             Cancel
           </Button>
           <Button onClick={handleSave}>
-            {mode === 'create' ? 'Add Truck' : 'Save Changes'}
+            {mode === 'create' ? 'Add Equipment' : 'Save Changes'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -5,7 +5,7 @@ import Layout from '@/components/layout/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
-import { TruckModal, TruckData, OWNERSHIP_LABEL, STATUS_LABEL } from '@/components/trucks/truck-modal'
+import { TruckModal, TruckData, TruckOwnership, STATUS_LABEL } from '@/components/trucks/truck-modal'
 import { Plus, Truck as TruckIcon, Edit, Trash2, FileText } from 'lucide-react'
 import { useTrucks, useCreateTruck, useUpdateTruck } from '@/hooks/use-trucks'
 
@@ -20,15 +20,22 @@ export default function TrucksPage() {
   const updateTruck = useUpdateTruck()
 
   const trucks: any[] = rawTrucks
+  const [tab, setTab] = useState<TruckOwnership>('company')
+  const ownershipOf = (t: any): TruckOwnership => (t.ownership === 'owner_operator' ? 'owner_operator' : 'company')
+  const counts = useMemo(() => ({
+    company: trucks.filter(t => ownershipOf(t) === 'company').length,
+    owner_operator: trucks.filter(t => ownershipOf(t) === 'owner_operator').length,
+  }), [trucks])
 
-  // Trucks and trailers; within each, sold / not leased last
+  // This tab's trucks and trailers; within each, sold / not leased last
   const { trucksOnly, trailersOnly } = useMemo(() => {
+    const mine = trucks.filter(t => ownershipOf(t) === tab)
     const order = (list: any[]) => [...list].sort((a, b) => Number(INACTIVE.has(a.status)) - Number(INACTIVE.has(b.status)))
     return {
-      trucksOnly: order(trucks.filter(t => (t.type || 'truck') === 'truck')),
-      trailersOnly: order(trucks.filter(t => t.type === 'trailer'))
+      trucksOnly: order(mine.filter(t => (t.type || 'truck') === 'truck')),
+      trailersOnly: order(mine.filter(t => t.type === 'trailer'))
     }
-  }, [trucks])
+  }, [trucks, tab])
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -135,7 +142,6 @@ export default function TrucksPage() {
 
   const renderEquipmentRow = (item: any, index: number) => {
     const inactive = INACTIVE.has(item.status)
-    const ownerOp = item.ownership === 'owner_operator'
     return (
       <tr
         key={item.id}
@@ -156,14 +162,6 @@ export default function TrucksPage() {
       >
         <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
           <span className="font-medium" style={{ fontSize: '13px', color: 'var(--monday-cornflower)', textDecoration: inactive ? 'line-through' : undefined }}>{item.truck_number}</span>
-        </td>
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style={{
-            backgroundColor: ownerOp ? 'rgba(162, 93, 220, 0.15)' : 'rgba(87, 155, 252, 0.15)',
-            color: ownerOp ? 'var(--monday-purple)' : 'var(--monday-cornflower)'
-          }}>
-            {ownerOp ? OWNERSHIP_LABEL.owner_operator : OWNERSHIP_LABEL.company}
-          </span>
         </td>
         <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
           {item.year || 'N/A'}
@@ -238,12 +236,32 @@ export default function TrucksPage() {
           </Button>
         </div>
 
+        {/* Company / Owner Operators */}
+        <div className="flex items-center gap-1 border-b" style={{ borderColor: 'var(--monday-border-light)' }}>
+          {([['company', 'Company'], ['owner_operator', 'Owner Operators']] as [TruckOwnership, string][]).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className="px-4 py-2 text-sm transition-all"
+              style={{
+                color: tab === key ? 'var(--monday-done)' : 'var(--monday-text-secondary)',
+                borderBottom: tab === key ? '3px solid var(--monday-done)' : '3px solid transparent',
+                marginBottom: '-1px',
+                fontWeight: tab === key ? 600 : 500,
+                fontSize: '14px'
+              }}
+            >
+              {label}
+              <span style={{ marginLeft: '6px', fontSize: '12px', opacity: 0.7 }}>({counts[key]})</span>
+            </button>
+          ))}
+        </div>
+
         <div className="overflow-x-auto rounded-lg shadow-sm" style={{ border: '1px solid var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)' }}>
           <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
               <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Unit #</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Whose</th>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Year</th>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Make</th>
                 <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Model</th>
@@ -259,7 +277,7 @@ export default function TrucksPage() {
             <tbody>
               {/* Trucks Section Header */}
               <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
-                <td colSpan={12} className="px-3 py-2 font-semibold" style={{ fontSize: '14px', color: 'var(--monday-text-primary)', borderBottom: '1px solid var(--monday-border-light)' }}>
+                <td colSpan={11} className="px-3 py-2 font-semibold" style={{ fontSize: '14px', color: 'var(--monday-text-primary)', borderBottom: '1px solid var(--monday-border-light)' }}>
                   <div className="flex items-center gap-2">
                     <TruckIcon className="h-4 w-4" style={{ color: 'var(--monday-cornflower)' }} />
                     Trucks ({trucksOnly.length})
@@ -272,7 +290,7 @@ export default function TrucksPage() {
 
               {trucksOnly.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="px-3 py-4 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
+                  <td colSpan={11} className="px-3 py-4 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
                     No trucks added yet
                   </td>
                 </tr>
@@ -280,7 +298,7 @@ export default function TrucksPage() {
 
               {/* Trailers Section Header */}
               <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
-                <td colSpan={12} className="px-3 py-2 font-semibold" style={{ fontSize: '14px', color: 'var(--monday-text-primary)', borderBottom: '1px solid var(--monday-border-light)' }}>
+                <td colSpan={11} className="px-3 py-2 font-semibold" style={{ fontSize: '14px', color: 'var(--monday-text-primary)', borderBottom: '1px solid var(--monday-border-light)' }}>
                   <div className="flex items-center gap-2">
                     <TruckIcon className="h-4 w-4" style={{ color: 'var(--monday-purple)' }} />
                     Trailers ({trailersOnly.length})
@@ -293,7 +311,7 @@ export default function TrucksPage() {
 
               {trailersOnly.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="px-3 py-4 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
+                  <td colSpan={11} className="px-3 py-4 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>
                     No trailers added yet
                   </td>
                 </tr>
@@ -309,6 +327,7 @@ export default function TrucksPage() {
           onSave={handleSaveTruck}
           truck={editingTruck}
           mode={modalMode}
+          defaultOwnership={tab}
         />
 
         <ContextMenu
