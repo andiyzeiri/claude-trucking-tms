@@ -57,6 +57,7 @@ class TruckResponse(TruckBase):
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
     id: int
+    odometer_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     company_id: int

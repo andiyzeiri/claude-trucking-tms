@@ -88,6 +88,8 @@ async def update_truck(
 
     update_data = truck_update.model_dump(exclude_unset=True)
     _check_status(update_data.get("status", truck.status), update_data.get("ownership", truck.ownership))
+    if "miles" in update_data and update_data["miles"] != truck.miles:
+        truck.odometer_at = None  # typed in by hand; the next ELD reading replaces it
     for field, value in update_data.items():
         setattr(truck, field, value)
 

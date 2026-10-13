@@ -69,6 +69,7 @@ export default function TrucksPage() {
       vin: truck.vin || '',
       value: Number(truck.value) || 0,
       miles: Number(truck.miles) || 0,
+      odometer_at: truck.odometer_at || null,
       mpg: Number(truck.mpg) || 0,
       registration: '',
       inspection: '',
@@ -99,7 +100,8 @@ export default function TrucksPage() {
       status: truckData.status,
       ownership: truckData.ownership,
       value: truckData.value || 0,
-      miles: truckData.miles || 0,
+      // Peak ELD keeps the miles of matched trucks; don't overwrite them from the form
+      ...(truckData.odometer_at ? {} : { miles: truckData.miles || 0 }),
       mpg: truckData.mpg || 0
     }
 
@@ -179,7 +181,10 @@ export default function TrucksPage() {
           ${item.value ? Number(item.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
         </td>
         <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
-          {item.miles ? Number(item.miles).toLocaleString() : '0'}
+          <span title={item.odometer_at ? `Peak ELD odometer, ${new Date(item.odometer_at).toLocaleString()}` : 'Typed in (not matched to a Peak ELD truck)'}>
+            {item.miles ? Number(item.miles).toLocaleString() : '0'}
+            {item.odometer_at && <span className="ml-1 rounded px-1" style={{ fontSize: '10px', backgroundColor: 'rgba(0, 200, 117, 0.15)', color: 'var(--monday-done)' }}>ELD</span>}
+          </span>
         </td>
         <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
           {item.mpg ? Number(item.mpg).toFixed(1) : '0.0'}

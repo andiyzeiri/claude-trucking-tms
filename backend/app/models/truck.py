@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, Enum, Numeric, Boolean, false
+from sqlalchemy import Column, String, Integer, ForeignKey, Enum, Numeric, Boolean, DateTime, false
 from sqlalchemy.orm import relationship
 from geoalchemy2 import Geometry
 import enum
@@ -48,6 +48,8 @@ class Truck(Base):
     liability_insurance = Column(Numeric(10, 2), default=0)
     physical_damage_insurance = Column(Numeric(10, 2), default=0)
     miles = Column(Integer, default=0)
+    # When `miles` was last set from the Peak ELD odometer (null = typed in)
+    odometer_at = Column(DateTime(timezone=True))
     mpg = Column(Numeric(5, 1), default=0)
     # Owner buys fuel on their own card: shown red at the bottom of the Fuel page
     own_fuel_card = Column(Boolean, nullable=False, default=False, server_default=false())

@@ -87,6 +87,9 @@ export interface Truck {
   status: 'available' | 'in_use' | 'in_transit' | 'maintenance' | 'out_of_service' | 'sold' | 'not_leased'
   /** Company equipment or an owner-operator's */
   ownership?: 'company' | 'owner_operator'
+  miles?: number
+  /** When miles were last read from the Peak ELD odometer */
+  odometer_at?: string | null
   /** Owner fuels on their own card: red and at the bottom of the Fuel page */
   own_fuel_card?: boolean
   created_at: string

@@ -20,7 +20,8 @@ async def main():
     engine = create_async_engine(database_url)
     async with engine.begin() as conn:
         await conn.execute(text("ALTER TABLE trucks ADD COLUMN IF NOT EXISTS ownership VARCHAR(20) NOT NULL DEFAULT 'company'"))
-        print("trucks: ownership ready")
+        await conn.execute(text("ALTER TABLE trucks ADD COLUMN IF NOT EXISTS odometer_at TIMESTAMPTZ"))
+        print("trucks: ownership, odometer_at ready")
     await engine.dispose()
 
 

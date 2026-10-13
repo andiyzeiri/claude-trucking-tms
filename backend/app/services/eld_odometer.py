@@ -22,6 +22,8 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.eld_connection import EldConnection, EldOdometerReading
+from app.models.truck import Truck
+from app.services.eld_match import TruckMatcher
 from app.services import peak_eld, secret_box
 
 logger = logging.getLogger(__name__)
@@ -34,7 +36,7 @@ async def record(db: AsyncSession, conn: EldConnection) -> int:
     key = secret_box.decrypt(conn.api_key_encrypted)
     if not key:
         return 0
-    _, unit = await peak_eld.vehicles(key)
+    vehicles, unit = await peak_eld.vehicles(key)
     readings = await peak_eld.live_odometers(key, unit)
     rows = [
         {
@@ -51,8 +53,38 @@ async def record(db: AsyncSession, conn: EldConnection) -> int:
         added = result.rowcount or 0
     if conn.odometer_since is None:
         conn.odometer_since = datetime.now(timezone.utc)
+    await update_truck_miles(db, conn, vehicles, readings)
     await db.commit()
     return added
+
+
+async def update_truck_miles(db: AsyncSession, conn: EldConnection, vehicles, readings) -> int:
+    """
+    Equipment page Miles: each matched truck's latest Peak odometer, with when
+    it was read. Never moves a truck's miles backwards (a stale reading after a
+    newer one, or a second Peak vehicle matched to the same truck).
+    """
+    trucks = (await db.execute(
+        select(Truck).where(Truck.company_id == conn.company_id, Truck.type == "truck")
+    )).scalars().all()
+    if not trucks:
+        return 0
+    matcher = TruckMatcher(trucks, conn.truck_map)
+    info = {str(v.get("id") or ""): v for v in vehicles}
+    updated = 0
+    for vid, ms, odo in readings:
+        truck, _ = matcher.match(vid, info.get(vid) or {"vehicleId": vid})
+        if truck is None or odo is None or odo <= 0:
+            continue
+        when = datetime.fromtimestamp(ms / 1000, timezone.utc)
+        miles = int(round(odo))
+        if truck.odometer_at is not None and when <= truck.odometer_at:
+            continue
+        if truck.miles and miles < truck.miles and truck.odometer_at is not None:
+            continue
+        truck.miles, truck.odometer_at = miles, when
+        updated += 1
+    return updated
 
 
 async def record_all() -> None:

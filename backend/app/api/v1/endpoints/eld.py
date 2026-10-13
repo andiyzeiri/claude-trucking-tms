@@ -27,6 +27,7 @@ from app.models.eld_connection import EldConnection
 from app.models.truck import Truck
 from app.models.user import User
 from app.services import eld_odometer, peak_eld, secret_box
+from app.services.eld_match import TruckMatcher
 
 router = APIRouter()
 
@@ -143,13 +144,6 @@ def _range_ms(start: date, end: date, tz: str) -> tuple:
     return int(start_dt.timestamp() * 1000), int(end_dt.timestamp() * 1000) - 1
 
 
-def _norm_unit(s: Optional[str]) -> str:
-    """"Truck #0101" and "101" both -> "101"."""
-    s = re.sub(r"[^a-z0-9]", "", (s or "").lower())
-    s = re.sub(r"^(truck|unit|trk)", "", s)
-    return s.lstrip("0")
-
-
 def _peak_error(e: peak_eld.PeakError) -> HTTPException:
     return HTTPException(status_code=400 if e.auth else 502, detail=str(e))
 
@@ -256,12 +250,7 @@ async def mileage(
         select(Truck).options(selectinload(Truck.current_driver))
         .where(Truck.company_id == current_user.company_id, Truck.type == "truck")
     )).scalars().all()
-    by_id = {t.id: t for t in trucks}
-    by_unit = {}
-    for t in trucks:
-        by_unit.setdefault(_norm_unit(t.truck_number), t)
-    by_vin = {(t.vin or "").strip().upper(): t for t in trucks if (t.vin or "").strip()}
-    manual = conn.truck_map or {}
+    matcher = TruckMatcher(trucks, conn.truck_map)
 
     out: List[VehicleMiles] = []
     seen = set()
@@ -270,10 +259,10 @@ async def mileage(
         if not eld_id:
             continue
         seen.add(eld_id)
-        out.append(_vehicle_row(eld_id, v, miles.get(eld_id, 0.0), manual, by_id, by_unit, by_vin))
+        out.append(_vehicle_row(eld_id, v, miles.get(eld_id, 0.0), matcher))
     for eld_id, m in miles.items():  # miles for a vehicle no longer listed
         if eld_id not in seen:
-            out.append(_vehicle_row(eld_id, {"vehicleId": eld_id, "active": False}, m, manual, by_id, by_unit, by_vin))
+            out.append(_vehicle_row(eld_id, {"vehicleId": eld_id, "active": False}, m, matcher))
 
     for r in out:
         if r.eld_id in recorded:
@@ -301,19 +290,10 @@ async def mileage(
     )
 
 
-def _vehicle_row(eld_id, v, miles, manual, by_id, by_unit, by_vin) -> VehicleMiles:
+def _vehicle_row(eld_id, v, miles, matcher: TruckMatcher) -> VehicleMiles:
     unit = str(v.get("vehicleId") or eld_id)
     vin = (v.get("vinNum") or "").strip().upper() or None
-    truck, how = None, None
-    if eld_id in manual:
-        truck = by_id.get(manual[eld_id]) if manual[eld_id] else None
-        how = "manual" if truck else None
-    else:
-        truck = by_unit.get(_norm_unit(unit))
-        how = "unit" if truck else None
-        if truck is None and vin:
-            truck = by_vin.get(vin)
-            how = "vin" if truck else None
+    truck, how = matcher.match(eld_id, v)
     driver = truck.current_driver if truck else None
     return VehicleMiles(
         eld_id=eld_id, unit=unit, vin=vin, active=v.get("active", True) is not False,

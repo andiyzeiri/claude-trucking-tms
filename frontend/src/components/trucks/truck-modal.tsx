@@ -17,6 +17,8 @@ export interface TruckData {
   vin: string
   value: number
   miles: number
+  /** Set when miles come from the Peak ELD odometer */
+  odometer_at?: string | null
   mpg: number
   registration: string
   inspection: string
@@ -245,7 +247,13 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode, defaultOwners
               value={formData.miles || ''}
               onChange={(e) => setFormData({ ...formData, miles: parseInt(e.target.value) || 0 })}
               placeholder="0"
+              disabled={!!formData.odometer_at}
             />
+            {formData.odometer_at && (
+              <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>
+                Peak ELD odometer, {new Date(formData.odometer_at).toLocaleString()}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
