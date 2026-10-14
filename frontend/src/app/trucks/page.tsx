@@ -6,11 +6,29 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
 import { TruckModal, TruckData, TruckOwnership, STATUS_LABEL } from '@/components/trucks/truck-modal'
-import { Plus, Truck as TruckIcon, Edit, Trash2, FileText, X } from 'lucide-react'
+import { Plus, Truck as TruckIcon, Edit, Trash2, FileText, X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 import { useTrucks, useCreateTruck, useUpdateTruck } from '@/hooks/use-trucks'
 import { PdfViewer } from '@/components/loads/pdf-viewer'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
+
+type SortKey = 'truck_number' | 'year' | 'make' | 'model' | 'vin' | 'value' | 'miles' | 'mpg' | 'registration_url' | 'inspection_url' | 'status'
+const num = (v: any) => (v === null || v === undefined || v === '' ? null : Number(v))
+const SORT_VALUE: Record<SortKey, (t: any) => string | number | null> = {
+  truck_number: t => t.truck_number || '',
+  year: t => num(t.year),
+  make: t => t.make || '',
+  model: t => t.model || '',
+  vin: t => t.vin || '',
+  value: t => num(t.value),
+  miles: t => num(t.miles),
+  mpg: t => num(t.mpg),
+  registration_url: t => (t.registration_url ? 0 : 1),   // with a document first
+  inspection_url: t => (t.inspection_url ? 0 : 1),
+  status: t => STATUS_LABEL[t.status as keyof typeof STATUS_LABEL] || t.status || '',
+}
+// "2" before "10" for unit numbers
+const COLLATOR = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
 
 type DocField = 'registration_url' | 'inspection_url'
 const DOC_LABEL: Record<DocField, string> = { registration_url: 'Registration', inspection_url: 'Inspection' }
@@ -41,14 +59,39 @@ export default function TrucksPage() {
   }), [trucks])
 
   // This tab's trucks and trailers; within each, sold / not leased last
+  // Column sort (click a header; again to reverse), remembered in this browser
+  const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('equipment-sort') || 'null')
+      if (saved && SORT_VALUE[saved.key as SortKey]) return saved
+    } catch {}
+    return { key: 'truck_number', dir: 'asc' }
+  })
+  const toggleSort = (key: SortKey) => {
+    const next = { key, dir: sort.key === key && sort.dir === 'asc' ? 'desc' : 'asc' } as const
+    setSort(next)
+    try { localStorage.setItem('equipment-sort', JSON.stringify(next)) } catch {}
+  }
+
   const { trucksOnly, trailersOnly } = useMemo(() => {
     const mine = trucks.filter(t => ownershipOf(t) === tab)
-    const order = (list: any[]) => [...list].sort((a, b) => Number(INACTIVE.has(a.status)) - Number(INACTIVE.has(b.status)))
+    const value = SORT_VALUE[sort.key]
+    const sign = sort.dir === 'asc' ? 1 : -1
+    // Sold / not leased stay at the bottom; blanks sort last either way
+    const order = (list: any[]) => [...list].sort((a, b) => {
+      const inactive = Number(INACTIVE.has(a.status)) - Number(INACTIVE.has(b.status))
+      if (inactive) return inactive
+      const x = value(a), y = value(b)
+      const xBlank = x === '' || x == null, yBlank = y === '' || y == null
+      if (xBlank || yBlank) return Number(xBlank) - Number(yBlank)
+      const c = typeof x === 'number' && typeof y === 'number' ? x - y : COLLATOR.compare(String(x), String(y))
+      return c * sign
+    })
     return {
       trucksOnly: order(mine.filter(t => (t.type || 'truck') === 'truck')),
       trailersOnly: order(mine.filter(t => t.type === 'trailer'))
     }
-  }, [trucks, tab])
+  }, [trucks, tab, sort])
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -200,6 +243,25 @@ export default function TrucksPage() {
     )
   }
 
+  const sortHeader = (key: SortKey, label: string, align: 'left' | 'right', border: boolean) => {
+    const active = sort.key === key
+    return (
+      <th
+        className={`px-3 py-2.5 text-${align} border-b${border ? ' border-r' : ''} cursor-pointer select-none hover:bg-gray-100`}
+        style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: active ? 600 : 500, color: active ? 'var(--monday-text-primary)' : 'var(--monday-text-secondary)' }}
+        onClick={() => toggleSort(key)}
+        title={`Sort by ${label}`}
+      >
+        <span className={`inline-flex items-center gap-1 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
+          {label}
+          {active
+            ? (sort.dir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)
+            : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+        </span>
+      </th>
+    )
+  }
+
   const renderEquipmentRow = (item: any, index: number) => {
     const inactive = INACTIVE.has(item.status)
     return (
@@ -308,17 +370,17 @@ export default function TrucksPage() {
           <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
               <tr style={{ backgroundColor: 'var(--monday-bg-secondary)' }}>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Unit #</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Year</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Make</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Model</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>VIN</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Value</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Miles</th>
-                <th className="px-3 py-2.5 text-right border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>MPG</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Registration</th>
-                <th className="px-3 py-2.5 text-left border-b border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Inspection</th>
-                <th className="px-3 py-2.5 text-left border-b" style={{ borderColor: 'var(--monday-border-light)', fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)' }}>Status</th>
+                {sortHeader('truck_number', 'Unit #', 'left', true)}
+                {sortHeader('year', 'Year', 'left', true)}
+                {sortHeader('make', 'Make', 'left', true)}
+                {sortHeader('model', 'Model', 'left', true)}
+                {sortHeader('vin', 'VIN', 'left', true)}
+                {sortHeader('value', 'Value', 'right', true)}
+                {sortHeader('miles', 'Miles', 'right', true)}
+                {sortHeader('mpg', 'MPG', 'right', true)}
+                {sortHeader('registration_url', 'Registration', 'left', true)}
+                {sortHeader('inspection_url', 'Inspection', 'left', true)}
+                {sortHeader('status', 'Status', 'left', false)}
               </tr>
             </thead>
             <tbody>
