@@ -271,7 +271,7 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode, defaultOwners
             />
             {formData.mpg_at && (
               <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>
-                ELD miles / Fuel gallons, last 90 days ({new Date(formData.mpg_at).toLocaleDateString()})
+                Average weekly MPG from the Fuel tab ({new Date(formData.mpg_at).toLocaleDateString()})
               </p>
             )}
           </div>

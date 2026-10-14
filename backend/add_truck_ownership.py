@@ -24,7 +24,18 @@ async def main():
         await conn.execute(text("ALTER TABLE trucks ADD COLUMN IF NOT EXISTS registration_url VARCHAR"))
         await conn.execute(text("ALTER TABLE trucks ADD COLUMN IF NOT EXISTS inspection_url VARCHAR"))
         await conn.execute(text("ALTER TABLE trucks ADD COLUMN IF NOT EXISTS mpg_at TIMESTAMPTZ"))
-        print("trucks: ownership, odometer_at, registration_url, inspection_url, mpg_at ready")
+        # ELD miles per truck per finished week, for the average weekly MPG (services/truck_mpg.py)
+        await conn.execute(text(
+            "CREATE TABLE IF NOT EXISTS truck_week_miles ("
+            " id SERIAL PRIMARY KEY, company_id INTEGER NOT NULL REFERENCES companies(id),"
+            " truck_id INTEGER REFERENCES trucks(id) ON DELETE CASCADE, week_start DATE NOT NULL,"
+            " miles NUMERIC(10, 1) NOT NULL DEFAULT 0, created_at TIMESTAMPTZ DEFAULT NOW())"
+        ))
+        await conn.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_truck_week_miles"
+            " ON truck_week_miles (company_id, COALESCE(truck_id, 0), week_start)"
+        ))
+        print("trucks: ownership, odometer_at, registration_url, inspection_url, mpg_at, truck_week_miles ready")
     await engine.dispose()
 
 

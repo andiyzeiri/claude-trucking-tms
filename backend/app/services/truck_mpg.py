@@ -1,85 +1,104 @@
 """
-Equipment page MPG: each truck's Peak ELD miles over the last 90 days divided
-by the gallons on its Fuel entries over the same 90 days. A long window evens
-out fill-up timing (a tank bought on day 1 burned over the next week). Run
-once a day; a truck without enough miles or fuel in the window keeps its MPG.
+Equipment page MPG: the average of each truck's weekly MPG on the Fuel tab.
+
+A week's MPG is worked out exactly as the Fuel tab does it: the week's Peak
+ELD miles (the /eld/mileage numbers the Fuel tab and Payroll show - live
+odometer, else first/last inspection, else GPS miles) divided by the gallons
+on the truck's Fuel entries dated in that Monday-Sunday week. Weeks where
+either is missing (the Fuel tab shows "-") are left out of the average.
+
+A finished week's ELD miles don't change, so each is asked of Peak once and
+kept in truck_week_miles. Runs every Monday and once after start-up.
 """
 import logging
-from datetime import datetime, timedelta, timezone
+import types
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Dict
+from typing import Dict, List, Tuple
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.eld_connection import EldConnection
 from app.models.fuel import Fuel
 from app.models.truck import Truck
-from app.services import peak_eld, secret_box
-from app.services.eld_match import TruckMatcher
 
 logger = logging.getLogger(__name__)
 
-WINDOW_DAYS = 90
-MIN_MILES = 500
-MIN_GALLONS = 50
-SANE_MPG = (3.0, 15.0)  # outside this the miles or the fuel is incomplete
+WEEKS_BACK = 52
+TZ = "America/Chicago"  # the Fuel tab asks for the browser's zone; the office is on Central
+
+
+def _monday(d: date) -> date:
+    return d - timedelta(days=d.weekday())
+
+
+async def _week_miles(db: AsyncSession, company_id: int, monday: date) -> Dict[int, float]:
+    """TMS truck id -> that week's ELD miles, as the Fuel tab shows them."""
+    from app.api.v1.endpoints.eld import mileage
+
+    out = await mileage(start=monday, end=monday + timedelta(days=6), tz=TZ, odometer=True, db=db,
+                        current_user=types.SimpleNamespace(company_id=company_id))
+    miles: Dict[int, float] = {}
+    for v in out.vehicles:
+        if v.truck_id:
+            # Same choice as the Fuel tab: odometer miles when there are any, else GPS miles.
+            miles[v.truck_id] = float(v.odometer_miles if v.odometer_miles is not None else v.miles)
+    return miles
 
 
 async def update(db: AsyncSession, conn: EldConnection) -> int:
-    key = secret_box.decrypt(conn.api_key_encrypted)
-    if not key:
-        return 0
-    end = datetime.now(timezone.utc)
-    start = end - timedelta(days=WINDOW_DAYS)
-    vehicles, unit = await peak_eld.vehicles(key)
-    # A week at a time, as the mileage report asks Peak.
-    miles: Dict[str, float] = {}
-    t = start
-    while t < end:
-        t2 = min(t + timedelta(days=7), end)
-        for vid, m in (await peak_eld.miles_by_vehicle(key, int(t.timestamp() * 1000), int(t2.timestamp() * 1000), unit)).items():
-            miles[vid] = miles.get(vid, 0.0) + m
-        t = t2
+    company_id = conn.company_id
+    this_monday = _monday(datetime.now(timezone.utc).date())
+    first = this_monday - timedelta(weeks=WEEKS_BACK)
 
-    trucks = (await db.execute(
-        select(Truck).where(Truck.company_id == conn.company_id, Truck.type == "truck")
-    )).scalars().all()
-    matcher = TruckMatcher(trucks, conn.truck_map)
-    info = {str(v.get("id") or ""): v for v in vehicles}
-    truck_miles: Dict[int, float] = {}
-    for vid, m in miles.items():
-        truck, _ = matcher.match(vid, info.get(vid) or {"vehicleId": vid})
-        if truck is not None:
-            truck_miles[truck.id] = truck_miles.get(truck.id, 0.0) + m
+    # Gallons per truck per finished week, from the Fuel entries.
+    gallons: Dict[Tuple[int, date], float] = {}
+    for truck_id, day, g in (await db.execute(
+        select(Fuel.truck_id, Fuel.date, Fuel.gallons)
+        .where(Fuel.company_id == company_id, Fuel.truck_id.isnot(None), Fuel.date >= first, Fuel.date < this_monday)
+    )).all():
+        key = (truck_id, _monday(day))
+        gallons[key] = gallons.get(key, 0.0) + float(g or 0)
 
-    gallons = dict((await db.execute(
-        select(Fuel.truck_id, func.sum(Fuel.gallons))
-        .where(Fuel.company_id == conn.company_id, Fuel.truck_id.isnot(None), Fuel.date >= start.date())
-        .group_by(Fuel.truck_id)
-    )).all())
+    # ELD miles for the weeks that have fuel and haven't been fetched yet.
+    have = {r[0] for r in (await db.execute(text(
+        "SELECT DISTINCT week_start FROM truck_week_miles WHERE company_id = :c AND week_start >= :f"
+    ), {"c": company_id, "f": first})).all()}
+    for monday in sorted({m for (_, m) in gallons} - have):
+        miles = await _week_miles(db, company_id, monday)
+        rows = [{"c": company_id, "t": t, "w": monday, "m": round(m, 1)} for t, m in miles.items()]
+        rows.append({"c": company_id, "t": None, "w": monday, "m": 0})  # marks the week fetched
+        await db.execute(text(
+            "INSERT INTO truck_week_miles (company_id, truck_id, week_start, miles) VALUES (:c, :t, :w, :m) "
+            "ON CONFLICT DO NOTHING"
+        ), rows)
+        await db.commit()
 
+    miles: Dict[Tuple[int, date], float] = {
+        (t, w): float(m) for t, w, m in (await db.execute(text(
+            "SELECT truck_id, week_start, miles FROM truck_week_miles "
+            "WHERE company_id = :c AND week_start >= :f AND truck_id IS NOT NULL"
+        ), {"c": company_id, "f": first})).all()
+    }
+
+    weekly: Dict[int, List[float]] = {}
+    for (truck_id, monday), g in gallons.items():
+        m = miles.get((truck_id, monday), 0.0)
+        if m > 0 and g > 0:
+            weekly.setdefault(truck_id, []).append(m / g)
+
+    now = datetime.now(timezone.utc)
     updated = 0
-    skipped = {"miles": 0, "fuel": 0, "range": []}
-    for truck in trucks:
-        m, g = truck_miles.get(truck.id, 0.0), float(gallons.get(truck.id) or 0)
-        if m < MIN_MILES:
-            skipped["miles"] += 1
+    for truck in (await db.execute(select(Truck).where(Truck.company_id == company_id, Truck.type == "truck"))).scalars():
+        mpgs = weekly.get(truck.id)
+        if not mpgs:
             continue
-        if g < MIN_GALLONS:
-            skipped["fuel"] += 1
-            continue
-        mpg = m / g
-        if not SANE_MPG[0] <= mpg <= SANE_MPG[1]:
-            skipped["range"].append(f"{truck.truck_number}: {m:.0f} mi / {g:.0f} gal")
-            continue
-        truck.mpg = Decimal(str(round(mpg, 1)))
-        truck.mpg_at = end
+        truck.mpg = Decimal(str(round(sum(mpgs) / len(mpgs), 1)))
+        truck.mpg_at = now
         updated += 1
     await db.commit()
-    logger.info("truck_mpg: company %s: %s of %s trucks updated; skipped - under %s ELD mi: %s, under %s gal: %s, "
-                "outside %s-%s MPG: %s", conn.company_id, updated, len(trucks), MIN_MILES, skipped["miles"],
-                MIN_GALLONS, skipped["fuel"], SANE_MPG[0], SANE_MPG[1], skipped["range"][:20])
+    logger.info("truck_mpg: company %s: %s truck(s) set to their average weekly Fuel-tab MPG", company_id, updated)
     return updated
 
 
@@ -96,7 +115,5 @@ async def update_all() -> None:
                 continue
             try:
                 await update(db, conn)
-            except peak_eld.PeakError as e:
-                logger.warning("truck_mpg: company %s: %s", conn.company_id, e)
             except Exception:
-                logger.exception("truck_mpg: company %s crashed", conn.company_id)
+                logger.exception("truck_mpg: company %s failed", conn.company_id)

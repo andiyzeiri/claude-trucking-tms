@@ -309,7 +309,7 @@ export default function TrucksPage() {
           </span>
         </td>
         <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
-          <span title={item.mpg_at ? `Peak ELD miles / Fuel gallons, last 90 days (updated ${new Date(item.mpg_at).toLocaleDateString()})` : 'Typed in (not enough ELD miles or fuel in the last 90 days)'}>
+          <span title={item.mpg_at ? `Average of this truck's weekly MPG on the Fuel tab (updated ${new Date(item.mpg_at).toLocaleDateString()})` : 'Typed in (no week on the Fuel tab with both ELD miles and fuel yet)'}>
             {item.mpg ? Number(item.mpg).toFixed(1) : '0.0'}
             {item.mpg_at && <span className="ml-1 rounded px-1" style={{ fontSize: '10px', backgroundColor: 'rgba(87, 155, 252, 0.15)', color: 'var(--monday-cornflower)' }}>FUEL</span>}
           </span>
