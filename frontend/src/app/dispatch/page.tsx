@@ -36,6 +36,15 @@ function cityState(location?: string | null): string {
   return parts[0] || ''
 }
 
+// 'Wed 10/15 · 8a – 3p' from a wall-clock date and the page's time text.
+function when(date?: string | null, time?: { kind: string; text: string } | null): string {
+  const day = dayKey(date)
+  if (!day) return '-'
+  const [y, m, d] = day.split('-').map(Number)
+  const label = format(new Date(y, m - 1, d), 'EEE M/d')
+  return time && time.kind !== 'none' ? `${label} · ${time.text}` : label
+}
+
 function LoadLine({ load }: { load: AILoad }) {
   const f = load.fields || {}
   const number = f.broker_load_number || f.load_number || `#${load.id}`
@@ -114,6 +123,37 @@ export default function DispatchBoardPage() {
     return n
   }, [byDriverDay])
 
+  // Each current driver's trip: the load they're on today (picked up on or
+  // before today, delivering today or later), else their next load. Drivers
+  // with neither have no trip; for them, where they last delivered.
+  const { active, idle } = useMemo(() => {
+    const todayKey = ymd(new Date())
+    const byDriver = new Map<number, AILoad[]>()
+    aiLoads.forEach(l => {
+      const id = Number(l.fields?.driver_id)
+      if (id) byDriver.set(id, [...(byDriver.get(id) || []), l])
+    })
+    const active: { driver: (typeof drivers)[number]; load: AILoad; now: boolean }[] = []
+    const idle: { driver: (typeof drivers)[number]; last: AILoad | null }[] = []
+    drivers.filter(d => !d.date_terminated).forEach(driver => {
+      const loads = byDriver.get(driver.id) || []
+      const pick = (l: AILoad) => dayKey(l.fields?.pickup_date) || ''
+      const drop = (l: AILoad) => dayKey(l.fields?.delivery_date) || pick(l)
+      const byPickup = (a: AILoad, b: AILoad) => String(a.fields?.pickup_date).localeCompare(String(b.fields?.pickup_date))
+      const current = loads.filter(l => pick(l) && pick(l) <= todayKey && drop(l) >= todayKey).sort(byPickup)[0]
+      const next = loads.filter(l => pick(l) > todayKey).sort(byPickup)[0]
+      if (current || next) {
+        active.push({ driver, load: (current || next)!, now: !!current })
+      } else {
+        const last = loads.filter(l => drop(l) && drop(l) < todayKey)
+          .sort((a, b) => String(b.fields?.delivery_date || b.fields?.pickup_date).localeCompare(String(a.fields?.delivery_date || a.fields?.pickup_date)))[0]
+        idle.push({ driver, last: last || null })
+      }
+    })
+    active.sort((a, b) => Number(b.now) - Number(a.now) || String(a.load.fields?.delivery_date).localeCompare(String(b.load.fields?.delivery_date)))
+    return { active, idle }
+  }, [aiLoads, drivers])
+
   const line = { borderColor: 'var(--monday-border-light)' }
   const today = new Date()
 
@@ -137,12 +177,101 @@ export default function DispatchBoardPage() {
     </tr>
   )
 
+  const th = (label: string) => (
+    <th className="px-3 py-2 text-left border-b" style={{ ...line, fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', whiteSpace: 'nowrap' }}>{label}</th>
+  )
+  const td = (content: React.ReactNode, sub?: React.ReactNode) => (
+    <td className="px-3 py-2 align-top border-b" style={line}>
+      <div style={{ fontSize: '13px', color: 'var(--monday-text-primary)' }}>{content}</div>
+      {sub && <div style={{ fontSize: '12px', color: 'var(--monday-text-secondary)' }}>{sub}</div>}
+    </td>
+  )
+  const heading = (title: string, count: number) => (
+    <h2 className="mb-1 font-semibold" style={{ fontSize: '14px', color: 'var(--monday-text-primary)' }}>
+      {title} <span style={{ fontWeight: 400, color: 'var(--monday-text-muted)' }}>({count})</span>
+    </h2>
+  )
+
   return (
     <Layout>
-      <div className="p-6 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>Dispatch Board</h1>
-          <div className="flex items-center gap-2">
+      <div className="p-6 space-y-6">
+        <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>Dispatch Board</h1>
+
+        {/* Square truck map top left; active drivers and drivers without a trip to its right */}
+        <div className="grid gap-6 lg:grid-cols-[minmax(320px,32%)_1fr] lg:items-start">
+          <div>
+            {eld?.connected ? (
+              <>
+                <div style={{ aspectRatio: '1 / 1', width: '100%' }}>
+                  <TruckMap trucks={locations} height="100%" />
+                </div>
+                <div className="mt-1 flex flex-wrap justify-between gap-x-2" style={{ fontSize: '11px', color: 'var(--monday-text-muted)' }}>
+                  <span>
+                    {locationsError
+                      ? ((locationsError as any)?.response?.data?.detail || 'Couldn’t get truck locations from Peak ELD')
+                      : `${locations.length} truck${locations.length === 1 ? '' : 's'} from Peak ELD · green = moving`}
+                  </span>
+                  {dataUpdatedAt > 0 && <span>Updated {format(new Date(dataUpdatedAt), 'h:mm a')} · refreshes every minute</span>}
+                </div>
+              </>
+            ) : eld && !eld.connected ? (
+              <p style={{ fontSize: '12px', color: 'var(--monday-text-muted)' }}>Connect Peak ELD in Settings to see your trucks on a map here.</p>
+            ) : null}
+          </div>
+
+          <div className="min-w-0 space-y-6">
+            <div>
+              {heading('Active drivers', active.length)}
+              <div className="overflow-x-auto">
+                <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+                  <thead><tr>{th('Driver')}{th('Load')}{th('Pickup')}{th('Delivery')}</tr></thead>
+                  <tbody>
+                    {active.length === 0 && (
+                      <tr><td colSpan={4} className="px-3 py-3" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>{isLoading ? 'Loading…' : 'No drivers on a trip.'}</td></tr>
+                    )}
+                    {active.map(({ driver, load, now }) => {
+                      const f = load.fields || {}
+                      return (
+                        <tr key={driver.id}>
+                          {td(`${driver.first_name} ${driver.last_name}`, now ? 'On a trip' : 'Next trip')}
+                          {td(f.broker_load_number || f.load_number || `#${load.id}`, load.broker_name)}
+                          {td(cityState(f.pickup_location) || '-', when(f.pickup_date, load.pickup_time))}
+                          {td(cityState(f.delivery_location) || '-', when(f.delivery_date, load.delivery_time))}
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              {heading('No trip', idle.length)}
+              <div className="overflow-x-auto">
+                <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+                  <thead><tr>{th('Driver')}{th('Last delivery')}</tr></thead>
+                  <tbody>
+                    {idle.length === 0 && (
+                      <tr><td colSpan={2} className="px-3 py-3" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>{isLoading ? 'Loading…' : 'Every driver has a trip.'}</td></tr>
+                    )}
+                    {idle.map(({ driver, last }) => (
+                      <tr key={driver.id}>
+                        {td(`${driver.first_name} ${driver.last_name}`)}
+                        {last
+                          ? td(cityState(last.fields?.delivery_location) || '-', when(last.fields?.delivery_date || last.fields?.pickup_date, last.delivery_time))
+                          : td(<span style={{ color: 'var(--monday-text-muted)' }}>-</span>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* The week: drivers down the left, Monday-Sunday across */}
+        <div>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => setWeekStart(w => addDays(w, -7))} aria-label="Previous week">
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -159,65 +288,42 @@ export default function DispatchBoardPage() {
               {isLoading ? 'Loading…' : `${weekCount} load${weekCount === 1 ? '' : 's'}`}
             </span>
           </div>
-        </div>
-
-        {/* The week on the left; the truck map on the right, 30% of the width and nearly full height */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-          <div className="min-w-0 flex-1">
-            {error ? (
-              <p style={{ fontSize: '13px', color: 'var(--monday-text-secondary)' }}>
-                Couldn&apos;t load the Loads AI loads. Seeing the Dispatch Board needs access to Loads AI.
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', minWidth: '760px' }}>
-                  <colgroup>
-                    <col style={{ width: '140px' }} />
-                    {weekDays.map(d => <col key={ymd(d)} />)}
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th className="sticky left-0 z-10 border-b" style={{ ...line, backgroundColor: 'var(--monday-bg-primary)' }} />
-                      {weekDays.map(day => {
-                        const isToday = isSameDay(day, today)
-                        return (
-                          <th key={ymd(day)} className="px-3 py-2 text-left border-b" style={line}>
-                            <span style={{ fontSize: '12px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', color: isToday ? '#2563eb' : 'var(--monday-text-secondary)' }}>
-                              {format(day, 'EEE')}
-                            </span>
-                            <span className="ml-1.5" style={{ fontSize: '14px', fontWeight: 600, color: isToday ? '#2563eb' : 'var(--monday-text-primary)' }}>
-                              {format(day, 'd')}
-                            </span>
-                          </th>
-                        )
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {drivers.map(d => row(d.id, `${d.first_name} ${d.last_name}`, byDriverDay.get(d.id)))}
-                    {unassigned.size > 0 && row('unassigned', 'Unassigned', unassigned, true)}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-          <div className="w-full lg:sticky lg:top-4 lg:w-[30%] lg:flex-shrink-0">
-            {eld?.connected ? (
-              <div>
-                <TruckMap trucks={locations} height="calc(100vh - 190px)" />
-                <div className="mt-1 flex flex-wrap justify-between gap-x-2" style={{ fontSize: '11px', color: 'var(--monday-text-muted)' }}>
-                  <span>
-                    {locationsError
-                      ? ((locationsError as any)?.response?.data?.detail || 'Couldn\u2019t get truck locations from Peak ELD')
-                      : `${locations.length} truck${locations.length === 1 ? '' : 's'} from Peak ELD \u00b7 green = moving`}
-                  </span>
-                  {dataUpdatedAt > 0 && <span>Updated {format(new Date(dataUpdatedAt), 'h:mm a')} \u00b7 refreshes every minute</span>}
-                </div>
-              </div>
-            ) : eld && !eld.connected ? (
-              <p style={{ fontSize: '12px', color: 'var(--monday-text-muted)' }}>Connect Peak ELD in Settings to see your trucks on a map here.</p>
-            ) : null}
-          </div>
+          {error ? (
+            <p style={{ fontSize: '13px', color: 'var(--monday-text-secondary)' }}>
+              Couldn&apos;t load the Loads AI loads. Seeing the Dispatch Board needs access to Loads AI.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', minWidth: '1000px' }}>
+                <colgroup>
+                  <col style={{ width: '170px' }} />
+                  {weekDays.map(d => <col key={ymd(d)} />)}
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 z-10 border-b" style={{ ...line, backgroundColor: 'var(--monday-bg-primary)' }} />
+                    {weekDays.map(day => {
+                      const isToday = isSameDay(day, today)
+                      return (
+                        <th key={ymd(day)} className="px-3 py-2 text-left border-b" style={line}>
+                          <span style={{ fontSize: '12px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', color: isToday ? '#2563eb' : 'var(--monday-text-secondary)' }}>
+                            {format(day, 'EEE')}
+                          </span>
+                          <span className="ml-1.5" style={{ fontSize: '14px', fontWeight: 600, color: isToday ? '#2563eb' : 'var(--monday-text-primary)' }}>
+                            {format(day, 'd')}
+                          </span>
+                        </th>
+                      )
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {drivers.map(d => row(d.id, `${d.first_name} ${d.last_name}`, byDriverDay.get(d.id)))}
+                  {unassigned.size > 0 && row('unassigned', 'Unassigned', unassigned, true)}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </Layout>
