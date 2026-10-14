@@ -92,6 +92,20 @@ class StatesOut(BaseModel):
     by_vehicle: Dict[str, List[StateMiles]]  # eld_id -> states
 
 
+class TruckLocation(BaseModel):
+    eld_id: str
+    unit: str
+    truck_id: Optional[int] = None
+    truck_number: Optional[str] = None
+    driver_name: Optional[str] = None
+    lat: float
+    lng: float
+    location: Optional[str] = None  # Peak's address, e.g. "2 mi NE of Joliet, IL"
+    speed_mph: Optional[float] = None
+    bearing: Optional[str] = None
+    located_at: Optional[datetime] = None
+
+
 class TruckMapIn(BaseModel):
     eld_id: str = Field(..., min_length=1, max_length=64)
     truck_id: Optional[int] = None  # null = match automatically again
@@ -288,6 +302,50 @@ async def mileage(
                        if t.status not in ("sold", "not_leased") or t.id in {r.truck_id for r in out}),
                       key=lambda t: t.truck_number),
     )
+
+
+@router.get("/locations", response_model=List[TruckLocation])
+async def truck_locations(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Where every truck is now (its last ELD position), for the Dispatch Board map."""
+    conn, key = await _api_key(db, current_user.company_id)
+    try:
+        rows = await peak_eld.locations(key)
+        _, unit = await peak_eld.vehicles(key)  # speed comes in the company's odometer unit per hour
+    except peak_eld.PeakError as e:
+        await _record(db, conn, str(e))
+        raise _peak_error(e)
+    trucks = (await db.execute(
+        select(Truck).options(selectinload(Truck.current_driver))
+        .where(Truck.company_id == current_user.company_id, Truck.type == "truck")
+    )).scalars().all()
+    matcher = TruckMatcher(trucks, conn.truck_map)
+
+    out: List[TruckLocation] = []
+    for v in rows:
+        eld_id, lat, lng = str(v.get("id") or ""), v.get("latitude"), v.get("longitude")
+        if not eld_id or lat is None or lng is None or (not lat and not lng):
+            continue
+        truck, _ = matcher.match(eld_id, {**v, "vinNum": v.get("vin")})
+        if truck is not None and truck.status in ("sold", "not_leased"):
+            continue
+        driver = truck.current_driver if truck else None
+        speed = v.get("speed")
+        when = v.get("locationTime")
+        out.append(TruckLocation(
+            eld_id=eld_id, unit=str(v.get("vehicleId") or eld_id),
+            truck_id=truck.id if truck else None, truck_number=truck.truck_number if truck else None,
+            driver_name=f"{driver.first_name} {driver.last_name}".strip() if driver else None,
+            lat=float(lat), lng=float(lng),
+            location=(v.get("geoCodedLocation") or "").strip() or None,
+            speed_mph=round(peak_eld._to_miles(speed, unit), 1) if speed is not None else None,
+            bearing=v.get("bearing") or None,
+            located_at=datetime.fromtimestamp(int(when) / 1000, timezone.utc) if when else None,
+        ))
+    out.sort(key=lambda t: (t.truck_number or t.unit))
+    return out
 
 
 def _vehicle_row(eld_id, v, miles, matcher: TruckMatcher) -> VehicleMiles:

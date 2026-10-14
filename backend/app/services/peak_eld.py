@@ -6,6 +6,7 @@ is enough) and it is sent as the X-Api-Key header. We use:
   GET /api/v0/vehicles              trucks in Peak: unit number, VIN
   GET /api/v0/vehicles/ifta         miles per truck for a time range
   GET /api/v0/vehicles/ifta/{id}    miles per state for one truck
+  GET /api/v0/locations             last position, speed and odometer of every truck
 
 Times are epoch milliseconds (UTC). Lists are paginated with page/elements.
 Distances come in the Peak company's odometer unit; we always return miles.
@@ -181,6 +182,22 @@ async def live_odometers(api_key: str, unit: Optional[str]) -> List[Tuple[str, i
         if vid and when and odo:
             out.append((vid, int(when), _to_miles(odo, unit)))
     return out
+
+
+LOCATIONS_SECONDS = 60
+_locations: Dict[str, Tuple[float, List[dict]]] = {}
+
+
+async def locations(api_key: str) -> List[dict]:
+    """Every truck's last recorded position (Dispatch Board map). Cached a minute per key."""
+    kid = _key_id(api_key)
+    hit = _locations.get(kid)
+    if hit and hit[0] > time.monotonic():
+        return hit[1]
+    data = await _get(api_key, "/api/v0/locations", {}, cache=False)
+    rows = [v for v in data.get("vehicles") or [] if isinstance(v, dict)]
+    _locations[kid] = (time.monotonic() + LOCATIONS_SECONDS, rows)
+    return rows
 
 
 async def odometer_span(api_key: str, vehicle_id: str, start_ms: int, end_ms: int, unit: Optional[str]) -> Optional[dict]:

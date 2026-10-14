@@ -8,6 +8,12 @@ import { Button } from '@/components/ui/button'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useAILoads, type AILoad } from '@/hooks/use-loads-ai-ingestion'
 import { formatCurrency } from '@/lib/utils'
+import { useEldConnection } from '@/hooks/use-eld'
+import dynamic from 'next/dynamic'
+import { useTruckLocations } from '@/components/dispatch/truck-map'
+
+// Leaflet touches window, so the map renders in the browser only.
+const TruckMap = dynamic(() => import('@/components/dispatch/truck-map').then(m => m.TruckMap), { ssr: false })
 
 // Dispatch Board: drivers down the left, Monday-Sunday across, and each
 // Loads AI load on its pickup day in its driver's row. Loads with no driver
@@ -58,6 +64,8 @@ export default function DispatchBoardPage() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const { data: driversData } = useDrivers(1, 500)
   const { data: aiLoads = [], isLoading, error } = useAILoads()
+  const { data: eld } = useEldConnection()
+  const { data: locations = [], error: locationsError, dataUpdatedAt } = useTruckLocations(!!eld?.connected)
 
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart])
 
@@ -152,6 +160,23 @@ export default function DispatchBoardPage() {
             </span>
           </div>
         </div>
+
+        {/* Truck map: 30% of the screen's height */}
+        {eld?.connected ? (
+          <div>
+            <TruckMap trucks={locations} height="30vh" />
+            <div className="mt-1 flex justify-between" style={{ fontSize: '11px', color: 'var(--monday-text-muted)' }}>
+              <span>
+                {locationsError
+                  ? ((locationsError as any)?.response?.data?.detail || 'Couldn\u2019t get truck locations from Peak ELD')
+                  : `${locations.length} truck${locations.length === 1 ? '' : 's'} from Peak ELD \u00b7 green = moving`}
+              </span>
+              {dataUpdatedAt > 0 && <span>Updated {format(new Date(dataUpdatedAt), 'h:mm a')} \u00b7 refreshes every minute</span>}
+            </div>
+          </div>
+        ) : eld && !eld.connected ? (
+          <p style={{ fontSize: '12px', color: 'var(--monday-text-muted)' }}>Connect Peak ELD in Settings to see your trucks on a map here.</p>
+        ) : null}
 
         {error ? (
           <p style={{ fontSize: '13px', color: 'var(--monday-text-secondary)' }}>
