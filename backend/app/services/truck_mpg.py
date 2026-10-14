@@ -60,17 +60,26 @@ async def update(db: AsyncSession, conn: EldConnection) -> int:
     )).all())
 
     updated = 0
+    skipped = {"miles": 0, "fuel": 0, "range": []}
     for truck in trucks:
         m, g = truck_miles.get(truck.id, 0.0), float(gallons.get(truck.id) or 0)
-        if m < MIN_MILES or g < MIN_GALLONS:
+        if m < MIN_MILES:
+            skipped["miles"] += 1
+            continue
+        if g < MIN_GALLONS:
+            skipped["fuel"] += 1
             continue
         mpg = m / g
         if not SANE_MPG[0] <= mpg <= SANE_MPG[1]:
+            skipped["range"].append(f"{truck.truck_number}: {m:.0f} mi / {g:.0f} gal")
             continue
         truck.mpg = Decimal(str(round(mpg, 1)))
         truck.mpg_at = end
         updated += 1
     await db.commit()
+    logger.info("truck_mpg: company %s: %s of %s trucks updated; skipped - under %s ELD mi: %s, under %s gal: %s, "
+                "outside %s-%s MPG: %s", conn.company_id, updated, len(trucks), MIN_MILES, skipped["miles"],
+                MIN_GALLONS, skipped["fuel"], SANE_MPG[0], SANE_MPG[1], skipped["range"][:20])
     return updated
 
 
@@ -86,8 +95,7 @@ async def update_all() -> None:
             if conn is None:
                 continue
             try:
-                n = await update(db, conn)
-                logger.info("truck_mpg: company %s: %s truck(s) updated", conn.company_id, n)
+                await update(db, conn)
             except peak_eld.PeakError as e:
                 logger.warning("truck_mpg: company %s: %s", conn.company_id, e)
             except Exception:
