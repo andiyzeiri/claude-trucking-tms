@@ -43,7 +43,7 @@ function ago(iso: string | null): string {
 }
 
 // Every truck at its last ELD position (Peak), refreshed each minute.
-// Leaflet with CARTO's light map tiles; a label per truck instead of pin images.
+// Leaflet with OpenStreetMap tiles; a label per truck instead of pin images.
 export function TruckMap({ trucks, height }: { trucks: TruckLocation[]; height: string }) {
   const box = useRef<HTMLDivElement>(null)
   const map = useRef<any>(null)
@@ -57,9 +57,9 @@ export function TruckMap({ trucks, height }: { trucks: TruckLocation[]; height: 
       if (cancelled || !box.current || map.current) return
       L.current = mod.default || mod
       map.current = L.current.map(box.current, { zoomControl: true, attributionControl: true }).setView([39.5, -94], 4)
-      L.current.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-        subdomains: 'abcd',
+      // OpenStreetMap's own tiles: no API key (CARTO's now ask for one).
+      L.current.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
       }).addTo(map.current)
       layer.current = L.current.layerGroup().addTo(map.current)

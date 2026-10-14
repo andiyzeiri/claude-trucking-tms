@@ -161,59 +161,64 @@ export default function DispatchBoardPage() {
           </div>
         </div>
 
-        {/* Truck map: 30% of the screen's height */}
-        {eld?.connected ? (
-          <div>
-            <TruckMap trucks={locations} height="30vh" />
-            <div className="mt-1 flex justify-between" style={{ fontSize: '11px', color: 'var(--monday-text-muted)' }}>
-              <span>
-                {locationsError
-                  ? ((locationsError as any)?.response?.data?.detail || 'Couldn\u2019t get truck locations from Peak ELD')
-                  : `${locations.length} truck${locations.length === 1 ? '' : 's'} from Peak ELD \u00b7 green = moving`}
-              </span>
-              {dataUpdatedAt > 0 && <span>Updated {format(new Date(dataUpdatedAt), 'h:mm a')} \u00b7 refreshes every minute</span>}
-            </div>
+        {/* The week on the left; the truck map on the right, 30% of the width and nearly full height */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+          <div className="min-w-0 flex-1">
+            {error ? (
+              <p style={{ fontSize: '13px', color: 'var(--monday-text-secondary)' }}>
+                Couldn&apos;t load the Loads AI loads. Seeing the Dispatch Board needs access to Loads AI.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', minWidth: '760px' }}>
+                  <colgroup>
+                    <col style={{ width: '140px' }} />
+                    {weekDays.map(d => <col key={ymd(d)} />)}
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th className="sticky left-0 z-10 border-b" style={{ ...line, backgroundColor: 'var(--monday-bg-primary)' }} />
+                      {weekDays.map(day => {
+                        const isToday = isSameDay(day, today)
+                        return (
+                          <th key={ymd(day)} className="px-3 py-2 text-left border-b" style={line}>
+                            <span style={{ fontSize: '12px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', color: isToday ? '#2563eb' : 'var(--monday-text-secondary)' }}>
+                              {format(day, 'EEE')}
+                            </span>
+                            <span className="ml-1.5" style={{ fontSize: '14px', fontWeight: 600, color: isToday ? '#2563eb' : 'var(--monday-text-primary)' }}>
+                              {format(day, 'd')}
+                            </span>
+                          </th>
+                        )
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {drivers.map(d => row(d.id, `${d.first_name} ${d.last_name}`, byDriverDay.get(d.id)))}
+                    {unassigned.size > 0 && row('unassigned', 'Unassigned', unassigned, true)}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        ) : eld && !eld.connected ? (
-          <p style={{ fontSize: '12px', color: 'var(--monday-text-muted)' }}>Connect Peak ELD in Settings to see your trucks on a map here.</p>
-        ) : null}
-
-        {error ? (
-          <p style={{ fontSize: '13px', color: 'var(--monday-text-secondary)' }}>
-            Couldn&apos;t load the Loads AI loads. Seeing the Dispatch Board needs access to Loads AI.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', minWidth: '1000px' }}>
-              <colgroup>
-                <col style={{ width: '170px' }} />
-                {weekDays.map(d => <col key={ymd(d)} />)}
-              </colgroup>
-              <thead>
-                <tr>
-                  <th className="sticky left-0 z-10 border-b" style={{ ...line, backgroundColor: 'var(--monday-bg-primary)' }} />
-                  {weekDays.map(day => {
-                    const isToday = isSameDay(day, today)
-                    return (
-                      <th key={ymd(day)} className="px-3 py-2 text-left border-b" style={line}>
-                        <span style={{ fontSize: '12px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', color: isToday ? '#2563eb' : 'var(--monday-text-secondary)' }}>
-                          {format(day, 'EEE')}
-                        </span>
-                        <span className="ml-1.5" style={{ fontSize: '14px', fontWeight: 600, color: isToday ? '#2563eb' : 'var(--monday-text-primary)' }}>
-                          {format(day, 'd')}
-                        </span>
-                      </th>
-                    )
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {drivers.map(d => row(d.id, `${d.first_name} ${d.last_name}`, byDriverDay.get(d.id)))}
-                {unassigned.size > 0 && row('unassigned', 'Unassigned', unassigned, true)}
-              </tbody>
-            </table>
+          <div className="w-full lg:sticky lg:top-4 lg:w-[30%] lg:flex-shrink-0">
+            {eld?.connected ? (
+              <div>
+                <TruckMap trucks={locations} height="calc(100vh - 190px)" />
+                <div className="mt-1 flex flex-wrap justify-between gap-x-2" style={{ fontSize: '11px', color: 'var(--monday-text-muted)' }}>
+                  <span>
+                    {locationsError
+                      ? ((locationsError as any)?.response?.data?.detail || 'Couldn\u2019t get truck locations from Peak ELD')
+                      : `${locations.length} truck${locations.length === 1 ? '' : 's'} from Peak ELD \u00b7 green = moving`}
+                  </span>
+                  {dataUpdatedAt > 0 && <span>Updated {format(new Date(dataUpdatedAt), 'h:mm a')} \u00b7 refreshes every minute</span>}
+                </div>
+              </div>
+            ) : eld && !eld.connected ? (
+              <p style={{ fontSize: '12px', color: 'var(--monday-text-muted)' }}>Connect Peak ELD in Settings to see your trucks on a map here.</p>
+            ) : null}
           </div>
-        )}
+        </div>
       </div>
     </Layout>
   )
