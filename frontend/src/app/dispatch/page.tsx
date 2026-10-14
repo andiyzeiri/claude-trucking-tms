@@ -12,7 +12,7 @@ import { useEldConnection } from '@/hooks/use-eld'
 import dynamic from 'next/dynamic'
 import { useTruckLocations } from '@/components/dispatch/truck-map'
 
-// Leaflet touches window, so the map renders in the browser only.
+// The map uses window.google, so it renders in the browser only.
 const TruckMap = dynamic(() => import('@/components/dispatch/truck-map').then(m => m.TruckMap), { ssr: false })
 
 // Dispatch Board: drivers down the left, Monday-Sunday across, and each

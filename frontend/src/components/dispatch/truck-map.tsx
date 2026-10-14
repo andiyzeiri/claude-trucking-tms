@@ -1,8 +1,7 @@
 'use client'
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import 'leaflet/dist/leaflet.css'
 import api from '@/lib/api'
 
 export interface TruckLocation {
@@ -42,68 +41,98 @@ function ago(iso: string | null): string {
   return hrs < 48 ? `${hrs} hr ago` : `${Math.round(hrs / 24)} days ago`
 }
 
-// Every truck at its last ELD position (Peak), refreshed each minute.
-// Leaflet with OpenStreetMap tiles; a label per truck instead of pin images.
+// Every truck at its last ELD position (Peak), refreshed each minute, on a
+// Google map (the Maps JavaScript API the app already loads for address search).
 export function TruckMap({ trucks, height }: { trucks: TruckLocation[]; height: string }) {
   const box = useRef<HTMLDivElement>(null)
-  const map = useRef<any>(null)
-  const layer = useRef<any>(null)
-  const L = useRef<any>(null)
+  const map = useRef<google.maps.Map | null>(null)
+  const markers = useRef<google.maps.Marker[]>([])
+  const info = useRef<google.maps.InfoWindow | null>(null)
   const fitted = useRef(false)
+  const [ready, setReady] = useState(false)
+  const [missing, setMissing] = useState(false)
 
+  // The script loads before the page, but wait for it just in case.
   useEffect(() => {
-    let cancelled = false
-    import('leaflet').then(mod => {
-      if (cancelled || !box.current || map.current) return
-      L.current = mod.default || mod
-      map.current = L.current.map(box.current, { zoomControl: true, attributionControl: true }).setView([39.5, -94], 4)
-      // OpenStreetMap's own tiles: no API key (CARTO's now ask for one).
-      L.current.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-      }).addTo(map.current)
-      layer.current = L.current.layerGroup().addTo(map.current)
-      draw()
-    })
-    return () => {
-      cancelled = true
-      map.current?.remove()
-      map.current = null
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let tries = 0
+    const t = setInterval(() => {
+      if (window.google?.maps?.Map) {
+        clearInterval(t)
+        setReady(true)
+      } else if (++tries > 50) {
+        clearInterval(t)
+        setMissing(true)
+      }
+    }, 200)
+    return () => clearInterval(t)
   }, [])
 
-  const draw = () => {
-    if (!map.current || !L.current) return
-    layer.current.clearLayers()
-    const points: [number, number][] = []
+  useEffect(() => {
+    if (!ready || !box.current || map.current) return
+    map.current = new google.maps.Map(box.current, {
+      center: { lat: 39.5, lng: -94 },
+      zoom: 4,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: true,
+      clickableIcons: false,
+    })
+    info.current = new google.maps.InfoWindow()
+  }, [ready])
+
+  useEffect(() => {
+    if (!map.current) return
+    markers.current.forEach(m => m.setMap(null))
+    markers.current = []
+    const bounds = new google.maps.LatLngBounds()
     trucks.forEach(t => {
       const moving = (t.speed_mph || 0) > 3
-      const label = esc(t.truck_number || t.unit)
-      const icon = L.current.divIcon({
-        className: '',
-        html: `<div style="display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:10px;background:#fff;border:1px solid ${moving ? '#16a34a' : '#94a3b8'};box-shadow:0 1px 3px rgba(0,0,0,.25);font:600 11px system-ui,sans-serif;color:#1f2937;white-space:nowrap;transform:translate(-50%,-50%)"><span style="width:7px;height:7px;border-radius:50%;background:${moving ? '#16a34a' : '#94a3b8'}"></span>${label}</div>`,
-        iconSize: [0, 0],
+      const label = t.truck_number || t.unit
+      const marker = new google.maps.Marker({
+        map: map.current!,
+        position: { lat: t.lat, lng: t.lng },
+        title: `Truck ${label}`,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 7,
+          fillColor: moving ? '#16a34a' : '#64748b',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 2,
+          labelOrigin: new google.maps.Point(0, -2.6),
+        },
+        label: { text: label, fontSize: '11px', fontWeight: '700', color: '#1f2937' },
       })
       const popup = [
-        `<b>Truck ${label}</b>`,
+        `<b>Truck ${esc(label)}</b>`,
         t.driver_name && esc(t.driver_name),
         t.location && esc(t.location),
         t.speed_mph != null && (moving ? `${Math.round(t.speed_mph)} mph${t.bearing ? ' ' + esc(t.bearing) : ''}` : 'Stopped'),
         t.located_at && `<span style="color:#6b7280">Updated ${ago(t.located_at)}</span>`,
       ].filter(Boolean).join('<br/>')
-      L.current.marker([t.lat, t.lng], { icon }).bindPopup(popup).addTo(layer.current)
-      points.push([t.lat, t.lng])
+      marker.addListener('click', () => {
+        info.current?.setContent(`<div style="font:13px system-ui,sans-serif;line-height:1.45">${popup}</div>`)
+        info.current?.open({ map: map.current!, anchor: marker })
+      })
+      markers.current.push(marker)
+      bounds.extend(marker.getPosition()!)
     })
     // Zoom to the trucks once; after that the view stays where the user left it.
-    if (points.length && !fitted.current) {
-      map.current.fitBounds(points, { padding: [30, 30], maxZoom: 9 })
+    if (trucks.length && !fitted.current) {
+      map.current.fitBounds(bounds, 40)
+      google.maps.event.addListenerOnce(map.current, 'idle', () => {
+        if ((map.current?.getZoom() || 0) > 9) map.current?.setZoom(9)
+      })
       fitted.current = true
     }
+  }, [trucks, ready])
+
+  if (missing) {
+    return (
+      <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, border: '1px solid var(--monday-border-light)', fontSize: 12, color: 'var(--monday-text-muted)' }}>
+        Google Maps didn&apos;t load.
+      </div>
+    )
   }
-
-  useEffect(draw, [trucks])
-
-  // isolation keeps Leaflet's own z-indexes (up to 1000) from covering menus and dialogs.
-  return <div ref={box} style={{ height, width: '100%', borderRadius: 8, isolation: 'isolate' }} />
+  return <div ref={box} style={{ height, width: '100%', borderRadius: 8 }} />
 }
