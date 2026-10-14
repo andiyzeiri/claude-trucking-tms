@@ -127,6 +127,7 @@ export default function TrucksPage() {
       miles: Number(truck.miles) || 0,
       odometer_at: truck.odometer_at || null,
       mpg: Number(truck.mpg) || 0,
+      mpg_at: truck.mpg_at || null,
       registration: '',
       inspection: '',
       status: truck.status,
@@ -158,7 +159,8 @@ export default function TrucksPage() {
       value: truckData.value || 0,
       // Peak ELD keeps the miles of matched trucks; don't overwrite them from the form
       ...(truckData.odometer_at ? {} : { miles: truckData.miles || 0 }),
-      mpg: truckData.mpg || 0
+      // MPG from the Fuel page's gallons and ELD miles isn't overwritten from the form
+      ...(truckData.mpg_at ? {} : { mpg: truckData.mpg || 0 })
     }
 
     if (modalMode === 'create') {
@@ -307,7 +309,10 @@ export default function TrucksPage() {
           </span>
         </td>
         <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
-          {item.mpg ? Number(item.mpg).toFixed(1) : '0.0'}
+          <span title={item.mpg_at ? `Peak ELD miles / Fuel gallons, last 90 days (updated ${new Date(item.mpg_at).toLocaleDateString()})` : 'Typed in (not enough ELD miles or fuel in the last 90 days)'}>
+            {item.mpg ? Number(item.mpg).toFixed(1) : '0.0'}
+            {item.mpg_at && <span className="ml-1 rounded px-1" style={{ fontSize: '10px', backgroundColor: 'rgba(87, 155, 252, 0.15)', color: 'var(--monday-cornflower)' }}>FUEL</span>}
+          </span>
         </td>
         {docCell(item, 'registration_url')}
         {docCell(item, 'inspection_url')}

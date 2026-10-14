@@ -50,6 +50,8 @@ class Truck(Base):
     miles = Column(Integer, default=0)
     # When `miles` was last set from the Peak ELD odometer (null = typed in)
     odometer_at = Column(DateTime(timezone=True))
+    # When `mpg` was last worked out from ELD miles / Fuel gallons (null = typed in)
+    mpg_at = Column(DateTime(timezone=True))
     # Registration / annual inspection documents (PDF, /api/v1/uploads/s3/... like POD and ratecon)
     registration_url = Column(String)
     inspection_url = Column(String)

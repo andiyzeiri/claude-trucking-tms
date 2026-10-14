@@ -19,6 +19,8 @@ export interface TruckData {
   miles: number
   /** Set when miles come from the Peak ELD odometer */
   odometer_at?: string | null
+  /** Set when MPG is worked out from ELD miles and Fuel gallons */
+  mpg_at?: string | null
   mpg: number
   registration: string
   inspection: string
@@ -264,8 +266,14 @@ export function TruckModal({ isOpen, onClose, onSave, truck, mode, defaultOwners
               step="0.1"
               value={formData.mpg || ''}
               onChange={(e) => setFormData({ ...formData, mpg: parseFloat(e.target.value) || 0 })}
+              disabled={!!formData.mpg_at}
               placeholder="0.0"
             />
+            {formData.mpg_at && (
+              <p className="text-xs" style={{ color: 'var(--monday-text-muted)' }}>
+                ELD miles / Fuel gallons, last 90 days ({new Date(formData.mpg_at).toLocaleDateString()})
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

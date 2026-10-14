@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 from fastapi.encoders import jsonable_encoder
 from fastapi import FastAPI, Request, status
@@ -14,6 +15,7 @@ from app.health import router as health_router
 from app.services.dedicated_lane_scheduler import generate_loads_from_dedicated_lanes
 from app.services.fuel_card_sync import sync_all as sync_fuel_cards
 from app.services.eld_odometer import record_all as record_eld_odometers
+from app.services.truck_mpg import update_all as update_truck_mpg
 from app.documents.pipeline import run_ingestion_job, run_retry_job
 from app.sms.pod_reminders import run_pod_reminder_job
 
@@ -54,6 +56,19 @@ async def lifespan(app: FastAPI):
         max_instances=1,
         coalesce=True,
     )
+
+    # Equipment MPG: ELD miles / Fuel gallons over 90 days, once a day (and
+    # shortly after start-up, so a deploy fills it in).
+    scheduler.add_job(
+        update_truck_mpg,
+        CronTrigger(hour=9, minute=15),
+        id="truck_mpg",
+        name="Update truck MPG",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    scheduler.add_job(update_truck_mpg, "date", run_date=datetime.now() + timedelta(minutes=2), id="truck_mpg_startup", replace_existing=True)
 
     # Fuel card feed (WEX Fleet One / EFS): WEX drops a transaction file on
     # its SFTP server each day; new files are imported into Fuel. Files and

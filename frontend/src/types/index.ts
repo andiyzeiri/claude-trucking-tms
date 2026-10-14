@@ -90,6 +90,9 @@ export interface Truck {
   miles?: number
   /** When miles were last read from the Peak ELD odometer */
   odometer_at?: string | null
+  mpg?: number
+  /** When MPG was last worked out from ELD miles / Fuel gallons */
+  mpg_at?: string | null
   registration_url?: string | null
   inspection_url?: string | null
   /** Owner fuels on their own card: red and at the bottom of the Fuel page */

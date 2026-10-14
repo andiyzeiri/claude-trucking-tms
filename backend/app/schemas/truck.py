@@ -62,6 +62,7 @@ class TruckResponse(TruckBase):
 
     id: int
     odometer_at: Optional[datetime] = None
+    mpg_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     company_id: int

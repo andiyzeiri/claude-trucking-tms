@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,6 +91,8 @@ async def update_truck(
     _check_status(update_data.get("status", truck.status), update_data.get("ownership", truck.ownership))
     if "miles" in update_data and update_data["miles"] != truck.miles:
         truck.odometer_at = None  # typed in by hand; the next ELD reading replaces it
+    if "mpg" in update_data and update_data["mpg"] is not None and truck.mpg is not None and Decimal(str(update_data["mpg"])) != truck.mpg:
+        truck.mpg_at = None  # typed in by hand; the next daily MPG run replaces it
     for field, value in update_data.items():
         setattr(truck, field, value)
 

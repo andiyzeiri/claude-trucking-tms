@@ -23,7 +23,8 @@ async def main():
         await conn.execute(text("ALTER TABLE trucks ADD COLUMN IF NOT EXISTS odometer_at TIMESTAMPTZ"))
         await conn.execute(text("ALTER TABLE trucks ADD COLUMN IF NOT EXISTS registration_url VARCHAR"))
         await conn.execute(text("ALTER TABLE trucks ADD COLUMN IF NOT EXISTS inspection_url VARCHAR"))
-        print("trucks: ownership, odometer_at, registration_url, inspection_url ready")
+        await conn.execute(text("ALTER TABLE trucks ADD COLUMN IF NOT EXISTS mpg_at TIMESTAMPTZ"))
+        print("trucks: ownership, odometer_at, registration_url, inspection_url, mpg_at ready")
     await engine.dispose()
 
 
