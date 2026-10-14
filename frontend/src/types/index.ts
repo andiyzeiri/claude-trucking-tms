@@ -133,6 +133,7 @@ export interface Load {
   adjustment_type?: 'lumper' | 'detention' | 'layover' | 'pickup' | 'delivery' | null
   adjustment_amount?: number | null
   needs_attention?: boolean
+  is_brokerage?: boolean
   created_at: string
   updated_at: string
 }

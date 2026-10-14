@@ -316,9 +316,11 @@ function parseTimeInput(timeInput: string, existingDateTime: string): string {
 }
 
 export default function BrokeragePage() {
-  const { data: loadsData, isLoading, refetch } = useLoads(1, 10000)
+  // Brokerage has its own loads: only ones created here are listed, and every load created here is marked as such.
+  const { data: loadsData, isLoading, refetch } = useLoads(1, 10000, true)
   const loads = loadsData?.items || []
-  const createLoad = useCreateLoad()
+  const createLoadBase = useCreateLoad()
+  const createLoad = { ...createLoadBase, mutateAsync: (data: any) => createLoadBase.mutateAsync({ ...data, is_brokerage: true }) }
   const updateLoad = useUpdateLoad()
   const deleteLoad = useDeleteLoad()
 
@@ -2621,7 +2623,7 @@ export default function BrokeragePage() {
                 onClick={() => setBrokerMenuOpen(!brokerMenuOpen)}
                 className="w-48"
               >
-                Select Brokers
+                Select Customer
                 {selectedBrokers.size > 0 && (
                   <span className="ml-2 bg-orange-500 text-white rounded-full px-2 py-0.5 text-xs">
                     {selectedBrokers.size}

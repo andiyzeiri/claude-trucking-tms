@@ -413,7 +413,7 @@ export default function DispatchBoardPage() {
 
   // Optimistic update helper - instantly updates the cache
   const optimisticUpdateLoad = (loadId: number, newDriverId: number | null) => {
-    queryClient.setQueryData(['loads', 1, 10000], (oldData: any) => {
+    queryClient.setQueriesData({ queryKey: ['loads', 1, 10000] }, (oldData: any) => {
       if (!oldData?.items) return oldData
       return {
         ...oldData,

@@ -317,7 +317,7 @@ function parseTimeInput(timeInput: string, existingDateTime: string): string {
 export default function LoadsPageInline() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin' || user?.role === 'company_admin' || user?.role === 'super_admin'
-  const { data: loadsData, isLoading, refetch } = useLoads(1, 10000)
+  const { data: loadsData, isLoading, refetch } = useLoads(1, 10000, false) // Brokerage page loads are listed there only
   const loads = loadsData?.items || []
   const createLoad = useCreateLoad()
   const updateLoad = useUpdateLoad()

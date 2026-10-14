@@ -71,6 +71,8 @@ class Load(Base):
 
     # Attention flag for dispatch board
     needs_attention = Column(Boolean, default=False, nullable=False)
+    # Created on the Brokerage page: listed there only, not on the Loads page.
+    is_brokerage = Column(Boolean, default=False, nullable=False, server_default="false")
 
     # Notes
     pickup_notes = Column(Text)

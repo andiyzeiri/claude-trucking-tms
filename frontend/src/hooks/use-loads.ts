@@ -6,11 +6,13 @@ import api from '@/lib/api'
 import { Load, PaginatedResponse } from '@/types'
 import { LoadFormData } from '@/lib/schemas'
 
-export function useLoads(page = 1, limit = 10) {
+// brokerage: true = the Brokerage page's loads only, false = every other load, omitted = all loads.
+export function useLoads(page = 1, limit = 10, brokerage?: boolean) {
   return useQuery({
-    queryKey: ['loads', page, limit],
+    queryKey: ['loads', page, limit, brokerage ?? 'all'],
     queryFn: async (): Promise<PaginatedResponse<Load>> => {
-      const response = await api.get(`/v1/loads/?skip=${(page - 1) * limit}&limit=${limit}`)
+      const only = brokerage === undefined ? '' : `&brokerage=${brokerage}`
+      const response = await api.get(`/v1/loads/?skip=${(page - 1) * limit}&limit=${limit}${only}`)
       // Backend returns array, convert to paginated format
       const loads = Array.isArray(response.data) ? response.data : []
       return {
@@ -46,15 +48,20 @@ export function useCreateLoad() {
     },
     onSuccess: (newLoad) => {
       // Add the new load directly to the cache for immediate UI update
-      queryClient.setQueryData(['loads', 1, 10000], (oldData: any) => {
-        if (!oldData?.items) {
-          return { items: [newLoad], total: 1, page: 1, per_page: 1000, pages: 1 }
-        }
-        return {
-          ...oldData,
-          items: [newLoad, ...oldData.items],
-          total: oldData.total + 1
-        }
+      // (only into the lists it belongs on: all loads, or Brokerage / not Brokerage)
+      queryClient.getQueryCache().findAll({ queryKey: ['loads', 1, 10000] }).forEach(q => {
+        const only = q.queryKey[3]
+        if (only !== 'all' && only !== !!newLoad.is_brokerage) return
+        queryClient.setQueryData(q.queryKey, (oldData: any) => {
+          if (!oldData?.items) {
+            return { items: [newLoad], total: 1, page: 1, per_page: 1000, pages: 1 }
+          }
+          return {
+            ...oldData,
+            items: [newLoad, ...oldData.items],
+            total: oldData.total + 1
+          }
+        })
       })
       // Also invalidate to ensure fresh data on next fetch (e.g., after logout/login)
       queryClient.invalidateQueries({ queryKey: ['loads'] })
@@ -81,7 +88,7 @@ export function useUpdateLoad() {
     },
     onSuccess: (updatedLoad, { id }) => {
       // Update the cache directly with the returned data to avoid refetch flash
-      queryClient.setQueryData(['loads', 1, 10000], (oldData: any) => {
+      queryClient.setQueriesData({ queryKey: ['loads', 1, 10000] }, (oldData: any) => {
         if (!oldData?.items) return oldData
         return {
           ...oldData,

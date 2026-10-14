@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -18,9 +18,11 @@ router = APIRouter()
 async def get_loads(
     skip: int = 0,
     limit: int = 100,
+    brokerage: Optional[bool] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """brokerage=true: the Brokerage page's loads only; false: all but those; omitted: every load."""
     query = (
         select(Load)
         .options(
@@ -30,6 +32,8 @@ async def get_loads(
         )
         .where(Load.company_id == current_user.company_id)
     )
+    if brokerage is not None:
+        query = query.where(Load.is_brokerage.is_(brokerage))
 
     # If user is a driver, only show their assigned loads
     if current_user.role == UserRole.DRIVER.value or current_user.role == "driver":
