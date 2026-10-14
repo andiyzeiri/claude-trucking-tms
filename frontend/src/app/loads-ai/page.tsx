@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Copy, Undo2, X, Check, ArrowUpDown, ArrowUp, ArrowDown, Search, Mail, FileUp, AlertTriangle, Sparkles, RefreshCw, Inbox, CheckCircle2, MessageSquare } from 'lucide-react'
+import { Plus, ChevronRight, ChevronDown, ChevronUp, Edit2, Trash2, Copy, Undo2, X, Check, ArrowUpDown, ArrowUp, ArrowDown, Search, Mail, FileUp, AlertTriangle, Sparkles, RefreshCw, Inbox, CheckCircle2, MessageSquare } from 'lucide-react'
 import { useDedicatedLanes } from '@/hooks/use-dedicated-lanes'
 import { useCustomers } from '@/hooks/use-customers'
 import { useDrivers } from '@/hooks/use-drivers'
@@ -524,6 +524,7 @@ export default function LoadsAIPageInline() {
   }
 
   // --- Automatic email ingestion -----------------------------------------
+  const [emailPanelOpen, setEmailPanelOpen] = useState(false) // the panel is hidden until its button is clicked
   const { data: ingestionStatus } = useIngestionStatus()
   const { data: unverifiedLoads } = useUnverifiedLoads()
   const dismissUnverified = useDismissUnverified()
@@ -2911,6 +2912,19 @@ export default function LoadsAIPageInline() {
                 </button>
               )}
             </div>
+            <Button
+              variant="outline"
+              onClick={() => setEmailPanelOpen(o => !o)}
+              title={ingestionStatus ? (ingestionStatus.blockers.length === 0 ? `Email reading on, every ${ingestionStatus.poll_minutes} min` : 'Email reading is not running') : 'Automatic email reading'}
+              style={emailPanelOpen ? { borderColor: 'var(--monday-cornflower)', color: 'var(--monday-cornflower)' } : undefined}
+            >
+              <Inbox className="h-4 w-4 mr-2" />
+              Email reading
+              {ingestionStatus && (
+                <span className={`ml-2 h-2 w-2 rounded-full ${ingestionStatus.blockers.length === 0 ? 'bg-green-500' : 'bg-amber-500'}`} />
+              )}
+              {emailPanelOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+            </Button>
             <div className="relative" ref={groupMenuRef}>
               <Button
                 variant="outline"
@@ -3022,7 +3036,8 @@ export default function LoadsAIPageInline() {
           />
         </div>
 
-        {/* Automatic email ingestion */}
+        {/* Automatic email ingestion (opened from the Email reading button by the search box) */}
+        {emailPanelOpen && (
         <div
           className="rounded-lg border p-3 md:p-4"
           style={{ backgroundColor: 'var(--monday-bg-primary)', borderColor: 'var(--monday-border-light)' }}
@@ -3154,6 +3169,7 @@ export default function LoadsAIPageInline() {
             </div>
           )}
         </div>
+        )}
 
         {/* Read a rate confirmation into a draft load */}
         <div
