@@ -2,6 +2,8 @@
 
 import React, { useMemo } from 'react'
 import { format } from 'date-fns'
+import { Inter } from 'next/font/google'
+import { Coffee, Truck } from 'lucide-react'
 import Layout from '@/components/layout/layout'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useAILoads, type AILoad } from '@/hooks/use-loads-ai-ingestion'
@@ -30,13 +32,64 @@ function cityState(location?: string | null): string {
   return parts[0] || ''
 }
 
-// 'Wed 10/15 · 8a – 3p' from a wall-clock date and the page's time text.
-function when(date?: string | null, time?: { kind: string; text: string } | null): string {
+const inter = Inter({ subsets: ['latin'], display: 'swap' })
+
+// 'Wed 10/15' from a wall-clock date.
+function dayLabel(date?: string | null): string | null {
   const day = dayKey(date)
-  if (!day) return '-'
+  if (!day) return null
   const [y, m, d] = day.split('-').map(Number)
-  const label = format(new Date(y, m - 1, d), 'EEE M/d')
-  return time && time.kind !== 'none' ? `${label} · ${time.text}` : label
+  return format(new Date(y, m - 1, d), 'EEE M/d')
+}
+
+// Whole days from a wall-clock date to today.
+function daysSince(date?: string | null): number | null {
+  const day = dayKey(date)
+  if (!day) return null
+  const [y, m, d] = day.split('-').map(Number)
+  const now = new Date()
+  return Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - new Date(y, m - 1, d).getTime()) / 86400000)
+}
+
+const AVATAR_COLORS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#0d9488', '#4f46e5', '#0891b2', '#65a30d', '#c026d3', '#dc2626']
+
+function Avatar({ id, first, last }: { id: number; first: string; last: string }) {
+  const color = AVATAR_COLORS[id % AVATAR_COLORS.length]
+  return (
+    <span
+      className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-white"
+      style={{ backgroundColor: color, fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em' }}
+    >
+      {`${first?.[0] || ''}${last?.[0] || ''}`.toUpperCase()}
+    </span>
+  )
+}
+
+function Pill({ text, color, bg }: { text: string; color: string; bg: string }) {
+  return (
+    <span className="inline-flex items-center rounded-full px-2 py-0.5" style={{ fontSize: '11px', fontWeight: 600, color, backgroundColor: bg, whiteSpace: 'nowrap' }}>
+      {text}
+    </span>
+  )
+}
+
+// Same colours as Loads AI: a window green, an appointment orange, no time grey.
+const TIME_COLOR: Record<string, string> = { window: '#059669', appointment: '#d97706', none: '#94a3b8' }
+
+function Stop({ kind, location, date, time }: { kind: 'pickup' | 'delivery'; location?: string | null; date?: string | null; time?: { kind: string; text: string } | null }) {
+  const day = dayLabel(date)
+  return (
+    <div className="flex gap-2">
+      <span className="mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: kind === 'pickup' ? '#10b981' : '#ef4444', boxShadow: `0 0 0 3px ${kind === 'pickup' ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.15)'}` }} />
+      <div className="min-w-0">
+        <div className="truncate" style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>{cityState(location) || '-'}</div>
+        <div className="flex flex-wrap items-center gap-1.5" style={{ fontSize: '12px' }}>
+          {day && <span style={{ color: 'var(--monday-text-secondary)', fontWeight: 500 }}>{day}</span>}
+          {time && time.kind !== 'none' && <span style={{ color: TIME_COLOR[time.kind] || TIME_COLOR.none, fontWeight: 600 }}>{time.text}</span>}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function DispatchBoardPage() {
@@ -87,24 +140,34 @@ export default function DispatchBoardPage() {
   const line = { borderColor: 'var(--monday-border-light)' }
 
   const th = (label: string) => (
-    <th className="px-3 py-2 text-left border-b" style={{ ...line, fontSize: '12px', fontWeight: 500, color: 'var(--monday-text-secondary)', whiteSpace: 'nowrap' }}>{label}</th>
+    <th className="px-4 py-2.5 text-left" style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--monday-text-secondary)', whiteSpace: 'nowrap' }}>{label}</th>
   )
-  const td = (content: React.ReactNode, sub?: React.ReactNode) => (
-    <td className="px-3 py-2 align-top border-b" style={line}>
-      <div style={{ fontSize: '13px', color: 'var(--monday-text-primary)' }}>{content}</div>
-      {sub && <div style={{ fontSize: '12px', color: 'var(--monday-text-secondary)' }}>{sub}</div>}
+  const heading = (title: string, count: number, icon: React.ReactNode, color: string, bg: string) => (
+    <div className="mb-2 flex items-center gap-2.5">
+      <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: bg, color }}>{icon}</span>
+      <h2 style={{ fontSize: '17px', fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--monday-text-primary)' }}>{title}</h2>
+      <span className="rounded-full px-2 py-0.5" style={{ fontSize: '12px', fontWeight: 700, color, backgroundColor: bg }}>{count}</span>
+    </div>
+  )
+  const driverCell = (driver: (typeof drivers)[number], status?: React.ReactNode) => (
+    <td className="px-4 py-3 align-top">
+      <div className="flex items-center gap-3">
+        <Avatar id={driver.id} first={driver.first_name} last={driver.last_name} />
+        <div className="min-w-0">
+          <div className="truncate" style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>{driver.first_name} {driver.last_name}</div>
+          {status && <div className="mt-0.5">{status}</div>}
+        </div>
+      </div>
     </td>
   )
-  const heading = (title: string, count: number) => (
-    <h2 className="mb-1 font-semibold" style={{ fontSize: '14px', color: 'var(--monday-text-primary)' }}>
-      {title} <span style={{ fontWeight: 400, color: 'var(--monday-text-muted)' }}>({count})</span>
-    </h2>
+  const empty = (cols: number, text: string) => (
+    <tr><td colSpan={cols} className="px-4 py-6 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>{text}</td></tr>
   )
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
-        <h1 className="text-2xl font-semibold" style={{ color: 'var(--monday-text-primary)' }}>Dispatch Board</h1>
+      <div className={`p-6 space-y-6 ${inter.className}`}>
+        <h1 style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--monday-text-primary)' }}>Dispatch Board</h1>
 
         {/* Square truck map top left; active drivers and drivers without a trip to its right */}
         <div className="grid gap-6 lg:grid-cols-[minmax(320px,32%)_1fr] lg:items-start">
@@ -128,53 +191,62 @@ export default function DispatchBoardPage() {
             ) : null}
           </div>
 
-          <div className="min-w-0 space-y-6">
-            <div>
-              {heading('Active drivers', active.length)}
-              <div className="overflow-x-auto">
-                <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
-                  <thead><tr>{th('Driver')}{th('Load')}{th('Pickup')}{th('Delivery')}</tr></thead>
+          <div className="min-w-0 space-y-8">
+            <section>
+              {heading('Active drivers', active.length, <Truck className="h-4 w-4" />, '#047857', 'rgba(16,185,129,.14)')}
+              <div className="overflow-x-auto rounded-xl border" style={line}>
+                <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                  <thead style={{ backgroundColor: 'rgba(16,185,129,.07)' }}><tr>{th('Driver')}{th('Load')}{th('Pickup')}{th('Delivery')}</tr></thead>
                   <tbody>
-                    {active.length === 0 && (
-                      <tr><td colSpan={4} className="px-3 py-3" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>{error ? 'Couldn\u2019t load the Loads AI loads. The Dispatch Board needs access to Loads AI.' : isLoading ? 'Loading…' : 'No drivers on a trip.'}</td></tr>
-                    )}
+                    {active.length === 0 && empty(4, error ? 'Couldn\u2019t load the Loads AI loads. The Dispatch Board needs access to Loads AI.' : isLoading ? 'Loading\u2026' : 'No drivers on a trip.')}
                     {active.map(({ driver, load, now }) => {
                       const f = load.fields || {}
                       return (
-                        <tr key={driver.id}>
-                          {td(`${driver.first_name} ${driver.last_name}`, now ? 'On a trip' : 'Next trip')}
-                          {td(f.broker_load_number || f.load_number || `#${load.id}`, load.broker_name)}
-                          {td(cityState(f.pickup_location) || '-', when(f.pickup_date, load.pickup_time))}
-                          {td(cityState(f.delivery_location) || '-', when(f.delivery_date, load.delivery_time))}
+                        <tr key={driver.id} className="border-t transition-colors hover:bg-[rgba(37,99,235,0.04)]" style={line}>
+                          {driverCell(driver, now
+                            ? <Pill text="On a trip" color="#047857" bg="rgba(16,185,129,.15)" />
+                            : <Pill text="Next trip" color="#1d4ed8" bg="rgba(37,99,235,.12)" />)}
+                          <td className="px-4 py-3 align-top">
+                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{f.broker_load_number || f.load_number || `#${load.id}`}</div>
+                            {load.broker_name && <div className="truncate" style={{ fontSize: '12px', color: 'var(--monday-text-secondary)', maxWidth: '180px' }}>{load.broker_name}</div>}
+                          </td>
+                          <td className="px-4 py-3 align-top"><Stop kind="pickup" location={f.pickup_location} date={f.pickup_date} time={load.pickup_time} /></td>
+                          <td className="px-4 py-3 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} /></td>
                         </tr>
                       )
                     })}
                   </tbody>
                 </table>
               </div>
-            </div>
+            </section>
 
-            <div>
-              {heading('No trip', idle.length)}
-              <div className="overflow-x-auto">
-                <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
-                  <thead><tr>{th('Driver')}{th('Last delivery')}</tr></thead>
+            <section>
+              {heading('No trip', idle.length, <Coffee className="h-4 w-4" />, '#b45309', 'rgba(245,158,11,.16)')}
+              <div className="overflow-x-auto rounded-xl border" style={line}>
+                <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                  <thead style={{ backgroundColor: 'rgba(245,158,11,.08)' }}><tr>{th('Driver')}{th('Last delivery')}</tr></thead>
                   <tbody>
-                    {idle.length === 0 && (
-                      <tr><td colSpan={2} className="px-3 py-3" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>{isLoading ? 'Loading…' : 'Every driver has a trip.'}</td></tr>
-                    )}
-                    {idle.map(({ driver, last }) => (
-                      <tr key={driver.id}>
-                        {td(`${driver.first_name} ${driver.last_name}`)}
-                        {last
-                          ? td(cityState(last.fields?.delivery_location) || '-', when(last.fields?.delivery_date || last.fields?.pickup_date, last.delivery_time))
-                          : td(<span style={{ color: 'var(--monday-text-muted)' }}>-</span>)}
-                      </tr>
-                    ))}
+                    {idle.length === 0 && empty(2, isLoading ? 'Loading\u2026' : 'Every driver has a trip.')}
+                    {idle.map(({ driver, last }) => {
+                      const lastDate = last ? (last.fields?.delivery_date || last.fields?.pickup_date) : null
+                      const days = daysSince(lastDate)
+                      return (
+                        <tr key={driver.id} className="border-t transition-colors hover:bg-[rgba(245,158,11,0.05)]" style={line}>
+                          {driverCell(driver, days == null
+                            ? <Pill text="No loads yet" color="#64748b" bg="rgba(100,116,139,.12)" />
+                            : <Pill text={days <= 0 ? 'Free today' : `Free ${days} day${days === 1 ? '' : 's'}`} color={days > 3 ? '#b91c1c' : '#b45309'} bg={days > 3 ? 'rgba(239,68,68,.12)' : 'rgba(245,158,11,.16)'} />)}
+                          <td className="px-4 py-3 align-top">
+                            {last
+                              ? <Stop kind="delivery" location={last.fields?.delivery_location} date={lastDate} time={last.delivery_time} />
+                              : <span style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>-</span>}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
-            </div>
+            </section>
           </div>
         </div>
       </div>
