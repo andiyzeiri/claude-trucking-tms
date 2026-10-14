@@ -8,6 +8,7 @@ from .base import Base
 
 class SmsKind:
     LOAD_ASSIGNED = "load_assigned" # load details sent when a driver is assigned
+    PAY_STATEMENT = "pay_statement" # weekly pay statement, "Send Statement" on Payroll
     POD_REQUEST = "pod_request"     # first text after delivery
     POD_REMINDER = "pod_reminder"   # follow-ups while no POD
     POD_REQUEST_MANUAL = "pod_request_manual"  # "Request POD" button on Loads AI

@@ -15,6 +15,9 @@ from app.schemas.payroll import PayrollCreate, PayrollUpdate, PayrollResponse, C
 from app.core.security import get_current_active_user
 from app.models.user import User
 from app.services import accounting as gl
+from pydantic import BaseModel, Field
+from app.models.sms import LoadSmsMessage, SmsKind
+from app.sms.util import to_e164
 
 router = APIRouter()
 
@@ -305,6 +308,49 @@ async def calculate_payroll_from_loads(
     print(f"📊 Payroll entries created: {len(result_list)}")
 
     return result_list
+
+
+class StatementSend(BaseModel):
+    driver_id: int
+    message: str = Field(..., min_length=1, max_length=1600)
+
+
+@router.post("/statement/send")
+async def send_pay_statement(
+    body: StatementSend,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Text a driver their weekly pay statement ("Send Statement" under their
+    column on the Payroll page). The text is composed on the page from the
+    payroll table; it is sent as shown and kept in the driver's text log.
+    """
+    driver = await db.get(Driver, body.driver_id)
+    if not driver or driver.company_id != current_user.company_id:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    if driver.sms_opt_out:
+        raise HTTPException(status_code=400, detail=f"{driver.first_name} has opted out of texts (replied STOP).")
+    phone = to_e164(driver.phone)
+    if not phone:
+        raise HTTPException(status_code=400, detail=f"{driver.first_name} {driver.last_name} has no textable phone number on the Drivers page.")
+
+    from app.services.twilio_service import get_twilio_service
+
+    result = await get_twilio_service().send_sms(phone, body.message)
+    ok = bool(result.get("success"))
+    db.add(LoadSmsMessage(
+        company_id=driver.company_id, driver_id=driver.id, direction="out", kind=SmsKind.PAY_STATEMENT,
+        phone=phone, body=body.message, twilio_sid=result.get("message_sid"),
+        status=(result.get("status") or "sent") if ok else "failed",
+        error=None if ok else str(result.get("error"))[:1000],
+    ))
+    if not ok and result.get("error_code") == 21610:
+        driver.sms_opt_out = True
+    await db.commit()
+    if not ok:
+        raise HTTPException(status_code=502, detail=f"Text not sent: {result.get('error') or 'unknown error'}")
+    return {"sent": True, "to": phone}
 
 
 @router.post("/", response_model=PayrollResponse)

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { formatCurrency } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Calculator, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, EyeOff, GripVertical, ListChecks, Plus, RefreshCw, Settings, Trash2, X } from 'lucide-react'
+import { Calculator, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, EyeOff, GripVertical, ListChecks, MessageSquare, Plus, RefreshCw, Settings, Trash2, X } from 'lucide-react'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useTrucks, pickableTrucks } from '@/hooks/use-trucks'
 import { useCalculatedPayroll } from '@/hooks/use-payroll'
@@ -18,6 +18,8 @@ import { DriverSettingsModal } from '@/components/payroll/driver-settings-modal'
 import { DebtView } from '@/components/payroll/debt-view'
 import { useDriverDebts } from '@/hooks/use-driver-debts'
 import { useEldConnection, useEldMileage } from '@/hooks/use-eld'
+import { useCompany } from '@/hooks/use-company'
+import api from '@/lib/api'
 
 
 // Generate 52 weeks for a given year using ISO week numbering
@@ -156,6 +158,8 @@ export default function PayrollPage() {
   const savePaySettings = useCreateOrUpdateDriverPayrollSettings()
   const { data: rateVersions } = useDriverRateVersions()
   const [payDriverId, setPayDriverId] = useState<number | null>(null) // Pay Structure dialog
+  const [statementDriverId, setStatementDriverId] = useState<number | null>(null) // Send Statement dialog
+  const { company } = useCompany()
   // Each driver type has its own rows.
   const { data: companyRows, isLoading: companyLayoutLoading } = usePayrollLayout('company')
   const { data: ownerRows, isLoading: ownerLayoutLoading } = usePayrollLayout('owner_operator')
@@ -564,6 +568,39 @@ export default function PayrollPage() {
   const LABEL_W = 230
   const COL_W = 140
   const border = '1px solid var(--monday-border-light)'
+  // A driver's pay statement for the selected week, as a text message: the
+  // table's own lines (in table order, as shown there), total deductions and Net Pay.
+  const statementText = (d: DriverPayrollData): string => {
+    const wk = d.weeks[selectedWeek]
+    const day = (x: Date) => x.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const truckId = getOverride(d.driver_id, selectedWeek, 'truck_id') ?? d.truck_id
+    const truck = truckId ? trucks.find((t: any) => t.id === Number(truckId))?.truck_number : null
+    const lines = [
+      company?.name ? `${company.name} - Pay statement` : 'Pay statement',
+      d.driver_name + (truck ? ` - Truck ${truck}` : ''),
+      selectedWeekObj
+        ? `Week ${selectedWeek}: ${day(selectedWeekObj.startDate)} - ${day(selectedWeekObj.endDate)}, ${selectedWeekObj.endDate.getFullYear()}`
+        : `Week ${selectedWeek}`,
+      '',
+    ]
+    let deductions = 0
+    visibleRows.forEach(row => {
+      const v = wk?.values[row.key]
+      if (!v) return
+      if (row.kind === 'deduction') deductions += v
+      lines.push(`${row.label}: ${cellDisplay(row, v, false).text}`)
+    })
+    if (deductions) lines.push(`Total deductions: (${formatCurrency(deductions)})`)
+    if (wk?.pay) {
+      const text = payStructureText(ratesAt(d.driver_id, selectedWeek))
+      if (text) lines.push(`Your pay: ${text}`)
+    }
+    if (wk?.to_debt) lines.push(`No gross this week: ${formatCurrency(wk.to_debt)} added to your balance`)
+    lines.push('', `NET PAY: ${formatCurrency(wk?.check_amount || 0)}`)
+    return lines.join('\n')
+  }
+  const statementDriver = tabRows.find(d => d.driver_id === statementDriverId) || null
+
   const stickyLabel: React.CSSProperties = { position: 'sticky', left: 0, zIndex: 1, width: LABEL_W, minWidth: LABEL_W, borderRight: border, borderBottom: border }
   const cell: React.CSSProperties = { width: COL_W, minWidth: COL_W, borderRight: border, borderBottom: border, fontSize: '13px' }
 
@@ -964,6 +1001,29 @@ export default function PayrollPage() {
                       })}
                     </tr>
                   )}
+
+                  {/* Send Statement: text the driver this week's statement */}
+                  {tabRows.length > 0 && (
+                    <tr>
+                      <td className="px-3 py-2" style={{ ...stickyLabel, backgroundColor: 'var(--monday-bg-primary)', fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' }}>Statement</td>
+                      {tabRows.map(d => (
+                        <td key={d.driver_id} className="px-3 py-2" style={cell}>
+                          {d.weeks[selectedWeek] ? (
+                            <button
+                              onClick={() => setStatementDriverId(d.driver_id)}
+                              className="inline-flex items-center gap-1 rounded px-2 py-1 hover:bg-brand/5"
+                              style={{ fontSize: '12px', fontWeight: 500, color: '#0073ea', border: '1px solid #0073ea' }}
+                              title={`Text ${d.driver_name} this week's pay statement`}
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" /> Send Statement
+                            </button>
+                          ) : (
+                            <span style={{ color: 'var(--monday-text-muted)' }}>-</span>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1006,6 +1066,12 @@ export default function PayrollPage() {
           saving={savePaySettings.isPending}
           onClose={() => setPayDriverId(null)}
           onSave={(data) => payDriverId && savePaySettings.mutate({ driver_id: payDriverId, ...data }, { onSuccess: () => setPayDriverId(null) })}
+        />
+        <StatementDialog
+          driver={statementDriver}
+          phone={drivers.find((x: any) => x.id === statementDriverId)?.phone}
+          text={statementDriver ? statementText(statementDriver) : ''}
+          onClose={() => setStatementDriverId(null)}
         />
         <AmountsDialog
           row={amountsRow}
@@ -1313,6 +1379,67 @@ function AmountsDialog({ row, drivers, onClose, onSave }: {
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={save}>Save</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Send Statement: the week's pay statement, editable, texted to the driver.
+function StatementDialog({ driver, phone, text, onClose }: {
+  driver: DriverPayrollData | null
+  phone?: string | null
+  text: string
+  onClose: () => void
+}) {
+  const [message, setMessage] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [sentTo, setSentTo] = useState<string | null>(null)
+  useEffect(() => {
+    if (!driver) return
+    setMessage(text)
+    setError(null)
+    setSentTo(null)
+  }, [driver?.driver_id])
+
+  const send = async () => {
+    if (!driver) return
+    setSending(true)
+    setError(null)
+    try {
+      const r = await api.post('/v1/payroll/statement/send', { driver_id: driver.driver_id, message })
+      setSentTo(r.data?.to || phone || '')
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || 'Could not send the text.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <Dialog open={!!driver} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Send Statement: {driver?.driver_name}</DialogTitle>
+          <DialogDescription>
+            Texted to {phone || 'no phone on file'}. This is this week&apos;s column of the payroll table; you can edit it before sending.
+          </DialogDescription>
+        </DialogHeader>
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          rows={Math.min(18, Math.max(8, message.split('\n').length + 1))}
+          maxLength={1600}
+          disabled={!!sentTo}
+          className="w-full rounded border p-2 font-mono text-sm"
+          style={{ borderColor: 'var(--monday-border-light)', backgroundColor: 'var(--monday-bg-primary)', color: 'var(--monday-text-primary)' }}
+        />
+        {error && <div className="text-sm" style={{ color: 'var(--monday-stuck)' }}>{error}</div>}
+        {sentTo && <div className="text-sm font-medium" style={{ color: 'var(--monday-done)' }}>Sent to {sentTo}.</div>}
+        <div className="flex justify-end gap-2 pt-1">
+          <Button variant="outline" onClick={onClose}>{sentTo ? 'Close' : 'Cancel'}</Button>
+          {!sentTo && <Button onClick={send} disabled={sending || !message.trim() || !phone}>{sending ? 'Sending…' : 'Send Text'}</Button>}
         </div>
       </DialogContent>
     </Dialog>
