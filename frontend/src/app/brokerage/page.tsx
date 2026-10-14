@@ -522,6 +522,15 @@ export default function BrokeragePage() {
     localStorage.setItem('brokerage-brokers', JSON.stringify(Array.from(selectedBrokers)))
   }, [selectedBrokers])
 
+  // Select Customer lists Customers-tab customers only: drop earlier picks that aren't one.
+  useEffect(() => {
+    if (!rawCustomers.length) return
+    const ok = new Set(rawCustomers.filter(c => c.customer_type === 'customer').map(c => c.id))
+    if (Array.from(selectedBrokers).some(id => !ok.has(id))) {
+      setSelectedBrokers(new Set(Array.from(selectedBrokers).filter(id => ok.has(id))))
+    }
+  }, [rawCustomers, selectedBrokers])
+
   // Toggle grouping
   const toggleGrouping = (groupType: 'week' | 'day' | 'driver' | 'customer') => {
     const newGroupings = new Set(activeGroupings)
@@ -2633,7 +2642,11 @@ export default function BrokeragePage() {
               {brokerMenuOpen && (
                 <div className="absolute top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
                   <div className="py-1">
-                    {customers.map(customer => (
+                    {/* Customers tab only (customer_type 'customer'), not brokers */}
+                    {customers.filter(c => c.customer_type === 'customer').length === 0 && (
+                      <div className="px-4 py-2 text-sm text-gray-500">No customers on the Customers tab yet.</div>
+                    )}
+                    {customers.filter(c => c.customer_type === 'customer').map(customer => (
                       <button
                         key={customer.id}
                         className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center justify-between"
