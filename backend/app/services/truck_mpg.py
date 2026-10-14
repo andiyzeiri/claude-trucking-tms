@@ -8,8 +8,10 @@ on the truck's Fuel entries dated in that Monday-Sunday week. Weeks where
 either is missing (the Fuel tab shows "-") are left out of the average.
 
 A finished week's ELD miles don't change, so each is asked of Peak once and
-kept in truck_week_miles. Runs every Monday and once after start-up.
+kept in truck_week_miles. Runs daily (only weeks not fetched yet go to Peak)
+and once after start-up.
 """
+import asyncio
 import logging
 import types
 from datetime import date, datetime, timedelta, timezone
@@ -26,6 +28,7 @@ from app.models.truck import Truck
 logger = logging.getLogger(__name__)
 
 WEEKS_BACK = 52
+PAUSE_SECONDS = 5
 TZ = "America/Chicago"  # the Fuel tab asks for the browser's zone; the office is on Central
 
 
@@ -65,8 +68,17 @@ async def update(db: AsyncSession, conn: EldConnection) -> int:
     have = {r[0] for r in (await db.execute(text(
         "SELECT DISTINCT week_start FROM truck_week_miles WHERE company_id = :c AND week_start >= :f"
     ), {"c": company_id, "f": first})).all()}
-    for monday in sorted({m for (_, m) in gallons} - have):
-        miles = await _week_miles(db, company_id, monday)
+    missing = sorted({m for (_, m) in gallons} - have, reverse=True)  # newest first
+    for i, monday in enumerate(missing):
+        if i:
+            await asyncio.sleep(PAUSE_SECONDS)  # go easy on Peak while catching up
+        try:
+            miles = await _week_miles(db, company_id, monday)
+        except Exception as e:  # Peak busy / down: keep what we have, the next run carries on
+            await db.rollback()
+            logger.warning("truck_mpg: company %s: week of %s not fetched (%s); %s week(s) left for the next run",
+                           company_id, monday, getattr(e, "detail", e), len(missing) - i)
+            break
         rows = [{"c": company_id, "t": t, "w": monday, "m": round(m, 1)} for t, m in miles.items()]
         rows.append({"c": company_id, "t": None, "w": monday, "m": 0})  # marks the week fetched
         await db.execute(text(

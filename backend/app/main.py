@@ -57,11 +57,11 @@ async def lifespan(app: FastAPI):
         coalesce=True,
     )
 
-    # Equipment MPG: average of each truck's weekly Fuel-tab MPG, every Monday
-    # (and shortly after start-up, so a deploy fills it in).
+    # Equipment MPG: average of each truck's weekly Fuel-tab MPG, daily (and
+    # shortly after start-up, so a deploy fills it in).
     scheduler.add_job(
         update_truck_mpg,
-        CronTrigger(day_of_week='mon', hour=10, minute=15),
+        CronTrigger(hour=10, minute=15),
         id="truck_mpg",
         name="Update truck MPG",
         replace_existing=True,
