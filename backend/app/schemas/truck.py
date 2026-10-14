@@ -25,6 +25,8 @@ class TruckBase(BaseModel):
     miles: Optional[int] = None
     mpg: Optional[Decimal] = None
     own_fuel_card: bool = False
+    registration_url: Optional[str] = None
+    inspection_url: Optional[str] = None
 
 
 class TruckCreate(TruckBase):
@@ -51,6 +53,8 @@ class TruckUpdate(BaseModel):
     miles: Optional[int] = None
     mpg: Optional[Decimal] = None
     own_fuel_card: Optional[bool] = None
+    registration_url: Optional[str] = None
+    inspection_url: Optional[str] = None
 
 
 class TruckResponse(TruckBase):

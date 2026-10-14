@@ -6,8 +6,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ContextMenu, ContextMenuItem } from '@/components/ui/context-menu'
 import { TruckModal, TruckData, TruckOwnership, STATUS_LABEL } from '@/components/trucks/truck-modal'
-import { Plus, Truck as TruckIcon, Edit, Trash2, FileText } from 'lucide-react'
+import { Plus, Truck as TruckIcon, Edit, Trash2, FileText, X } from 'lucide-react'
 import { useTrucks, useCreateTruck, useUpdateTruck } from '@/hooks/use-trucks'
+import { PdfViewer } from '@/components/loads/pdf-viewer'
+import api from '@/lib/api'
+import toast from 'react-hot-toast'
+
+type DocField = 'registration_url' | 'inspection_url'
+const DOC_LABEL: Record<DocField, string> = { registration_url: 'Registration', inspection_url: 'Inspection' }
+
+// /api/v1/uploads/s3/... paths are served by the API host.
+function fileUrl(path: string): string {
+  if (path.startsWith('http')) return path
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.absolutetms.com/api'
+  return `${apiUrl.replace('/api/v1', '').replace('/api', '')}${path}`
+}
 
 // Sold (company) and Not Leased (owner-operator) units are kept for history, at the bottom.
 const INACTIVE = new Set(['sold', 'not_leased'])
@@ -142,6 +155,51 @@ export default function TrucksPage() {
   }
 
 
+  // Registration / inspection documents: upload, view, replace, delete - like POD and ratecon
+  const [docModal, setDocModal] = useState<{ truckId: number; field: DocField; url: string; label: string } | null>(null)
+  const uploadDoc = async (e: React.ChangeEvent<HTMLInputElement>, truckId: number, field: DocField) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!/\.(pdf|jpe?g|png|heic|heif|webp|gif)$/i.test(file.name)) {
+      toast.error('Upload a PDF or a photo (JPG, PNG, HEIC)')
+      return
+    }
+    const formData = new FormData()
+    formData.append('file', file)
+    const t = toast.loading('Uploading...')
+    try {
+      const res = await api.post('/v1/uploads/', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+      await updateTruck.mutateAsync({ id: truckId, data: { [field]: res.data.url } as any })
+      toast.success(`${DOC_LABEL[field]} uploaded`, { id: t })
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Upload failed', { id: t })
+    }
+  }
+  const docCell = (item: any, field: DocField) => {
+    const url: string | null = item[field]
+    const inputId = `${field}-${item.id}`
+    return (
+      <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2">
+          {url && (
+            <button
+              onClick={() => setDocModal({ truckId: item.id, field, url: fileUrl(url), label: `${DOC_LABEL[field]} - ${item.truck_number}` })}
+              className="inline-flex items-center gap-1 text-sm hover:underline"
+              style={{ color: 'var(--monday-cornflower)' }}
+            >
+              <FileText className="h-3.5 w-3.5" /> View
+            </button>
+          )}
+          <input type="file" accept=".pdf,image/*,.heic,.heif" className="hidden" id={inputId} onChange={(e) => uploadDoc(e, item.id, field)} />
+          <label htmlFor={inputId} className={url ? 'text-xs text-gray-500 hover:text-gray-700 cursor-pointer' : 'text-sm cursor-pointer hover:underline'} style={url ? undefined : { color: 'var(--monday-cornflower)' }}>
+            {url ? 'Replace' : 'Upload'}
+          </label>
+        </div>
+      </td>
+    )
+  }
+
   const renderEquipmentRow = (item: any, index: number) => {
     const inactive = INACTIVE.has(item.status)
     return (
@@ -189,24 +247,8 @@ export default function TrucksPage() {
         <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
           {item.mpg ? Number(item.mpg).toFixed(1) : '0.0'}
         </td>
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)' }}>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2"
-            style={{ color: 'var(--monday-stuck)' }}
-            onClick={(e) => {
-              e.stopPropagation()
-              alert('Registration PDF viewer coming soon')
-            }}
-          >
-            <FileText className="h-4 w-4 mr-1" />
-            <span className="text-xs">View PDF</span>
-          </Button>
-        </td>
-        <td className="px-3 py-2.5 border-r" style={{ borderColor: 'var(--monday-border-light)', fontSize: '13px', color: 'var(--monday-text-primary)' }}>
-          {item.inspection ? new Date(item.inspection).toLocaleDateString() : 'N/A'}
-        </td>
+        {docCell(item, 'registration_url')}
+        {docCell(item, 'inspection_url')}
         <td className="px-3 py-2.5" style={{ borderColor: 'var(--monday-border-light)' }}>
           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style={{
             backgroundColor: item.status === 'available' ? 'rgba(0, 200, 117, 0.15)' :
@@ -325,6 +367,34 @@ export default function TrucksPage() {
           </table>
         </div>
 
+
+        {docModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={() => setDocModal(null)}>
+            <div className="flex h-5/6 w-11/12 flex-col rounded-lg bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between border-b p-4">
+                <h2 className="text-lg font-semibold">{docModal.label}</h2>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm(`Delete this ${DOC_LABEL[docModal.field].toLowerCase()}?`)) {
+                        updateTruck.mutate({ id: docModal.truckId, data: { [docModal.field]: null } as any })
+                        setDocModal(null)
+                      }
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </Button>
+                  <button onClick={() => setDocModal(null)} className="rounded-full p-2 hover:bg-gray-100"><X className="h-5 w-5" /></button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-hidden p-4">
+                <PdfViewer url={docModal.url} title={docModal.label} />
+              </div>
+            </div>
+          </div>
+        )}
 
         <TruckModal
           isOpen={isModalOpen}

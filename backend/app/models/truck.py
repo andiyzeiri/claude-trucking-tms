@@ -50,6 +50,9 @@ class Truck(Base):
     miles = Column(Integer, default=0)
     # When `miles` was last set from the Peak ELD odometer (null = typed in)
     odometer_at = Column(DateTime(timezone=True))
+    # Registration / annual inspection documents (PDF, /api/v1/uploads/s3/... like POD and ratecon)
+    registration_url = Column(String)
+    inspection_url = Column(String)
     mpg = Column(Numeric(5, 1), default=0)
     # Owner buys fuel on their own card: shown red at the bottom of the Fuel page
     own_fuel_card = Column(Boolean, nullable=False, default=False, server_default=false())
