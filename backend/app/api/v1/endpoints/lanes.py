@@ -12,7 +12,10 @@ from app.schemas.lane import LaneCreate, LaneUpdate, LaneResponse
 from app.core.security import get_current_active_user
 from app.models.user import User
 from app.models.load import Load
-from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, IngestedDocument
+from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, InboundEmail, IngestedDocument
+from app.models.company import Company
+from app.documents.contacts import broker_email
+from app.documents.facilities import name_key
 from app.documents.facilities import _parse_location
 from app.geo.places import locate, parse_place
 from app.models.customer import Customer
@@ -188,6 +191,58 @@ async def lane_history(
             avg_rate=cents(v["rates"]), avg_rpm=cents(v["rpm"]), load_list=v["list"],
         ))
     out.sort(key=lambda l: (-l.loads, l.origin_state, l.origin_city))
+    return out
+
+
+class ContactOut(BaseModel):
+    broker: Optional[str] = None
+    email: Optional[str] = None
+    loads: int
+    last_load: Optional[str] = None
+
+
+@router.get("/contacts", response_model=List[ContactOut])
+async def broker_contacts(
+    days: int = 365,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Brokers and the email each AI load's rate confirmation came from, one row
+    per broker + email, with how many loads and the latest. Loads built before
+    the email was kept on the load use their ratecon email's sender.
+    """
+    since = datetime.utcnow() - timedelta(days=days)
+    company = await db.get(Company, current_user.company_id)
+    rows = (await db.execute(
+        select(IngestedDocument.draft, IngestedDocument.created_at, InboundEmail)
+        .outerjoin(InboundEmail, InboundEmail.id == IngestedDocument.inbound_email_id)
+        .where(
+            IngestedDocument.company_id == current_user.company_id,
+            IngestedDocument.status.in_(LIVE_AI_LOAD_STATUSES),
+            IngestedDocument.draft.isnot(None),
+            IngestedDocument.created_at >= since,
+        )
+    )).all()
+    contacts = {}
+    for draft, created, email_row in rows:
+        f = draft if isinstance(draft, dict) else {}
+        broker = (str(f.get("broker_name") or "").strip()) or None
+        email = f.get("broker_email") or broker_email(email_row, company.email if company else None)
+        if not broker and not email:
+            continue
+        key = (name_key(broker), email or "")
+        c = contacts.setdefault(key, {"broker": broker, "email": email, "loads": 0, "last": None})
+        c["broker"] = c["broker"] or broker
+        c["loads"] += 1
+        if created is not None:
+            created = created.astimezone(timezone.utc).replace(tzinfo=None) if created.tzinfo else created
+            if c["last"] is None or created > c["last"]:
+                c["last"] = created
+    out = [ContactOut(broker=c["broker"], email=c["email"], loads=c["loads"],
+                      last_load=c["last"].date().isoformat() if c["last"] else None)
+           for c in contacts.values()]
+    out.sort(key=lambda c: ((c.broker or "~").upper(), c.email or "~"))
     return out
 
 

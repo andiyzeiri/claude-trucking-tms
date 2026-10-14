@@ -40,6 +40,7 @@ from app.documents.extraction.base import (
 )
 from app.documents.extraction.registry import get_extractor
 from app.documents.extraction.schemas import AMAZON_APPOINTMENT_INSTRUCTION
+from app.documents.contacts import broker_email
 from app.documents.facilities import sync_places_safely
 from app.documents.mapping import build_load_draft
 from app.documents.sources.base import SourceAttachment, SourceMessage
@@ -52,7 +53,7 @@ from app.documents.unverified import (
 )
 from app.documents import revisions
 from app.documents.lumper import apply_lumper, lumper_total
-from app.documents.text_check import ratecon_title
+from app.documents.text_check import pdf_text, ratecon_title
 from app.services.mileage import fill_miles
 from app.services.pdf_convert import image_to_jpeg, image_to_pdf, is_image
 from app.documents.sources.imap_mailbox import ImapMailboxReader, MailboxError, fetch_recent
@@ -692,6 +693,11 @@ async def process_document(
 
     # Miles once, when the load is built (the page recalculates on edit).
     draft = await fill_miles(draft)
+    # Who sent the ratecon (for the Lanes page's Contacts tab; not shown on Loads AI).
+    if not draft.get("broker_email"):
+        email = await _broker_email_of(session, company_id, document, content)
+        if email:
+            draft["broker_email"] = email
     document.draft = draft
     document.warnings = mapped.warnings
 
@@ -718,6 +724,22 @@ async def process_document(
         document.original_filename,
         document.id,
     )
+
+
+async def _broker_email_of(session: AsyncSession, company_id: int, document: IngestedDocument,
+                           content: bytes) -> Optional[str]:
+    """The broker's email for a new AI load. Never breaks the build."""
+    try:
+        email_row = await session.get(InboundEmail, document.inbound_email_id) if document.inbound_email_id else None
+        company = await session.get(Company, company_id)
+        found = broker_email(email_row, company.email if company else None)
+        if not found and document.content_type == "application/pdf":
+            found = broker_email(None, company.email if company else None,
+                                 await run_in_threadpool(pdf_text, content, 6))
+        return found
+    except Exception:
+        logger.exception("loads-ai: could not read the broker email of document #%s", document.id)
+        return None
 
 
 async def _ratecon_sent_to_pods(session: AsyncSession, company_id: int, c, content: bytes, sender: Optional[str]) -> bool:

@@ -4,16 +4,18 @@ export const dynamic = 'force-dynamic'
 
 import React, { useEffect, useState } from 'react'
 import Layout from '@/components/layout/layout'
-import { Route, Warehouse, MapPin } from 'lucide-react'
+import { Route, Warehouse, MapPin, Contact } from 'lucide-react'
 import { LanesSearch } from '@/components/lanes/lanes-search'
 import { ShippersView } from '@/components/lanes/shippers-view'
 import { ReceiversView } from '@/components/lanes/receivers-view'
+import { ContactsView } from '@/components/lanes/contacts-view'
 
-type LanesTab = 'lanes' | 'shippers' | 'receivers'
+type LanesTab = 'lanes' | 'shippers' | 'receivers' | 'contacts'
 const TABS: { key: LanesTab; label: string; icon: React.ElementType }[] = [
   { key: 'lanes', label: 'Lanes', icon: Route },
   { key: 'shippers', label: 'Shippers', icon: Warehouse },
   { key: 'receivers', label: 'Receivers', icon: MapPin },
+  { key: 'contacts', label: 'Contacts', icon: Contact },
 ]
 
 export default function LanesPage() {
@@ -22,7 +24,7 @@ export default function LanesPage() {
   // ?tab=shippers / ?tab=receivers (the old Shippers and Receivers links land here)
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('tab')
-    if (t === 'shippers' || t === 'receivers' || t === 'lanes') setTab(t)
+    if (t === 'shippers' || t === 'receivers' || t === 'contacts' || t === 'lanes') setTab(t)
   }, [])
 
   const choose = (t: LanesTab) => {
@@ -53,7 +55,7 @@ export default function LanesPage() {
           ))}
         </div>
 
-        {tab === 'lanes' ? <LanesSearch /> : tab === 'shippers' ? <ShippersView /> : <ReceiversView />}
+        {tab === 'lanes' ? <LanesSearch /> : tab === 'shippers' ? <ShippersView /> : tab === 'receivers' ? <ReceiversView /> : <ContactsView />}
       </div>
     </Layout>
   )
