@@ -8,12 +8,11 @@ appointment builds the AI load and each later one is added to it as a stop
 instead of becoming a second load.
 
 The load keeps one pickup and one delivery (the last stop, by delivery
-time); every stop is kept in draft["stops"] and written into the load's
-Notes column (pickup_notes) so it shows on the Loads AI page.
+time); every stop is kept in draft["stops"], and the load's Notes list
+the appointment IDs.
 """
 import logging
 import re
-from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import select
@@ -23,9 +22,6 @@ from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, IngestedDocument
 from app.services.mileage import driving_miles
 
 logger = logging.getLogger(__name__)
-
-STOPS_HEADER = "Stops:"
-
 
 def stop_of(draft: dict) -> dict:
     """The delivery stop an Amazon appointment draft describes."""
@@ -37,31 +33,6 @@ def stop_of(draft: dict) -> dict:
         "appointment": draft.get("delivery_number") or draft.get("broker_load_number"),
         "ratecon_url": draft.get("ratecon_url"),
     }
-
-
-def _when(s: dict) -> Optional[str]:
-    """'Wed 10/22 10:00 CDT': the day, then the appointment time as printed (else the clock time)."""
-    raw = str(s.get("date") or "")
-    try:
-        d = datetime.fromisoformat(raw[:19])
-    except ValueError:
-        return s.get("window") or None
-    day = f"{d:%a} {d.month}/{d.day}"
-    time = s.get("window") or (f"{d:%H:%M}" if d.hour or d.minute else "")
-    return f"{day} {time}".strip()
-
-
-def _stop_line(i: int, n: int, s: dict) -> str:
-    bits = [s.get("name") or "Stop", s.get("location") if s.get("location") != s.get("name") else None, _when(s),
-            f"Appt {s['appointment']}" if s.get("appointment") else None]
-    return f"{i}/{n}: " + " - ".join(b for b in bits if b)
-
-
-def _with_stops_note(notes: Optional[str], stops: list) -> str:
-    """The load's notes with the Stops block replaced (anything typed above it kept)."""
-    kept = (notes or "").split(STOPS_HEADER)[0].rstrip()
-    block = "\n".join([STOPS_HEADER] + [_stop_line(i + 1, len(stops), s) for i, s in enumerate(stops)])
-    return f"{kept}\n{block}" if kept else block
 
 
 async def sibling_load(session: AsyncSession, company_id: int, document: IngestedDocument) -> Optional[IngestedDocument]:
@@ -99,8 +70,9 @@ async def add_stop(target: IngestedDocument, draft: dict) -> dict:
         "delivery_date": last["date"],
         "delivery_window": last["window"],
         "delivery_number": last["appointment"],
-        # pickup_notes is what the Loads AI page's Notes column edits and saves.
-        "pickup_notes": _with_stops_note(merged.get("pickup_notes") or merged.get("notes"), stops),
+        # Notes (pickup_notes, what the Loads AI page's Notes column edits):
+        # just the stops' Amazon appointment IDs, in delivery order.
+        "pickup_notes": "Appt# " + ", ".join(str(s["appointment"]) for s in stops if s.get("appointment")),
     })
     # Fill what the first appointment's bill of lading didn't.
     for key in ("pickup_location", "pickup_date", "pickup_window", "shipper_name", "broker_name", "customer_id"):

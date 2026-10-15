@@ -820,6 +820,9 @@ def _amazon_draft(draft: dict, warnings: list) -> None:
     missing = [label for label, key in (("rate", "rate"), ("pickup", "pickup_location"), ("customer", "customer_id"))
                if not draft.get(key)]
     draft["amazon_appointment"] = True  # so a second appointment in the same email joins it as a stop
+    # Notes: just Amazon's appointment ID, not every PRO / PO on the page.
+    appt = draft.get("delivery_number") or draft.get("broker_load_number")
+    draft["pickup_notes"] = f"Appt# {appt}" if appt else None
     note = "Amazon appointment - no rate on it."
     if missing:
         note += " Fill in the " + ", ".join(missing) + " before dispatching."
