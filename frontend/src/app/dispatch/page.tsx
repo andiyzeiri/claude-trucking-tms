@@ -32,6 +32,19 @@ function cityState(location?: string | null): string {
   return parts[0] || ''
 }
 
+// One type scale for the page: semibold only for titles and driver names,
+// medium for the main value in a cell, regular muted text under it.
+const TEXT = {
+  title: { fontSize: '22px', fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--monday-text-primary)' },
+  section: { fontSize: '15px', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--monday-text-primary)' },
+  head: { fontSize: '11px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--monday-text-muted)', whiteSpace: 'nowrap' },
+  name: { fontSize: '13px', fontWeight: 600, color: 'var(--monday-text-primary)' },
+  main: { fontSize: '13px', fontWeight: 500, color: 'var(--monday-text-primary)' },
+  sub: { fontSize: '12px', fontWeight: 400, color: 'var(--monday-text-secondary)' },
+  note: { fontSize: '11px', fontWeight: 400, color: 'var(--monday-text-muted)' },
+  pill: { fontSize: '11px', fontWeight: 500 },
+} as const satisfies Record<string, React.CSSProperties>
+
 const UPCOMING_DAYS = [1, 2, 3, 5, 7]
 const UPCOMING_LABEL: Record<number, string> = { 1: 'Tomorrow', 2: '2 days', 3: '3 days', 5: '5 days', 7: 'Next week' }
 
@@ -61,7 +74,7 @@ function Avatar({ id, first, last }: { id: number; first: string; last: string }
   return (
     <span
       className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-white"
-      style={{ backgroundColor: color, fontSize: '11px', fontWeight: 600, letterSpacing: '0.02em' }}
+      style={{ backgroundColor: color, fontSize: '11px', fontWeight: 600, letterSpacing: '0.03em' }}
     >
       {`${first?.[0] || ''}${last?.[0] || ''}`.toUpperCase()}
     </span>
@@ -70,7 +83,7 @@ function Avatar({ id, first, last }: { id: number; first: string; last: string }
 
 function Pill({ text, color, bg }: { text: string; color: string; bg: string }) {
   return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5" style={{ fontSize: '11px', fontWeight: 600, color, backgroundColor: bg, whiteSpace: 'nowrap' }}>
+    <span className="inline-flex items-center rounded-full px-2 py-px" style={{ ...TEXT.pill, color, backgroundColor: bg, whiteSpace: 'nowrap' }}>
       {text}
     </span>
   )
@@ -79,16 +92,26 @@ function Pill({ text, color, bg }: { text: string; color: string; bg: string }) 
 // Same colours as Loads AI: a window green, an appointment orange, no time grey.
 const TIME_COLOR: Record<string, string> = { window: '#059669', appointment: '#d97706', none: '#94a3b8' }
 
+function LoadCell({ load }: { load: AILoad }) {
+  const f = load.fields || {}
+  return (
+    <td className="px-3 py-1.5 align-top" style={{ lineHeight: 1.35 }}>
+      <div style={{ ...TEXT.main, fontVariantNumeric: 'tabular-nums' }}>{f.broker_load_number || f.load_number || `#${load.id}`}</div>
+      {load.broker_name && <div className="truncate" style={{ ...TEXT.sub, maxWidth: '180px' }}>{load.broker_name}</div>}
+    </td>
+  )
+}
+
 function Stop({ kind, location, date, time }: { kind: 'pickup' | 'delivery'; location?: string | null; date?: string | null; time?: { kind: string; text: string } | null }) {
   const day = dayLabel(date)
   return (
     <div className="flex gap-2">
       <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: kind === 'pickup' ? '#10b981' : '#ef4444', boxShadow: `0 0 0 3px ${kind === 'pickup' ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.15)'}` }} />
-      <div className="min-w-0" style={{ lineHeight: 1.3 }}>
-        <div className="truncate" style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>{cityState(location) || '-'}</div>
-        <div className="flex flex-wrap items-center gap-1.5" style={{ fontSize: '12px' }}>
-          {day && <span style={{ color: 'var(--monday-text-secondary)', fontWeight: 500 }}>{day}</span>}
-          {time && time.kind !== 'none' && <span style={{ color: TIME_COLOR[time.kind] || TIME_COLOR.none, fontWeight: 600 }}>{time.text}</span>}
+      <div className="min-w-0" style={{ lineHeight: 1.35 }}>
+        <div className="truncate" style={TEXT.main}>{cityState(location) || '-'}</div>
+        <div className="flex flex-wrap items-center gap-1.5" style={TEXT.sub}>
+          {day && <span>{day}</span>}
+          {time && time.kind !== 'none' && <span style={{ color: TIME_COLOR[time.kind] || TIME_COLOR.none, fontWeight: 500 }}>{time.text}</span>}
         </div>
       </div>
     </div>
@@ -175,13 +198,13 @@ export default function DispatchBoardPage() {
   const line = { borderColor: 'var(--monday-border-light)' }
 
   const th = (label: string) => (
-    <th className="px-3 py-1.5 text-left" style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--monday-text-secondary)', whiteSpace: 'nowrap' }}>{label}</th>
+    <th className="px-3 py-2 text-left" style={TEXT.head}>{label}</th>
   )
   const heading = (title: string, count: number, icon: React.ReactNode, color: string, bg: string) => (
     <div className="mb-2 flex items-center gap-2.5">
-      <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: bg, color }}>{icon}</span>
-      <h2 style={{ fontSize: '17px', fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--monday-text-primary)' }}>{title}</h2>
-      <span className="rounded-full px-2 py-0.5" style={{ fontSize: '12px', fontWeight: 700, color, backgroundColor: bg }}>{count}</span>
+      <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg" style={{ backgroundColor: bg, color }}>{icon}</span>
+      <h2 style={TEXT.section}>{title}</h2>
+      <span className="rounded-full px-2 py-px" style={{ ...TEXT.pill, fontVariantNumeric: 'tabular-nums', color, backgroundColor: bg }}>{count}</span>
     </div>
   )
   const driverCell = (driver: (typeof drivers)[number], status?: React.ReactNode) => (
@@ -189,8 +212,8 @@ export default function DispatchBoardPage() {
       <div className="flex items-center gap-2.5">
         <Avatar id={driver.id} first={driver.first_name} last={driver.last_name} />
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-2" style={{ lineHeight: 1.3 }}>
-            <span className="truncate" style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>{driver.first_name} {driver.last_name}</span>
+          <div className="flex flex-wrap items-center gap-x-2" style={{ lineHeight: 1.35 }}>
+            <span className="truncate" style={TEXT.name}>{driver.first_name} {driver.last_name}</span>
             {status}
           </div>
         </div>
@@ -198,13 +221,13 @@ export default function DispatchBoardPage() {
     </td>
   )
   const empty = (cols: number, text: string) => (
-    <tr><td colSpan={cols} className="px-4 py-6 text-center" style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>{text}</td></tr>
+    <tr><td colSpan={cols} className="px-4 py-6 text-center" style={{ ...TEXT.sub, color: 'var(--monday-text-muted)' }}>{text}</td></tr>
   )
 
   return (
     <Layout>
-      <div className={`p-6 space-y-6 ${inter.className}`}>
-        <h1 style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--monday-text-primary)' }}>Dispatch Board</h1>
+      <div className={`p-6 space-y-6 antialiased ${inter.className}`} style={{ fontFeatureSettings: '"cv11", "ss01"' }}>
+        <h1 style={TEXT.title}>Dispatch Board</h1>
 
         {/* Square truck map top left with drivers without a trip under it; active drivers to its right */}
         <div className="grid gap-6 lg:grid-cols-[minmax(380px,38%)_minmax(0,760px)] lg:items-start">
@@ -215,7 +238,7 @@ export default function DispatchBoardPage() {
                   <div style={{ aspectRatio: '1 / 1', width: '100%' }}>
                     <TruckMap trucks={locations} height="100%" />
                   </div>
-                  <div className="mt-1 flex flex-wrap justify-between gap-x-2" style={{ fontSize: '11px', color: 'var(--monday-text-muted)' }}>
+                  <div className="mt-1.5 flex flex-wrap justify-between gap-x-2" style={TEXT.note}>
                     <span>
                       {locationsError
                         ? ((locationsError as any)?.response?.data?.detail || 'Couldn’t get truck locations from Peak ELD')
@@ -225,7 +248,7 @@ export default function DispatchBoardPage() {
                   </div>
                 </>
               ) : eld && !eld.connected ? (
-                <p style={{ fontSize: '12px', color: 'var(--monday-text-muted)' }}>Connect Peak ELD in Settings to see your trucks on a map here.</p>
+                <p style={{ ...TEXT.sub, color: 'var(--monday-text-muted)' }}>Connect Peak ELD in Settings to see your trucks on a map here.</p>
               ) : null}
             </div>
 
@@ -247,7 +270,7 @@ export default function DispatchBoardPage() {
                           <td className="px-3 py-1.5 align-top">
                             {last
                               ? <Stop kind="delivery" location={last.fields?.delivery_location} date={lastDate} time={last.delivery_time} />
-                              : <span style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>-</span>}
+                              : <span style={{ ...TEXT.sub, color: 'var(--monday-text-muted)' }}>-</span>}
                           </td>
                         </tr>
                       )
@@ -273,10 +296,7 @@ export default function DispatchBoardPage() {
                           {driverCell(driver, now
                             ? <Pill text="On a trip" color="#047857" bg="rgba(16,185,129,.15)" />
                             : <Pill text="Next trip" color="#1d4ed8" bg="rgba(37,99,235,.12)" />)}
-                          <td className="px-3 py-1.5 align-top" style={{ lineHeight: 1.3 }}>
-                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{f.broker_load_number || f.load_number || `#${load.id}`}</div>
-                            {load.broker_name && <div className="truncate" style={{ fontSize: '12px', color: 'var(--monday-text-secondary)', maxWidth: '180px' }}>{load.broker_name}</div>}
-                          </td>
+                          <LoadCell load={load} />
                           <td className="px-3 py-1.5 align-top"><Stop kind="pickup" location={f.pickup_location} date={f.pickup_date} time={load.pickup_time} /></td>
                           <td className="px-3 py-1.5 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} /></td>
                         </tr>
@@ -297,7 +317,7 @@ export default function DispatchBoardPage() {
                       onClick={() => chooseAhead(n)}
                       className="rounded-md px-2.5 py-1 transition-colors"
                       style={{
-                        fontSize: '12px', fontWeight: 600,
+                        ...TEXT.pill, fontSize: '12px',
                         backgroundColor: ahead === n ? '#2563eb' : 'transparent',
                         color: ahead === n ? '#fff' : 'var(--monday-text-secondary)',
                       }}
@@ -319,10 +339,7 @@ export default function DispatchBoardPage() {
                           {driver
                             ? driverCell(driver)
                             : <td className="px-3 py-1.5 align-top"><Pill text="No driver yet" color="#b91c1c" bg="rgba(239,68,68,.12)" /></td>}
-                          <td className="px-3 py-1.5 align-top" style={{ lineHeight: 1.3 }}>
-                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{f.broker_load_number || f.load_number || `#${load.id}`}</div>
-                            {load.broker_name && <div className="truncate" style={{ fontSize: '12px', color: 'var(--monday-text-secondary)', maxWidth: '180px' }}>{load.broker_name}</div>}
-                          </td>
+                          <LoadCell load={load} />
                           <td className="px-3 py-1.5 align-top"><Stop kind="pickup" location={f.pickup_location} date={f.pickup_date} time={load.pickup_time} /></td>
                           <td className="px-3 py-1.5 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} /></td>
                         </tr>
