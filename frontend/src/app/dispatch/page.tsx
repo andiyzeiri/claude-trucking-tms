@@ -6,7 +6,8 @@ import { Inter } from 'next/font/google'
 import { CalendarClock, Coffee, Truck } from 'lucide-react'
 import Layout from '@/components/layout/layout'
 import { useDrivers } from '@/hooks/use-drivers'
-import { useAILoads, type AILoad } from '@/hooks/use-loads-ai-ingestion'
+import { useAILoads, useUpdateAILoad, type AILoad } from '@/hooks/use-loads-ai-ingestion'
+import toast from 'react-hot-toast'
 import { useEldConnection } from '@/hooks/use-eld'
 import dynamic from 'next/dynamic'
 import { useTruckLocations } from '@/components/dispatch/truck-map'
@@ -179,6 +180,30 @@ export default function DispatchBoardPage() {
     setAhead(n)
     try { localStorage.setItem('dispatch-upcoming-days', String(n)) } catch {}
   }
+  // Assigning a driver on Upcoming trips saves it on the Loads AI load, exactly
+  // as choosing one on the Loads AI page does (and texts the driver the load
+  // the same way, when load texts are on).
+  const updateLoad = useUpdateAILoad()
+  const [savingId, setSavingId] = useState<number | null>(null)
+  const assignDriver = (load: AILoad, driverId: number | null) => {
+    setSavingId(load.id)
+    updateLoad.mutate(
+      { id: load.id, data: { driver_id: driverId } },
+      {
+        onSuccess: () => {
+          const d = drivers.find(x => x.id === driverId)
+          const num = load.fields?.broker_load_number || load.fields?.load_number || `#${load.id}`
+          toast.success(d ? `${d.first_name} ${d.last_name} assigned to load ${num}` : `Load ${num} unassigned`)
+        },
+        onError: (e: any) => toast.error(e?.response?.data?.detail?.toString?.() || 'Couldn\u2019t assign the driver'),
+        onSettled: () => setSavingId(null),
+      },
+    )
+  }
+  // Current drivers to pick from, plus the load's own driver if they're not one (e.g. since terminated).
+  const pickable = (current: { id: number; first_name: string; last_name: string } | null) =>
+    current && !drivers.some(d => d.id === current.id) ? [current, ...drivers] : drivers
+
   const upcoming = useMemo(() => {
     const now = new Date()
     const from = ymd(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1))
@@ -336,9 +361,26 @@ export default function DispatchBoardPage() {
                       const f = load.fields || {}
                       return (
                         <tr key={load.id} className="border-t transition-colors hover:bg-[rgba(37,99,235,0.04)]" style={line}>
-                          {driver
-                            ? driverCell(driver)
-                            : <td className="px-3 py-1.5 align-top"><Pill text="No driver yet" color="#b91c1c" bg="rgba(239,68,68,.12)" /></td>}
+                          <td className="px-3 py-1.5 align-middle">
+                            <div className="flex items-center gap-2.5">
+                              {driver
+                                ? <Avatar id={driver.id} first={driver.first_name} last={driver.last_name} />
+                                : <span className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full" style={{ border: '1.5px dashed #ef4444', color: '#ef4444', fontSize: '13px', fontWeight: 600 }}>?</span>}
+                              <select
+                                value={driver?.id ?? ''}
+                                disabled={savingId === load.id}
+                                onChange={e => assignDriver(load, e.target.value ? Number(e.target.value) : null)}
+                                className="min-w-0 max-w-[170px] cursor-pointer truncate rounded-md border bg-transparent py-1 pl-2 pr-6 hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+                                style={{ ...(driver ? TEXT.name : { ...TEXT.main, color: '#b91c1c' }), borderColor: driver ? 'var(--monday-border-light)' : 'rgba(239,68,68,.45)', opacity: savingId === load.id ? 0.5 : 1 }}
+                                title={driver ? 'Change driver' : 'Assign a driver'}
+                              >
+                                <option value="">{driver ? 'Unassign' : 'Assign driver\u2026'}</option>
+                                {pickable(driver).map(d => (
+                                  <option key={d.id} value={d.id}>{d.first_name} {d.last_name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </td>
                           <LoadCell load={load} />
                           <td className="px-3 py-1.5 align-top"><Stop kind="pickup" location={f.pickup_location} date={f.pickup_date} time={load.pickup_time} /></td>
                           <td className="px-3 py-1.5 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} /></td>
