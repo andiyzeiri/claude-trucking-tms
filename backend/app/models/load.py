@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Text, Numeric, DateTime, ForeignKey, Integer, Enum, Boolean
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 import enum
 import uuid
 from .base import Base
@@ -73,6 +73,9 @@ class Load(Base):
     needs_attention = Column(Boolean, default=False, nullable=False)
     # Created on the Brokerage page: listed there only, not on the Loads page.
     is_brokerage = Column(Boolean, default=False, nullable=False, server_default="false")
+    # Stops between the first pickup and the final delivery (Brokerage page,
+    # right-click > Add pickup / delivery stop); same shape as an AI load's.
+    extra_stops = Column(JSONB, nullable=True)
 
     # Notes
     pickup_notes = Column(Text)

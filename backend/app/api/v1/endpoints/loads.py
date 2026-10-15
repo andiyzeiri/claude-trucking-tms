@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -8,6 +8,8 @@ from app.models.load import Load
 from app.models.driver import Driver
 from app.schemas.load import LoadCreate, LoadUpdate, LoadResponse
 from app.core.security import get_current_active_user
+from app.documents import extra_stops
+from pydantic import BaseModel
 from app.models.user import User, UserRole
 
 router = APIRouter()
@@ -159,10 +161,54 @@ async def update_load(
     update_data = load_update.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(load, field, value)
+    # With extra stops, pickup-to-delivery miles are too short: route through every stop.
+    if load.extra_stops and {"pickup_location", "delivery_location"} & update_data.keys():
+        miles = await extra_stops.route_miles(_route_of(load))
+        if miles:
+            load.miles = miles
 
     await db.commit()
     await db.refresh(load)
     return load
+
+
+def _route_of(load: Load) -> Dict[str, Any]:
+    return {"pickup_location": load.pickup_location, "delivery_location": load.delivery_location,
+            "extra_stops": load.extra_stops or []}
+
+
+class ExtraStopsUpdate(BaseModel):
+    extra_stops: List[Dict[str, Any]]
+
+
+@router.put("/{load_id}/stops", response_model=LoadResponse)
+async def set_load_stops(
+    load_id: int,
+    payload: ExtraStopsUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Replace a load's extra pickup / delivery stops and re-route its miles through them."""
+    load = (await db.execute(
+        select(Load).where(Load.id == load_id, Load.company_id == current_user.company_id)
+    )).scalar_one_or_none()
+    if not load:
+        raise HTTPException(status_code=404, detail="Load not found")
+    try:
+        load.extra_stops = extra_stops.clean(payload.extra_stops)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    miles = await extra_stops.route_miles(_route_of(load))
+    if miles:
+        load.miles = miles
+    await db.commit()
+    result = await db.execute(
+        select(Load)
+        .options(selectinload(Load.driver), selectinload(Load.truck), selectinload(Load.customer))
+        .where(Load.id == load_id)
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one()
 
 
 @router.delete("/{load_id}")

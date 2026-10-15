@@ -165,3 +165,12 @@ export function useUpdateLoadDocuments() {
     },
   })
 }
+/** Replace a load's extra pickup / delivery stops; the server re-routes miles through them. */
+export function useSetLoadStops() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, stops }: { id: number; stops: { type: 'pickup' | 'delivery'; location: string; date: string | null; name?: string | null; appointment?: string | null }[] }) =>
+      (await api.put(`/v1/loads/${id}/stops`, { extra_stops: stops })).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['loads'] }),
+  })
+}

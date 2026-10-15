@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { AddressAutocomplete } from '@/components/ui/address-autocomplete'
 import { useSetAILoadStops, type ExtraStop } from '@/hooks/use-loads-ai-ingestion'
+import { useSetLoadStops } from '@/hooks/use-loads'
 
 // Dates are wall-clock times stored as if UTC ("2026-10-15T08:00:00Z"):
 // read the digits, never convert time zones.
@@ -28,16 +29,32 @@ function shortPlace(location: string): string {
 }
 
 /**
+ * Saves a row's extra stops. On the Brokerage page AI loads are listed with
+ * negative ids next to its own loads (positive ids, the loads table).
+ */
+function useSaveStops(source: 'ai' | 'brokerage') {
+  const ai = useSetAILoadStops()
+  const load = useSetLoadStops()
+  return {
+    isPending: ai.isPending || load.isPending,
+    save: (id: number, stops: ExtraStop[]) =>
+      source === 'ai' ? ai.mutateAsync({ id, stops })
+        : id < 0 ? ai.mutateAsync({ id: -id, stops })
+        : load.mutateAsync({ id, stops }),
+  }
+}
+
+/**
  * A load's extra pickups or deliveries, listed in its Pickup / Delivery cell.
  * Clicking × removes that stop (miles are re-routed).
  */
-export function ExtraStopsList({ loadId, stops, type }: { loadId: number; stops: ExtraStop[]; type: ExtraStop['type'] }) {
-  const setStops = useSetAILoadStops()
+export function ExtraStopsList({ loadId, stops, type, source = 'ai' }: { loadId: number; stops: ExtraStop[]; type: ExtraStop['type']; source?: 'ai' | 'brokerage' }) {
+  const setStops = useSaveStops(source)
   const mine = stops.filter(s => s.type === type)
   if (!mine.length) return null
   const remove = async (stop: ExtraStop) => {
     try {
-      await setStops.mutateAsync({ id: loadId, stops: stops.filter(s => s !== stop) })
+      await setStops.save(loadId, stops.filter(s => s !== stop))
       toast.success('Stop removed')
     } catch {
       toast.error("Couldn't remove the stop")
@@ -74,11 +91,12 @@ export function ExtraStopsList({ loadId, stops, type }: { loadId: number; stops:
  * Radix dialog, so Google's address suggestions (attached to <body>) stay
  * clickable.
  */
-export function AddStopDialog({ target, onClose }: {
+export function AddStopDialog({ target, onClose, source = 'ai' }: {
   target: { loadId: number; label: string; type: ExtraStop['type']; stops: ExtraStop[] } | null
   onClose: () => void
+  source?: 'ai' | 'brokerage'
 }) {
-  const setStops = useSetAILoadStops()
+  const setStops = useSaveStops(source)
   const [location, setLocation] = useState('')
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
@@ -100,7 +118,7 @@ export function AddStopDialog({ target, onClose }: {
       name: name.trim() || null,
     }
     try {
-      await setStops.mutateAsync({ id: target.loadId, stops: [...target.stops, stop] })
+      await setStops.save(target.loadId, [...target.stops, stop])
       toast.success(`Added ${kind} stop`)
       onClose()
     } catch {

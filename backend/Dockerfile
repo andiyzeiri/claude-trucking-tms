@@ -94,6 +94,7 @@ COPY add_load_brokerage.py ./
 COPY fix_golden_arcus_notes.py ./
 COPY backfill_extra_stops.py ./
 COPY merge_golden_arcus_stops.py ./
+COPY add_load_extra_stops.py ./
 COPY backfill_shippers_receivers.py ./
 COPY create_fuel_card_tables.py ./
 COPY entrypoint.sh ./

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, field_validator
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional, Literal
+from typing import Any, Dict, List, Optional, Literal
 from app.models.load import LoadStatus, AdjustmentType
 from app.schemas.driver import DriverResponse
 from app.schemas.truck import TruckResponse
@@ -123,6 +123,7 @@ class LoadResponse(BaseModel):
     adjustment_amount: Optional[Decimal] = None
     needs_attention: bool = False
     is_brokerage: bool = False
+    extra_stops: Optional[List[Dict[str, Any]]] = None
     driver: Optional[DriverResponse] = None
     truck: Optional[TruckResponse] = None
     created_at: datetime
