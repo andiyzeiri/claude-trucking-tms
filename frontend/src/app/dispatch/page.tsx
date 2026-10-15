@@ -57,8 +57,8 @@ function Avatar({ id, first, last }: { id: number; first: string; last: string }
   const color = AVATAR_COLORS[id % AVATAR_COLORS.length]
   return (
     <span
-      className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-white"
-      style={{ backgroundColor: color, fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em' }}
+      className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-white"
+      style={{ backgroundColor: color, fontSize: '11px', fontWeight: 600, letterSpacing: '0.02em' }}
     >
       {`${first?.[0] || ''}${last?.[0] || ''}`.toUpperCase()}
     </span>
@@ -80,8 +80,8 @@ function Stop({ kind, location, date, time }: { kind: 'pickup' | 'delivery'; loc
   const day = dayLabel(date)
   return (
     <div className="flex gap-2">
-      <span className="mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: kind === 'pickup' ? '#10b981' : '#ef4444', boxShadow: `0 0 0 3px ${kind === 'pickup' ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.15)'}` }} />
-      <div className="min-w-0">
+      <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: kind === 'pickup' ? '#10b981' : '#ef4444', boxShadow: `0 0 0 3px ${kind === 'pickup' ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.15)'}` }} />
+      <div className="min-w-0" style={{ lineHeight: 1.3 }}>
         <div className="truncate" style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>{cityState(location) || '-'}</div>
         <div className="flex flex-wrap items-center gap-1.5" style={{ fontSize: '12px' }}>
           {day && <span style={{ color: 'var(--monday-text-secondary)', fontWeight: 500 }}>{day}</span>}
@@ -142,7 +142,7 @@ export default function DispatchBoardPage() {
   const line = { borderColor: 'var(--monday-border-light)' }
 
   const th = (label: string) => (
-    <th className="px-4 py-2.5 text-left" style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--monday-text-secondary)', whiteSpace: 'nowrap' }}>{label}</th>
+    <th className="px-3 py-1.5 text-left" style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--monday-text-secondary)', whiteSpace: 'nowrap' }}>{label}</th>
   )
   const heading = (title: string, count: number, icon: React.ReactNode, color: string, bg: string) => (
     <div className="mb-2 flex items-center gap-2.5">
@@ -152,12 +152,14 @@ export default function DispatchBoardPage() {
     </div>
   )
   const driverCell = (driver: (typeof drivers)[number], status?: React.ReactNode) => (
-    <td className="px-4 py-3 align-top">
-      <div className="flex items-center gap-3">
+    <td className="px-3 py-1.5 align-top">
+      <div className="flex items-center gap-2.5">
         <Avatar id={driver.id} first={driver.first_name} last={driver.last_name} />
         <div className="min-w-0">
-          <div className="truncate" style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>{driver.first_name} {driver.last_name}</div>
-          {status && <div className="mt-0.5">{status}</div>}
+          <div className="flex flex-wrap items-center gap-x-2" style={{ lineHeight: 1.3 }}>
+            <span className="truncate" style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)' }}>{driver.first_name} {driver.last_name}</span>
+            {status}
+          </div>
         </div>
       </div>
     </td>
@@ -209,7 +211,7 @@ export default function DispatchBoardPage() {
                           {driverCell(driver, days == null
                             ? <Pill text="No loads yet" color="#64748b" bg="rgba(100,116,139,.12)" />
                             : <Pill text={days <= 0 ? 'Free today' : `Free ${days} day${days === 1 ? '' : 's'}`} color={days > 3 ? '#b91c1c' : '#b45309'} bg={days > 3 ? 'rgba(239,68,68,.12)' : 'rgba(245,158,11,.16)'} />)}
-                          <td className="px-4 py-3 align-top">
+                          <td className="px-3 py-1.5 align-top">
                             {last
                               ? <Stop kind="delivery" location={last.fields?.delivery_location} date={lastDate} time={last.delivery_time} />
                               : <span style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>-</span>}
@@ -238,12 +240,12 @@ export default function DispatchBoardPage() {
                           {driverCell(driver, now
                             ? <Pill text="On a trip" color="#047857" bg="rgba(16,185,129,.15)" />
                             : <Pill text="Next trip" color="#1d4ed8" bg="rgba(37,99,235,.12)" />)}
-                          <td className="px-4 py-3 align-top">
+                          <td className="px-3 py-1.5 align-top" style={{ lineHeight: 1.3 }}>
                             <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{f.broker_load_number || f.load_number || `#${load.id}`}</div>
                             {load.broker_name && <div className="truncate" style={{ fontSize: '12px', color: 'var(--monday-text-secondary)', maxWidth: '180px' }}>{load.broker_name}</div>}
                           </td>
-                          <td className="px-4 py-3 align-top"><Stop kind="pickup" location={f.pickup_location} date={f.pickup_date} time={load.pickup_time} /></td>
-                          <td className="px-4 py-3 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} /></td>
+                          <td className="px-3 py-1.5 align-top"><Stop kind="pickup" location={f.pickup_location} date={f.pickup_date} time={load.pickup_time} /></td>
+                          <td className="px-3 py-1.5 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} /></td>
                         </tr>
                       )
                     })}
