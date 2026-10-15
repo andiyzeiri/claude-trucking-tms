@@ -91,6 +91,7 @@ COPY add_customer_type.py ./
 COPY add_truck_own_fuel_card.py ./
 COPY add_truck_ownership.py ./
 COPY add_load_brokerage.py ./
+COPY fix_golden_arcus_notes.py ./
 COPY backfill_shippers_receivers.py ./
 COPY create_fuel_card_tables.py ./
 COPY entrypoint.sh ./

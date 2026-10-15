@@ -129,6 +129,7 @@ python3 add_customer_type.py || echo "⚠️  add_customer_type.py had errors, c
 python3 add_truck_own_fuel_card.py || echo "⚠️  add_truck_own_fuel_card.py had errors, continuing..."
 python3 add_truck_ownership.py || echo "⚠️  add_truck_ownership.py had errors, continuing..."
 python3 add_load_brokerage.py || echo "⚠️  add_load_brokerage.py had errors, continuing..."
+python3 fix_golden_arcus_notes.py || echo "⚠️  fix_golden_arcus_notes.py had errors, continuing..."
 
 # Add insurance columns to trucks
 echo "🔧 Adding insurance columns to trucks..."
