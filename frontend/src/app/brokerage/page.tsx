@@ -24,6 +24,7 @@ import { AddressAutocomplete, AddressData } from '@/components/ui/address-autoco
 import { InlineDateTimePicker } from '@/components/ui/datetime-picker'
 import { DedicatedLanesPanel } from '@/components/dedicated-lanes/dedicated-lanes-panel'
 import api from '@/lib/api'
+import { useAILoads, useUpdateAILoad, type AILoad } from '@/hooks/use-loads-ai-ingestion'
 
 interface EditableLoad extends Load {
   isNew?: boolean
@@ -318,14 +319,59 @@ function parseTimeInput(timeInput: string, existingDateTime: string): string {
 export default function BrokeragePage() {
   // Brokerage has its own loads: only ones created here are listed, and every load created here is marked as such.
   const { data: loadsData, isLoading, refetch } = useLoads(1, 10000, true)
-  const loads = loadsData?.items || []
   const createLoadBase = useCreateLoad()
   const createLoad = { ...createLoadBase, mutateAsync: (data: any) => createLoadBase.mutateAsync({ ...data, is_brokerage: true }) }
-  const updateLoad = useUpdateLoad()
+  const updateLoadBase = useUpdateLoad()
   const deleteLoad = useDeleteLoad()
 
   const { data: customersData } = useCustomers()
   const rawCustomers = customersData?.items || []
+
+  // Loads AI loads for Customers-tab customers (e.g. Golden Arcus) are listed
+  // here too. They stay Loads AI loads - nothing is copied into the loads
+  // table: their rows carry a negative id (so they can't clash with a
+  // Brokerage load's id) and edits are saved back to Loads AI.
+  const { data: aiLoadsData } = useAILoads()
+  const updateAILoad = useUpdateAILoad()
+  const aiRows = useMemo(() => {
+    const direct = new Set(rawCustomers.filter((c: any) => c.customer_type === 'customer').map((c: any) => c.id))
+    return (aiLoadsData || [])
+      .filter((a: AILoad) => a.customer_match === 'exact' && direct.has(Number(a.fields?.customer_id)))
+      .map((a: AILoad) => {
+        const f = a.fields || {}
+        const when = a.created_at || new Date().toISOString()
+        return {
+          ...f,
+          id: -a.id,
+          from_loads_ai: true,
+          load_number: f.load_number || f.broker_load_number || '',
+          customer_id: Number(f.customer_id),
+          pickup_location: f.pickup_location || '',
+          delivery_location: f.delivery_location || '',
+          pickup_date: f.pickup_date || when,
+          delivery_date: f.delivery_date || f.pickup_date || when,
+          rate: Number(f.rate) || 0,
+          miles: Number(f.miles) || 0,
+          status: f.status || 'available',
+          created_at: a.created_at || '',
+          updated_at: a.created_at || '',
+        } as unknown as Load
+      })
+  }, [aiLoadsData, rawCustomers])
+  const loads = useMemo(() => [...(loadsData?.items || []), ...aiRows], [loadsData, aiRows])
+  const isAIRow = (id: number) => id < 0
+  const updateLoad = {
+    ...updateLoadBase,
+    mutateAsync: ({ id, data }: { id: number; data: any }) => {
+      if (!isAIRow(id)) return updateLoadBase.mutateAsync({ id, data })
+      const { notes, ...rest } = data || {}
+      // The customer shown is the one matched; keep it as chosen.
+      return updateAILoad.mutateAsync({
+        id: -id,
+        data: { ...rest, ...(notes !== undefined && rest.pickup_notes === undefined ? { pickup_notes: notes } : {}), customer_confirmed: true },
+      })
+    },
+  }
 
   // Sort customers alphabetically by name for dropdown
   const customers = useMemo(() => {
@@ -892,6 +938,10 @@ export default function BrokeragePage() {
   }
 
   const handleDelete = async (id: number) => {
+    if (isAIRow(id)) {
+      toast.error('This load comes from Loads AI - delete it on the Loads AI page.')
+      return
+    }
     // Store the deleted load for undo
     const deletedLoad = editableLoads.find(load => load.id === id)
     if (!deletedLoad) return
@@ -1437,6 +1487,10 @@ export default function BrokeragePage() {
   }
 
   const handleDuplicate = async (id: number) => {
+    if (isAIRow(id)) {
+      toast.error('This load comes from Loads AI - duplicate it on the Loads AI page.')
+      return
+    }
     const loadToDuplicate = editableLoads.find(l => l.id === id)
     if (!loadToDuplicate) return
 
@@ -1809,6 +1863,9 @@ export default function BrokeragePage() {
           ) : (
             <div className="font-medium cursor-pointer hover:bg-brand/5 rounded px-1.5 py-0.5" style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)'}}>
               {load.load_number}
+              {(load as any).from_loads_ai && (
+                <span className="ml-1.5 rounded px-1 py-px align-middle" style={{ fontSize: '10px', fontWeight: 600, color: '#7c3aed', backgroundColor: 'rgba(124,58,237,.12)' }} title="From Loads AI - edits here save to the Loads AI load">AI</span>
+              )}
             </div>
           )}
         </td>

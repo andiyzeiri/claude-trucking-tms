@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.security import get_current_admin_user, get_loads_ai_user
 from app.database import get_db
-from app.documents.facilities import sync_places_safely
+from app.documents.facilities import name_key, sync_places_safely
 from app.documents.extraction.base import (
     DocumentBytes,
     ExtractionError,
@@ -634,6 +634,30 @@ def _extracted(doc: IngestedDocument, key: str) -> Optional[str]:
     return value or None
 
 
+def _direct_customer(doc: IngestedDocument, fields: Dict[str, Any], customers: List[Customer]) -> Optional[Customer]:
+    """
+    The Customers-tab customer (customer_type 'customer') whose name, minus
+    Inc/LLC-type endings, appears in the load's shipper or broker name - e.g.
+    "Golden Arcus Inc" in "GOLDEN ARCUS INT'L CO". The longest name wins; a
+    one-word name must be 5+ letters so short names can't match by accident.
+    """
+    names = [fields.get("shipper_name"), _extracted(doc, "origin_company"),
+             fields.get("broker_name"), _extracted(doc, "broker_name")]
+    haystacks = [f" {name_key(n)} " for n in names if n and name_key(n)]
+    if not haystacks:
+        return None
+    best, best_len = None, 0
+    for c in customers:
+        if getattr(c, "customer_type", None) != "customer":
+            continue
+        key = name_key(c.name)
+        if not key or (" " not in key and len(key) < 5):
+            continue
+        if any(f" {key} " in h for h in haystacks) and len(key) > best_len:
+            best, best_len = c, len(key)
+    return best
+
+
 def _match_customer(doc: IngestedDocument, fields: Dict[str, Any], customers: List[Customer]):
     """
     Resolve the AI load's customer against the company's current customers.
@@ -658,6 +682,12 @@ def _match_customer(doc: IngestedDocument, fields: Dict[str, Any], customers: Li
     ]
     if candidates and candidates[0].score >= CUSTOMER_EXACT:
         return candidates[0].id, "exact", candidates[0].reason, broker_name, shown
+
+    # A shipper booking us directly (e.g. Golden Arcus with its Amazon
+    # appointments): a Customers-tab customer whose name is in the shipper's.
+    direct = _direct_customer(doc, fields, customers)
+    if direct is not None:
+        return direct.id, "exact", f"Shipper is your customer {direct.name}", broker_name, shown
     if candidates and candidates[0].score >= CUSTOMER_PARTIAL:
         return candidates[0].id, "partial", candidates[0].reason, broker_name, shown
 
