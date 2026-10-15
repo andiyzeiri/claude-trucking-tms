@@ -98,11 +98,13 @@ export default function DispatchBoardPage() {
   const { data: eld } = useEldConnection()
   const { data: locations = [], error: locationsError, dataUpdatedAt } = useTruckLocations(!!eld?.connected)
 
-  // Current drivers (the Outside Carrier placeholder isn't one).
+  // Current drivers. "Outside Carrier" and "Brokerage Account" are placeholder
+  // drivers for brokered loads, not people.
+  const isPlaceholder = (name: string) => /outside carrier|brokerage/i.test(name)
   const drivers = useMemo(() => {
     const all = driversData?.items || []
     return all
-      .filter(d => !d.date_terminated && !`${d.first_name} ${d.last_name}`.toLowerCase().includes('outside carrier'))
+      .filter(d => !d.date_terminated && !isPlaceholder(`${d.first_name} ${d.last_name}`))
       .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`))
   }, [driversData])
 
