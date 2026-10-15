@@ -8,18 +8,18 @@ appointment builds the AI load and each later one is added to it as a stop
 instead of becoming a second load.
 
 The load keeps one pickup and one delivery (the last stop, by delivery
-time); every stop is kept in draft["stops"], and the load's Notes list
-the appointment IDs.
+time); every stop is kept in draft["stops"], the earlier ones show as
+extra stops (draft["extra_stops"]), and the load's Notes list the
+appointment IDs.
 """
 import logging
-import re
 from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, IngestedDocument
-from app.services.mileage import driving_miles
+from app.documents import extra_stops
 
 logger = logging.getLogger(__name__)
 
@@ -73,20 +73,15 @@ async def add_stop(target: IngestedDocument, draft: dict) -> dict:
         # Notes (pickup_notes, what the Loads AI page's Notes column edits):
         # just the stops' Amazon appointment IDs, in delivery order.
         "pickup_notes": "Appt# " + ", ".join(str(s["appointment"]) for s in stops if s.get("appointment")),
+        "notes": None,
     })
     # Fill what the first appointment's bill of lading didn't.
     for key in ("pickup_location", "pickup_date", "pickup_window", "shipper_name", "broker_name", "customer_id"):
         if not merged.get(key) and draft.get(key):
             merged[key] = draft[key]
-    # Miles: pickup, then each stop in order.
-    legs = [merged.get("pickup_location")] + [s.get("location") for s in stops]
-    total = 0
-    for a, b in zip(legs, legs[1:]):
-        m = await driving_miles(a, b) if a and b and not re.fullmatch(r"(?i)amazon\s+\w+", str(b).strip()) else None
-        if not m:
-            total = 0
-            break
-        total += m
-    if total:
-        merged["miles"] = total
+    # The earlier deliveries show as extra stops; miles run through each.
+    merged["extra_stops"] = extra_stops.from_amazon_stops(stops)
+    miles = await extra_stops.route_miles(merged)
+    if miles:
+        merged["miles"] = miles
     return merged

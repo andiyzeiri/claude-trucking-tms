@@ -326,7 +326,7 @@ export default function DispatchBoardPage() {
                             : <Pill text="Next trip" color="#1d4ed8" bg="rgba(37,99,235,.12)" />)}
                           <LoadCell load={load} />
                           <td className="px-3 py-1.5 align-top"><Stop kind="pickup" location={f.pickup_location} date={f.pickup_date} time={load.pickup_time} /></td>
-                          <td className="px-3 py-1.5 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} extraStops={Math.max(0, (f.stops?.length || 0) - 1)} /></td>
+                          <td className="px-3 py-1.5 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} extraStops={f.extra_stops?.length ?? Math.max(0, (f.stops?.length || 0) - 1)} /></td>
                         </tr>
                       )
                     })}
@@ -386,7 +386,7 @@ export default function DispatchBoardPage() {
                           </td>
                           <LoadCell load={load} />
                           <td className="px-3 py-1.5 align-top"><Stop kind="pickup" location={f.pickup_location} date={f.pickup_date} time={load.pickup_time} /></td>
-                          <td className="px-3 py-1.5 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} extraStops={Math.max(0, (f.stops?.length || 0) - 1)} /></td>
+                          <td className="px-3 py-1.5 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} extraStops={f.extra_stops?.length ?? Math.max(0, (f.stops?.length || 0) - 1)} /></td>
                         </tr>
                       )
                     })}

@@ -244,6 +244,26 @@ export function useUpdateAILoad() {
   })
 }
 
+/** A stop between the load's first pickup and final delivery. */
+export interface ExtraStop {
+  type: 'pickup' | 'delivery'
+  location: string
+  /** Wall-clock date/time, stored like pickup_date */
+  date: string | null
+  name?: string | null
+  appointment?: string | null
+}
+
+/** Replace an AI load's extra stops; the server re-routes miles through them. */
+export function useSetAILoadStops() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, stops }: { id: number; stops: ExtraStop[] }): Promise<AILoad> =>
+      (await api.put(`/v1/loads-ai/loads/${id}/stops`, { extra_stops: stops })).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: AI_LOADS_KEY }),
+  })
+}
+
 export function useDeleteAILoad() {
   const queryClient = useQueryClient()
   return useMutation({

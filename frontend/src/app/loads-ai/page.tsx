@@ -27,6 +27,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useLoadsAISettings } from '@/hooks/use-loads-ai-settings'
 import { InboxField } from '@/components/loads-ai/inbox-field'
 import { PodEmailDialog } from '@/components/loads-ai/pod-email-dialog'
+import { AddStopDialog, ExtraStopsList } from '@/components/loads-ai/extra-stops'
 import {
   useExtractDocument,
   extractionErrorMessage,
@@ -41,6 +42,7 @@ import {
   useUpdateAILoad,
   useDeleteAILoad,
   type AILoad,
+  type ExtraStop,
   type CustomerMatch,
   type TimeDisplay,
   type PendingRevision,
@@ -644,6 +646,7 @@ export default function LoadsAIPageInline() {
   const [showBrokerageOnly, setShowBrokerageOnly] = useState<boolean>(false)
   const [factoringFilter, setFactoringFilter] = useState<'invoice' | 'ratecon' | 'pod' | null>(null)
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, loadId?: number, type: 'load' | 'general'} | null>(null)
+  const [addStopFor, setAddStopFor] = useState<{ loadId: number; label: string; type: ExtraStop['type']; stops: ExtraStop[] } | null>(null)
   const [pdfModal, setPdfModal] = useState<{url: string, loadId: number, type: 'pod' | 'ratecon'} | null>(null)
   const [podEmailFor, setPodEmailFor] = useState<{ id: number; label: string } | null>(null)
   const [sortField, setSortField] = useState<keyof EditableLoad>('pickup_date')
@@ -1514,7 +1517,8 @@ export default function LoadsAIPageInline() {
         const pickup = type === 'pickup' ? locationString : load.pickup_location
         const delivery = type === 'delivery' ? locationString : load.delivery_location
 
-        if (pickup && delivery) {
+        // With extra stops the server routes miles through every stop.
+        if (pickup && delivery && !(load as any).extra_stops?.length) {
           console.log('[Maps] Attempting to calculate distance from', pickup, 'to', delivery)
           try {
             const response = await api.post('/v1/maps/calculate-distance', {
@@ -2306,6 +2310,7 @@ export default function LoadsAIPageInline() {
                 </div>
                 <StopDateTime load={load} side="pickup" />
               </div>
+              {!load.isNew && <ExtraStopsList loadId={load.id} stops={(load as any).extra_stops || []} type="pickup" />}
             </div>
           )}
         </td>
@@ -2434,6 +2439,7 @@ export default function LoadsAIPageInline() {
             </div>
           ) : (
             <div className="cursor-pointer hover:bg-brand/5 rounded px-1 py-1">
+              {!load.isNew && <ExtraStopsList loadId={load.id} stops={(load as any).extra_stops || []} type="delivery" />}
               {/* Top row: City, State, Zip */}
               <div className="flex gap-1 mb-0.5">
                 <div style={{fontSize: '14px', lineHeight: '20px', color: 'var(--monday-text-primary)', flex: 1}}>
@@ -3729,6 +3735,20 @@ export default function LoadsAIPageInline() {
                   <Edit2 className="h-4 w-4 text-brand" />
                   <span>Edit Load</span>
                 </button>
+                {(['pickup', 'delivery'] as const).map(type => (
+                  <button
+                    key={type}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-surface-hover flex items-center gap-2"
+                    onClick={() => {
+                      const l = editableLoads.find(x => x.id === contextMenu.loadId) as any
+                      setAddStopFor({ loadId: contextMenu.loadId!, label: l?.load_number || '', type, stops: l?.extra_stops || [] })
+                      setContextMenu(null)
+                    }}
+                  >
+                    <Plus className="h-4 w-4" style={{ color: '#7c3aed' }} />
+                    <span>Add {type} stop</span>
+                  </button>
+                ))}
                 <button
                   className="w-full text-left px-4 py-2 text-sm hover:bg-surface-hover flex items-center gap-2"
                   onClick={() => {
@@ -3773,6 +3793,7 @@ export default function LoadsAIPageInline() {
         )}
 
         {/* PDF Viewer Modal */}
+        <AddStopDialog target={addStopFor} onClose={() => setAddStopFor(null)} />
         <PodEmailDialog aiLoadId={podEmailFor?.id ?? null} loadLabel={podEmailFor?.label || ''} onClose={() => setPodEmailFor(null)} />
 
         {pdfModal && (

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 One-time: Notes on Golden Arcus AI loads built before Notes held only the
-Amazon appointment ID(s) (commit c13329b) - e.g. "Appt# 139274008987" or, for
+Amazon appointment ID(s) - e.g. "Appt# 139274008987" or, for
 a multi-stop load, "Appt# 139274008987, 973274703".
 
 Only AI loads built before CUTOFF are touched, and each once (marked
@@ -16,7 +16,7 @@ from datetime import datetime
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-CUTOFF = datetime.fromisoformat("2026-10-14T23:00:00-05:00")  # after c13329b deployed
+CUTOFF = datetime.fromisoformat("2026-10-15T14:30:00+00:00")  # after the notes fix deployed
 LIVE = ("ai_load", "load_created", "needs_review", "extracted")
 GOLDEN_ARCUS = re.compile(r"golden\s+arcus", re.I)
 

@@ -39,7 +39,7 @@ from app.models.load import Load
 from app.models.loads_ai import LIVE_AI_LOAD_STATUSES, DocumentStatus, InboundEmail, IngestedDocument
 from app.sms.ai_loads import view as ai_view
 from app.sms.assignment import notify_ai_load_assigned
-from app.documents import pod_email, revisions
+from app.documents import extra_stops, pod_email, revisions
 from app.documents.load_times import describe_time
 from app.documents.unverified import merge_pod_into, verify_with
 from app.sms.ai_loads import parse_wall_clock
@@ -867,6 +867,12 @@ async def update_ai_load(
                 changes[f"{side}_window"] = None
                 merged[f"{side}_time_manual"] = True
     merged.update(changes)
+    # With extra stops, the page's pickup-to-delivery miles are too short:
+    # route through every stop instead.
+    if merged.get("extra_stops") and {"pickup_location", "delivery_location"} & changes.keys():
+        miles = await extra_stops.route_miles(merged)
+        if miles:
+            merged["miles"] = miles
     # Reassign rather than mutate in place: SQLAlchemy does not track
     # changes inside a plain JSONB dict.
     doc.draft = merged
@@ -879,6 +885,37 @@ async def update_ai_load(
     new_driver = ai_view(doc).driver_id
     if new_driver and new_driver != previous_driver:
         background_tasks.add_task(notify_ai_load_assigned, doc.id, new_driver)
+    return _ai_load_response(doc, await _company_customers(db, current_user.company_id))
+
+
+class ExtraStopsUpdate(BaseModel):
+    extra_stops: List[Dict[str, Any]]
+
+
+@router.put("/loads/{ai_load_id}/stops", response_model=AILoadResponse)
+async def set_ai_load_stops(
+    ai_load_id: int,
+    payload: ExtraStopsUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_loads_ai_user),
+):
+    """
+    Replace an AI load's extra stops (right-click > Add pickup / delivery
+    stop on the Loads AI page) and re-route its miles through them.
+    """
+    doc = await _get_ai_load(db, current_user.company_id, ai_load_id)
+    try:
+        stops = extra_stops.clean(payload.extra_stops)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    merged = dict(doc.draft) if isinstance(doc.draft, dict) else {}
+    merged["extra_stops"] = stops
+    miles = await extra_stops.route_miles(merged)
+    if miles:
+        merged["miles"] = miles
+    doc.draft = merged
+    await db.commit()
+    await db.refresh(doc)
     return _ai_load_response(doc, await _company_customers(db, current_user.company_id))
 
 
