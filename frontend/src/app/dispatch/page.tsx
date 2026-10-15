@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { Inter } from 'next/font/google'
-import { Coffee, Truck } from 'lucide-react'
+import { CalendarClock, Coffee, Truck } from 'lucide-react'
 import Layout from '@/components/layout/layout'
 import { useDrivers } from '@/hooks/use-drivers'
 import { useAILoads, type AILoad } from '@/hooks/use-loads-ai-ingestion'
@@ -31,6 +31,9 @@ function cityState(location?: string | null): string {
   }
   return parts[0] || ''
 }
+
+const UPCOMING_DAYS = [1, 2, 3, 5, 7]
+const UPCOMING_LABEL: Record<number, string> = { 1: 'Tomorrow', 2: '2 days', 3: '3 days', 5: '5 days', 7: 'Next week' }
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
@@ -139,6 +142,36 @@ export default function DispatchBoardPage() {
     return { active, idle }
   }, [aiLoads, drivers])
 
+  // Upcoming trips: loads picking up from tomorrow through the next `ahead`
+  // days (any driver, or none yet), soonest first. Loads on the placeholder
+  // drivers are brokered, not ours, so they're left out.
+  const [ahead, setAhead] = useState(7)
+  useEffect(() => {
+    try {
+      const v = Number(localStorage.getItem('dispatch-upcoming-days'))
+      if (UPCOMING_DAYS.includes(v)) setAhead(v)
+    } catch {}
+  }, [])
+  const chooseAhead = (n: number) => {
+    setAhead(n)
+    try { localStorage.setItem('dispatch-upcoming-days', String(n)) } catch {}
+  }
+  const upcoming = useMemo(() => {
+    const now = new Date()
+    const from = ymd(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1))
+    const to = ymd(new Date(now.getFullYear(), now.getMonth(), now.getDate() + ahead))
+    const byId = new Map((driversData?.items || []).map(d => [d.id, d]))
+    return aiLoads
+      .filter(l => {
+        const day = dayKey(l.fields?.pickup_date)
+        if (!day || day < from || day > to) return false
+        const d = byId.get(Number(l.fields?.driver_id))
+        return !d || !isPlaceholder(`${d.first_name} ${d.last_name}`)
+      })
+      .map(l => ({ load: l, driver: byId.get(Number(l.fields?.driver_id)) || null }))
+      .sort((a, b) => String(a.load.fields?.pickup_date).localeCompare(String(b.load.fields?.pickup_date)))
+  }, [aiLoads, driversData, ahead])
+
   const line = { borderColor: 'var(--monday-border-light)' }
 
   const th = (label: string) => (
@@ -225,7 +258,7 @@ export default function DispatchBoardPage() {
             </section>
           </div>
 
-          <div className="min-w-0">
+          <div className="min-w-0 space-y-8">
             <section>
               {heading('Active drivers', active.length, <Truck className="h-4 w-4" />, '#047857', 'rgba(16,185,129,.14)')}
               <div className="overflow-x-auto rounded-xl border" style={line}>
@@ -240,6 +273,52 @@ export default function DispatchBoardPage() {
                           {driverCell(driver, now
                             ? <Pill text="On a trip" color="#047857" bg="rgba(16,185,129,.15)" />
                             : <Pill text="Next trip" color="#1d4ed8" bg="rgba(37,99,235,.12)" />)}
+                          <td className="px-3 py-1.5 align-top" style={{ lineHeight: 1.3 }}>
+                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{f.broker_load_number || f.load_number || `#${load.id}`}</div>
+                            {load.broker_name && <div className="truncate" style={{ fontSize: '12px', color: 'var(--monday-text-secondary)', maxWidth: '180px' }}>{load.broker_name}</div>}
+                          </td>
+                          <td className="px-3 py-1.5 align-top"><Stop kind="pickup" location={f.pickup_location} date={f.pickup_date} time={load.pickup_time} /></td>
+                          <td className="px-3 py-1.5 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} /></td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                {heading('Upcoming trips', upcoming.length, <CalendarClock className="h-4 w-4" />, '#1d4ed8', 'rgba(37,99,235,.12)')}
+                <div className="mb-2 inline-flex rounded-lg border p-0.5" style={line}>
+                  {UPCOMING_DAYS.map(n => (
+                    <button
+                      key={n}
+                      onClick={() => chooseAhead(n)}
+                      className="rounded-md px-2.5 py-1 transition-colors"
+                      style={{
+                        fontSize: '12px', fontWeight: 600,
+                        backgroundColor: ahead === n ? '#2563eb' : 'transparent',
+                        color: ahead === n ? '#fff' : 'var(--monday-text-secondary)',
+                      }}
+                    >
+                      {UPCOMING_LABEL[n]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="overflow-x-auto rounded-xl border" style={line}>
+                <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                  <thead style={{ backgroundColor: 'rgba(37,99,235,.06)' }}><tr>{th('Driver')}{th('Load')}{th('Pickup')}{th('Delivery')}</tr></thead>
+                  <tbody>
+                    {upcoming.length === 0 && empty(4, isLoading ? 'Loading\u2026' : `No trips picking up ${ahead === 1 ? 'tomorrow' : `in the next ${ahead} days`}.`)}
+                    {upcoming.map(({ load, driver }) => {
+                      const f = load.fields || {}
+                      return (
+                        <tr key={load.id} className="border-t transition-colors hover:bg-[rgba(37,99,235,0.04)]" style={line}>
+                          {driver
+                            ? driverCell(driver)
+                            : <td className="px-3 py-1.5 align-top"><Pill text="No driver yet" color="#b91c1c" bg="rgba(239,68,68,.12)" /></td>}
                           <td className="px-3 py-1.5 align-top" style={{ lineHeight: 1.3 }}>
                             <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{f.broker_load_number || f.load_number || `#${load.id}`}</div>
                             {load.broker_name && <div className="truncate" style={{ fontSize: '12px', color: 'var(--monday-text-secondary)', maxWidth: '180px' }}>{load.broker_name}</div>}
