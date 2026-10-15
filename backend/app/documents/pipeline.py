@@ -41,6 +41,7 @@ from app.documents.extraction.base import (
 from app.documents.extraction.registry import get_extractor
 from app.documents.extraction.schemas import AMAZON_APPOINTMENT_INSTRUCTION
 from app.documents.contacts import broker_email
+from app.documents import amazon_stops
 from app.documents.facilities import sync_places_safely
 from app.documents.mapping import build_load_draft
 from app.documents.sources.base import SourceAttachment, SourceMessage
@@ -666,7 +667,12 @@ async def process_document(
         .scalars()
         .all()
     )
-    mapped = build_load_draft(result.extraction, customers=list(customers))
+    extraction = result.extraction
+    if amazon and not (extraction.broker_name.value or "").strip() and (extraction.origin_company.value or "").strip():
+        # An Amazon appointment names no broker: the shipper on its bill of
+        # lading booked us (e.g. Golden Arcus), so match the customer on it.
+        extraction = extraction.model_copy(update={"broker_name": extraction.origin_company})
+    mapped = build_load_draft(extraction, customers=list(customers))
     draft = vars(mapped.draft).copy()
     if amazon:
         _amazon_draft(draft, mapped.warnings)
@@ -690,6 +696,19 @@ async def process_document(
             document.warnings = [f"Same rate confirmation re-sent for load {revisions.label_of(existing)} - nothing changed."]
         logger.info("loads-ai: %s is a revision of AI load %s (%s changes)", document.original_filename, existing.id, len(changes))
         return
+
+    # Another appointment in the same email already built the load: this one
+    # is its next stop (one trailer to two Amazon FCs), not a second load.
+    if amazon:
+        target = await amazon_stops.sibling_load(session, company_id, document)
+        if target is not None:
+            target.draft = await amazon_stops.add_stop(target, draft)
+            document.draft = draft
+            document.status = DocumentStatus.STOP_ADDED
+            label = target.draft.get("broker_load_number") or target.draft.get("load_number") or f"#{target.id}"
+            document.warnings = [f"Added as a stop on load {label} (same email)."]
+            logger.info("loads-ai: %s added as a stop on AI load %s", document.original_filename, target.id)
+            return
 
     # Miles once, when the load is built (the page recalculates on edit).
     draft = await fill_miles(draft)
@@ -800,6 +819,7 @@ def _amazon_draft(draft: dict, warnings: list) -> None:
                                                        "No broker name", "Broker "))]
     missing = [label for label, key in (("rate", "rate"), ("pickup", "pickup_location"), ("customer", "customer_id"))
                if not draft.get(key)]
+    draft["amazon_appointment"] = True  # so a second appointment in the same email joins it as a stop
     note = "Amazon appointment - no rate on it."
     if missing:
         note += " Fill in the " + ", ".join(missing) + " before dispatching."

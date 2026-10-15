@@ -59,6 +59,7 @@ class DocumentStatus:
     REVISION_DISMISSED = "revision_dismissed"
     REVISION_SAME = "revision_same"   # re-sent rate confirmation with nothing changed
     VERIFIED = "verified"             # unverified load whose rate confirmation arrived (now an AI load)
+    STOP_ADDED = "stop_added"         # another Amazon appointment in the same email: added as a stop on that load
     # Legacy: rows written before AI loads were separated from the loads table.
     LOAD_CREATED = "load_created"     # a real load was created from this document
     NEEDS_REVIEW = "needs_review"     # extracted but could not be auto-created

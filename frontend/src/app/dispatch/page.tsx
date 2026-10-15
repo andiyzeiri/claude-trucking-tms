@@ -103,13 +103,16 @@ function LoadCell({ load }: { load: AILoad }) {
   )
 }
 
-function Stop({ kind, location, date, time }: { kind: 'pickup' | 'delivery'; location?: string | null; date?: string | null; time?: { kind: string; text: string } | null }) {
+function Stop({ kind, location, date, time, extraStops = 0 }: { kind: 'pickup' | 'delivery'; location?: string | null; date?: string | null; time?: { kind: string; text: string } | null; extraStops?: number }) {
   const day = dayLabel(date)
   return (
     <div className="flex gap-2">
       <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: kind === 'pickup' ? '#10b981' : '#ef4444', boxShadow: `0 0 0 3px ${kind === 'pickup' ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.15)'}` }} />
       <div className="min-w-0" style={{ lineHeight: 1.35 }}>
-        <div className="truncate" style={TEXT.main}>{cityState(location) || '-'}</div>
+        <div className="flex items-center gap-1.5">
+          <span className="truncate" style={TEXT.main}>{cityState(location) || '-'}</span>
+          {extraStops > 0 && <Pill text={`+${extraStops} stop${extraStops === 1 ? '' : 's'}`} color="#7c3aed" bg="rgba(124,58,237,.12)" />}
+        </div>
         <div className="flex flex-wrap items-center gap-1.5" style={TEXT.sub}>
           {day && <span>{day}</span>}
           {time && time.kind !== 'none' && <span style={{ color: TIME_COLOR[time.kind] || TIME_COLOR.none, fontWeight: 500 }}>{time.text}</span>}
@@ -323,7 +326,7 @@ export default function DispatchBoardPage() {
                             : <Pill text="Next trip" color="#1d4ed8" bg="rgba(37,99,235,.12)" />)}
                           <LoadCell load={load} />
                           <td className="px-3 py-1.5 align-top"><Stop kind="pickup" location={f.pickup_location} date={f.pickup_date} time={load.pickup_time} /></td>
-                          <td className="px-3 py-1.5 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} /></td>
+                          <td className="px-3 py-1.5 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} extraStops={Math.max(0, (f.stops?.length || 0) - 1)} /></td>
                         </tr>
                       )
                     })}
@@ -383,7 +386,7 @@ export default function DispatchBoardPage() {
                           </td>
                           <LoadCell load={load} />
                           <td className="px-3 py-1.5 align-top"><Stop kind="pickup" location={f.pickup_location} date={f.pickup_date} time={load.pickup_time} /></td>
-                          <td className="px-3 py-1.5 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} /></td>
+                          <td className="px-3 py-1.5 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} extraStops={Math.max(0, (f.stops?.length || 0) - 1)} /></td>
                         </tr>
                       )
                     })}

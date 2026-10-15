@@ -3126,6 +3126,10 @@ export default function LoadsAIPageInline() {
                           <span className="text-gray-500">revision dismissed</span>
                         ) : d.status === 'revision_same' ? (
                           <span className="text-gray-500">re-sent, no changes</span>
+                        ) : d.status === 'stop_added' ? (
+                          <span className="inline-flex items-center gap-1 text-green-700">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> added as a stop
+                          </span>
                         ) : d.status === 'unverified' ? (
                           <span className="text-amber-700">unverified</span>
                         ) : d.status === 'verified' ? (
