@@ -169,56 +169,28 @@ export default function DispatchBoardPage() {
       <div className={`p-6 space-y-6 ${inter.className}`}>
         <h1 style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--monday-text-primary)' }}>Dispatch Board</h1>
 
-        {/* Square truck map top left; active drivers and drivers without a trip to its right */}
-        <div className="grid gap-6 lg:grid-cols-[minmax(320px,32%)_1fr] lg:items-start">
-          <div>
-            {eld?.connected ? (
-              <>
-                <div style={{ aspectRatio: '1 / 1', width: '100%' }}>
-                  <TruckMap trucks={locations} height="100%" />
-                </div>
-                <div className="mt-1 flex flex-wrap justify-between gap-x-2" style={{ fontSize: '11px', color: 'var(--monday-text-muted)' }}>
-                  <span>
-                    {locationsError
-                      ? ((locationsError as any)?.response?.data?.detail || 'Couldn’t get truck locations from Peak ELD')
-                      : `${locations.length} truck${locations.length === 1 ? '' : 's'} from Peak ELD · green = moving`}
-                  </span>
-                  {dataUpdatedAt > 0 && <span>Updated {format(new Date(dataUpdatedAt), 'h:mm a')} · refreshes every minute</span>}
-                </div>
-              </>
-            ) : eld && !eld.connected ? (
-              <p style={{ fontSize: '12px', color: 'var(--monday-text-muted)' }}>Connect Peak ELD in Settings to see your trucks on a map here.</p>
-            ) : null}
-          </div>
-
+        {/* Square truck map top left with drivers without a trip under it; active drivers to its right */}
+        <div className="grid gap-6 lg:grid-cols-[minmax(380px,38%)_minmax(0,760px)] lg:items-start">
           <div className="min-w-0 space-y-8">
-            <section>
-              {heading('Active drivers', active.length, <Truck className="h-4 w-4" />, '#047857', 'rgba(16,185,129,.14)')}
-              <div className="overflow-x-auto rounded-xl border" style={line}>
-                <table className="w-full" style={{ borderCollapse: 'collapse' }}>
-                  <thead style={{ backgroundColor: 'rgba(16,185,129,.07)' }}><tr>{th('Driver')}{th('Load')}{th('Pickup')}{th('Delivery')}</tr></thead>
-                  <tbody>
-                    {active.length === 0 && empty(4, error ? 'Couldn\u2019t load the Loads AI loads. The Dispatch Board needs access to Loads AI.' : isLoading ? 'Loading\u2026' : 'No drivers on a trip.')}
-                    {active.map(({ driver, load, now }) => {
-                      const f = load.fields || {}
-                      return (
-                        <tr key={driver.id} className="border-t transition-colors hover:bg-[rgba(37,99,235,0.04)]" style={line}>
-                          {driverCell(driver, now
-                            ? <Pill text="On a trip" color="#047857" bg="rgba(16,185,129,.15)" />
-                            : <Pill text="Next trip" color="#1d4ed8" bg="rgba(37,99,235,.12)" />)}
-                          <td className="px-4 py-3 align-top">
-                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{f.broker_load_number || f.load_number || `#${load.id}`}</div>
-                            {load.broker_name && <div className="truncate" style={{ fontSize: '12px', color: 'var(--monday-text-secondary)', maxWidth: '180px' }}>{load.broker_name}</div>}
-                          </td>
-                          <td className="px-4 py-3 align-top"><Stop kind="pickup" location={f.pickup_location} date={f.pickup_date} time={load.pickup_time} /></td>
-                          <td className="px-4 py-3 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} /></td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+            <div>
+              {eld?.connected ? (
+                <>
+                  <div style={{ aspectRatio: '1 / 1', width: '100%' }}>
+                    <TruckMap trucks={locations} height="100%" />
+                  </div>
+                  <div className="mt-1 flex flex-wrap justify-between gap-x-2" style={{ fontSize: '11px', color: 'var(--monday-text-muted)' }}>
+                    <span>
+                      {locationsError
+                        ? ((locationsError as any)?.response?.data?.detail || 'Couldn’t get truck locations from Peak ELD')
+                        : `${locations.length} truck${locations.length === 1 ? '' : 's'} from Peak ELD · green = moving`}
+                    </span>
+                    {dataUpdatedAt > 0 && <span>Updated {format(new Date(dataUpdatedAt), 'h:mm a')} · refreshes every minute</span>}
+                  </div>
+                </>
+              ) : eld && !eld.connected ? (
+                <p style={{ fontSize: '12px', color: 'var(--monday-text-muted)' }}>Connect Peak ELD in Settings to see your trucks on a map here.</p>
+              ) : null}
+            </div>
 
             <section>
               {heading('No trip', idle.length, <Coffee className="h-4 w-4" />, '#b45309', 'rgba(245,158,11,.16)')}
@@ -240,6 +212,36 @@ export default function DispatchBoardPage() {
                               ? <Stop kind="delivery" location={last.fields?.delivery_location} date={lastDate} time={last.delivery_time} />
                               : <span style={{ fontSize: '13px', color: 'var(--monday-text-muted)' }}>-</span>}
                           </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <div className="min-w-0">
+            <section>
+              {heading('Active drivers', active.length, <Truck className="h-4 w-4" />, '#047857', 'rgba(16,185,129,.14)')}
+              <div className="overflow-x-auto rounded-xl border" style={line}>
+                <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                  <thead style={{ backgroundColor: 'rgba(16,185,129,.07)' }}><tr>{th('Driver')}{th('Load')}{th('Pickup')}{th('Delivery')}</tr></thead>
+                  <tbody>
+                    {active.length === 0 && empty(4, error ? 'Couldn\u2019t load the Loads AI loads. The Dispatch Board needs access to Loads AI.' : isLoading ? 'Loading\u2026' : 'No drivers on a trip.')}
+                    {active.map(({ driver, load, now }) => {
+                      const f = load.fields || {}
+                      return (
+                        <tr key={driver.id} className="border-t transition-colors hover:bg-[rgba(37,99,235,0.04)]" style={line}>
+                          {driverCell(driver, now
+                            ? <Pill text="On a trip" color="#047857" bg="rgba(16,185,129,.15)" />
+                            : <Pill text="Next trip" color="#1d4ed8" bg="rgba(37,99,235,.12)" />)}
+                          <td className="px-4 py-3 align-top">
+                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--monday-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{f.broker_load_number || f.load_number || `#${load.id}`}</div>
+                            {load.broker_name && <div className="truncate" style={{ fontSize: '12px', color: 'var(--monday-text-secondary)', maxWidth: '180px' }}>{load.broker_name}</div>}
+                          </td>
+                          <td className="px-4 py-3 align-top"><Stop kind="pickup" location={f.pickup_location} date={f.pickup_date} time={load.pickup_time} /></td>
+                          <td className="px-4 py-3 align-top"><Stop kind="delivery" location={f.delivery_location} date={f.delivery_date} time={load.delivery_time} /></td>
                         </tr>
                       )
                     })}
