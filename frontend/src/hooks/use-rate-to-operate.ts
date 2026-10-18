@@ -4,8 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import api from '@/lib/api'
 
-// equipment / fixed_cost: Reports > Variable Costs / Fixed Costs (total = cost, miles = the miles it covers)
-export type RtoSection = 'variable' | 'fixed' | 'summary' | 'equipment' | 'fixed_cost'
+// equipment / fixed_cost / company_cost: Reports > Variable / Fixed / Company Costs (total = cost, miles = the miles it covers)
+export type RtoSection = 'variable' | 'fixed' | 'summary' | 'equipment' | 'fixed_cost' | 'company_cost'
 
 export interface RtoRow {
   id: number

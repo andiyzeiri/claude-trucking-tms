@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
-import { Calendar, CalendarDays, LayoutDashboard, Lock, TrendingUp } from 'lucide-react'
+import { Building2, Calendar, CalendarDays, LayoutDashboard, Lock, TrendingUp } from 'lucide-react'
 import OverviewReport from '@/components/reports/overview-report'
 import WeeklyReport from '@/components/reports/weekly-report'
 import CostTable from '@/components/reports/cost-table'
@@ -17,13 +17,14 @@ function isoWeekYear(dateString: string): number {
   return d.getUTCFullYear()
 }
 
-type TabType = 'overview' | 'weekly' | 'variable' | 'fixed'
+type TabType = 'overview' | 'weekly' | 'variable' | 'fixed' | 'company'
 
 const TABS: { key: TabType; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
   { key: 'overview', label: 'Overview', Icon: LayoutDashboard },
   { key: 'weekly', label: 'Weekly', Icon: CalendarDays },
   { key: 'variable', label: 'Variable Costs', Icon: TrendingUp },
   { key: 'fixed', label: 'Fixed Costs', Icon: Lock },
+  { key: 'company', label: 'Company Costs', Icon: Building2 },
 ]
 
 export default function ReportsPage() {
@@ -93,6 +94,7 @@ export default function ReportsPage() {
         {activeTab === 'weekly' && <WeeklyReport year={selectedYear} />}
         {activeTab === 'variable' && <CostTable kind="variable" />}
         {activeTab === 'fixed' && <CostTable kind="fixed" />}
+        {activeTab === 'company' && <CostTable kind="company" />}
       </div>
     </Layout>
   )

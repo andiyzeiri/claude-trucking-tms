@@ -13,13 +13,14 @@ import { useCreateRto, useDeleteRto, useRateToOperate, useUpdateRto, type RtoRow
 export const COST_TABLES = {
   variable: { section: 'equipment' as RtoSection, defaults: ['Insurance', 'Truck', 'Trailer', 'Maintenance', 'ELD', 'Brakes', 'Tires', 'Tolls'] },
   fixed: { section: 'fixed_cost' as RtoSection, defaults: [] as string[] },
+  company: { section: 'company_cost' as RtoSection, defaults: [] as string[] },
 }
 const LEGACY_KEY = 'equipmentExpenses' // costs Equipment Expenses used to keep in the browser
 
 const perMile = (r: Pick<RtoRow, 'total' | 'miles'>) => (r.miles > 0 ? r.total / r.miles : null)
 const fmtPerMile = (n: number | null) => (n == null ? '—' : `$${n.toFixed(3)}`)
 
-/** Reports > Variable Costs / Fixed Costs: each cost and the miles it covers, giving its cost per mile. */
+/** Reports > Variable Costs / Fixed Costs / Company Costs: each cost and the miles it covers, giving its cost per mile. */
 export default function CostTable({ kind }: { kind: keyof typeof COST_TABLES }) {
   const { section: SECTION, defaults: DEFAULTS } = COST_TABLES[kind]
   const { data, isLoading } = useRateToOperate()
