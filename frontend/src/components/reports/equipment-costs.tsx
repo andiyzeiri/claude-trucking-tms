@@ -1,0 +1,110 @@
+'use client'
+
+import React, { useEffect, useRef } from 'react'
+import { Plus, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { formatCurrency } from '@/lib/utils'
+import { useCreateRto, useDeleteRto, useRateToOperate, useUpdateRto, type RtoRow } from '@/hooks/use-rate-to-operate'
+
+// Stored as rate_to_operate rows in their own section; total = cost,
+// miles = the miles the cost covers (e.g. a set of tires: $3,000 over 100,000 mi).
+const SECTION = 'equipment' as const
+const DEFAULTS = ['Insurance', 'Truck', 'Trailer', 'Maintenance', 'ELD', 'Brakes', 'Tires', 'Tolls']
+const LEGACY_KEY = 'equipmentExpenses' // costs this tab used to keep in the browser
+
+const perMile = (r: Pick<RtoRow, 'total' | 'miles'>) => (r.miles > 0 ? r.total / r.miles : null)
+const fmtPerMile = (n: number | null) => (n == null ? '—' : `$${n.toFixed(3)}`)
+
+/** Reports > Equipment Expenses: each cost and the miles it covers, giving its cost per mile. */
+export default function EquipmentCosts() {
+  const { data, isLoading } = useRateToOperate()
+  const create = useCreateRto()
+  const update = useUpdateRto()
+  const remove = useDeleteRto()
+  const rows = (data || []).filter(r => r.section === SECTION).sort((a, b) => a.sort_order - b.sort_order || a.id - b.id)
+
+  // First visit: start from the usual categories, with any costs saved in this browser before.
+  const seeded = useRef(false)
+  useEffect(() => {
+    if (isLoading || !data || seeded.current || rows.length) return
+    seeded.current = true
+    let legacy: Record<string, number> = {}
+    try { legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || '{}') || {} } catch { /* none */ }
+    DEFAULTS.forEach((expense, i) => create.mutate({ section: SECTION, expense, total: Number(legacy[expense]) || 0, miles: 0, sort_order: i }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, data])
+
+  const save = (row: RtoRow, patch: Partial<Pick<RtoRow, 'expense' | 'total' | 'miles'>>) => {
+    const next = { ...row, ...patch }
+    if (next.expense === row.expense && next.total === row.total && next.miles === row.miles) return
+    update.mutate({ id: row.id, data: { ...patch, rate_per_mile: perMile(next) ?? 0 } })
+  }
+  const addRow = () =>
+    create.mutate({ section: SECTION, expense: 'New cost', total: 0, miles: 0, sort_order: (rows[rows.length - 1]?.sort_order ?? -1) + 1 })
+
+  const totalCost = rows.reduce((s, r) => s + r.total, 0)
+  const totalPerMile = rows.reduce((s, r) => s + (perMile(r) ?? 0), 0)
+  const input = 'w-full rounded border border-transparent bg-transparent px-2 py-1 text-sm hover:border-gray-300 focus:border-blue-500 focus:bg-white focus:outline-none'
+  const enterBlurs = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') e.currentTarget.blur() }
+
+  return (
+    <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[220px]">Expense</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Cost</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Miles</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Cost per mile</th>
+              <th className="w-12" />
+            </tr>
+          </thead>
+          <tbody className="bg-white">
+            {isLoading && (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">Loading…</td></tr>
+            )}
+            {rows.map(r => (
+              // Re-mount when saved (here or by someone else) so the inputs show the stored values.
+              <tr key={`${r.id}-${r.updated_at || ''}`} className="group border-t border-gray-200 hover:bg-gray-50">
+                <td className="px-2 py-1.5">
+                  <input className={`${input} font-semibold text-gray-900`} defaultValue={r.expense} maxLength={60}
+                    onBlur={e => save(r, { expense: e.target.value.trim() || r.expense })} onKeyDown={enterBlurs} />
+                </td>
+                <td className="px-2 py-1.5">
+                  <input className={`${input} text-right`} type="number" step="0.01" min="0" defaultValue={r.total || ''} placeholder="0.00"
+                    onBlur={e => save(r, { total: Number(e.target.value) || 0 })} onKeyDown={enterBlurs} />
+                </td>
+                <td className="px-2 py-1.5">
+                  <input className={`${input} text-right`} type="number" step="1" min="0" defaultValue={r.miles || ''} placeholder="0"
+                    onBlur={e => save(r, { miles: Math.round(Number(e.target.value) || 0) })} onKeyDown={enterBlurs} />
+                </td>
+                <td className="px-4 py-1.5 text-right text-sm font-semibold text-gray-700">{fmtPerMile(perMile(r))}</td>
+                <td className="px-2 py-1.5 text-center">
+                  <button type="button" title="Delete" className="text-gray-300 opacity-0 group-hover:opacity-100 hover:text-red-600" onClick={() => remove.mutate(r.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {!isLoading && (
+              <tr className="border-t-2 border-gray-300 bg-gray-50 font-bold">
+                <td className="px-4 py-3 text-sm">Total</td>
+                <td className="px-4 py-3 text-sm text-right">{formatCurrency(totalCost)}</td>
+                <td className="px-4 py-3 text-sm text-right text-gray-400">—</td>
+                <td className="px-4 py-3 text-sm text-right" title="The cost per mile of every expense added together">{fmtPerMile(rows.some(r => perMile(r) != null) ? totalPerMile : null)}</td>
+                <td />
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-gray-50 border-t border-gray-200">
+        <span className="text-xs text-gray-500">Cost per mile = cost ÷ the miles it covers. Changes save when you leave the field and are shared with everyone.</span>
+        <Button size="sm" variant="outline" onClick={addRow} disabled={create.isPending}>
+          <Plus className="mr-1 h-4 w-4" /> Add cost
+        </Button>
+      </div>
+    </div>
+  )
+}

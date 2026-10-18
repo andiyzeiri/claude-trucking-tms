@@ -1,24 +1,16 @@
 'use client'
 
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 import Layout from '@/components/layout/layout'
 import { formatCurrency } from '@/lib/utils'
 import { ChevronRight, ChevronDown, TrendingUp, Truck, Calendar, CalendarDays, Gauge, LayoutDashboard } from 'lucide-react'
 import MileageReport from '@/components/reports/mileage-report'
 import OverviewReport from '@/components/reports/overview-report'
 import WeeklyReport from '@/components/reports/weekly-report'
+import EquipmentCosts from '@/components/reports/equipment-costs'
 import { useLoads } from '@/hooks/use-loads'
-import { useDrivers } from '@/hooks/use-drivers'
 import { useExpenses } from '@/hooks/use-expenses'
 import { useFuel } from '@/hooks/use-fuel'
-import { useDriverPayrollSettings } from '@/hooks/use-driver-payroll-settings'
-import { useCalculatedPayroll } from '@/hooks/use-payroll'
-
-// Helper to safely convert to number, defaulting to 0 for NaN/null/undefined
-function safeNumber(value: any): number {
-  const num = Number(value)
-  return isNaN(num) ? 0 : num
-}
 
 // Backend returns datetimes without timezone (e.g., "2024-12-28T14:00:00")
 // JavaScript would parse these as local time, so we append 'Z' to force UTC
@@ -30,25 +22,6 @@ function normalizeDateTime(dateString: string): string {
   }
   // Append Z to treat as UTC
   return dateString + 'Z'
-}
-
-// Helper to get week number from date (ISO 8601)
-function getWeekNumber(date: Date): number {
-  // Use UTC methods to get the date components (we store wall-clock time as UTC)
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
-
-  // Set to nearest Thursday: current date + 4 - current day number
-  // Make Sunday's day number 7
-  const dayNum = d.getUTCDay() || 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-
-  // Get first day of year
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-
-  // Calculate full weeks to nearest Thursday
-  const weekNum = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
-
-  return weekNum
 }
 
 // Helper to get ISO week year (the year the week belongs to)
@@ -77,36 +50,20 @@ type TabType = 'overview' | 'weekly' | 'equipment' | 'expenses' | 'mileage'
 export default function ReportsPage() {
   // Fetch ALL data - use large limit to get everything
   const { data: loadsData, isLoading: loadsLoading } = useLoads(1, 10000)
-  const { data: driversData, isLoading: driversLoading } = useDrivers()
   const { data: expensesData, isLoading: expensesLoading } = useExpenses(1, 10000)
   const { data: fuelData, isLoading: fuelLoading } = useFuel()
-  const { data: driverSettingsData } = useDriverPayrollSettings()
 
   const loads = loadsData?.items || []
-  const drivers = driversData?.items || []
   const expenses = expensesData?.items || []
   const fuel = fuelData || []
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
 
-  const { data: calculatedPayroll } = useCalculatedPayroll(selectedYear)
   const [expandedDrivers, setExpandedDrivers] = useState<Set<number>>(new Set())
 
-  // Equipment expenses state (persisted in localStorage)
-  const EQUIP_CATEGORIES = ['Insurance', 'Truck', 'Trailer', 'Maintenance', 'ELD', 'Brakes', 'Tires', 'Tolls']
-  const [equipCosts, setEquipCosts] = useState<Record<string, number>>({})
-  useEffect(() => {
-    const saved = localStorage.getItem('equipmentExpenses')
-    if (saved) setEquipCosts(JSON.parse(saved))
-  }, [])
-  const updateEquipCost = (category: string, value: number) => {
-    const updated = { ...equipCosts, [category]: value }
-    setEquipCosts(updated)
-    localStorage.setItem('equipmentExpenses', JSON.stringify(updated))
-  }
 
-  const isLoading = loadsLoading || driversLoading || expensesLoading || fuelLoading
+  const isLoading = loadsLoading || expensesLoading || fuelLoading
 
   // Get available years from loads data
   const availableYears = useMemo(() => {
@@ -153,79 +110,6 @@ export default function ReportsPage() {
     // Filter out any NaN values and sort descending (newest first)
     return Array.from(years).filter(y => !isNaN(y)).sort((a, b) => b - a)
   }, [loads, expenses, fuel])
-
-  // Find the last week number that has fuel on the payroll tab
-  const lastFuelWeek = useMemo(() => {
-    let maxWeek = 0
-    if (calculatedPayroll && Array.isArray(calculatedPayroll)) {
-      calculatedPayroll.forEach((entry: any) => {
-        if (!entry?.driver_id || !entry?.week_number) return
-        if ((Number(entry.fuel) || 0) > 0 && entry.week_number > maxWeek) {
-          maxWeek = entry.week_number
-        }
-      })
-    }
-    return maxWeek || 52 // fallback to 52 if no fuel data
-  }, [calculatedPayroll])
-
-  // Build fuel data per driver (via truck assignment from settings)
-  const fuelByDriver = useMemo(() => {
-    const settingsMap = new Map<number, any>()
-    if (driverSettingsData) driverSettingsData.forEach((s: any) => settingsMap.set(s.driver_id, s))
-
-    // Aggregate fuel by truck for the year
-    const fuelByTruck = new Map<number, { totalAmount: number; totalMiles: number }>()
-    const fuelEntriesByTruck = new Map<number, Array<{ odometer: number; weekYear: number; weekNum: number }>>()
-
-    fuel.forEach((fe: any) => {
-      if (!fe.date || !fe.truck_id) return
-      const fDate = new Date(fe.date + 'T00:00:00')
-      const d = new Date(Date.UTC(fDate.getFullYear(), fDate.getMonth(), fDate.getDate()))
-      const dayNum = d.getUTCDay() || 7
-      d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-      const fYear = d.getUTCFullYear()
-      if (fYear !== selectedYear) return
-      const fWeekNum = getWeekNumber(fDate)
-      if (fWeekNum > lastFuelWeek) return
-
-      const amount = (Number(fe.total_amount) || 0) + (Number(fe.def_price) || 0)
-      const existing = fuelByTruck.get(fe.truck_id) || { totalAmount: 0, totalMiles: 0 }
-      existing.totalAmount += amount
-      fuelByTruck.set(fe.truck_id, existing)
-
-      if (fe.odometer) {
-        if (!fuelEntriesByTruck.has(fe.truck_id)) fuelEntriesByTruck.set(fe.truck_id, [])
-        fuelEntriesByTruck.get(fe.truck_id)!.push({ odometer: Number(fe.odometer), weekYear: fYear, weekNum: 0 })
-      }
-    })
-
-    // Calculate miles from odometer (max - min)
-    fuelEntriesByTruck.forEach((entries, truckId) => {
-      if (entries.length > 1) {
-        const odoms = entries.map(e => e.odometer)
-        const miles = Math.max(...odoms) - Math.min(...odoms)
-        const existing = fuelByTruck.get(truckId)
-        if (existing) existing.totalMiles = miles
-      }
-    })
-
-    // Map to drivers via settings truck assignment
-    const result = new Map<number, { fuelTotal: number; fuelMiles: number; pricePerMile: number }>()
-    drivers.forEach((driver: any) => {
-      const settings = settingsMap.get(driver.id)
-      if (settings?.truck_id) {
-        const truckData = fuelByTruck.get(settings.truck_id)
-        if (truckData) {
-          result.set(driver.id, {
-            fuelTotal: truckData.totalAmount,
-            fuelMiles: truckData.totalMiles,
-            pricePerMile: truckData.totalMiles > 0 ? truckData.totalAmount / truckData.totalMiles : 0
-          })
-        }
-      }
-    })
-    return result
-  }, [fuel, drivers, driverSettingsData, selectedYear, lastFuelWeek])
 
   // Build expense report data grouped by driver type, then by category/week
   const expenseReportData = useMemo(() => {
@@ -312,12 +196,6 @@ export default function ReportsPage() {
       newExpanded.add(driverId)
     }
     setExpandedDrivers(newExpanded)
-  }
-
-  // Format number safely (avoid NaN display)
-  const formatNumber = (num: number): string => {
-    const safe = safeNumber(num)
-    return safe.toLocaleString()
   }
 
   if (isLoading) {
@@ -425,62 +303,7 @@ export default function ReportsPage() {
 
 
         {/* Equipment Expenses tab */}
-        {activeTab === 'equipment' && (
-          <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Expense</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Cost</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Cost per 100k Miles</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white">
-                  {EQUIP_CATEGORIES.map((cat) => {
-                    const cost = equipCosts[cat] || 0
-                    const totalMiles = Array.from(fuelByDriver.values()).reduce((s, d) => s + d.fuelMiles, 0)
-                    const costPer100k = totalMiles > 0 ? (cost / totalMiles) * 100000 : 0
-                    return (
-                      <tr key={cat} className="border-t border-gray-200 hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-900">{cat}</td>
-                        <td className="px-4 py-3 text-sm text-right">
-                          <input
-                            type="number"
-                            step="0.01"
-                            className="w-32 text-sm border rounded px-2 py-1 text-right"
-                            value={cost || ''}
-                            placeholder="0.00"
-                            onChange={(e) => updateEquipCost(cat, parseFloat(e.target.value) || 0)}
-                          />
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right text-gray-700 font-semibold">
-                          {costPer100k > 0 ? formatCurrency(costPer100k) : '-'}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                  {/* Totals Row */}
-                  {(() => {
-                    const totalCost = EQUIP_CATEGORIES.reduce((s, cat) => s + (equipCosts[cat] || 0), 0)
-                    const totalMiles = Array.from(fuelByDriver.values()).reduce((s, d) => s + d.fuelMiles, 0)
-                    const totalPer100k = totalMiles > 0 ? (totalCost / totalMiles) * 100000 : 0
-                    return (
-                      <tr className="border-t-2 border-gray-300 bg-gray-50 font-bold">
-                        <td className="px-4 py-3 text-sm">Total</td>
-                        <td className="px-4 py-3 text-sm text-right">{formatCurrency(totalCost)}</td>
-                        <td className="px-4 py-3 text-sm text-right">{totalPer100k > 0 ? formatCurrency(totalPer100k) : '-'}</td>
-                      </tr>
-                    )
-                  })()}
-                </tbody>
-              </table>
-            </div>
-            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
-              Cost per 100k miles based on {formatNumber(Array.from(fuelByDriver.values()).reduce((s, d) => s + d.fuelMiles, 0))} total fuel miles
-            </div>
-          </div>
-        )}
+        {activeTab === 'equipment' && <EquipmentCosts />}
 
         {/* Summary Cards - Expenses tab */}
         {activeTab === 'expenses' && (
