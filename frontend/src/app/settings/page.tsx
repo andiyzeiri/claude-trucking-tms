@@ -325,7 +325,7 @@ export default function SettingsPage() {
         </Card>
         )}
 
-        {/* ELD (Peak) - API key for Reports > Mileage */}
+        {/* ELD (Peak) - API key and truck matching */}
         {!isLoading && isAdmin && <EldCard />}
 
         {/* Fuel card (WEX Fleet One / EFS) - card swipes into Fuel */}

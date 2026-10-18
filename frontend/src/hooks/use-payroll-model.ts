@@ -139,7 +139,7 @@ export function usePayrollModel(selectedYear: number, selectedWeek: number, eldE
   const weeks = useMemo(() => generateWeeks(selectedYear), [selectedYear])
 
   // Total Miles row: what each truck drove in the selected week, from Peak ELD,
-  // keyed by TMS truck (Peak trucks are matched under Reports > Mileage).
+  // keyed by TMS truck (Peak trucks are matched under Settings > ELD Integration).
   const { data: eldConnection } = useEldConnection()
   const selectedWeekObj = weeks.find(w => w.weekNumber === selectedWeek)
   const { data: eldMileage } = useEldMileage(

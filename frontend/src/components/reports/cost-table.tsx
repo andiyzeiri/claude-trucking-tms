@@ -4,19 +4,24 @@ import React, { useEffect, useRef } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
-import { useCreateRto, useDeleteRto, useRateToOperate, useUpdateRto, type RtoRow } from '@/hooks/use-rate-to-operate'
+import { useCreateRto, useDeleteRto, useRateToOperate, useUpdateRto, type RtoRow, type RtoSection } from '@/hooks/use-rate-to-operate'
 
-// Stored as rate_to_operate rows in their own section; total = cost,
+// Stored as rate_to_operate rows, one section per table; total = cost,
 // miles = the miles the cost covers (e.g. a set of tires: $3,000 over 100,000 mi).
-const SECTION = 'equipment' as const
-const DEFAULTS = ['Insurance', 'Truck', 'Trailer', 'Maintenance', 'ELD', 'Brakes', 'Tires', 'Tolls']
-const LEGACY_KEY = 'equipmentExpenses' // costs this tab used to keep in the browser
+// Variable Costs keep the 'equipment' section they were saved under as
+// Equipment Expenses.
+export const COST_TABLES = {
+  variable: { section: 'equipment' as RtoSection, defaults: ['Insurance', 'Truck', 'Trailer', 'Maintenance', 'ELD', 'Brakes', 'Tires', 'Tolls'] },
+  fixed: { section: 'fixed_cost' as RtoSection, defaults: [] as string[] },
+}
+const LEGACY_KEY = 'equipmentExpenses' // costs Equipment Expenses used to keep in the browser
 
 const perMile = (r: Pick<RtoRow, 'total' | 'miles'>) => (r.miles > 0 ? r.total / r.miles : null)
 const fmtPerMile = (n: number | null) => (n == null ? '—' : `$${n.toFixed(3)}`)
 
-/** Reports > Equipment Expenses: each cost and the miles it covers, giving its cost per mile. */
-export default function EquipmentCosts() {
+/** Reports > Variable Costs / Fixed Costs: each cost and the miles it covers, giving its cost per mile. */
+export default function CostTable({ kind }: { kind: keyof typeof COST_TABLES }) {
+  const { section: SECTION, defaults: DEFAULTS } = COST_TABLES[kind]
   const { data, isLoading } = useRateToOperate()
   const create = useCreateRto()
   const update = useUpdateRto()
@@ -26,7 +31,7 @@ export default function EquipmentCosts() {
   // First visit: start from the usual categories, with any costs saved in this browser before.
   const seeded = useRef(false)
   useEffect(() => {
-    if (isLoading || !data || seeded.current || rows.length) return
+    if (isLoading || !data || seeded.current || rows.length || !DEFAULTS.length) return
     seeded.current = true
     let legacy: Record<string, number> = {}
     try { legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || '{}') || {} } catch { /* none */ }
@@ -63,6 +68,9 @@ export default function EquipmentCosts() {
           <tbody className="bg-white">
             {isLoading && (
               <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">Loading…</td></tr>
+            )}
+            {!isLoading && rows.length === 0 && (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">No costs yet - click Add cost.</td></tr>
             )}
             {rows.map(r => (
               // Re-mount when saved (here or by someone else) so the inputs show the stored values.

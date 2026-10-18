@@ -354,7 +354,7 @@ export default function FuelPage() {
 
   // Weekly Miles: what each truck drove in the selected week from Peak ELD -
   // the same numbers as Payroll's Total Miles (Peak trucks are matched to TMS
-  // trucks under Reports > Mileage).
+  // trucks under Settings > ELD Integration).
   const { data: eldConnection } = useEldConnection()
   const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   const weekStart = getDateFromWeekNumber(selectedWeek, selectedYear)
@@ -639,7 +639,7 @@ export default function FuelPage() {
 
         {/* Weekly Miles (Peak ELD, as on Payroll) */}
         <td className="px-3 py-2.5 border-r text-right" style={{ borderColor: 'var(--monday-border-light)', width: `${columnWidths.weeklyMiles}px`, minWidth: `${columnWidths.weeklyMiles}px` }}>
-          <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }} title={eld?.how || (eldConnection?.connected ? 'No Peak ELD miles for this truck this week (match Peak trucks under Reports > Mileage)' : 'Connect Peak ELD to see miles')}>
+          <div style={{ fontSize: '13px', lineHeight: '18px', color: 'var(--monday-text-primary)' }} title={eld?.how || (eldConnection?.connected ? 'No Peak ELD miles for this truck this week (match Peak trucks under Settings > ELD Integration)' : 'Connect Peak ELD to see miles')}>
             {weeklyMiles > 0 ? weeklyMiles.toLocaleString() : '-'}
           </div>
         </td>
