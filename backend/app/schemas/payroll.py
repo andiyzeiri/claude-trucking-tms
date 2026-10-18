@@ -75,6 +75,7 @@ class CalculatedPayrollResponse(BaseModel):
     dispatch_fee: float
     insurance: float
     fuel: float = 0.0
+    gallons: float = 0.0  # diesel gallons on the truck's fuel cards that week (for MPG on Reports)
     truck_id: Optional[int] = None
     parking: float
     trailer: float

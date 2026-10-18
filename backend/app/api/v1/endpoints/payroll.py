@@ -181,6 +181,7 @@ async def calculate_payroll_from_loads(
                 "loads": [],
                 "adjustments": 0.0,  # Total adjustments from load details
                 "fuel": 0.0,  # Will be populated from fuel entries
+                "gallons": 0.0,
                 "truck_id": None
             }
 
@@ -219,6 +220,7 @@ async def calculate_payroll_from_loads(
 
     # Step 2: Aggregate fuel by truck+week
     fuel_by_truck_week = {}  # {(truck_id, iso_year, week_num): total}
+    gallons_by_truck_week = {}  # diesel gallons (not DEF), same key
     for fe in fuel_entries:
         if not fe.date or not fe.truck_id:
             continue
@@ -230,6 +232,7 @@ async def calculate_payroll_from_loads(
         fuel_amount = float(fe.total_amount) if fe.total_amount else 0.0
         def_amount = float(fe.def_price) if fe.def_price else 0.0
         fuel_by_truck_week[ftw_key] = fuel_by_truck_week.get(ftw_key, 0.0) + fuel_amount + def_amount
+        gallons_by_truck_week[ftw_key] = gallons_by_truck_week.get(ftw_key, 0.0) + (float(fe.gallons) if fe.gallons else 0.0)
 
     # Step 3: Get per-week truck_id overrides from payroll_overrides
     override_query = select(PayrollOverride).where(
@@ -256,6 +259,7 @@ async def calculate_payroll_from_loads(
         if truck_id:
             fuel_total = fuel_by_truck_week.get((truck_id, year, wn), 0.0)
             data["fuel"] = fuel_total
+            data["gallons"] = round(gallons_by_truck_week.get((truck_id, year, wn), 0.0), 2)
             data["truck_id"] = truck_id
         else:
             data["truck_id"] = default_truck
