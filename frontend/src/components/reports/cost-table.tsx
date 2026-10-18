@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
 import { useCreateRto, useDeleteRto, useRateToOperate, useUpdateRto, type RtoRow, type RtoSection } from '@/hooks/use-rate-to-operate'
+import { useLoads } from '@/hooks/use-loads'
 
 // Stored as rate_to_operate rows, one section per table; total = cost,
 // miles = the miles the cost covers (e.g. a set of tires: $3,000 over 100,000 mi).
@@ -13,12 +14,10 @@ import { useCreateRto, useDeleteRto, useRateToOperate, useUpdateRto, type RtoRow
 export const COST_TABLES = {
   variable: { section: 'equipment' as RtoSection, defaults: ['Insurance', 'Truck', 'Trailer', 'Maintenance', 'ELD', 'Brakes', 'Tires', 'Tolls'] },
   fixed: { section: 'fixed_cost' as RtoSection, defaults: [] as string[] },
-  // Company Costs: the cost is a yearly cost, also shown per week and year to date;
-  // cost per mile divides it by one figure, the company's miles for the year
-  // (stored as a single rate_to_operate row in section 'company_miles').
+  // Company Costs: the cost is a yearly cost, also shown per week and year to
+  // date; cost per mile is the year-to-date cost over this year's load miles.
   company: { section: 'company_cost' as RtoSection, defaults: [] as string[], yearly: true },
 }
-const MILES_SECTION = 'company_miles' as RtoSection
 const LEGACY_KEY = 'equipmentExpenses' // costs Equipment Expenses used to keep in the browser
 
 const perMile = (r: Pick<RtoRow, 'total' | 'miles'>) => (r.miles > 0 ? r.total / r.miles : null)
@@ -41,15 +40,23 @@ export default function CostTable({ kind }: { kind: keyof typeof COST_TABLES }) 
   const update = useUpdateRto()
   const remove = useDeleteRto()
   const rows = (data || []).filter(r => r.section === SECTION).sort((a, b) => a.sort_order - b.sort_order || a.id - b.id)
-  const milesRow = yearly ? (data || []).find(r => r.section === MILES_SECTION) : undefined
-  const companyMiles = milesRow?.miles || 0
-  // Company Costs: per mile of the company's miles for the year; else per the row's own miles.
-  const costPerMile = (r: Pick<RtoRow, 'total' | 'miles'>) => (yearly ? (companyMiles > 0 ? r.total / companyMiles : null) : perMile(r))
-  const saveCompanyMiles = (value: number) => {
-    if (value === companyMiles) return
-    if (milesRow) update.mutate({ id: milesRow.id, data: { miles: value } })
-    else create.mutate({ section: MILES_SECTION, expense: 'Company miles for the year', miles: value, total: 0 })
-  }
+  // Company miles: every load picked up this year so far (Brokerage loads run
+  // on other carriers' trucks, so they're left out).
+  const { data: loadsData, isLoading: loadsLoading } = useLoads(1, 10000, false)
+  const ytdShare = yearShare()
+  const { companyMiles, loadCount } = useMemo(() => {
+    const now = new Date()
+    const year = String(now.getFullYear())
+    let miles = 0, count = 0
+    ;(loadsData?.items || []).forEach(l => {
+      if (!l.pickup_date || !l.pickup_date.startsWith(year) || new Date(l.pickup_date) > now) return
+      miles += Number(l.miles) || 0
+      count += 1
+    })
+    return { companyMiles: miles, loadCount: count }
+  }, [loadsData])
+  // Company Costs: year-to-date cost per year-to-date load mile; else per the row's own miles.
+  const costPerMile = (r: Pick<RtoRow, 'total' | 'miles'>) => (yearly ? (companyMiles > 0 ? (r.total * ytdShare) / companyMiles : null) : perMile(r))
 
   // First visit: start from the usual categories, with any costs saved in this browser before.
   const seeded = useRef(false)
@@ -71,8 +78,7 @@ export default function CostTable({ kind }: { kind: keyof typeof COST_TABLES }) 
     create.mutate({ section: SECTION, expense: 'New cost', total: 0, miles: 0, sort_order: (rows[rows.length - 1]?.sort_order ?? -1) + 1 })
 
   const totalCost = rows.reduce((s, r) => s + r.total, 0)
-  const ytdShare = yearShare()
-  const totalPerMile = yearly ? (companyMiles > 0 ? totalCost / companyMiles : null)
+  const totalPerMile = yearly ? (companyMiles > 0 ? (totalCost * ytdShare) / companyMiles : null)
     : rows.some(r => perMile(r) != null) ? rows.reduce((s, r) => s + (perMile(r) ?? 0), 0) : null
   const input = 'w-full rounded border border-transparent bg-transparent px-2 py-1 text-sm hover:border-gray-300 focus:border-blue-500 focus:bg-white focus:outline-none'
   const enterBlurs = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') e.currentTarget.blur() }
@@ -81,17 +87,12 @@ export default function CostTable({ kind }: { kind: keyof typeof COST_TABLES }) 
     <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
       {yearly && (
         <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 px-4 py-3">
-          <label htmlFor="company-miles" className="text-sm font-medium text-gray-700">Company miles for the year</label>
-          <input
-            id="company-miles"
-            key={`miles-${milesRow?.id ?? 'new'}-${milesRow?.updated_at || ''}`}
-            className="w-40 rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-blue-500 focus:outline-none"
-            type="number" step="1" min="0" placeholder="0"
-            defaultValue={companyMiles || ''}
-            onBlur={e => saveCompanyMiles(Math.round(Number(e.target.value) || 0))}
-            onKeyDown={enterBlurs}
-          />
-          <span className="text-xs text-gray-500">Every expense&apos;s cost per mile is its yearly cost ÷ this number.</span>
+          <span className="text-sm font-medium text-gray-700">Company miles, {new Date().getFullYear()} to date</span>
+          <span className="text-lg font-semibold text-gray-900">{loadsLoading ? '…' : Math.round(companyMiles).toLocaleString()}</span>
+          <span className="text-xs text-gray-500">
+            Loaded miles on {loadCount.toLocaleString()} load{loadCount === 1 ? '' : 's'} picked up this year (Brokerage loads not included).
+            Cost per mile = each expense&apos;s YTD cost ÷ these miles.
+          </span>
         </div>
       )}
       <div className="overflow-x-auto">
@@ -148,7 +149,7 @@ export default function CostTable({ kind }: { kind: keyof typeof COST_TABLES }) 
                 {yearly && <td className="px-4 py-3 text-sm text-right">{formatCurrency(totalCost / 52)}</td>}
                 {yearly && <td className="px-4 py-3 text-sm text-right">{formatCurrency(totalCost * ytdShare)}</td>}
                 {!yearly && <td className="px-4 py-3 text-sm text-right text-gray-400">—</td>}
-                <td className="px-4 py-3 text-sm text-right" title={yearly ? 'Total yearly cost ÷ company miles' : 'The cost per mile of every expense added together'}>{fmtPerMile(totalPerMile)}</td>
+                <td className="px-4 py-3 text-sm text-right" title={yearly ? 'Total YTD cost ÷ company miles to date' : 'The cost per mile of every expense added together'}>{fmtPerMile(totalPerMile)}</td>
                 <td />
               </tr>
             )}
@@ -158,7 +159,7 @@ export default function CostTable({ kind }: { kind: keyof typeof COST_TABLES }) 
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-gray-50 border-t border-gray-200">
         <span className="text-xs text-gray-500">
           {yearly
-            ? `Weekly = yearly cost ÷ 52. YTD = yearly cost × the share of ${new Date().getFullYear()} so far (${(ytdShare * 100).toFixed(1)}%). Cost per mile = yearly cost ÷ company miles for the year. `
+            ? `Weekly = yearly cost ÷ 52. YTD = yearly cost × the share of ${new Date().getFullYear()} so far (${(ytdShare * 100).toFixed(1)}%). Cost per mile = YTD cost ÷ this year's load miles to date. `
             : 'Cost per mile = cost ÷ the miles it covers. '}
           Changes save when you leave the field and are shared with everyone.
         </span>

@@ -5,8 +5,7 @@ import toast from 'react-hot-toast'
 import api from '@/lib/api'
 
 // equipment / fixed_cost / company_cost: Reports > Variable / Fixed / Company Costs (total = cost, miles = the miles it covers)
-// company_miles: one row, the company's miles for the year (Company Costs' cost per mile)
-export type RtoSection = 'variable' | 'fixed' | 'summary' | 'equipment' | 'fixed_cost' | 'company_cost' | 'company_miles'
+export type RtoSection = 'variable' | 'fixed' | 'summary' | 'equipment' | 'fixed_cost' | 'company_cost'
 
 export interface RtoRow {
   id: number
